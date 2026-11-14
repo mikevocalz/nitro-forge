@@ -1,0 +1,71 @@
+08:08:04.296 [ INFO] maestro.cli.report.TestDebugReporter.logSystemInfo: Debug output path: /home/runner/work/_temp/runtime-ui/pass-1/debug/.maestro/tests/2026-11-14_080804
+08:08:04.302 [ INFO] MAESTRO.logSystemInfo: ---- System Info ----
+08:08:04.306 [ INFO] MAESTRO.logSystemInfo: Maestro Version: 2.12.1
+08:08:04.310 [ INFO] MAESTRO.logSystemInfo: CI: github
+08:08:04.310 [ INFO] MAESTRO.logSystemInfo: OS Name: Linux
+08:08:04.311 [ INFO] MAESTRO.logSystemInfo: OS Version: 7.0.0-1019-azure
+08:08:04.311 [ INFO] MAESTRO.logSystemInfo: Architecture: amd64
+08:08:04.315 [ INFO] MAESTRO.logSystemInfo: Java Version: 17
+08:08:04.322 [ INFO] MAESTRO.logSystemInfo: Xcode Version: null
+08:08:04.326 [ INFO] MAESTRO.logSystemInfo: Flutter Version: Undefined
+08:08:04.332 [ INFO] MAESTRO.logSystemInfo: Flutter Channel: Undefined
+08:08:04.332 [ INFO] MAESTRO.logSystemInfo: ---------------------
+08:08:05.839 [DEBUG] io.micrometer.common.util.internal.logging.InternalLoggerFactory.newDefaultFactory: Using SLF4J as the default logging framework
+08:08:10.375 [ INFO] maestro.cli.command.TestCommand.runShardSuite: [shard 1] Selected device emulator-5554 using port 38909 with execution plan ExecutionPlan(flowsToRun=[/home/runner/work/_temp/runtime-ui/pass-1/flow.yaml], sequence=FlowSequence(flows=[], continueOnFailure=true), workspaceConfig=WorkspaceConfig(flows=null, includeTags=null, excludeTags=null, executionOrder=null, baselineBranch=null, notifications=null, disableRetries=false, platform=PlatformConfiguration(android=AndroidConfiguration(disableAnimations=false), ios=IOSConfiguration(disableAnimations=false, snapshotKeyHonorModalViews=null)), testOutputDir=null))
+08:08:16.754 [ INFO] maestro.cli.runner.TestSuiteInteractor.runFlow:  Running flow Forge seven-studio durable document workflows
+08:08:16.775 [ INFO] maestro.Maestro.cachedDeviceInfo_delegate$lambda$0: Getting device info
+08:08:17.552 [ INFO] maestro.Maestro.cachedDeviceInfo_delegate$lambda$0: Got device info: DeviceInfo(platform=ANDROID, widthPixels=320, heightPixels=800, widthGrid=320, heightGrid=800)
+08:08:17.880 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:08:17.892 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:08:17.895 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:08:17.895 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:08:17.896 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Launch app "dev.nitroforge.f6.consumer" RUNNING
+08:08:18.137 [ INFO] maestro.Maestro.launchApp$lambda$6: Launching app dev.nitroforge.f6.consumer
+08:08:18.140 [ INFO] maestro.Maestro.launchApp$lambda$6: Stopping dev.nitroforge.f6.consumer app during launch
+08:08:18.143 [ERROR] maestro.orchestra.Orchestra.executeCommands: [Command execution] CommandFailed: Command failed (host:transport:emulator-5554): device offline
+08:08:18.168 [ WARN] maestro.orchestra.debug.ArtifactsGenerator.captureStepHierarchy: Failed to capture step hierarchy
+maestro.android.DeviceServerDiedException: Device server died during 'deviceInfo' on emulator-5554 (117ms since last byte, connection age 5868ms): StatusRuntimeException: UNAVAILABLE
+	at maestro.android.AndroidDeviceConnection.onGrpcDeath(AndroidDeviceConnection.kt:319)
+	at maestro.android.AndroidDeviceConnection.mapTransport(AndroidDeviceConnection.kt:306)
+	at maestro.android.AndroidDeviceConnection.execute(AndroidDeviceConnection.kt:122)
+	at maestro.drivers.AndroidDriver.deviceInfo(AndroidDriver.kt:205)
+	at maestro.ViewHierarchy$Companion.from-8JJjmZI(ViewHierarchy.kt:28)
+	at maestro.Maestro$viewHierarchy$2.invoke-prqvCes(Maestro.kt:535)
+	at maestro.Maestro$viewHierarchy$2.invoke(Maestro.kt:534)
+	at kotlinx.coroutines.InterruptibleKt.runInterruptibleInExpectedContext(Interruptible.kt:48)
+	at kotlinx.coroutines.InterruptibleKt.access$runInterruptibleInExpectedContext(Interruptible.kt:1)
+	at kotlinx.coroutines.InterruptibleKt$runInterruptible$2.invokeSuspend(Interruptible.kt:40)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+Caused by: io.grpc.StatusRuntimeException: UNAVAILABLE
+	at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:275)
+	at io.grpc.stub.ClientCalls.getUnchecked(ClientCalls.java:256)
+	at io.grpc.stub.ClientCalls.blockingUnaryCall(ClientCalls.java:169)
+	at maestro_android.MaestroDriverGrpc$MaestroDriverBlockingStub.deviceInfo(MaestroDriverGrpc.java:740)
+	at maestro.drivers.AndroidDriver.deviceInfo$lambda$4(AndroidDriver.kt:205)
+	at maestro.android.AndroidDeviceConnection.execute(AndroidDeviceConnection.kt:120)
+	... 15 more
+Caused by: java.io.IOException: Command failed (host:transport:emulator-5554): device offline
+	at dadb.adbserver.AdbServer.send$dadb(AdbServer.kt:103)
+	at dadb.adbserver.AdbServerDadb.open(AdbServer.kt:148)
+	at maestro.android.AndroidDeviceConnection.buildChannel$lambda$2(AndroidDeviceConnection.kt:98)
+	at maestro.android.RawAdbSocket.connect(AdbSocketFactory.kt:206)
+	at java.base/java.net.Socket.connect(Socket.java:583)
+	at maestro.android.AdbSocketFactory.createSocket(AdbSocketFactory.kt:57)
+	at maestro.android.AdbSocketFactory.createSocket(AdbSocketFactory.kt:63)
+	at io.grpc.okhttp.OkHttpClientTransport$3.run(OkHttpClientTransport.java:535)
+	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+08:08:18.173 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:08:18.178 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:08:18.188 [ WARN] maestro.orchestra.debug.ArtifactsGenerator.captureScreenshot: Failed to capture screenshot screenshots/step-003-launchApp-dev.nitroforge.f6.consumer.png
+08:08:18.188 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Launch app "dev.nitroforge.f6.consumer" FAILED
+08:08:19.654 [ INFO] maestro.cli.report.TestDebugReporter.deleteOldFiles: Performing purge of logs older than 14 days from /home/runner/work/_temp/runtime-ui/pass-1/artifacts

@@ -1,0 +1,29 @@
+Monitoring boot status for iPhone Duo (C898E3E4-5033-4085-B886-963EE2D0C478).
+[2026-11-14 07:16:38 +0000] Status=2, isTerminal=NO, Elapsed=00:47.
+	Waiting on Data Migration
+		Reason:Running plugin com.apple.managedconfiguration.migrator (MCProfile.migrator, user-agnostic)
+		Migration Elapsed:00:35 seconds
+
+[2026-11-14 07:16:39 +0000] Status=2, isTerminal=NO, Elapsed=00:48.
+	Waiting on Data Migration
+		Reason:Running plugin com.apple.WebBookmarks.migrator (WebBookmarks.migrator)
+		Migration Elapsed:00:36 seconds
+
+[2026-11-14 07:16:40 +0000] Status=2, isTerminal=NO, Elapsed=00:50.
+	Waiting on Data Migration
+		Reason:Running plugin com.apple.MobileSafari.migrator (MobileSafari.migrator)
+		Migration Elapsed:00:37 seconds
+
+[2026-11-14 07:16:41 +0000] Status=2, isTerminal=NO, Elapsed=00:50.
+	Waiting on Data Migration
+		Reason:Running plugin com.apple.MobileSafari.migrator (MobileSafari.migrator)
+		Migration Elapsed:00:38 seconds
+
+[2026-11-14 07:16:42 +0000] Status=2, isTerminal=NO, Elapsed=00:51.
+	Waiting on Data Migration
+		Reason:Running plugin com.apple.keyboards.migrator (KeyboardMigrator.migrator)
+		Migration Elapsed:00:39 seconds
+
+[2026-11-14 07:16:43 +0000] Status=3, isTerminal=YES, Elapsed=00:52.
+	Data Migration Failed
+

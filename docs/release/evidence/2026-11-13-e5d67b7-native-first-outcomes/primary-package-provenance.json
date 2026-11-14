@@ -1,0 +1,40 @@
+{
+  "expo-file-system": {
+    "version": "58.0.13",
+    "metadataUrl": "https://registry.npmjs.org/expo-file-system/58.0.13",
+    "tarballUrl": "https://registry.npmjs.org/expo-file-system/-/expo-file-system-58.0.13.tgz",
+    "integrity": "sha512-+/1aFErkawyky5UdWI06zYeO2DeHUnfaWnYHeiI8M8Z/sB6L66gI3WUxqtvUvKJoaM0Ti1CximD3x3JwteLYIg==",
+    "sha256": "820d4af9889f3906b78d70d11533a4a4b2bb3099397d69cb1957273e220cb7d7",
+    "files": [
+      {
+        "path": "package/src/internal/NativeFileSystem.types.ts",
+        "bytes": 13263,
+        "sha256": "c7a308f53a864f30da6db82b4e8f3ccd508865abb8d64d8427e06c12f14d4c68"
+      },
+      {
+        "path": "package/android/src/main/java/expo/modules/filesystem/FileSystemModule.kt",
+        "bytes": 15583,
+        "sha256": "dfcc4376aa6ba0044567a8b81247bba073a18b3478e552acc5f6432bf5a7fcea"
+      }
+    ]
+  },
+  "expo-constants": {
+    "version": "58.0.16",
+    "metadataUrl": "https://registry.npmjs.org/expo-constants/58.0.16",
+    "tarballUrl": "https://registry.npmjs.org/expo-constants/-/expo-constants-58.0.16.tgz",
+    "integrity": "sha512-sVETnE1ktBMclc2Ve3qNrHhOCCio75a9JdghnJYGbqblmKfrrfE+lO9K4g9kNtmslIBLTK9Dyty6PbubkXs3Yw==",
+    "sha256": "6ce2b82d70ad3c06510b625dd0a4168ce0cbe8e003f1d7252d7ed016f7e86c99",
+    "files": [
+      {
+        "path": "package/scripts/get-app-config-ios.sh",
+        "bytes": 2390,
+        "sha256": "558ba29ea9f45cd3b154f1792987248124424498851f3ae214e3fb8d2d0b7c0e"
+      },
+      {
+        "path": "package/package.json",
+        "bytes": 2025,
+        "sha256": "d993120267b9e8b8b65b92f605d0cbc7ddb2e3bfe295df6c4a97bfe81e06247a"
+      }
+    ]
+  }
+}

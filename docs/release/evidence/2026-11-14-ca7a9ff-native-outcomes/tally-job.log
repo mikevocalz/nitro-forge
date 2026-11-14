@@ -1,0 +1,826 @@
+﻿2026-11-14T06:19:11.2565728Z Current runner version: '2.338.2'
+2026-11-14T06:19:11.2620225Z ##[group]Runner Image Provisioner
+2026-11-14T06:19:11.2621181Z Hosted Compute Agent
+2026-11-14T06:19:11.2621966Z Version: 20261103.629
+2026-11-14T06:19:11.2622786Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-14T06:19:11.2623753Z Build Date: 2026-11-03T17:26:59Z
+2026-11-14T06:19:11.2624665Z Worker ID: {74014dba-e987-4a70-b333-68949c4e96d3}
+2026-11-14T06:19:11.2625549Z Region: centralus
+2026-11-14T06:19:11.2626537Z Cloud: Azure
+2026-11-14T06:19:11.2627196Z ##[endgroup]
+2026-11-14T06:19:11.2628818Z ##[group]Operating System
+2026-11-14T06:19:11.2629725Z Ubuntu
+2026-11-14T06:19:11.2630329Z 26.04.1
+2026-11-14T06:19:11.2630975Z LTS
+2026-11-14T06:19:11.2631646Z ##[endgroup]
+2026-11-14T06:19:11.2632270Z ##[group]Runner Image
+2026-11-14T06:19:11.2633111Z Image: ubuntu-26.04
+2026-11-14T06:19:11.2633778Z Version: 20261111.196.1
+2026-11-14T06:19:11.2635451Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-14T06:19:11.2637678Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-14T06:19:11.2639072Z ##[endgroup]
+2026-11-14T06:19:11.2640382Z ##[group]GITHUB_TOKEN Permissions
+2026-11-14T06:19:11.2642524Z Contents: read
+2026-11-14T06:19:11.2643228Z Metadata: read
+2026-11-14T06:19:11.2643975Z ##[endgroup]
+2026-11-14T06:19:11.2646976Z Secret source: Actions
+2026-11-14T06:19:11.2648198Z Cache mode: write
+2026-11-14T06:19:11.2649303Z Prepare workflow directory
+2026-11-14T06:19:11.2995864Z Prepare all required actions
+2026-11-14T06:19:11.3053562Z Getting action download info
+2026-11-14T06:19:11.5374289Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-14T06:19:11.6397438Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-14T06:19:11.8212041Z Complete job name: typecheck-and-adapter
+2026-11-14T06:19:11.8952390Z ##[group]Run actions/checkout@v4
+2026-11-14T06:19:11.8953056Z with:
+2026-11-14T06:19:11.8953420Z   repository: mikevocalz/nitro-forge
+2026-11-14T06:19:11.8956696Z   token: ***
+2026-11-14T06:19:11.8957068Z   ssh-strict: true
+2026-11-14T06:19:11.8957420Z   ssh-user: git
+2026-11-14T06:19:11.8957775Z   persist-credentials: true
+2026-11-14T06:19:11.8958173Z   clean: true
+2026-11-14T06:19:11.8958529Z   sparse-checkout-cone-mode: true
+2026-11-14T06:19:11.8958950Z   fetch-depth: 1
+2026-11-14T06:19:11.8959294Z   fetch-tags: false
+2026-11-14T06:19:11.8959644Z   show-progress: true
+2026-11-14T06:19:11.8960000Z   lfs: false
+2026-11-14T06:19:11.8960331Z   submodules: false
+2026-11-14T06:19:11.8960682Z   set-safe-directory: true
+2026-11-14T06:19:11.8961083Z   allow-unsafe-pr-checkout: false
+2026-11-14T06:19:11.8961692Z ##[endgroup]
+2026-11-14T06:19:12.0875403Z Syncing repository: mikevocalz/nitro-forge
+2026-11-14T06:19:12.0877152Z ##[group]Getting Git version info
+2026-11-14T06:19:12.0877828Z Working directory is '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T06:19:12.0878665Z [command]/usr/bin/git version
+2026-11-14T06:19:12.1010593Z git version 2.56.1
+2026-11-14T06:19:12.1027230Z ##[endgroup]
+2026-11-14T06:19:12.1038581Z Temporarily overriding HOME='/home/runner/work/_temp/b087fd21-2d6e-495e-801b-aafa72f104be' before making global git config changes
+2026-11-14T06:19:12.1039928Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T06:19:12.1043059Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T06:19:12.1095431Z Deleting the contents of '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T06:19:12.1097913Z ##[group]Initializing the repository
+2026-11-14T06:19:12.1101379Z [command]/usr/bin/git init /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T06:19:12.1172579Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-14T06:19:12.1174057Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-14T06:19:12.1175295Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-14T06:19:12.1175891Z hint: call:
+2026-11-14T06:19:12.1176488Z hint:
+2026-11-14T06:19:12.1176991Z hint: 	git config --global init.defaultBranch <name>
+2026-11-14T06:19:12.1177494Z hint:
+2026-11-14T06:19:12.1178056Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-14T06:19:12.1178854Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-14T06:19:12.1179746Z hint:
+2026-11-14T06:19:12.1180248Z hint: 	git branch -m <name>
+2026-11-14T06:19:12.1180831Z hint:
+2026-11-14T06:19:12.1181575Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-14T06:19:12.1182568Z Initialized empty Git repository in /home/runner/work/nitro-forge/nitro-forge/.git/
+2026-11-14T06:19:12.1201274Z [command]/usr/bin/git remote add origin https://github.com/mikevocalz/nitro-forge
+2026-11-14T06:19:12.1236416Z ##[endgroup]
+2026-11-14T06:19:12.1237116Z ##[group]Disabling automatic garbage collection
+2026-11-14T06:19:12.1241057Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-14T06:19:12.1270424Z ##[endgroup]
+2026-11-14T06:19:12.1271351Z ##[group]Setting up auth
+2026-11-14T06:19:12.1275434Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T06:19:12.1304285Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T06:19:12.1689178Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T06:19:12.1728161Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T06:19:12.1965429Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T06:19:12.1994902Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T06:19:12.2228928Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-14T06:19:12.2265546Z ##[endgroup]
+2026-11-14T06:19:12.2266712Z ##[group]Fetching the repository
+2026-11-14T06:19:12.2273986Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ed82495361f21407d27adf970374c8f79cb4822d:refs/remotes/pull/88/merge
+2026-11-14T06:19:14.2180183Z From https://github.com/mikevocalz/nitro-forge
+2026-11-14T06:19:14.2182457Z  * [new ref]         ed82495361f21407d27adf970374c8f79cb4822d -> pull/88/merge
+2026-11-14T06:19:14.2187639Z ##[endgroup]
+2026-11-14T06:19:14.2189096Z ##[group]Determining the checkout info
+2026-11-14T06:19:14.2190725Z ##[endgroup]
+2026-11-14T06:19:14.2191699Z [command]/usr/bin/git sparse-checkout disable
+2026-11-14T06:19:14.2237724Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-14T06:19:14.2262318Z ##[group]Checking out the ref
+2026-11-14T06:19:14.2264533Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/88/merge
+2026-11-14T06:19:14.4046674Z Note: switching to 'refs/remotes/pull/88/merge'.
+2026-11-14T06:19:14.4047496Z 
+2026-11-14T06:19:14.4048066Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-14T06:19:14.4049434Z changes and commit them, and you can discard any commits you make in this
+2026-11-14T06:19:14.4050759Z state without impacting any branches by switching back to a branch.
+2026-11-14T06:19:14.4051535Z 
+2026-11-14T06:19:14.4052088Z If you want to create a new branch to retain commits you create, you may
+2026-11-14T06:19:14.4053285Z do so (now or later) by using -c with the switch command. Example:
+2026-11-14T06:19:14.4053963Z 
+2026-11-14T06:19:14.4054349Z   git switch -c <new-branch-name>
+2026-11-14T06:19:14.4055141Z 
+2026-11-14T06:19:14.4055586Z Or undo this operation with:
+2026-11-14T06:19:14.4056382Z 
+2026-11-14T06:19:14.4056792Z   git switch -
+2026-11-14T06:19:14.4057311Z 
+2026-11-14T06:19:14.4058142Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-14T06:19:14.4059244Z 
+2026-11-14T06:19:14.4060887Z HEAD is now at ed82495 Merge ca7a9ffb3244b1eee39e884281b9989bbf1d2a42 into dab27e177f05a747f2a234e3892f62e2f7b8c28b
+2026-11-14T06:19:14.4066462Z ##[endgroup]
+2026-11-14T06:19:14.4370290Z [command]/usr/bin/git log -1 --format=%H
+2026-11-14T06:19:14.4392615Z ed82495361f21407d27adf970374c8f79cb4822d
+2026-11-14T06:19:14.5224028Z ##[group]Run actions/setup-node@v4
+2026-11-14T06:19:14.5225023Z with:
+2026-11-14T06:19:14.5225752Z   node-version: 24.19.0
+2026-11-14T06:19:14.5226727Z   always-auth: false
+2026-11-14T06:19:14.5227550Z   check-latest: false
+2026-11-14T06:19:14.5235584Z   token: ***
+2026-11-14T06:19:14.5236418Z ##[endgroup]
+2026-11-14T06:19:14.6379011Z Attempting to download 24.19.0...
+2026-11-14T06:19:14.6491445Z (node:2205) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T06:19:14.6494839Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T06:19:15.5368438Z Acquiring 24.19.0 - x64 from https://github.com/actions/node-versions/releases/download/24.19.0-30872449280/node-24.19.0-linux-x64.tar.gz
+2026-11-14T06:19:15.9422473Z Extracting ...
+2026-11-14T06:19:15.9523384Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/b29bd76b-1766-4740-81fc-6dad3d4da66f -f /home/runner/work/_temp/ee6ead47-1af5-4eef-945e-85494defb7c6
+2026-11-14T06:19:16.6141246Z Adding to the cache ...
+2026-11-14T06:19:18.7191193Z ##[group]Environment details
+2026-11-14T06:19:18.9084889Z node: v24.19.0
+2026-11-14T06:19:18.9085416Z npm: 11.17.0
+2026-11-14T06:19:18.9085687Z yarn: 1.22.22
+2026-11-14T06:19:18.9086409Z ##[endgroup]
+2026-11-14T06:19:18.9256488Z ##[group]Run corepack enable
+2026-11-14T06:19:18.9256827Z [36;1mcorepack enable[0m
+2026-11-14T06:19:18.9307335Z shell: /usr/bin/bash -e {0}
+2026-11-14T06:19:18.9307610Z ##[endgroup]
+2026-11-14T06:19:18.9977663Z ##[group]Run corepack pnpm install --frozen-lockfile
+2026-11-14T06:19:18.9978020Z [36;1mcorepack pnpm install --frozen-lockfile[0m
+2026-11-14T06:19:19.0024302Z shell: /usr/bin/bash -e {0}
+2026-11-14T06:19:19.0024521Z ##[endgroup]
+2026-11-14T06:19:19.4864266Z Downloading the pnpm 12.18.0 binary for linux-x64...
+2026-11-14T06:19:20.1147383Z Scope: all 30 workspace projects
+2026-11-14T06:19:20.1603771Z ? Verifying lockfile against supply-chain policies (774 entries)...
+2026-11-14T06:19:20.1605025Z ✓ Lockfile passes supply-chain policies (774 entries in 0ms)
+2026-11-14T06:19:20.1605783Z Lockfile is up to date, resolution step is skipped
+2026-11-14T06:19:20.2454278Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-14T06:19:20.2455152Z   Content-addressable store is at: /home/runner/.local/share/pnpm/store/v11
+2026-11-14T06:19:20.2455785Z   Virtual store is at:             node_modules/.pnpm
+2026-11-14T06:19:20.2852709Z Downloading @rolldown/binding-linux-x64-gnu@1.2.19: 0.00 B/8.83 MB
+2026-11-14T06:19:20.2959759Z Downloading react-native-webgpu-dawn@157.1.0: 0.00 B/76.63 MB
+2026-11-14T06:19:20.2981512Z Downloading react-native-skia-graphite-android@157.1.0: 0.00 B/72.95 MB
+2026-11-14T06:19:20.3804228Z Downloading expo-file-system@58.0.13: 0.00 B/8.61 MB
+2026-11-14T06:19:20.3852562Z Downloading react-native-skia-graphite-apple-macos@157.1.0: 0.00 B/32.25 MB
+2026-11-14T06:19:20.3906733Z Downloading expo-image@58.0.18: 0.00 B/50.66 MB
+2026-11-14T06:19:20.4341340Z Downloading canvaskit-wasm@0.41.1: 0.00 B/9.93 MB
+2026-11-14T06:19:20.5317644Z Downloading expo-modules-core@58.1.0: 0.00 B/35.54 MB
+2026-11-14T06:19:20.5452978Z Downloading expo-modules-macros@0.33.0: 0.00 B/6.40 MB
+2026-11-14T06:19:20.5920882Z Downloading @turbo/linux-64@2.11.11: 0.00 B/19.83 MB
+2026-11-14T06:19:20.5950661Z Downloading react-native-worklets@0.13.1: 0.00 B/7.42 MB
+2026-11-14T06:19:20.6904062Z Downloading react-native-skia-graphite-apple-ios@157.1.0: 0.00 B/79.23 MB
+2026-11-14T06:19:20.6967719Z Downloading react-native-skia-graphite-apple-tvos@157.1.0: 0.00 B/46.93 MB
+2026-11-14T06:19:20.7044189Z Downloading hermes-compiler@260318099.0.5: 0.00 B/19.35 MB
+2026-11-14T06:19:20.7280358Z Downloading @typescript/typescript-linux-x64@7.0.2: 0.00 B/9.66 MB
+2026-11-14T06:19:20.7641549Z Downloading @expo/modules-macros-linux-x64@0.33.0: 0.00 B/9.09 MB
+2026-11-14T06:19:21.7608260Z Progress: resolved 642, reused 0, downloaded 336, added 308
+2026-11-14T06:19:22.7834840Z Progress: resolved 642, reused 0, downloaded 481, added 474
+2026-11-14T06:19:23.8518199Z Progress: resolved 642, reused 0, downloaded 573, added 569
+2026-11-14T06:19:24.8767221Z Progress: resolved 642, reused 0, downloaded 618, added 616
+2026-11-14T06:19:25.9754042Z Downloading react-native-webgpu-dawn@157.1.0: 57.41 MB/76.63 MB
+2026-11-14T06:19:26.9977776Z Downloading react-native-webgpu-dawn@157.1.0: 76.63 MB/76.63 MB, done
+2026-11-14T06:19:28.0780580Z Downloading react-native-skia-graphite-apple-ios@157.1.0: 60.34 MB/79.23 MB
+2026-11-14T06:19:28.4487098Z Packages: +642
+2026-11-14T06:19:28.4487638Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-14T06:19:28.5269572Z Progress: resolved 642, reused 0, downloaded 642, added 642, done
+2026-11-14T06:19:29.0568084Z 
+2026-11-14T06:19:29.0568643Z devDependencies:
+2026-11-14T06:19:29.0569014Z + @types/node 26.6.6
+2026-11-14T06:19:29.0569218Z + tsx 4.23.15
+2026-11-14T06:19:29.0569542Z + turbo 2.11.11
+2026-11-14T06:19:29.0569781Z + typescript 7.0.2
+2026-11-14T06:19:29.0569995Z + vitest 5.1.0
+2026-11-14T06:19:29.0570121Z 
+2026-11-14T06:19:29.1811791Z Done in 9.1s using pnpm v12.18.0
+2026-11-14T06:19:29.2338244Z ##[group]Run node tooling/verify-nyc-tron-pin.mjs --download
+2026-11-14T06:19:29.2338631Z [36;1mnode tooling/verify-nyc-tron-pin.mjs --download[0m
+2026-11-14T06:19:29.2387222Z shell: /usr/bin/bash -e {0}
+2026-11-14T06:19:29.2387436Z ##[endgroup]
+2026-11-14T06:19:29.9669902Z NYC-Tron pin v1.0.0-rc.2: 26 manifest references match; release assets re-hashed
+2026-11-14T06:19:30.0004486Z ##[group]Run corepack pnpm --filter @nitro-forge/tally typecheck
+2026-11-14T06:19:30.0004886Z [36;1mcorepack pnpm --filter @nitro-forge/tally typecheck[0m
+2026-11-14T06:19:30.0050524Z shell: /usr/bin/bash -e {0}
+2026-11-14T06:19:30.0050739Z ##[endgroup]
+2026-11-14T06:19:30.2988695Z $ tsc --noEmit -p tsconfig.json
+2026-11-14T06:19:30.7507194Z ##[group]Run corepack pnpm --filter @nitro-forge/tally exec vitest run tests/grid-adapter.test.ts tests/grid-cluster.test.ts tests/nyc-tron-consumer.test.ts
+2026-11-14T06:19:30.7508065Z [36;1mcorepack pnpm --filter @nitro-forge/tally exec vitest run tests/grid-adapter.test.ts tests/grid-cluster.test.ts tests/nyc-tron-consumer.test.ts[0m
+2026-11-14T06:19:30.7551702Z shell: /usr/bin/bash -e {0}
+2026-11-14T06:19:30.7551928Z ##[endgroup]
+2026-11-14T06:19:31.0995200Z 
+2026-11-14T06:19:31.1000965Z [1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/home/runner/work/nitro-forge/nitro-forge/packages/tally[39m
+2026-11-14T06:19:31.1001824Z 
+2026-11-14T06:19:31.2878857Z  [32m✓[39m tests/nyc-tron-consumer.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+2026-11-14T06:19:31.3009229Z  [32m✓[39m tests/grid-adapter.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-14T06:19:31.3405863Z  [32m✓[39m tests/grid-cluster.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-14T06:19:31.3434193Z 
+2026-11-14T06:19:31.3437685Z [2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+2026-11-14T06:19:31.3438393Z [2m      Tests [22m [1m[32m22 passed[39m[22m[90m (22)[39m
+2026-11-14T06:19:31.3441007Z [2m   Start at [22m 06:19:31
+2026-11-14T06:19:31.3442914Z [2m   Duration [22m 236ms[2m (transform 65%, import 19%, tests 11%, worker 5%)[22m
+2026-11-14T06:19:31.3455277Z 
+2026-11-14T06:19:31.4118836Z ##[group]Run cargo test -p tally-engine
+2026-11-14T06:19:31.4119239Z [36;1mcargo test -p tally-engine[0m
+2026-11-14T06:19:31.4163462Z shell: /usr/bin/bash -e {0}
+2026-11-14T06:19:31.4163680Z ##[endgroup]
+2026-11-14T06:19:33.6541834Z     Updating crates.io index
+2026-11-14T06:19:34.8598777Z  Downloading crates ...
+2026-11-14T06:19:34.9464442Z   Downloaded adler2 v2.0.1
+2026-11-14T06:19:34.9508072Z   Downloaded cfg-if v1.0.5
+2026-11-14T06:19:34.9518259Z   Downloaded equivalent v1.0.3
+2026-11-14T06:19:34.9567416Z   Downloaded crc32fast v1.5.5
+2026-11-14T06:19:34.9589106Z   Downloaded bumpalo v3.20.3
+2026-11-14T06:19:34.9638013Z   Downloaded itoa v1.0.19
+2026-11-14T06:19:34.9660579Z   Downloaded thiserror v2.0.21
+2026-11-14T06:19:34.9710591Z   Downloaded simd-adler32 v0.3.10
+2026-11-14T06:19:34.9729387Z   Downloaded zmij v1.0.23
+2026-11-14T06:19:34.9743372Z   Downloaded thiserror-impl v2.0.21
+2026-11-14T06:19:34.9755761Z   Downloaded quote v1.0.47
+2026-11-14T06:19:34.9776503Z   Downloaded zopfli v0.8.4
+2026-11-14T06:19:34.9794001Z   Downloaded log v0.4.35
+2026-11-14T06:19:34.9813667Z   Downloaded unicode-ident v1.0.27
+2026-11-14T06:19:34.9834907Z   Downloaded proc-macro2 v1.0.107
+2026-11-14T06:19:34.9857792Z   Downloaded serde_core v1.0.229
+2026-11-14T06:19:34.9878308Z   Downloaded miniz_oxide v0.9.1
+2026-11-14T06:19:34.9899512Z   Downloaded serde_derive v1.0.229
+2026-11-14T06:19:34.9922966Z   Downloaded serde v1.0.229
+2026-11-14T06:19:34.9949379Z   Downloaded zip v2.6.1
+2026-11-14T06:19:34.9981875Z   Downloaded memchr v2.8.3
+2026-11-14T06:19:35.0024356Z   Downloaded flate2 v1.1.11
+2026-11-14T06:19:35.0064306Z   Downloaded indexmap v2.14.2
+2026-11-14T06:19:35.0097209Z   Downloaded hashbrown v0.17.1
+2026-11-14T06:19:35.0138346Z   Downloaded serde_json v1.0.154
+2026-11-14T06:19:35.0195825Z   Downloaded quick-xml v0.37.5
+2026-11-14T06:19:35.0239135Z   Downloaded syn v3.0.10
+2026-11-14T06:19:35.0738049Z    Compiling proc-macro2 v1.0.107
+2026-11-14T06:19:35.0738562Z    Compiling unicode-ident v1.0.27
+2026-11-14T06:19:35.0738902Z    Compiling quote v1.0.47
+2026-11-14T06:19:35.0739152Z    Compiling serde_core v1.0.229
+2026-11-14T06:19:39.5733643Z    Compiling crc32fast v1.5.5
+2026-11-14T06:19:42.2938987Z    Compiling cfg-if v1.0.5
+2026-11-14T06:19:42.2939679Z    Compiling zmij v1.0.23
+2026-11-14T06:19:42.2966115Z    Compiling memchr v2.8.3
+2026-11-14T06:19:42.3814560Z    Compiling simd-adler32 v0.3.10
+2026-11-14T06:19:43.2227579Z    Compiling adler2 v2.0.1
+2026-11-14T06:19:43.2744395Z    Compiling serde_json v1.0.154
+2026-11-14T06:19:43.3527096Z    Compiling thiserror v2.0.21
+2026-11-14T06:19:43.4997567Z    Compiling syn v3.0.10
+2026-11-14T06:19:43.5043906Z    Compiling serde v1.0.229
+2026-11-14T06:19:43.5837386Z    Compiling miniz_oxide v0.9.1
+2026-11-14T06:19:44.1744144Z    Compiling hashbrown v0.17.1
+2026-11-14T06:19:44.2757262Z    Compiling log v0.4.35
+2026-11-14T06:19:44.3897331Z    Compiling zip v2.6.1
+2026-11-14T06:19:44.4747151Z    Compiling equivalent v1.0.3
+2026-11-14T06:19:44.5050824Z    Compiling bumpalo v3.20.3
+2026-11-14T06:19:44.6207475Z    Compiling itoa v1.0.19
+2026-11-14T06:19:44.7476801Z    Compiling indexmap v2.14.2
+2026-11-14T06:19:44.7770208Z    Compiling zopfli v0.8.4
+2026-11-14T06:19:45.3627212Z    Compiling thiserror-impl v2.0.21
+2026-11-14T06:19:45.4387026Z    Compiling serde_derive v1.0.229
+2026-11-14T06:19:45.6687043Z    Compiling flate2 v1.1.11
+2026-11-14T06:19:45.9847427Z    Compiling quick-xml v0.37.5
+2026-11-14T06:19:47.2615649Z    Compiling ignition-core v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/ignition-core)
+2026-11-14T06:19:47.4647395Z    Compiling tally-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/tally/rust)
+2026-11-14T06:19:50.2967397Z warning: unused variable: `before`
+2026-11-14T06:19:50.2996794Z    --> packages/tally/rust/src/csv_ops.rs:494:13
+2026-11-14T06:19:50.3026452Z     |
+2026-11-14T06:19:50.3027138Z 494 |         let before = e.snapshot().unwrap();
+2026-11-14T06:19:50.3057543Z     |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_before`
+2026-11-14T06:19:50.3086428Z     |
+2026-11-14T06:19:50.3098803Z     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T06:19:50.3116417Z 
+2026-11-14T06:19:51.5041793Z warning: unused variable: `v`
+2026-11-14T06:19:51.5042178Z     --> packages/tally/rust/src/lib.rs:3033:22
+2026-11-14T06:19:51.5042426Z      |
+2026-11-14T06:19:51.5042676Z 3033 |         let (schema, v) = snapshot_schema(&e);
+2026-11-14T06:19:51.5043059Z      |                      ^ help: if this is intentional, prefix it with an underscore: `_v`
+2026-11-14T06:19:51.5043300Z 
+2026-11-14T06:19:51.5043400Z warning: unused variable: `v`
+2026-11-14T06:19:51.5043649Z     --> packages/tally/rust/src/lib.rs:3047:22
+2026-11-14T06:19:51.5043872Z      |
+2026-11-14T06:19:51.5044103Z 3047 |         let (schema, v) = snapshot_schema(&e);
+2026-11-14T06:19:51.5044455Z      |                      ^ help: if this is intentional, prefix it with an underscore: `_v`
+2026-11-14T06:19:51.5044739Z 
+2026-11-14T06:19:51.5600834Z warning: function `sheet_cell` is never used
+2026-11-14T06:19:51.5601331Z    --> packages/tally/rust/src/struct_ops.rs:835:8
+2026-11-14T06:19:51.5601653Z     |
+2026-11-14T06:19:51.5602148Z 835 |     fn sheet_cell(e: &TallyEngine, idx: usize, addr: &str) -> Option<String> {
+2026-11-14T06:19:51.5602566Z     |        ^^^^^^^^^^
+2026-11-14T06:19:51.5602793Z     |
+2026-11-14T06:19:51.5603125Z     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T06:19:51.5603417Z 
+2026-11-14T06:19:55.2797408Z warning: `tally-engine` (lib test) generated 4 warnings (run `cargo fix --lib -p tally-engine --tests` to apply 3 suggestions)
+2026-11-14T06:19:55.2798328Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 23.26s
+2026-11-14T06:19:55.3076932Z      Running unittests src/lib.rs (target/debug/deps/tally_engine-82f7592246fefe49)
+2026-11-14T06:19:55.3092328Z 
+2026-11-14T06:19:55.3092460Z running 234 tests
+2026-11-14T06:19:55.3116865Z test chart_ops::tests::undo_redo_and_sheet_removal_cascade ... ok
+2026-11-14T06:19:55.3126627Z test chart_ops::tests::insert_list_update_remove_roundtrip ... ok
+2026-11-14T06:19:55.3136775Z test chart_ops::tests::update_chart_patch_edges ... ok
+2026-11-14T06:19:55.3137898Z test comment_ops::tests::add_update_resolve_remove_roundtrip ... ok
+2026-11-14T06:19:55.3138740Z test comment_ops::tests::list_comments_filters ... ok
+2026-11-14T06:19:55.3139537Z test chart_ops::tests::hostile_restore_validates_charts ... ok
+2026-11-14T06:19:55.3146949Z test comment_ops::tests::undo_redo_and_sheet_removal_cascade ... ok
+2026-11-14T06:19:55.3148730Z test conditional_ops::tests::clear_conditional_format_rejects_sheet_alongside_id ... ok
+2026-11-14T06:19:55.3163779Z test conditional_ops::tests::criteria_kinds_match_computed_values ... ok
+2026-11-14T06:19:55.3237169Z test chart_ops::tests::insert_chart_payload_validation_is_atomic ... ok
+2026-11-14T06:19:55.3240310Z test conditional_ops::tests::evaluate_uses_live_computed_values_and_sheet_param ... ok
+2026-11-14T06:19:55.3251680Z test conditional_ops::tests::hostile_restore_normalizes_format_booleans ... ok
+2026-11-14T06:19:55.3306812Z test comment_ops::tests::snapshot_roundtrip_and_hostile_restore ... ok
+2026-11-14T06:19:55.3312506Z test conditional_ops::tests::invalid_payloads_reject_atomically ... ok
+2026-11-14T06:19:55.3315692Z test conditional_ops::tests::set_list_clear_by_id_and_range ... ok
+2026-11-14T06:19:55.3323500Z test conditional_ops::tests::undo_redo_remove_sheet_cascade_and_snapshot_roundtrip ... ok
+2026-11-14T06:19:55.3327526Z test csv_ops::tests::csv_round_trip_preserves_values ... ok
+2026-11-14T06:19:55.3331653Z test conditional_ops::tests::hostile_restore_rejects_bad_rules_atomically ... ok
+2026-11-14T06:19:55.3356691Z test csv_ops::tests::export_respects_explicit_range_empty_and_sparse_sheets ... ok
+2026-11-14T06:19:55.3373284Z test csv_ops::tests::import_at_anchor_and_sheet_params ... ok
+2026-11-14T06:19:55.3387515Z test csv_ops::tests::import_csv_writes_verbatim_and_types_like_setcell ... ok
+2026-11-14T06:19:55.3388675Z test csv_ops::tests::import_handles_crlf_lf_cr_embedded_newlines_and_bom ... ok
+2026-11-14T06:19:55.3389552Z test csv_ops::tests::import_is_ragged_and_empty_fields_clear ... ok
+2026-11-14T06:19:55.3390399Z test csv_ops::tests::export_csv_emits_computed_values_with_quoting ... ok
+2026-11-14T06:19:55.3391191Z test csv_ops::tests::import_respects_sheet_protection ... ok
+2026-11-14T06:19:55.3392019Z test csv_ops::tests::import_skips_blank_lines_but_keeps_delimiter_rows ... ok
+2026-11-14T06:19:55.3392812Z test csv_ops::tests::import_tsv_uses_tab_delimiter ... ok
+2026-11-14T06:19:55.3393635Z test csv_ops::tests::import_undo_restores_and_empty_import_is_readonly ... ok
+2026-11-14T06:19:55.3394464Z test csv_ops::tests::import_unicode_and_control_heavy_fields ... ok
+2026-11-14T06:19:55.3395429Z test filter_ops::tests::criteria_match_computed_values_and_undo_restores ... ok
+2026-11-14T06:19:55.3396461Z test filter_ops::tests::set_list_clear_and_match ... ok
+2026-11-14T06:19:55.3416756Z test filter_ops::tests::sheet_scoping_cascade_and_snapshot_schema ... ok
+2026-11-14T06:19:55.3548607Z test filter_ops::tests::validation_and_atomicity ... ok
+2026-11-14T06:19:55.3585273Z test filter_ops::tests::whole_row_filter_ands_across_columns ... ok
+2026-11-14T06:19:55.3586680Z test csv_ops::tests::import_rejects_malformed_and_oversized_atomically ... ok
+2026-11-14T06:19:55.3587536Z test format_ops::tests::border_and_fill_formats ... ok
+2026-11-14T06:19:55.3588306Z test format_ops::tests::content_ops_do_not_touch_formats ... ok
+2026-11-14T06:19:55.3589211Z test format_ops::tests::invalid_patches_reject_without_mutation_or_redo_loss ... ok
+2026-11-14T06:19:55.3590090Z test format_ops::tests::legacy_snapshots_default_to_no_formats ... ok
+2026-11-14T06:19:55.3590958Z test format_ops::tests::hostile_restore_rejects_bad_formats_atomically ... ok
+2026-11-14T06:19:55.3591810Z test format_ops::tests::set_patch_merge_and_clear ... ok
+2026-11-14T06:19:55.3592689Z test format_ops::tests::snapshot_wraps_for_formats_and_restores ... ok
+2026-11-14T06:19:55.3597820Z test format_ops::tests::targets_cells_dedupe_and_bounds ... ok
+2026-11-14T06:19:55.3598556Z test format_ops::tests::undo_redo_formats ... ok
+2026-11-14T06:19:55.3604565Z test formula::conditional::document_tests::stored_conditional_formulas_recompute_after_edit_undo_and_reopen ... ok
+2026-11-14T06:19:55.3613962Z test formula::conditional::tests::numbers_references_concatenated_criteria_blanks_and_evaluated_cells ... ok
+2026-11-14T06:19:55.3621604Z test formula::conditional::tests::shape_reference_errors_cycles_and_lazy_sum_cells ... ok
+2026-11-14T06:19:55.3630516Z test formula::conditional::tests::unicode_scalars_ascii_case_and_escaped_wildcards ... ok
+2026-11-14T06:19:55.3647343Z test formula::tests::addr_parse_and_format ... ok
+2026-11-14T06:19:55.3657817Z test formula::tests::arithmetic_precedence ... ok
+2026-11-14T06:19:55.3668020Z test formula::tests::comparisons ... ok
+2026-11-14T06:19:55.3678370Z test formula::tests::cross_sheet_cells_ranges_and_quoting ... ok
+2026-11-14T06:19:55.3684420Z test formula::tests::cross_sheet_cycles_terminate ... ok
+2026-11-14T06:19:55.3687626Z test formula::tests::cross_sheet_missing_and_malformed_refs ... ok
+2026-11-14T06:19:55.3698416Z test formula::tests::cycles_and_memoization ... ok
+2026-11-14T06:19:55.3707694Z test formula::tests::error_values ... ok
+2026-11-14T06:19:55.3737460Z test formula::tests::function_arity_errors ... ok
+2026-11-14T06:19:55.3748757Z test formula::tests::functions_basics ... ok
+2026-11-14T06:19:55.3757508Z test formula::tests::percent_and_concat ... ok
+2026-11-14T06:19:55.3769594Z test formula::tests::ranges_and_aggregates ... ok
+2026-11-14T06:19:55.3777455Z test formula::tests::raw_scalars ... ok
+2026-11-14T06:19:55.3779501Z test formula::tests::remap_respects_sheet_qualifiers ... ok
+2026-11-14T06:19:55.3797783Z test formula::tests::rename_sheet_refs_rewrites_qualifiers ... ok
+2026-11-14T06:19:55.3816735Z test name_ops::tests::define_list_update_remove_roundtrip ... ok
+2026-11-14T06:19:55.3821007Z test name_ops::tests::define_name_validation_and_atomicity ... ok
+2026-11-14T06:19:55.3821889Z test name_ops::tests::function_catalog_is_read_only_and_bounded ... ok
+2026-11-14T06:19:55.3896745Z test name_ops::tests::hostile_restore_rejects_bad_names_atomically ... ok
+2026-11-14T06:19:55.3926482Z test name_ops::tests::name_ops_undo_redo_and_snapshot_roundtrip ... ok
+2026-11-14T06:19:55.3956371Z test name_ops::tests::name_validation_subset ... ok
+2026-11-14T06:19:55.3986398Z test name_ops::tests::names_resolve_in_formulas ... ok
+2026-11-14T06:19:55.4016370Z test name_ops::tests::refers_to_parse_and_canonicalize ... ok
+2026-11-14T06:19:55.4037764Z test name_ops::tests::remove_sheet_cascades_names_and_undo_restores ... ok
+2026-11-14T06:19:55.4076470Z test pivot_ops::tests::column_delete_shrinking_source_drops_pivot ... ok
+2026-11-14T06:19:55.4106474Z test pivot_ops::tests::empty_filter_means_all_and_round_trips ... ok
+2026-11-14T06:19:55.4196994Z test formula::conditional::tests::deterministic_range_text_criteria_and_shared_work_limits ... ok
+2026-11-14T06:19:55.4217868Z test conditional_ops::tests::evaluate_charges_work_per_candidate_and_bounds_rule_cell_product ... ok
+2026-11-14T06:19:55.4226744Z test pivot_ops::tests::insert_list_describe_remove_roundtrip ... ok
+2026-11-14T06:19:55.4239123Z test pivot_ops::tests::insert_overflow_rejects_atomically ... ok
+2026-11-14T06:19:55.4271172Z test pivot_ops::tests::insert_validation_is_atomic ... ok
+2026-11-14T06:19:55.4283740Z test pivot_ops::tests::protection_gates_mutations_by_output_sheet ... ok
+2026-11-14T06:19:55.4284502Z test pivot_ops::tests::hostile_restore_validates_pivots ... ok
+2026-11-14T06:19:55.4293823Z test comment_ops::tests::add_comment_payload_validation_is_atomic ... ok
+2026-11-14T06:19:55.4294584Z test pivot_ops::tests::refresh_all_skips_protected_and_undoes_as_one_entry ... ok
+2026-11-14T06:19:55.4295333Z test pivot_ops::tests::refresh_honors_columns_filters_sort_and_all_aggs ... ok
+2026-11-14T06:19:55.4296260Z test pivot_ops::tests::refresh_writes_grouped_grid_and_is_eventless_when_identical ... ok
+2026-11-14T06:19:55.4297056Z test pivot_ops::tests::remove_sheet_cascades_on_output_and_source ... ok
+2026-11-14T06:19:55.4297816Z test pivot_ops::tests::refresh_snapshot_roundtrip_and_restore_validation ... ok
+2026-11-14T06:19:55.4298653Z test pivot_ops::tests::source_sheet_defaults_to_output_and_resolves_names ... ok
+2026-11-14T06:19:55.4299344Z test pivot_ops::tests::field_and_value_caps_enforced ... ok
+2026-11-14T06:19:55.4299969Z test pivot_ops::tests::structural_edits_remap_source_range ... ok
+2026-11-14T06:19:55.4300562Z test pivot_ops::tests::undo_redo_restores_specs ... ok
+2026-11-14T06:19:55.4301209Z test pivot_ops::tests::snapshot_roundtrip_and_schema9 ... ok
+2026-11-14T06:19:55.4301836Z test pivot_ops::tests::update_pivot_patches_and_clears ... ok
+2026-11-14T06:19:55.4302623Z test protection::tests::batch_enforces_protection_and_rolls_back_prior_staged_writes ... ok
+2026-11-14T06:19:55.4303421Z test protection::tests::comment_ops_guard_their_bound_sheet ... ok
+2026-11-14T06:19:55.4304119Z test pivot_ops::tests::refresh_output_anchor_patch_and_bounds ... ok
+2026-11-14T06:19:55.4304954Z test protection::tests::every_protected_write_rejects_without_state_or_history_changes ... ok
+2026-11-14T06:19:55.4305852Z test protection::tests::protection_roundtrips_and_invalid_restore_is_atomic ... ok
+2026-11-14T06:19:55.4306747Z test protection::tests::name_ops_guard_their_bound_sheet ... ok
+2026-11-14T06:19:55.4307359Z test protection::tests::view_ops_guard_their_bound_sheet ... ok
+2026-11-14T06:19:55.4308025Z test range_ops::tests::blank_source_clears_target_on_active_sheet_only ... ok
+2026-11-14T06:19:55.4308795Z test range_ops::tests::fill_shifts_locks_and_repeats_from_original_source ... ok
+2026-11-14T06:19:55.4309511Z test range_ops::tests::no_op_preserves_redo_and_has_no_events ... ok
+2026-11-14T06:19:55.4310128Z test range_ops::tests::paste_is_atomic_and_undoable ... ok
+2026-11-14T06:19:55.4311753Z test range_ops::tests::reference_lexer_preserves_nonreferences ... ok
+2026-11-14T06:19:55.4312633Z test range_ops::tests::references_and_writes_stay_on_the_sheet ... ok
+2026-11-14T06:19:55.4313365Z test range_ops::tests::series_fill_infers_steps_and_writes_literals ... ok
+2026-11-14T06:19:55.4316780Z test range_ops::tests::rejects_invalid_fill_without_losing_redo ... ok
+2026-11-14T06:19:55.4317480Z test range_ops::tests::series_fill_rejects_without_mutation ... ok
+2026-11-14T06:19:55.4318140Z test range_ops::tests::series_fill_zero_change_is_eventless ... ok
+2026-11-14T06:19:55.4321397Z test sheet_ops::tests::add_sheet_allocator_branches_and_remove_sheet_inverses_are_reversible ... ok
+2026-11-14T06:19:55.4325073Z test sheet_ops::tests::duplicate_is_independent_durable_and_preserves_active_identity ... ok
+2026-11-14T06:19:55.4328306Z test sheet_ops::tests::exhausted_ids_reject_without_snapshot_or_history_changes ... ok
+2026-11-14T06:19:55.4329239Z test sheet_ops::tests::missing_add_sheet_inverse_does_not_change_allocator ... ok
+2026-11-14T06:19:55.4330136Z test sheet_ops::tests::legacy_snapshot_defaults_tone_and_current_color_roundtrips ... ok
+2026-11-14T06:19:55.4333120Z test sheet_ops::tests::reopened_add_sheet_undo_redo_restores_complete_snapshot_and_allocator ... ok
+2026-11-14T06:19:55.4334432Z test sheet_ops::tests::reorder_preserves_active_sheet_cells_and_undo_redo ... ok
+2026-11-14T06:19:55.4335870Z test sheet_ops::tests::same_value_requests_preserve_redo_and_invalid_moves_are_atomic ... ok
+2026-11-14T06:19:55.4339162Z test sort_ops::tests::duplicate_key_columns_dedupe_first_wins ... ok
+2026-11-14T06:19:55.4340514Z test sort_ops::tests::class_order_ties_and_descending ... ok
+2026-11-14T06:19:55.4342203Z test sort_ops::tests::formulas_move_verbatim_without_ref_rewriting ... ok
+2026-11-14T06:19:55.4345204Z test sort_ops::tests::no_op_and_outside_cells_untouched ... ok
+2026-11-14T06:19:55.4345815Z test sort_ops::tests::multi_key_ties_and_header ... ok
+2026-11-14T06:19:55.4347732Z test sort_ops::tests::sort_commits_to_the_resolved_sheet_not_the_active_one ... ok
+2026-11-14T06:19:55.4349027Z test sort_ops::tests::sort_on_unprotected_sheet_ignores_protected_active ... ok
+2026-11-14T06:19:55.4350973Z test sort_ops::tests::sort_rejects_a_protected_target_sheet ... ok
+2026-11-14T06:19:55.4354274Z test sort_ops::tests::undo_redo_restore_prior_order ... ok
+2026-11-14T06:19:55.4358446Z test sparkline_ops::tests::clear_sparkline_selector_edges ... ok
+2026-11-14T06:19:55.4396594Z test sort_ops::tests::validation_is_atomic ... ok
+2026-11-14T06:19:55.4397239Z test sparkline_ops::tests::set_replace_clear_roundtrip ... ok
+2026-11-14T06:19:55.4397928Z test sparkline_ops::tests::undo_redo_and_sheet_removal_cascade ... ok
+2026-11-14T06:19:55.4416976Z test struct_ops::tests::charts_sparklines_comments_views_remap ... ok
+2026-11-14T06:19:55.4418548Z test sparkline_ops::tests::hostile_restore_validates_sparklines ... ok
+2026-11-14T06:19:55.4419504Z test struct_ops::tests::dead_entries_drop_on_delete ... ok
+2026-11-14T06:19:55.4422412Z test struct_ops::tests::delete_rows_drops_band_and_rewrites_refs ... ok
+2026-11-14T06:19:55.4424979Z test struct_ops::tests::delete_rows_partial_range_clamps ... ok
+2026-11-14T06:19:55.4428898Z test struct_ops::tests::cols_ops_mirror_rows ... ok
+2026-11-14T06:19:55.4432524Z test struct_ops::tests::hostile_restore_rejects_bad_merges ... ok
+2026-11-14T06:19:55.4434919Z test struct_ops::tests::insert_growing_merge_past_cell_cap_rejects_atomically ... ok
+2026-11-14T06:19:55.4439142Z test struct_ops::tests::insert_past_last_col_rejects_atomically ... ok
+2026-11-14T06:19:55.4440173Z test struct_ops::tests::insert_overflow_covers_every_bound_structure ... ok
+2026-11-14T06:19:55.4441612Z test struct_ops::tests::insert_past_last_row_rejects_atomically ... ok
+2026-11-14T06:19:55.4443389Z test struct_ops::tests::insert_rows_multi_count_and_refs_below_band ... ok
+2026-11-14T06:19:55.4447057Z test struct_ops::tests::insert_rows_shifts_cells_formats_and_formula_refs ... ok
+2026-11-14T06:19:55.4449716Z test struct_ops::tests::merge_ops_undo_redo_atomic ... ok
+2026-11-14T06:19:55.4451863Z test struct_ops::tests::merge_rejects_overlap_single_cell_and_bad_bounds ... ok
+2026-11-14T06:19:55.4454580Z test struct_ops::tests::merge_undo_redo_and_snapshot_roundtrip ... ok
+2026-11-14T06:19:55.4457615Z test struct_ops::tests::merge_unmerge_list_and_anchor_reporting ... ok
+2026-11-14T06:19:55.4458610Z test struct_ops::tests::insert_remaps_locked_refs_and_expands_ranges ... ok
+2026-11-14T06:19:55.4462521Z test struct_ops::tests::names_validations_conditionals_filters_remap ... ok
+2026-11-14T06:19:55.4466659Z test struct_ops::tests::structural_bounds_and_atomicity ... ok
+2026-11-14T06:19:55.4468397Z test struct_ops::tests::structural_respects_sheet_param_and_protection ... ok
+2026-11-14T06:19:55.4469169Z test struct_ops::tests::merges_remap_shrink_and_drop_with_structural_ops ... ok
+2026-11-14T06:19:55.4480006Z test table_ops::tests::insert_list_describe_remove_roundtrip ... ok
+2026-11-14T06:19:55.4488465Z test table_ops::tests::insert_overflow_rejects_atomically ... ok
+2026-11-14T06:19:55.4495513Z test sparkline_ops::tests::set_sparkline_payload_validation_is_atomic ... ok
+2026-11-14T06:19:55.4496957Z test table_ops::tests::insert_validation_is_atomic ... ok
+2026-11-14T06:19:55.4499877Z test table_ops::tests::name_rules_and_auto_naming ... ok
+2026-11-14T06:19:55.4500702Z test table_ops::tests::overlap_checks_ignore_other_sheets ... ok
+2026-11-14T06:19:55.4501566Z test table_ops::tests::hostile_restore_validates_tables ... ok
+2026-11-14T06:19:55.4507278Z test table_ops::tests::protection_gates_mutations_by_bound_sheet ... ok
+2026-11-14T06:19:55.4514422Z test table_ops::tests::snapshot_roundtrip_and_schema10 ... ok
+2026-11-14T06:19:55.4515030Z test table_ops::tests::remove_sheet_cascades_and_readds ... ok
+2026-11-14T06:19:55.4515724Z test table_ops::tests::structural_delete_shrinking_table_to_two_cells_keeps_it ... ok
+2026-11-14T06:19:55.4516516Z test table_ops::tests::structural_edits_remap_table_range ... ok
+2026-11-14T06:19:55.4517259Z test table_ops::tests::structural_insert_growing_table_past_cell_cap_rejects ... ok
+2026-11-14T06:19:55.4521754Z test table_ops::tests::table_merge_overlap_rejects_both_directions ... ok
+2026-11-14T06:19:55.4523026Z test table_ops::tests::table_table_overlap_rejects ... ok
+2026-11-14T06:19:55.4525716Z test table_ops::tests::undo_redo_restores_tables ... ok
+2026-11-14T06:19:55.4528861Z test table_ops::tests::structural_delete_dropping_table_below_two_cells ... ok
+2026-11-14T06:19:55.4529533Z test table_ops::tests::update_table_patches_and_clears ... ok
+2026-11-14T06:19:55.4531276Z test table_ops::tests::update_table_shrink_onto_own_footprint_succeeds ... ok
+2026-11-14T06:19:55.4531828Z test tests::cell_ops_validation ... ok
+2026-11-14T06:19:55.4533852Z test tests::cells_are_per_active_sheet ... ok
+2026-11-14T06:19:55.4538944Z test tests::cross_sheet_cycles_and_depth_bounds ... ok
+2026-11-14T06:19:55.4540925Z test tests::cross_sheet_missing_and_hostile_refs ... ok
+2026-11-14T06:19:55.4544524Z test tests::cross_sheet_refs_evaluate_and_quote ... ok
+2026-11-14T06:19:55.4549088Z test tests::cycles_end_to_end ... ok
+2026-11-14T06:19:55.4550529Z test tests::evaluate_op ... ok
+2026-11-14T06:19:55.4551765Z test tests::events_emitted_on_mutations_only ... ok
+2026-11-14T06:19:55.4557481Z test tests::every_address_op_stops_at_the_sheet_edge ... ok
+2026-11-14T06:19:55.4569460Z test tests::computed_is_derived_live ... ok
+2026-11-14T06:19:55.4571205Z test tests::formulas_end_to_end ... ok
+2026-11-14T06:19:55.4571920Z test tests::full_round_trip ... ok
+2026-11-14T06:19:55.4572923Z test tests::get_range_op ... ok
+2026-11-14T06:19:55.4573500Z test tests::kind_and_new_defaults ... ok
+2026-11-14T06:19:55.4574214Z test tests::remove_sheet_leaves_refs_at_ref_error ... ok
+2026-11-14T06:19:55.4577979Z test tests::rename_sheet_rewrites_cross_sheet_refs ... ok
+2026-11-14T06:19:55.4579809Z test tests::restore_rejects_garbage ... ok
+2026-11-14T06:19:55.4589884Z test tests::restore_accepts_wrapped_and_legacy_raw_payloads ... ok
+2026-11-14T06:19:55.4599906Z test tests::set_get_cell_variants ... ok
+2026-11-14T06:19:55.4606745Z test tests::restore_rejects_newer_tables_under_lower_or_bare_schema ... ok
+2026-11-14T06:19:55.4616903Z test tests::sheet_lifecycle ... ok
+2026-11-14T06:19:55.4619862Z test tests::snapshot_restore_equality ... ok
+2026-11-14T06:19:55.4643190Z test tests::snapshot_wraps_only_when_durable_sheet_fields_present ... ok
+2026-11-14T06:19:55.4647056Z test tests::snapshot_schema_matrix_emit_and_restore ... ok
+2026-11-14T06:19:55.4647875Z test tests::structural_edits_remap_qualified_refs_on_all_sheets ... ok
+2026-11-14T06:19:55.4649131Z test tests::undo_redo_cells ... ok
+2026-11-14T06:19:55.4660046Z test tests::undo_redo_sheets_and_new ... ok
+2026-11-14T06:19:55.4663430Z test tests::undo_remove_sheet_readmits_names_within_restore_invariants ... ok
+2026-11-14T06:19:55.4686805Z test tests::version_gate_and_unknown_op ... ok
+2026-11-14T06:19:55.4691222Z test tests::undo_remove_sheet_dropped_names_respect_max_names ... ok
+2026-11-14T06:19:55.4692389Z test tests::versioned_snapshot_rejects_bad_kind_schema_atomically ... ok
+2026-11-14T06:19:55.4693151Z test validation_ops::tests::criteria_invariants ... ok
+2026-11-14T06:19:55.4696749Z test validation_ops::tests::error_and_computed_empty_never_pass_bounds ... ok
+2026-11-14T06:19:55.4699460Z test validation_ops::tests::clear_validation_by_id_and_range ... ok
+2026-11-14T06:19:55.4704982Z test validation_ops::tests::overlap_replace_and_noop_semantics ... ok
+2026-11-14T06:19:55.4722952Z test validation_ops::tests::payload_null_and_selector_edges ... ok
+2026-11-14T06:19:55.4736655Z test validation_ops::tests::protection_guards_validation_mutations_only ... ok
+2026-11-14T06:19:55.4766714Z test validation_ops::tests::remove_sheet_cascades_rules_and_undo_restores ... ok
+2026-11-14T06:19:55.4796546Z test validation_ops::tests::set_and_validate_number_list_text ... ok
+2026-11-14T06:19:55.4797443Z test validation_ops::tests::set_validation_payload_validation ... ok
+2026-11-14T06:19:55.4826648Z test validation_ops::tests::undo_redo_validation_ops ... ok
+2026-11-14T06:19:55.4831156Z test validation_ops::tests::hostile_restore_rejects_bad_rules_atomically ... ok
+2026-11-14T06:19:55.4832004Z test view_ops::tests::save_apply_list_remove_roundtrip ... ok
+2026-11-14T06:19:55.4832789Z test view_ops::tests::hostile_restore_validates_views ... ok
+2026-11-14T06:19:55.4833596Z test view_ops::tests::save_sheet_view_update_in_place_and_bounds ... ok
+2026-11-14T06:19:55.4834374Z test view_ops::tests::set_sheet_view_payload_edges ... ok
+2026-11-14T06:19:55.4835126Z test view_ops::tests::undo_redo_and_sheet_removal_cascade ... ok
+2026-11-14T06:19:55.4835881Z test xlsx::tests::export_xlsx_rejects_invalid_sheet_names ... ok
+2026-11-14T06:19:55.4836801Z test xlsx::tests::export_xlsx_emits_active_tab_and_round_trips_it ... ok
+2026-11-14T06:19:55.4837661Z test xlsx::tests::export_xlsx_rejects_xml_illegal_control_characters ... ok
+2026-11-14T06:19:55.4838421Z test table_ops::tests::table_cap_enforced ... ok
+2026-11-14T06:19:55.4843680Z test xlsx::tests::export_xlsx_round_trips_values_formulas_formats_merges ... ok
+2026-11-14T06:19:55.4853178Z test xlsx::tests::import_xlsx_error_literal_names_the_unsupported_value ... ok
+2026-11-14T06:19:55.4854052Z test xlsx::tests::import_xlsx_binary_sidecar_and_b64_mutex ... ok
+2026-11-14T06:19:55.4866219Z test xlsx::tests::import_xlsx_reads_cdata_and_decodes_x_escapes ... ok
+2026-11-14T06:19:55.4867170Z test xlsx::tests::import_xlsx_rejects_unescape_failures_and_oversized_input ... ok
+2026-11-14T06:19:55.4874026Z test range_ops::tests::paste_limits_and_address_overflow_are_atomic ... ok
+2026-11-14T06:19:55.4886979Z test xlsx::tests::import_xlsx_respects_sheet_protection ... ok
+2026-11-14T06:19:55.4887952Z test xlsx::tests::import_xlsx_shared_strings_and_positional_cells ... ok
+2026-11-14T06:19:55.4888997Z test xlsx::tests::import_xlsx_replaces_workbook_with_sheets_cells_merges ... ok
+2026-11-14T06:19:55.4889983Z test xlsx::tests::import_xlsx_rejects_hostile_and_malformed_atomically ... ok
+2026-11-14T06:19:55.6842726Z test xlsx::tests::import_xlsx_total_cap_counts_actual_bytes_not_forged_sizes ... ok
+2026-11-14T06:19:55.6843185Z 
+2026-11-14T06:19:55.6843629Z test result: ok. 234 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+2026-11-14T06:19:55.6844065Z 
+2026-11-14T06:19:55.6870485Z    Doc-tests tally_engine
+2026-11-14T06:19:56.6809956Z 
+2026-11-14T06:19:56.6810421Z running 0 tests
+2026-11-14T06:19:56.6810593Z 
+2026-11-14T06:19:56.6909373Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-11-14T06:19:56.6909809Z 
+2026-11-14T06:19:56.7834739Z ##[group]Run cargo build -p nf-cli
+2026-11-14T06:19:56.7835029Z [36;1mcargo build -p nf-cli[0m
+2026-11-14T06:19:56.7879474Z shell: /usr/bin/bash -e {0}
+2026-11-14T06:19:56.7879692Z ##[endgroup]
+2026-11-14T06:19:56.8285828Z  Downloading crates ...
+2026-11-14T06:19:56.8765517Z   Downloaded autocfg v1.5.1
+2026-11-14T06:19:56.8849874Z   Downloaded arrayvec v0.7.8
+2026-11-14T06:19:56.8979568Z   Downloaded aes v0.8.4
+2026-11-14T06:19:56.9008144Z   Downloaded arrayref v0.3.9
+2026-11-14T06:19:56.9021126Z   Downloaded sha2 v0.10.9
+2026-11-14T06:19:56.9040976Z   Downloaded bitflags v2.13.2
+2026-11-14T06:19:56.9076093Z   Downloaded inout v0.1.4
+2026-11-14T06:19:56.9084739Z   Downloaded multiversion_no_op v1.0.0
+2026-11-14T06:19:56.9091758Z   Downloaded time-core v0.1.9
+2026-11-14T06:19:56.9100541Z   Downloaded powerfmt v0.2.1
+2026-11-14T06:19:56.9111102Z   Downloaded scopeguard v1.2.0
+2026-11-14T06:19:56.9120944Z   Downloaded jiff-static v0.2.43
+2026-11-14T06:19:56.9128058Z   Downloaded rustversion v1.0.23
+2026-11-14T06:19:56.9149621Z   Downloaded simdutf8 v0.1.5
+2026-11-14T06:19:56.9167322Z   Downloaded ppv-lite86 v0.2.21
+2026-11-14T06:19:56.9177834Z   Downloaded ecb v0.1.2
+2026-11-14T06:19:56.9189926Z   Downloaded block-padding v0.3.3
+2026-11-14T06:19:56.9197703Z   Downloaded md-5 v0.10.6
+2026-11-14T06:19:56.9211788Z   Downloaded yoke-derive v0.8.4
+2026-11-14T06:19:56.9221722Z   Downloaded zerofrom v0.1.8
+2026-11-14T06:19:56.9230977Z   Downloaded generic-array v0.14.7
+2026-11-14T06:19:56.9243273Z   Downloaded strict-num v0.1.1
+2026-11-14T06:19:56.9252919Z   Downloaded zerofrom-derive v0.1.8
+2026-11-14T06:19:56.9261430Z   Downloaded cpufeatures v0.2.17
+2026-11-14T06:19:56.9272150Z   Downloaded crypto-common v0.1.7
+2026-11-14T06:19:56.9280131Z   Downloaded block-buffer v0.10.4
+2026-11-14T06:19:56.9288598Z   Downloaded version_check v0.9.5
+2026-11-14T06:19:56.9299536Z   Downloaded num-conv v0.2.2
+2026-11-14T06:19:56.9306329Z   Downloaded stable_deref_trait v1.2.1
+2026-11-14T06:19:56.9313825Z   Downloaded bytemuck_derive v1.12.1
+2026-11-14T06:19:56.9326500Z   Downloaded stringprep v0.1.5
+2026-11-14T06:19:56.9339926Z   Downloaded deranged v0.5.9
+2026-11-14T06:19:56.9352005Z   Downloaded rand_core v0.9.5
+2026-11-14T06:19:56.9364457Z   Downloaded smallvec v1.16.5
+2026-11-14T06:19:56.9375377Z   Downloaded digest v0.10.7
+2026-11-14T06:19:56.9389430Z   Downloaded bytecount v0.6.9
+2026-11-14T06:19:56.9406861Z   Downloaded cipher v0.4.4
+2026-11-14T06:19:56.9420020Z   Downloaded crossbeam-deque v0.8.8
+2026-11-14T06:19:56.9433422Z   Downloaded synstructure v0.14.0
+2026-11-14T06:19:56.9442699Z   Downloaded fdeflate v0.3.7
+2026-11-14T06:19:56.9459326Z   Downloaded rand_chacha v0.9.0
+2026-11-14T06:19:56.9470025Z   Downloaded nom_locate v5.0.0
+2026-11-14T06:19:56.9483923Z   Downloaded core_detect v1.0.0
+2026-11-14T06:19:56.9496904Z   Downloaded foldhash v0.2.0
+2026-11-14T06:19:56.9506534Z   Downloaded font-types v0.12.7
+2026-11-14T06:19:56.9523621Z   Downloaded once_cell v1.21.4
+2026-11-14T06:19:56.9550944Z   Downloaded time-macros v0.2.32
+2026-11-14T06:19:56.9574778Z   Downloaded tiny-skia-path v0.12.0
+2026-11-14T06:19:56.9593449Z   Downloaded yoke v0.8.4
+2026-11-14T06:19:56.9611296Z   Downloaded bytemuck v1.25.2
+2026-11-14T06:19:56.9634894Z   Downloaded weezl v0.1.12
+2026-11-14T06:19:56.9654476Z   Downloaded crossbeam-utils v0.8.23
+2026-11-14T06:19:56.9681778Z   Downloaded unicode-properties v0.1.5
+2026-11-14T06:19:56.9700110Z   Downloaded iana-time-zone v0.1.65
+2026-11-14T06:19:56.9723400Z   Downloaded cbc v0.1.2
+2026-11-14T06:19:56.9734850Z   Downloaded crossbeam-epoch v0.9.21
+2026-11-14T06:19:56.9753867Z   Downloaded tinyvec v1.13.3
+2026-11-14T06:19:56.9780856Z   Downloaded rangemap v1.8.0
+2026-11-14T06:19:56.9798952Z   Downloaded either v1.19.0
+2026-11-14T06:19:56.9810254Z   Downloaded num-traits v0.2.19
+2026-11-14T06:19:56.9830378Z   Downloaded getrandom v0.3.4
+2026-11-14T06:19:56.9857207Z   Downloaded miniz_oxide v0.8.9
+2026-11-14T06:19:56.9876651Z   Downloaded rayon-core v1.13.0
+2026-11-14T06:19:56.9905468Z   Downloaded unicode-bidi v0.3.18
+2026-11-14T06:19:56.9924279Z   Downloaded rand v0.9.5
+2026-11-14T06:19:56.9953953Z   Downloaded typenum v1.20.1
+2026-11-14T06:19:56.9982435Z   Downloaded jiff-core v0.1.5
+2026-11-14T06:19:57.0010393Z   Downloaded png v0.18.1
+2026-11-14T06:19:57.0043047Z   Downloaded nom v8.0.0
+2026-11-14T06:19:57.0084778Z   Downloaded unicode-normalization v0.1.25
+2026-11-14T06:19:57.0112617Z   Downloaded rayon v1.12.0
+2026-11-14T06:19:57.0186363Z   Downloaded zlib-rs v0.6.8
+2026-11-14T06:19:57.0229119Z   Downloaded chrono v0.4.45
+2026-11-14T06:19:57.0281612Z   Downloaded tiny-skia v0.12.0
+2026-11-14T06:19:57.0390980Z   Downloaded time v0.3.55
+2026-11-14T06:19:57.0504937Z   Downloaded syn v2.0.119
+2026-11-14T06:19:57.0590966Z   Downloaded skrifa v0.49.0
+2026-11-14T06:19:57.0672371Z   Downloaded zerocopy v0.8.63
+2026-11-14T06:19:57.0886712Z   Downloaded harfrust v0.15.0
+2026-11-14T06:19:57.0979184Z   Downloaded encoding_rs v0.8.44
+2026-11-14T06:19:57.1086780Z   Downloaded jiff v0.2.43
+2026-11-14T06:19:57.1233324Z   Downloaded read-fonts v0.46.0
+2026-11-14T06:19:57.1449809Z   Downloaded libc v0.2.191
+2026-11-14T06:19:57.1820568Z   Downloaded lopdf v0.36.0
+2026-11-14T06:19:57.2567289Z    Compiling memchr v2.8.3
+2026-11-14T06:19:57.2578403Z    Compiling version_check v0.9.5
+2026-11-14T06:19:57.2578830Z    Compiling serde_core v1.0.229
+2026-11-14T06:19:57.2579136Z    Compiling syn v3.0.10
+2026-11-14T06:19:57.4267670Z    Compiling generic-array v0.14.7
+2026-11-14T06:19:57.5524538Z    Compiling serde v1.0.229
+2026-11-14T06:19:57.6900805Z    Compiling simd-adler32 v0.3.10
+2026-11-14T06:19:57.8093802Z    Compiling typenum v1.20.1
+2026-11-14T06:19:57.8417322Z    Compiling miniz_oxide v0.9.1
+2026-11-14T06:19:58.4407197Z    Compiling flate2 v1.1.11
+2026-11-14T06:19:58.7748942Z    Compiling bitflags v2.13.2
+2026-11-14T06:19:58.8619963Z    Compiling crypto-common v0.1.7
+2026-11-14T06:19:58.9057210Z    Compiling libc v0.2.191
+2026-11-14T06:19:58.9347213Z    Compiling crossbeam-utils v0.8.23
+2026-11-14T06:19:59.0727103Z    Compiling synstructure v0.14.0
+2026-11-14T06:19:59.1687337Z    Compiling serde_json v1.0.154
+2026-11-14T06:19:59.2873749Z    Compiling block-padding v0.3.3
+2026-11-14T06:19:59.3512780Z    Compiling getrandom v0.3.4
+2026-11-14T06:19:59.4387253Z    Compiling rustversion v1.0.23
+2026-11-14T06:19:59.5080001Z    Compiling crossbeam-epoch v0.9.21
+2026-11-14T06:19:59.6317742Z    Compiling zerocopy v0.8.63
+2026-11-14T06:19:59.6538303Z    Compiling inout v0.1.4
+2026-11-14T06:19:59.7247449Z    Compiling thiserror-impl v2.0.21
+2026-11-14T06:19:59.8307127Z    Compiling serde_derive v1.0.229
+2026-11-14T06:20:00.1567172Z    Compiling bytemuck_derive v1.12.1
+2026-11-14T06:20:00.1977723Z    Compiling zerofrom-derive v0.1.8
+2026-11-14T06:20:00.6027034Z    Compiling thiserror v2.0.21
+2026-11-14T06:20:00.7047226Z    Compiling block-buffer v0.10.4
+2026-11-14T06:20:00.7715007Z    Compiling autocfg v1.5.1
+2026-11-14T06:20:01.0173231Z    Compiling bytemuck v1.25.2
+2026-11-14T06:20:01.0797133Z    Compiling crossbeam-deque v0.8.8
+2026-11-14T06:20:01.1675734Z    Compiling num-traits v0.2.19
+2026-11-14T06:20:01.2439226Z    Compiling digest v0.10.7
+2026-11-14T06:20:01.2870966Z    Compiling zerofrom v0.1.8
+2026-11-14T06:20:01.5842578Z    Compiling yoke-derive v0.8.4
+2026-11-14T06:20:01.8634229Z    Compiling cipher v0.4.4
+2026-11-14T06:20:02.1847825Z    Compiling miniz_oxide v0.8.9
+2026-11-14T06:20:02.3646898Z    Compiling fdeflate v0.3.7
+2026-11-14T06:20:02.6018135Z    Compiling ignition-core v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/ignition-core)
+2026-11-14T06:20:02.6994763Z    Compiling tinyvec v1.13.3
+2026-11-14T06:20:02.7643448Z    Compiling cpufeatures v0.2.17
+2026-11-14T06:20:02.7957347Z    Compiling stable_deref_trait v1.2.1
+2026-11-14T06:20:02.8267214Z    Compiling rayon-core v1.13.0
+2026-11-14T06:20:02.9117394Z    Compiling yoke v0.8.4
+2026-11-14T06:20:03.0057385Z    Compiling unicode-normalization v0.1.25
+2026-11-14T06:20:03.1032969Z    Compiling png v0.18.1
+2026-11-14T06:20:03.2077513Z    Compiling encoding_rs v0.8.44
+2026-11-14T06:20:03.3227061Z    Compiling rand_core v0.9.5
+2026-11-14T06:20:03.4457452Z    Compiling font-types v0.12.7
+2026-11-14T06:20:03.5248032Z    Compiling once_cell v1.21.4
+2026-11-14T06:20:03.6119696Z    Compiling smallvec v1.16.5
+2026-11-14T06:20:03.7387226Z    Compiling foldhash v0.2.0
+2026-11-14T06:20:03.8271956Z    Compiling read-fonts v0.46.0
+2026-11-14T06:20:03.8557345Z    Compiling prism-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/prism/rust)
+2026-11-14T06:20:04.2671937Z    Compiling zopfli v0.8.4
+2026-11-14T06:20:04.7587266Z    Compiling ppv-lite86 v0.2.21
+2026-11-14T06:20:05.0897165Z    Compiling rand_chacha v0.9.0
+2026-11-14T06:20:05.4448029Z    Compiling sha2 v0.10.9
+2026-11-14T06:20:05.9257172Z    Compiling nom v8.0.0
+2026-11-14T06:20:05.9379568Z    Compiling jiff-core v0.1.5
+2026-11-14T06:20:06.9780945Z    Compiling core_detect v1.0.0
+2026-11-14T06:20:07.0577317Z    Compiling unicode-properties v0.1.5
+2026-11-14T06:20:07.1887893Z    Compiling bytecount v0.6.9
+2026-11-14T06:20:07.2547201Z    Compiling deranged v0.5.9
+2026-11-14T06:20:08.2057307Z    Compiling iana-time-zone v0.1.65
+2026-11-14T06:20:08.2696313Z    Compiling strict-num v0.1.1
+2026-11-14T06:20:08.3457619Z    Compiling scopeguard v1.2.0
+2026-11-14T06:20:08.3757126Z    Compiling multiversion_no_op v1.0.0
+2026-11-14T06:20:08.3917686Z    Compiling arrayref v0.3.9
+2026-11-14T06:20:08.4117778Z    Compiling time-core v0.1.9
+2026-11-14T06:20:08.4204007Z    Compiling simdutf8 v0.1.5
+2026-11-14T06:20:08.4656589Z    Compiling powerfmt v0.2.1
+2026-11-14T06:20:08.5526256Z    Compiling num-conv v0.2.2
+2026-11-14T06:20:08.5559917Z    Compiling either v1.19.0
+2026-11-14T06:20:08.5797415Z    Compiling unicode-bidi v0.3.18
+2026-11-14T06:20:08.6467249Z    Compiling time v0.3.55
+2026-11-14T06:20:08.6905641Z    Compiling rayon v1.12.0
+2026-11-14T06:20:09.0823250Z    Compiling stringprep v0.1.5
+2026-11-14T06:20:10.6497176Z    Compiling tiny-skia-path v0.12.0
+2026-11-14T06:20:10.9257293Z    Compiling chrono v0.4.45
+2026-11-14T06:20:11.3238030Z    Compiling nom_locate v5.0.0
+2026-11-14T06:20:11.3879537Z    Compiling jiff v0.2.43
+2026-11-14T06:20:11.4047023Z    Compiling rand v0.9.5
+2026-11-14T06:20:11.9017179Z    Compiling zip v2.6.1
+2026-11-14T06:20:12.3061608Z    Compiling aes v0.8.4
+2026-11-14T06:20:12.7847983Z    Compiling cbc v0.1.2
+2026-11-14T06:20:12.8097343Z    Compiling ecb v0.1.2
+2026-11-14T06:20:12.8339338Z    Compiling md-5 v0.10.6
+2026-11-14T06:20:12.8527231Z    Compiling quick-xml v0.37.5
+2026-11-14T06:20:12.8961994Z    Compiling weezl v0.1.12
+2026-11-14T06:20:13.2457255Z    Compiling arrayvec v0.7.8
+2026-11-14T06:20:13.3757789Z    Compiling rangemap v1.8.0
+2026-11-14T06:20:13.5477056Z    Compiling tiny-skia v0.12.0
+2026-11-14T06:20:13.5777602Z    Compiling tally-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/tally/rust)
+2026-11-14T06:20:15.3295069Z    Compiling skrifa v0.49.0
+2026-11-14T06:20:15.4037214Z    Compiling harfrust v0.15.0
+2026-11-14T06:20:19.7598821Z    Compiling lopdf v0.36.0
+2026-11-14T06:20:20.6407729Z    Compiling quill-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/quill/rust)
+2026-11-14T06:20:21.0165537Z    Compiling motion-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/motion/rust)
+2026-11-14T06:20:21.3627636Z    Compiling draft-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/draft/rust)
+2026-11-14T06:20:25.9107378Z    Compiling folio-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/folio/rust)
+2026-11-14T06:20:26.4987641Z    Compiling design-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/design/rust)
+2026-11-14T06:20:27.4318080Z    Compiling scene-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/scene/rust)
+2026-11-14T06:20:27.9067916Z    Compiling pitch-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/pitch/rust)
+2026-11-14T06:20:29.4127446Z    Compiling photo-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/photo/rust)
+2026-11-14T06:20:29.4928011Z    Compiling splice-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/splice/rust)
+2026-11-14T06:20:30.5197393Z    Compiling cadence-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/cadence/rust)
+2026-11-14T06:20:30.6497295Z warning: unused doc comment
+2026-11-14T06:20:30.6527040Z    --> packages/cadence/rust/src/lib.rs:727:13
+2026-11-14T06:20:30.6536619Z     |
+2026-11-14T06:20:30.6556670Z 727 | /             /// Split a clip at an absolute timeline tick strictly inside it.
+2026-11-14T06:20:30.6566797Z 728 | |             /// The left half keeps the id; the right half gets a new id and
+2026-11-14T06:20:30.6596808Z 729 | |             /// copies gain/mute. Notes are clip-relative: a note entirely on
+2026-11-14T06:20:30.6626865Z 730 | |             /// one side moves or stays; a note spanning the split point is
+2026-11-14T06:20:30.6677270Z 731 | |             /// cut into two notes at the boundary (same pitch/velocity/
+2026-11-14T06:20:30.6708001Z 732 | |             /// channel, no overlap, no zero-length piece).
+2026-11-14T06:20:30.6716757Z     | |___________________________________________________________^
+2026-11-14T06:20:30.6746587Z 733 | /             "splitClip" => {
+2026-11-14T06:20:30.6747048Z 734 | |                 let id = req_u64(p, "id")?;
+2026-11-14T06:20:30.6747564Z 735 | |                 let at = req_ticks(p, "at_ticks")?;
+2026-11-14T06:20:30.6748016Z 736 | |                 let (ti, ci) = self
+2026-11-14T06:20:30.6748373Z ...   |
+2026-11-14T06:20:30.6748900Z 787 | |                 Ok(Self::changed(json!({ "left_id": id, "right_id": right_id })))
+2026-11-14T06:20:30.6749360Z 788 | |             }
+2026-11-14T06:20:30.6749764Z     | |_____________- rustdoc does not generate documentation for match arms
+2026-11-14T06:20:30.6750180Z     |
+2026-11-14T06:20:30.6750441Z     = help: use `//` for a plain comment
+2026-11-14T06:20:30.6751014Z     = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T06:20:30.6751398Z 
+2026-11-14T06:20:31.2927178Z warning: constant `B64_ALPHABET` is never used
+2026-11-14T06:20:31.2956990Z    --> packages/cadence/rust/src/lib.rs:267:7
+2026-11-14T06:20:31.2976513Z     |
+2026-11-14T06:20:31.3006642Z 267 | const B64_ALPHABET: &[u8; 64] =
+2026-11-14T06:20:31.3036848Z     |       ^^^^^^^^^^^^
+2026-11-14T06:20:31.3037517Z     |
+2026-11-14T06:20:31.3038082Z     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T06:20:31.3038619Z 
+2026-11-14T06:20:31.3039267Z warning: function `base64_encode` is never used
+2026-11-14T06:20:31.3039839Z    --> packages/cadence/rust/src/lib.rs:270:4
+2026-11-14T06:20:31.3040312Z     |
+2026-11-14T06:20:31.3040778Z 270 | fn base64_encode(bytes: &[u8]) -> String {
+2026-11-14T06:20:31.3041249Z     |    ^^^^^^^^^^^^^
+2026-11-14T06:20:31.3041554Z 
+2026-11-14T06:20:32.1098901Z warning: `cadence-engine` (lib) generated 3 warnings
+2026-11-14T06:20:32.1099455Z    Compiling nf-cli v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/nf-cli)
+2026-11-14T06:20:32.7379732Z     Finished `dev` profile [unoptimized + debuginfo] target(s) in 35.93s
+2026-11-14T06:20:32.7546542Z ##[group]Run corepack pnpm --filter @nitro-forge/tally exec vitest run tests/grid-adapter.e2e.test.ts tests/grid-cluster.e2e.test.ts tests/range-ops.e2e.test.ts
+2026-11-14T06:20:32.7547460Z [36;1mcorepack pnpm --filter @nitro-forge/tally exec vitest run tests/grid-adapter.e2e.test.ts tests/grid-cluster.e2e.test.ts tests/range-ops.e2e.test.ts[0m
+2026-11-14T06:20:32.7592059Z shell: /usr/bin/bash -e {0}
+2026-11-14T06:20:32.7592280Z ##[endgroup]
+2026-11-14T06:20:33.0527167Z 
+2026-11-14T06:20:33.0547731Z [1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/home/runner/work/nitro-forge/nitro-forge/packages/tally[39m
+2026-11-14T06:20:33.0555375Z 
+2026-11-14T06:20:33.2795271Z  [32m✓[39m tests/grid-cluster.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-14T06:20:33.2870843Z  [32m✓[39m tests/range-ops.e2e.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-11-14T06:20:33.2959203Z  [32m✓[39m tests/grid-adapter.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-11-14T06:20:33.3076149Z 
+2026-11-14T06:20:33.3079550Z [2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+2026-11-14T06:20:33.3080248Z [2m      Tests [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+2026-11-14T06:20:33.3080758Z [2m   Start at [22m 06:20:33
+2026-11-14T06:20:33.3086658Z [2m   Duration [22m 240ms[2m (transform 37%, tests 34%, import 25%, worker 5%)[22m
+2026-11-14T06:20:33.3093791Z 
+2026-11-14T06:20:33.5497480Z Post job cleanup.
+2026-11-14T06:20:33.6559456Z (node:4777) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T06:20:33.6560399Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T06:20:33.6761885Z Post job cleanup.
+2026-11-14T06:20:33.7499391Z [command]/usr/bin/git version
+2026-11-14T06:20:33.7538254Z git version 2.56.1
+2026-11-14T06:20:33.7568496Z Temporarily overriding HOME='/home/runner/work/_temp/941ba972-6d74-4575-93f4-9b8f03e27f81' before making global git config changes
+2026-11-14T06:20:33.7569670Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T06:20:33.7572305Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T06:20:33.7845841Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T06:20:33.7879718Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T06:20:33.8187053Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T06:20:33.8225551Z http.https://github.com/.extraheader
+2026-11-14T06:20:33.8238455Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-14T06:20:33.8921113Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T06:20:33.9195232Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T06:20:33.9231437Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T06:20:33.9635487Z Cleaning up orphan processes
+2026-11-14T06:20:33.9943450Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

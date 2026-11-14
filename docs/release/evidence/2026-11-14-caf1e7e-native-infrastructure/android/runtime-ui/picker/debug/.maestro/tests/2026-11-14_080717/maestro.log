@@ -1,0 +1,56 @@
+08:07:17.450 [ INFO] maestro.cli.report.TestDebugReporter.logSystemInfo: Debug output path: /home/runner/work/_temp/runtime-ui/picker/debug/.maestro/tests/2026-11-14_080717
+08:07:17.456 [ INFO] MAESTRO.logSystemInfo: ---- System Info ----
+08:07:17.457 [ INFO] MAESTRO.logSystemInfo: Maestro Version: 2.12.1
+08:07:17.463 [ INFO] MAESTRO.logSystemInfo: CI: github
+08:07:17.463 [ INFO] MAESTRO.logSystemInfo: OS Name: Linux
+08:07:17.464 [ INFO] MAESTRO.logSystemInfo: OS Version: 7.0.0-1019-azure
+08:07:17.464 [ INFO] MAESTRO.logSystemInfo: Architecture: amd64
+08:07:17.469 [ INFO] MAESTRO.logSystemInfo: Java Version: 17
+08:07:17.473 [ INFO] MAESTRO.logSystemInfo: Xcode Version: null
+08:07:17.481 [ INFO] MAESTRO.logSystemInfo: Flutter Version: Undefined
+08:07:17.487 [ INFO] MAESTRO.logSystemInfo: Flutter Channel: Undefined
+08:07:17.487 [ INFO] MAESTRO.logSystemInfo: ---------------------
+08:07:18.725 [DEBUG] io.micrometer.common.util.internal.logging.InternalLoggerFactory.newDefaultFactory: Using SLF4J as the default logging framework
+08:07:22.486 [ INFO] maestro.cli.command.TestCommand.runShardSuite: [shard 1] Selected device emulator-5554 using port 41705 with execution plan ExecutionPlan(flowsToRun=[/home/runner/work/_temp/runtime-ui/picker/flow.yaml], sequence=FlowSequence(flows=[], continueOnFailure=true), workspaceConfig=WorkspaceConfig(flows=null, includeTags=null, excludeTags=null, executionOrder=null, baselineBranch=null, notifications=null, disableRetries=false, platform=PlatformConfiguration(android=AndroidConfiguration(disableAnimations=false), ios=IOSConfiguration(disableAnimations=false, snapshotKeyHonorModalViews=null)), testOutputDir=null))
+08:07:34.503 [ INFO] maestro.cli.runner.TestSuiteInteractor.runFlow:  Running flow Forge native studio picker
+08:07:34.524 [ INFO] maestro.Maestro.cachedDeviceInfo_delegate$lambda$0: Getting device info
+08:07:35.780 [ INFO] maestro.Maestro.cachedDeviceInfo_delegate$lambda$0: Got device info: DeviceInfo(platform=ANDROID, widthPixels=320, heightPixels=800, widthGrid=320, heightGrid=800)
+08:07:36.101 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:07:36.106 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:07:36.107 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:07:36.109 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:07:36.110 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Launch app "dev.nitroforge.f6.consumer" RUNNING
+08:07:37.769 [ INFO] maestro.Maestro.launchApp$lambda$6: Launching app dev.nitroforge.f6.consumer
+08:07:37.769 [ INFO] maestro.Maestro.launchApp$lambda$6: Stopping dev.nitroforge.f6.consumer app during launch
+08:07:38.471 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Launch app "dev.nitroforge.f6.consumer" COMPLETED
+08:07:38.472 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: f6-selected is visible RUNNING
+08:07:42.817 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: f6-selected is visible COMPLETED
+08:07:42.818 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Scrolling UP until id: f6-studio is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled RUNNING
+08:07:44.504 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Scrolling try count: 0, DeviceWidth: 320, DeviceWidth: 800
+08:07:44.512 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Element bounds: Bounds(x=20, y=128, width=280, height=90)
+08:07:44.520 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Visibility Percent: 1.0
+08:07:44.597 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Command centerElement: ScrollUntilVisibleCommand(selector=ElementSelector(textRegex=null, idRegex=f6-studio, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), direction=UP, scrollDuration=601, visibilityPercentage=100, timeout=30000, waitToSettleTimeoutMs=null, centerElement=false, originalSpeedValue=40, label=null, optional=false).centerElement
+08:07:44.598 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: visibilityPercentageNormalized: 1.0
+08:07:44.598 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Scrolling UP until id: f6-studio is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled COMPLETED
+08:07:44.599 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on "^prism$", enabled RUNNING
+08:07:45.396 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={text=prism, accessibilityText=, hintText=, ignoreBoundsFiltering=false, resource-id=, clickable=false, bounds=[33,141][68,160], enabled=true, focused=false, checked=false, scrollable=false, selected=false, class=android.widget.TextView, important-for-accessibility=true, error=}, children=[], clickable=false, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=33, y=141, width=35, height=19))
+08:07:47.063 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via settled hierarchy
+08:07:47.069 [ INFO] maestro.Maestro.hierarchyBasedTap-ogj28Uc: Tapping at (50, 150) using hierarchy based logic for wait
+08:07:47.858 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on "^prism$", enabled COMPLETED
+08:07:47.859 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Scrolling DOWN until id: f6-selected is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled RUNNING
+08:07:48.026 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Scrolling try count: 0, DeviceWidth: 320, DeviceWidth: 800
+08:07:48.027 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Element bounds: Bounds(x=20, y=230, width=280, height=19)
+08:07:48.028 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Visibility Percent: 1.0
+08:07:48.029 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Command centerElement: ScrollUntilVisibleCommand(selector=ElementSelector(textRegex=null, idRegex=f6-selected, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), direction=DOWN, scrollDuration=601, visibilityPercentage=100, timeout=30000, waitToSettleTimeoutMs=null, centerElement=false, originalSpeedValue=40, label=null, optional=false).centerElement
+08:07:48.029 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: visibilityPercentageNormalized: 1.0
+08:07:48.029 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Scrolling DOWN until id: f6-selected is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled COMPLETED
+08:07:48.029 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "^Studio: prism · Document: closed$", id: f6-selected is visible RUNNING
+08:07:48.212 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "^Studio: prism · Document: closed$", id: f6-selected is visible COMPLETED
+08:07:48.214 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Take screenshot picker-picker RUNNING
+08:07:48.221 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:07:48.224 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:07:48.724 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Take screenshot picker-picker COMPLETED
+08:07:50.449 [ INFO] maestro.cli.report.TestDebugReporter.deleteOldFiles: Performing purge of logs older than 14 days from /home/runner/work/_temp/runtime-ui/picker/artifacts
+08:07:50.590 [ INFO] maestro.drivers.AndroidDriver.close: [Start] Uninstall driver from device
+08:07:50.591 [ INFO] maestro.drivers.AndroidDriver.close: [Done] Uninstall driver from device
+08:07:50.591 [ INFO] maestro.drivers.AndroidDriver.close: [Start] Close instrumentation session

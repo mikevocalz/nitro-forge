@@ -1,0 +1,162 @@
+{
+  "date": "2026-11-13 America/New_York",
+  "sourceCommit": "d9fa962634fd075cf0a5591a76bdcab3266d6de3",
+  "node": "v26.13.0",
+  "checks": [
+    {
+      "name": "node-boundaries",
+      "command": [
+        "node",
+        "--test",
+        "tooling/release/archive-boundaries.test.mjs",
+        "packages/ignition/plugin/withForge.test.cjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "headless-boundaries",
+      "command": [
+        "node",
+        "tooling/release/check-package-boundaries.mjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "workflow-yaml",
+      "command": [
+        "ruby",
+        "-e",
+        "require \"yaml\"; YAML.load_file(\".github/workflows/forge-clean-consumer.yml\"); puts \"Workflow YAML parsed (not Actions execution)\""
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "whitespace",
+      "command": [
+        "git",
+        "show",
+        "--check",
+        "--oneline",
+        "HEAD"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "syntax-archive-boundaries.test",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/archive-boundaries.test.mjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "syntax-archive-files",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/archive-files.mjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "syntax-candidate-manifest",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/candidate-manifest.mjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "syntax-check-consumer-bundle",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/check-consumer-bundle.mjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "syntax-consumer-smoke",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/consumer-smoke.mjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "syntax-native-fragment",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/native-fragment.mjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "syntax-pack-candidate",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/pack-candidate.mjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "syntax-unpack-archive",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/unpack-archive.mjs"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "literal-import-closure",
+      "command": [
+        "node",
+        "--input-type=module",
+        "-"
+      ],
+      "exitCode": 0,
+      "result": "PASS"
+    }
+  ],
+  "nodeTests": {
+    "passed": 25,
+    "failed": 0,
+    "scope": "Synthetic rejection boundaries/config preservation, not native behavior"
+  },
+  "diskBytes": {
+    "before": 11414179840,
+    "after": 11417260032,
+    "ownerFloor": 10000000000
+  },
+  "notRun": [
+    "full dependency install",
+    "real native payload production",
+    "pnpm candidate packing",
+    "installed plugin resolution",
+    "installed typecheck and Metro",
+    "ordinary native prebuild",
+    "native compile",
+    "simulator/emulator install/launch",
+    "visible durable open/edit/save/relaunch/reopen/undo",
+    "F6 acceptance"
+  ],
+  "gateChanged": false
+}

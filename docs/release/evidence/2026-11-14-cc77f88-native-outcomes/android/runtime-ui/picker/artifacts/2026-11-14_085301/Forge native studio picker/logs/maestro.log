@@ -1,0 +1,35 @@
+08:53:18.683 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:53:18.688 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:53:18.689 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:53:18.690 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:53:18.690 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Launch app "dev.nitroforge.f6.consumer" RUNNING
+08:53:20.551 [ INFO] maestro.Maestro.launchApp$lambda$6: Launching app dev.nitroforge.f6.consumer
+08:53:20.551 [ INFO] maestro.Maestro.launchApp$lambda$6: Stopping dev.nitroforge.f6.consumer app during launch
+08:53:21.136 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Launch app "dev.nitroforge.f6.consumer" COMPLETED
+08:53:21.137 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: f6-selected is visible RUNNING
+08:53:23.957 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: f6-selected is visible COMPLETED
+08:53:23.958 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Scrolling UP until id: f6-studio is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled RUNNING
+08:53:24.841 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Scrolling try count: 0, DeviceWidth: 320, DeviceWidth: 800
+08:53:24.847 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Element bounds: Bounds(x=20, y=128, width=280, height=90)
+08:53:24.848 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Visibility Percent: 1.0
+08:53:24.885 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Command centerElement: ScrollUntilVisibleCommand(selector=ElementSelector(textRegex=null, idRegex=f6-studio, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), direction=UP, scrollDuration=601, visibilityPercentage=100, timeout=30000, waitToSettleTimeoutMs=null, centerElement=false, originalSpeedValue=40, label=null, optional=false).centerElement
+08:53:24.886 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: visibilityPercentageNormalized: 1.0
+08:53:24.887 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Scrolling UP until id: f6-studio is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled COMPLETED
+08:53:24.888 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on "^prism$", enabled RUNNING
+08:53:25.159 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={text=prism, accessibilityText=, hintText=, ignoreBoundsFiltering=false, resource-id=, clickable=false, bounds=[33,141][68,160], enabled=true, focused=false, checked=false, scrollable=false, selected=false, class=android.widget.TextView, important-for-accessibility=true, error=}, children=[], clickable=false, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=33, y=141, width=35, height=19))
+08:53:26.467 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via settled hierarchy
+08:53:26.475 [ INFO] maestro.Maestro.hierarchyBasedTap-ogj28Uc: Tapping at (50, 150) using hierarchy based logic for wait
+08:53:27.024 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on "^prism$", enabled COMPLETED
+08:53:27.024 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Scrolling DOWN until id: f6-selected is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled RUNNING
+08:53:27.160 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Scrolling try count: 0, DeviceWidth: 320, DeviceWidth: 800
+08:53:27.160 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Element bounds: Bounds(x=20, y=230, width=280, height=19)
+08:53:27.161 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Visibility Percent: 1.0
+08:53:27.161 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Command centerElement: ScrollUntilVisibleCommand(selector=ElementSelector(textRegex=null, idRegex=f6-selected, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), direction=DOWN, scrollDuration=601, visibilityPercentage=100, timeout=30000, waitToSettleTimeoutMs=null, centerElement=false, originalSpeedValue=40, label=null, optional=false).centerElement
+08:53:27.161 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: visibilityPercentageNormalized: 1.0
+08:53:27.161 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Scrolling DOWN until id: f6-selected is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled COMPLETED
+08:53:27.161 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "^Studio: prism · Document: closed$", id: f6-selected is visible RUNNING
+08:53:27.311 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "^Studio: prism · Document: closed$", id: f6-selected is visible COMPLETED
+08:53:27.314 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Take screenshot picker-picker RUNNING
+08:53:27.319 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:53:27.324 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:53:27.881 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Take screenshot picker-picker COMPLETED

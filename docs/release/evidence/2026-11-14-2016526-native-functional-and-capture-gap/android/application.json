@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "platform": "android",
+  "configuration": "Release",
+  "sourceCommit": "5f6142a7f9a4caa6be0d9c6f312234bea1239707",
+  "manifestSha256": "0d7fa9cd2de195699712e6fc6eb49cf070f473cfbc19edd1b3caf31fde45485d",
+  "lockSha256": "094254031e91cf199cd61b6069b5cf43d11b32ff0db8fba5f4077395fef2d500",
+  "installedPackagesSha256": "eaf69832eeb6e4baf26d00a15ee6c3995207c76815a0f31ec98f1c0afb1b57d2",
+  "workspaceSha256": "827e1ee7c7ddef25315ad734261beaf124cb49d96501e17ea1d972f2c2f7208d",
+  "pnpmConfigSha256": "034d625f13583dafed5ca61b93cbd74408677e9ce05df4cc78095bc21f4fb7fc",
+  "archive": "forge-consumer-android.apk",
+  "sha256": "63aca2d0b11fb2116224853877ba73f1bb7c10e618f35e4033c09f030d1c35a2",
+  "bytes": 140814503,
+  "embeddedBundleSha256": "13b731a37baff54f5ed72bf24cf589b5aa2fff5006d2ca6eb2e582ca0566c993",
+  "applicationId": "dev.nitroforge.f6.consumer",
+  "architectures": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86",
+    "x86_64"
+  ],
+  "signingVerification": "V2 Signer: certificate DN: CN=Android Debug, OU=Android, O=Unknown, L=Unknown, ST=Unknown, C=US\nV2 Signer: certificate SHA-256 digest: fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c\nV2 Signer: certificate SHA-1 digest: 5e8f16062ea3cd2c4a0d547876baa6f38cabf625\nV2 Signer: certificate MD5 digest: 20f46148b72d8e5e5ca23d37a4f41490\n",
+  "signing": "Ordinary Expo template acceptance build; default debug signing, not a publication credential",
+  "nativeRuntime": "NOT RUN"
+}

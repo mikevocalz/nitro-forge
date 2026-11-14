@@ -1,0 +1,3397 @@
+appId: "dev.nitroforge.f6.consumer"
+name: "Forge seven-studio durable document workflows"
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "f6-selected"
+    timeout: 90000
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^prism$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: closed$"
+- takeScreenshot: "f6-prism-picker"
+- scrollUntilVisible:
+    element:
+      id: "f6-create"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-create"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Open/create: PASS — prism initialized through its public adapter and real Nitro host$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Open/create: PASS — prism initialized through its public adapter and real Nitro host$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-save"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-save"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-prism\\.nfd; retained for app relaunch$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-prism\\.nfd; retained for app relaunch$"
+- scrollUntilVisible:
+    element:
+      id: "f6-file"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-file"
+    text: "^file://[^\\n]+/forge-f6-prism\\.nfd$"
+- takeScreenshot: "f6-prism-disk-save"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-prism-fresh-host-reopen"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-undo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-undo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+- takeScreenshot: "f6-prism-undo-fresh-edit"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-redo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-redo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Redo: PASS — authoritative state exactly matches the committed edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Redo: PASS — authoritative state exactly matches the committed edit$"
+- takeScreenshot: "f6-prism-redo"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-bad-restore"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-bad-restore"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+- takeScreenshot: "f6-prism-bad-restore-rejected"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: closed$"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "f6-selected"
+    timeout: 90000
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^prism$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-prism-process-relaunch-persistence"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^prism / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^prism / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^cadence$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: closed$"
+- takeScreenshot: "f6-cadence-picker"
+- scrollUntilVisible:
+    element:
+      id: "f6-create"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-create"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Open/create: PASS — cadence initialized through its public adapter and real Nitro host$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Open/create: PASS — cadence initialized through its public adapter and real Nitro host$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-save"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-save"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-cadence\\.nfd; retained for app relaunch$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-cadence\\.nfd; retained for app relaunch$"
+- scrollUntilVisible:
+    element:
+      id: "f6-file"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-file"
+    text: "^file://[^\\n]+/forge-f6-cadence\\.nfd$"
+- takeScreenshot: "f6-cadence-disk-save"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-cadence-fresh-host-reopen"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-undo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-undo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+- takeScreenshot: "f6-cadence-undo-fresh-edit"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-redo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-redo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Redo: PASS — authoritative state exactly matches the committed edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Redo: PASS — authoritative state exactly matches the committed edit$"
+- takeScreenshot: "f6-cadence-redo"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-bad-restore"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-bad-restore"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+- takeScreenshot: "f6-cadence-bad-restore-rejected"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: closed$"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "f6-selected"
+    timeout: 90000
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^cadence$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-cadence-process-relaunch-persistence"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^cadence / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^cadence / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: cadence · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^splice$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: closed$"
+- takeScreenshot: "f6-splice-picker"
+- scrollUntilVisible:
+    element:
+      id: "f6-create"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-create"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Open/create: PASS — splice initialized through its public adapter and real Nitro host$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Open/create: PASS — splice initialized through its public adapter and real Nitro host$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-save"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-save"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-splice\\.nfd; retained for app relaunch$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-splice\\.nfd; retained for app relaunch$"
+- scrollUntilVisible:
+    element:
+      id: "f6-file"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-file"
+    text: "^file://[^\\n]+/forge-f6-splice\\.nfd$"
+- takeScreenshot: "f6-splice-disk-save"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-splice-fresh-host-reopen"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-undo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-undo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+- takeScreenshot: "f6-splice-undo-fresh-edit"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-redo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-redo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Redo: PASS — authoritative state exactly matches the committed edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Redo: PASS — authoritative state exactly matches the committed edit$"
+- takeScreenshot: "f6-splice-redo"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-bad-restore"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-bad-restore"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+- takeScreenshot: "f6-splice-bad-restore-rejected"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: closed$"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "f6-selected"
+    timeout: 90000
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^splice$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-splice-process-relaunch-persistence"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^splice / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^splice / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: splice · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^folio$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: closed$"
+- takeScreenshot: "f6-folio-picker"
+- scrollUntilVisible:
+    element:
+      id: "f6-create"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-create"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Open/create: PASS — folio initialized through its public adapter and real Nitro host$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Open/create: PASS — folio initialized through its public adapter and real Nitro host$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-save"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-save"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-folio\\.nfd; retained for app relaunch$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-folio\\.nfd; retained for app relaunch$"
+- scrollUntilVisible:
+    element:
+      id: "f6-file"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-file"
+    text: "^file://[^\\n]+/forge-f6-folio\\.nfd$"
+- takeScreenshot: "f6-folio-disk-save"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-folio-fresh-host-reopen"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-undo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-undo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+- takeScreenshot: "f6-folio-undo-fresh-edit"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-redo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-redo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Redo: PASS — authoritative state exactly matches the committed edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Redo: PASS — authoritative state exactly matches the committed edit$"
+- takeScreenshot: "f6-folio-redo"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-bad-restore"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-bad-restore"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+- takeScreenshot: "f6-folio-bad-restore-rejected"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: closed$"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "f6-selected"
+    timeout: 90000
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^folio$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-folio-process-relaunch-persistence"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^folio / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^folio / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: folio · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^pitch$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: closed$"
+- takeScreenshot: "f6-pitch-picker"
+- scrollUntilVisible:
+    element:
+      id: "f6-create"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-create"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Open/create: PASS — pitch initialized through its public adapter and real Nitro host$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Open/create: PASS — pitch initialized through its public adapter and real Nitro host$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-save"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-save"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-pitch\\.nfd; retained for app relaunch$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-pitch\\.nfd; retained for app relaunch$"
+- scrollUntilVisible:
+    element:
+      id: "f6-file"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-file"
+    text: "^file://[^\\n]+/forge-f6-pitch\\.nfd$"
+- takeScreenshot: "f6-pitch-disk-save"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-pitch-fresh-host-reopen"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-undo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-undo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+- takeScreenshot: "f6-pitch-undo-fresh-edit"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-redo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-redo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Redo: PASS — authoritative state exactly matches the committed edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Redo: PASS — authoritative state exactly matches the committed edit$"
+- takeScreenshot: "f6-pitch-redo"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-bad-restore"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-bad-restore"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+- takeScreenshot: "f6-pitch-bad-restore-rejected"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: closed$"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "f6-selected"
+    timeout: 90000
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^pitch$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-pitch-process-relaunch-persistence"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^pitch / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^pitch / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: pitch · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^tally$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: closed$"
+- takeScreenshot: "f6-tally-picker"
+- scrollUntilVisible:
+    element:
+      id: "f6-create"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-create"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Open/create: PASS — tally initialized through its public adapter and real Nitro host$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Open/create: PASS — tally initialized through its public adapter and real Nitro host$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-save"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-save"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-tally\\.nfd; retained for app relaunch$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-tally\\.nfd; retained for app relaunch$"
+- scrollUntilVisible:
+    element:
+      id: "f6-file"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-file"
+    text: "^file://[^\\n]+/forge-f6-tally\\.nfd$"
+- takeScreenshot: "f6-tally-disk-save"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-tally-fresh-host-reopen"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-undo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-undo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+- takeScreenshot: "f6-tally-undo-fresh-edit"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-redo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-redo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Redo: PASS — authoritative state exactly matches the committed edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Redo: PASS — authoritative state exactly matches the committed edit$"
+- takeScreenshot: "f6-tally-redo"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-bad-restore"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-bad-restore"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+- takeScreenshot: "f6-tally-bad-restore-rejected"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: closed$"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "f6-selected"
+    timeout: 90000
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^tally$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-tally-process-relaunch-persistence"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^tally / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^tally / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: tally · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^quill$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: closed$"
+- takeScreenshot: "f6-quill-picker"
+- scrollUntilVisible:
+    element:
+      id: "f6-create"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-create"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Open/create: PASS — quill initialized through its public adapter and real Nitro host$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Open/create: PASS — quill initialized through its public adapter and real Nitro host$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-save"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-save"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-quill\\.nfd; retained for app relaunch$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Save to disk: PASS — [0-9]+ exact NFD1 bytes read back from file://[^\\n]+/forge-f6-quill\\.nfd; retained for app relaunch$"
+- scrollUntilVisible:
+    element:
+      id: "f6-file"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-file"
+    text: "^file://[^\\n]+/forge-f6-quill\\.nfd$"
+- takeScreenshot: "f6-quill-disk-save"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-quill-fresh-host-reopen"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-edit"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-edit"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Edit: PASS — typed engine mutation changed the document; fresh undo comparison recorded$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-undo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-undo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Undo fresh edit: PASS — authoritative state exactly matches the state before the fresh edit$"
+- takeScreenshot: "f6-quill-undo-fresh-edit"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-redo"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-redo"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Redo: PASS — authoritative state exactly matches the committed edit$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Redo: PASS — authoritative state exactly matches the committed edit$"
+- takeScreenshot: "f6-quill-redo"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-bad-restore"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-bad-restore"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Reject bad restore: PASS — malformed NFD1 rejected without changing the open document$"
+- takeScreenshot: "f6-quill-bad-restore-rejected"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: closed$"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "f6-selected"
+    timeout: 90000
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^quill$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: closed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-reopen"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-reopen"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state$"
+- takeScreenshot: "f6-quill-process-relaunch-persistence"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: open$"
+- scrollUntilVisible:
+    element:
+      id: "f6-close"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    id: "f6-close"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-result"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- extendedWaitUntil:
+    visible:
+      id: "f6-result"
+      text: "^quill / Close: PASS — document closed and its host disposed$"
+    timeout: 90000
+- assertVisible:
+    id: "f6-result"
+    text: "^quill / Close: PASS — document closed and its host disposed$"
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: quill · Document: closed$"

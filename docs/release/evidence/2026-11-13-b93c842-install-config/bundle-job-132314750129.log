@@ -1,0 +1,293 @@
+﻿2026-11-14T03:24:48.2839982Z Current runner version: '2.338.2'
+2026-11-14T03:24:48.2860746Z ##[group]Runner Image Provisioner
+2026-11-14T03:24:48.2861510Z Hosted Compute Agent
+2026-11-14T03:24:48.2862001Z Version: 20261103.629
+2026-11-14T03:24:48.2862522Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-14T03:24:48.2863177Z Build Date: 2026-11-03T17:26:59Z
+2026-11-14T03:24:48.2863725Z Worker ID: {121b6eb1-57c2-49c1-a1ee-8f81dc21e046}
+2026-11-14T03:24:48.2864275Z Region: centralus
+2026-11-14T03:24:48.2864775Z Cloud: Azure
+2026-11-14T03:24:48.2865302Z ##[endgroup]
+2026-11-14T03:24:48.2867491Z ##[group]Operating System
+2026-11-14T03:24:48.2868300Z Ubuntu
+2026-11-14T03:24:48.2868911Z 26.04.1
+2026-11-14T03:24:48.2869663Z LTS
+2026-11-14T03:24:48.2870491Z ##[endgroup]
+2026-11-14T03:24:48.2871269Z ##[group]Runner Image
+2026-11-14T03:24:48.2872055Z Image: ubuntu-26.04
+2026-11-14T03:24:48.2872796Z Version: 20261111.196.1
+2026-11-14T03:24:48.2874400Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-14T03:24:48.2876493Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-14T03:24:48.2877744Z ##[endgroup]
+2026-11-14T03:24:48.2879160Z ##[group]GITHUB_TOKEN Permissions
+2026-11-14T03:24:48.2881564Z Contents: read
+2026-11-14T03:24:48.2882294Z Metadata: read
+2026-11-14T03:24:48.2883111Z ##[endgroup]
+2026-11-14T03:24:48.2885382Z Secret source: Actions
+2026-11-14T03:24:48.2886600Z Cache mode: write
+2026-11-14T03:24:48.2887808Z Prepare workflow directory
+2026-11-14T03:24:48.3216357Z Prepare all required actions
+2026-11-14T03:24:48.3258028Z Getting action download info
+2026-11-14T03:24:48.5760438Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-14T03:24:48.6673225Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-14T03:24:48.7568136Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2026-11-14T03:24:49.1993678Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-14T03:24:49.3882339Z Complete job name: bundle
+2026-11-14T03:24:49.4582076Z ##[group]Run actions/checkout@v4
+2026-11-14T03:24:49.4582788Z with:
+2026-11-14T03:24:49.4583180Z   repository: mikevocalz/nitro-forge
+2026-11-14T03:24:49.4586515Z   token: ***
+2026-11-14T03:24:49.4586895Z   ssh-strict: true
+2026-11-14T03:24:49.4587277Z   ssh-user: git
+2026-11-14T03:24:49.4587671Z   persist-credentials: true
+2026-11-14T03:24:49.4588092Z   clean: true
+2026-11-14T03:24:49.4588481Z   sparse-checkout-cone-mode: true
+2026-11-14T03:24:49.4588932Z   fetch-depth: 1
+2026-11-14T03:24:49.4589308Z   fetch-tags: false
+2026-11-14T03:24:49.4589699Z   show-progress: true
+2026-11-14T03:24:49.4590094Z   lfs: false
+2026-11-14T03:24:49.4590618Z   submodules: false
+2026-11-14T03:24:49.4591013Z   set-safe-directory: true
+2026-11-14T03:24:49.4591446Z   allow-unsafe-pr-checkout: false
+2026-11-14T03:24:49.4592076Z env:
+2026-11-14T03:24:49.4592425Z   CI: 1
+2026-11-14T03:24:49.4592782Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:49.4593177Z ##[endgroup]
+2026-11-14T03:24:49.6424255Z Syncing repository: mikevocalz/nitro-forge
+2026-11-14T03:24:49.6426926Z ##[group]Getting Git version info
+2026-11-14T03:24:49.6428049Z Working directory is '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T03:24:49.6429635Z [command]/usr/bin/git version
+2026-11-14T03:24:49.6431820Z git version 2.56.1
+2026-11-14T03:24:49.6448008Z ##[endgroup]
+2026-11-14T03:24:49.6461471Z Temporarily overriding HOME='/home/runner/work/_temp/984135ef-b2c9-4861-bd6d-4b7ab382a699' before making global git config changes
+2026-11-14T03:24:49.6463547Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T03:24:49.6465646Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T03:24:49.6516824Z Deleting the contents of '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T03:24:49.6519906Z ##[group]Initializing the repository
+2026-11-14T03:24:49.6524344Z [command]/usr/bin/git init /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T03:24:49.6596472Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-14T03:24:49.6598065Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-14T03:24:49.6599604Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-14T03:24:49.6601002Z hint: call:
+2026-11-14T03:24:49.6601769Z hint:
+2026-11-14T03:24:49.6602764Z hint: 	git config --global init.defaultBranch <name>
+2026-11-14T03:24:49.6603964Z hint:
+2026-11-14T03:24:49.6605105Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-14T03:24:49.6606813Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-14T03:24:49.6608242Z hint:
+2026-11-14T03:24:49.6609204Z hint: 	git branch -m <name>
+2026-11-14T03:24:49.6610546Z hint:
+2026-11-14T03:24:49.6612092Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-14T03:24:49.6614091Z Initialized empty Git repository in /home/runner/work/nitro-forge/nitro-forge/.git/
+2026-11-14T03:24:49.6617082Z [command]/usr/bin/git remote add origin https://github.com/mikevocalz/nitro-forge
+2026-11-14T03:24:49.6654384Z ##[endgroup]
+2026-11-14T03:24:49.6655570Z ##[group]Disabling automatic garbage collection
+2026-11-14T03:24:49.6657785Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-14T03:24:49.6688255Z ##[endgroup]
+2026-11-14T03:24:49.6689357Z ##[group]Setting up auth
+2026-11-14T03:24:49.6778979Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T03:24:49.6783380Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T03:24:49.7146295Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T03:24:49.7175569Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T03:24:49.7405824Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T03:24:49.7435442Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T03:24:49.7662966Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-14T03:24:49.7697845Z ##[endgroup]
+2026-11-14T03:24:49.7698637Z ##[group]Fetching the repository
+2026-11-14T03:24:49.7704896Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ce9f10805996770cc5d709412f3d47b9f872c85d:refs/remotes/pull/88/merge
+2026-11-14T03:24:50.9012839Z From https://github.com/mikevocalz/nitro-forge
+2026-11-14T03:24:50.9014519Z  * [new ref]         ce9f10805996770cc5d709412f3d47b9f872c85d -> pull/88/merge
+2026-11-14T03:24:50.9018251Z ##[endgroup]
+2026-11-14T03:24:50.9019318Z ##[group]Determining the checkout info
+2026-11-14T03:24:50.9020780Z ##[endgroup]
+2026-11-14T03:24:50.9031607Z [command]/usr/bin/git sparse-checkout disable
+2026-11-14T03:24:50.9072092Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-14T03:24:50.9096848Z ##[group]Checking out the ref
+2026-11-14T03:24:50.9099017Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/88/merge
+2026-11-14T03:24:51.0582222Z Note: switching to 'refs/remotes/pull/88/merge'.
+2026-11-14T03:24:51.0583624Z 
+2026-11-14T03:24:51.0613454Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-14T03:24:51.0617084Z changes and commit them, and you can discard any commits you make in this
+2026-11-14T03:24:51.0620163Z state without impacting any branches by switching back to a branch.
+2026-11-14T03:24:51.0622167Z 
+2026-11-14T03:24:51.0623604Z If you want to create a new branch to retain commits you create, you may
+2026-11-14T03:24:51.0625983Z do so (now or later) by using -c with the switch command. Example:
+2026-11-14T03:24:51.0627013Z 
+2026-11-14T03:24:51.0627641Z   git switch -c <new-branch-name>
+2026-11-14T03:24:51.0628367Z 
+2026-11-14T03:24:51.0628990Z Or undo this operation with:
+2026-11-14T03:24:51.0629657Z 
+2026-11-14T03:24:51.0630233Z   git switch -
+2026-11-14T03:24:51.0630962Z 
+2026-11-14T03:24:51.0631971Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-14T03:24:51.0633159Z 
+2026-11-14T03:24:51.0634648Z HEAD is now at ce9f108 Merge b93c842e13c4c4fc166ae63e187386bf0510608b into dab27e177f05a747f2a234e3892f62e2f7b8c28b
+2026-11-14T03:24:51.0638798Z ##[endgroup]
+2026-11-14T03:24:51.0647057Z [command]/usr/bin/git log -1 --format=%H
+2026-11-14T03:24:51.0669319Z ce9f10805996770cc5d709412f3d47b9f872c85d
+2026-11-14T03:24:51.0986567Z ##[group]Run actions/setup-node@v4
+2026-11-14T03:24:51.0987469Z with:
+2026-11-14T03:24:51.0988156Z   node-version: 24.19.0
+2026-11-14T03:24:51.0988939Z   always-auth: false
+2026-11-14T03:24:51.0989714Z   check-latest: false
+2026-11-14T03:24:51.0997478Z   token: ***
+2026-11-14T03:24:51.0998177Z env:
+2026-11-14T03:24:51.0998825Z   CI: 1
+2026-11-14T03:24:51.0999505Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:51.1000275Z ##[endgroup]
+2026-11-14T03:24:51.2121330Z Attempting to download 24.19.0...
+2026-11-14T03:24:51.2232213Z (node:2208) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T03:24:51.2234669Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T03:24:52.0187398Z Acquiring 24.19.0 - x64 from https://github.com/actions/node-versions/releases/download/24.19.0-30872449280/node-24.19.0-linux-x64.tar.gz
+2026-11-14T03:24:52.5968480Z Extracting ...
+2026-11-14T03:24:52.6070907Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/346cdece-6aed-4e42-9439-889314445c0f -f /home/runner/work/_temp/e03945a1-c10d-4ffb-8344-1df2a4bf251a
+2026-11-14T03:24:53.2592127Z Adding to the cache ...
+2026-11-14T03:24:54.9939846Z ##[group]Environment details
+2026-11-14T03:24:55.1824116Z node: v24.19.0
+2026-11-14T03:24:55.1824453Z npm: 11.17.0
+2026-11-14T03:24:55.1824697Z yarn: 1.22.22
+2026-11-14T03:24:55.1825217Z ##[endgroup]
+2026-11-14T03:24:55.1981309Z ##[group]Run corepack enable
+2026-11-14T03:24:55.1981593Z [36;1mcorepack enable[0m
+2026-11-14T03:24:55.2032266Z shell: /usr/bin/bash -e {0}
+2026-11-14T03:24:55.2032502Z env:
+2026-11-14T03:24:55.2032669Z   CI: 1
+2026-11-14T03:24:55.2032848Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:55.2033056Z ##[endgroup]
+2026-11-14T03:24:55.2685803Z ##[group]Run actions/download-artifact@v4
+2026-11-14T03:24:55.2686058Z with:
+2026-11-14T03:24:55.2686230Z   name: forge-candidate
+2026-11-14T03:24:55.2686455Z   path: /home/runner/work/_temp/candidate
+2026-11-14T03:24:55.2686684Z   merge-multiple: false
+2026-11-14T03:24:55.2686880Z   repository: mikevocalz/nitro-forge
+2026-11-14T03:24:55.2687095Z   run-id: 43550831178
+2026-11-14T03:24:55.2687272Z env:
+2026-11-14T03:24:55.2687432Z   CI: 1
+2026-11-14T03:24:55.2687591Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:55.2687764Z ##[endgroup]
+2026-11-14T03:24:55.3898583Z Downloading single artifact
+2026-11-14T03:24:55.4012631Z (node:2255) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T03:24:55.4013324Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T03:24:55.5295310Z Preparing to download the following artifacts:
+2026-11-14T03:24:55.5296579Z - forge-candidate (ID: 14096675968, Size: 147263506, Expected Digest: sha256:2185de5a076e3f2ca005a5f937631bdcbcfbed273c703da188bcd727e0ee470b)
+2026-11-14T03:24:55.7013035Z Redirecting to blob download url: https://productionresultssa2.blob.core.windows.net/actions-results/7c52041a-b0a8-84a0-b13f-e6629f1fe665/workflow-job-run-e2f49a44-fd39-53f8-b0dc-24cbaa19046b/artifacts/9d0189f3144c9ecef10a6a19cf742fd2830fae4619675c988b09ec3740dfe973.zip
+2026-11-14T03:24:55.7015384Z Starting download of artifact to: /home/runner/work/_temp/candidate
+2026-11-14T03:24:55.8992545Z (node:2255) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-11-14T03:24:59.2461288Z SHA256 digest of downloaded artifact is 2185de5a076e3f2ca005a5f937631bdcbcfbed273c703da188bcd727e0ee470b
+2026-11-14T03:24:59.2462080Z Artifact download completed successfully.
+2026-11-14T03:24:59.2462533Z Total of 1 artifact(s) downloaded
+2026-11-14T03:24:59.2466160Z Download artifact has finished successfully
+2026-11-14T03:24:59.2604468Z ##[group]Run node tooling/verify-nyc-tron-pin.mjs --download
+2026-11-14T03:24:59.2604838Z [36;1mnode tooling/verify-nyc-tron-pin.mjs --download[0m
+2026-11-14T03:24:59.2650160Z shell: /usr/bin/bash -e {0}
+2026-11-14T03:24:59.2650554Z env:
+2026-11-14T03:24:59.2650718Z   CI: 1
+2026-11-14T03:24:59.2650882Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:59.2651073Z ##[endgroup]
+2026-11-14T03:25:00.6316768Z NYC-Tron pin v1.0.0-rc.2: 26 manifest references match; release assets re-hashed
+2026-11-14T03:25:00.6421629Z ##[group]Run set -euo pipefail
+2026-11-14T03:25:00.6421919Z [36;1mset -euo pipefail[0m
+2026-11-14T03:25:00.6422185Z [36;1mfor stage in prepare install verify bundle; do[0m
+2026-11-14T03:25:00.6422825Z [36;1m  node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage"[0m
+2026-11-14T03:25:00.6423409Z [36;1mdone[0m
+2026-11-14T03:25:00.6469863Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:25:00.6470167Z env:
+2026-11-14T03:25:00.6470498Z   CI: 1
+2026-11-14T03:25:00.6470670Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:25:00.6470876Z ##[endgroup]
+2026-11-14T03:25:06.2538758Z {"stage":"prepare","app":"/home/runner/work/_temp/consumer","sourceCommit":"ce9f10805996770cc5d709412f3d47b9f872c85d","manifestSha256":"2d32bbdaeb2ccc43057ea61a1e907a3fa17771b43faddef507adecc01ad08b8e"}
+2026-11-14T03:25:06.8811794Z Downloading the pnpm 12.18.0 binary for linux-x64...
+2026-11-14T03:25:08.2797063Z [WARN] The "pnpm" field in package.json is no longer read by pnpm. The following keys were ignored: "pnpm.overrides". See https://pnpm.io/settings for the new home of each setting.
+2026-11-14T03:25:08.4038701Z Progress: resolved 0, reused 0, downloaded 1, added 0
+2026-11-14T03:25:08.4079337Z Downloading expo-file-system@58.0.13: 0.00 B/8.61 MB
+2026-11-14T03:25:08.6628105Z Downloading expo-modules-core@58.1.0: 0.00 B/35.54 MB
+2026-11-14T03:25:08.7011960Z Downloading @typescript/typescript-linux-x64@7.0.2: 0.00 B/9.66 MB
+2026-11-14T03:25:08.8292961Z Downloading expo-modules-macros@0.33.0: 0.00 B/6.40 MB
+2026-11-14T03:25:08.9559724Z Downloading hermes-compiler@260318099.0.5: 0.00 B/19.35 MB
+2026-11-14T03:25:09.1231617Z Downloading @expo/modules-macros-linux-x64@0.33.0: 0.00 B/9.09 MB
+2026-11-14T03:25:10.1401696Z Progress: resolved 0, reused 0, downloaded 449, added 0
+2026-11-14T03:25:10.5158998Z Error: ERR_PNPM_FETCH_404
+2026-11-14T03:25:10.5159376Z 
+2026-11-14T03:25:10.5159969Z   × installing dependencies
+2026-11-14T03:25:10.5161146Z   ├─▶ Failed to resolve dependency tree: GET https://registry.npmjs.org/
+2026-11-14T03:25:10.5162318Z   │   @nitro-forge%2Fignition: Not Found - 404
+2026-11-14T03:25:10.5162782Z   │   
+2026-11-14T03:25:10.5163185Z   │   Failed to resolve @nitro-forge/ignition@1.0.0-f6.43550831178.1
+2026-11-14T03:25:10.5163663Z   │   This error happened while installing the dependencies of @
+2026-11-14T03:25:10.5164174Z   ╰─▶ GET https://registry.npmjs.org/@nitro-forge%2Fignition: Not Found - 404
+2026-11-14T03:25:10.5171426Z   help: @nitro-forge/ignition is not in the npm registry, or you have no
+2026-11-14T03:25:10.5172379Z         permission to fetch it.
+2026-11-14T03:25:10.5172708Z         
+2026-11-14T03:25:10.5173345Z         No authorization header was set for the request.
+2026-11-14T03:25:10.5173671Z 
+2026-11-14T03:25:10.5461130Z node:internal/errors:985
+2026-11-14T03:25:10.5461689Z   const err = new Error(message);
+2026-11-14T03:25:10.5462059Z               ^
+2026-11-14T03:25:10.5462943Z 
+2026-11-14T03:25:10.5466970Z Error: Command failed: corepack pnpm install --strict-peer-dependencies --ignore-scripts
+2026-11-14T03:25:10.5467823Z     at genericNodeError (node:internal/errors:985:15)
+2026-11-14T03:25:10.5468366Z     at wrappedFn (node:internal/errors:539:14)
+2026-11-14T03:25:10.5468902Z     at checkExecSyncError (node:child_process:942:11)
+2026-11-14T03:25:10.5469432Z     at execFileSync (node:child_process:978:15)
+2026-11-14T03:25:10.5470222Z     at run (file:///home/runner/work/nitro-forge/nitro-forge/tooling/release/consumer-smoke.mjs:29:3)
+2026-11-14T03:25:10.5471308Z     at file:///home/runner/work/nitro-forge/nitro-forge/tooling/release/consumer-smoke.mjs:83:21
+2026-11-14T03:25:10.5471974Z     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+2026-11-14T03:25:10.5472479Z     at async node:internal/modules/esm/loader:643:26
+2026-11-14T03:25:10.5473166Z     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+2026-11-14T03:25:10.5474236Z   status: 1,
+2026-11-14T03:25:10.5474470Z   signal: null,
+2026-11-14T03:25:10.5474691Z   output: [ null, null, null ],
+2026-11-14T03:25:10.5474906Z   pid: 2344,
+2026-11-14T03:25:10.5475076Z   stdout: null,
+2026-11-14T03:25:10.5475250Z   stderr: null
+2026-11-14T03:25:10.5475432Z }
+2026-11-14T03:25:10.5475518Z 
+2026-11-14T03:25:10.5475599Z Node.js v24.19.0
+2026-11-14T03:25:10.5503494Z ##[error]Process completed with exit code 1.
+2026-11-14T03:25:10.5584091Z ##[group]Run actions/upload-artifact@v4
+2026-11-14T03:25:10.5584475Z with:
+2026-11-14T03:25:10.5584730Z   name: forge-consumer-graph
+2026-11-14T03:25:10.5585416Z   path: /home/runner/work/_temp/consumer/pnpm-lock.yaml
+/home/runner/work/_temp/consumer/forge-consumer-receipt.json
+
+2026-11-14T03:25:10.5586130Z   retention-days: 14
+2026-11-14T03:25:10.5586424Z   if-no-files-found: warn
+2026-11-14T03:25:10.5586721Z   compression-level: 6
+2026-11-14T03:25:10.5587007Z   overwrite: false
+2026-11-14T03:25:10.5587286Z   include-hidden-files: false
+2026-11-14T03:25:10.5587596Z env:
+2026-11-14T03:25:10.5587822Z   CI: 1
+2026-11-14T03:25:10.5588057Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:25:10.5588319Z ##[endgroup]
+2026-11-14T03:25:10.7162703Z (node:2421) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T03:25:10.7164007Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T03:25:10.7206650Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-14T03:25:10.7208821Z The least common ancestor is /home/runner/work/_temp/consumer. This will be the root directory of the artifact
+2026-11-14T03:25:10.7209955Z With the provided path, there will be 2 files uploaded
+2026-11-14T03:25:10.7213111Z Artifact name is valid!
+2026-11-14T03:25:10.7213792Z Root directory input is valid!
+2026-11-14T03:25:10.9907800Z Beginning upload of artifact content to blob storage
+2026-11-14T03:25:11.0084505Z (node:2421) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-14T03:25:11.1594820Z Uploaded bytes 2035
+2026-11-14T03:25:11.2022295Z Finished uploading artifact content to blob storage!
+2026-11-14T03:25:11.2023403Z SHA256 digest of uploaded artifact zip is fe63dd19a01e1fabace3ed246d5586a7c16164f59c4588021ead70544bea65d2
+2026-11-14T03:25:11.2025048Z Finalizing artifact upload
+2026-11-14T03:25:11.5444615Z Artifact forge-consumer-graph.zip successfully finalized. Artifact ID 14095996904
+2026-11-14T03:25:11.5445327Z Artifact forge-consumer-graph has been successfully uploaded! Final size is 2035 bytes. Artifact ID is 14095996904
+2026-11-14T03:25:11.5451274Z Artifact download URL: https://github.com/mikevocalz/nitro-forge/actions/runs/43550831178/artifacts/14095996904
+2026-11-14T03:25:11.5619755Z Post job cleanup.
+2026-11-14T03:25:11.6289290Z [command]/usr/bin/git version
+2026-11-14T03:25:11.6325135Z git version 2.56.1
+2026-11-14T03:25:11.6354057Z Temporarily overriding HOME='/home/runner/work/_temp/13d985a3-014f-4b24-b56c-f12e8bc5a288' before making global git config changes
+2026-11-14T03:25:11.6355376Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T03:25:11.6358559Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T03:25:11.6391826Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T03:25:11.6421139Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T03:25:11.6684697Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T03:25:11.6707551Z http.https://github.com/.extraheader
+2026-11-14T03:25:11.6716676Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-14T03:25:11.6749898Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T03:25:11.7013998Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T03:25:11.7045367Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T03:25:11.7413864Z Cleaning up orphan processes
+2026-11-14T03:25:11.7774636Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/download-artifact@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

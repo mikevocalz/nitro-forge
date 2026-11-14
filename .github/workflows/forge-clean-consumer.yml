@@ -1,0 +1,278 @@
+name: Forge clean tarball consumer
+on:
+  pull_request:
+    paths:
+      - 'packages/ignition/**'
+      - 'packages/prism/**'
+      - 'packages/cadence/**'
+      - 'packages/splice/**'
+      - 'packages/folio/**'
+      - 'packages/pitch/**'
+      - 'packages/tally/**'
+      - 'packages/quill/**'
+      - 'rust/**'
+      - 'Cargo.*'
+      - 'tooling/release/**'
+      - 'tooling/nyc-tron.json'
+      - '.github/workflows/forge-clean-consumer.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: forge-clean-consumer-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+env:
+  CI: '1'
+  EXPO_NO_TELEMETRY: '1'
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - run: node --test tooling/release/archive-boundaries.test.mjs packages/ignition/plugin/withForge.node.cjs tooling/release/native-ui/*.test.mjs
+      - run: node tooling/release/check-package-boundaries.mjs
+  apple-payload:
+    needs: source
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+      - run: bash packages/ignition/scripts/build-apple.sh
+      - run: node tooling/release/native-fragment.mjs --platform apple --output "$RUNNER_TEMP/native-apple"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forge-native-apple
+          path: ${{ runner.temp }}/native-apple
+          retention-days: 7
+  android-payload:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - name: Build all declared Android Rust ABIs using pinned RN NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error 'https://unpkg.com/react-native@0.88.1/gradle/libs.versions.toml' -o "$RUNNER_TEMP/rn-versions.toml"
+          ndk_version=$(node -e 'const fs=require("node:fs");const text=fs.readFileSync(process.argv[1],"utf8");const m=text.match(/^ndkVersion\s*=\s*"([^"]+)"/m);if(!m)throw Error("Missing pinned RN NDK version");console.log(m[1]);' "$RUNNER_TEMP/rn-versions.toml")
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$ndk_version"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$ndk_version"
+          cargo install cargo-ndk --version 4.1.2 --locked
+          bash packages/ignition/scripts/build-android.sh
+          node tooling/release/native-fragment.mjs --platform android --readobj "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readobj" --output "$RUNNER_TEMP/native-android"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forge-native-android
+          path: ${{ runner.temp }}/native-android
+          retention-days: 7
+  archives:
+    needs: [apple-payload, android-payload]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - run: corepack enable
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: forge-native-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/native
+      - name: Collect actual resolved nf-sys source/license materials before packing
+        run: node tooling/release/collect-native-licenses.mjs --native "$RUNNER_TEMP/native"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forge-license-materials
+          path: ${{ runner.temp }}/native/licenses
+          retention-days: 14
+      - name: Assemble once; internal candidate only, no release or tag
+        run: node tooling/release/pack-candidate.mjs --native "$RUNNER_TEMP/native" --output "$RUNNER_TEMP/candidate" --version "1.0.0-f6.${{ github.run_id }}.${{ github.run_attempt }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forge-candidate
+          path: ${{ runner.temp }}/candidate
+          retention-days: 14
+          if-no-files-found: error
+  bundle:
+    needs: archives
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - run: corepack enable
+      - uses: actions/download-artifact@v4
+        with:
+          name: forge-candidate
+          path: ${{ runner.temp }}/candidate
+      - name: Verify released Tron dependency bytes
+        run: node tooling/verify-nyc-tron-pin.mjs --download
+      - name: New external app; no checkout source fallbacks
+        shell: bash
+        run: |
+          set -euo pipefail
+          for stage in prepare install verify bundle; do
+            node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forge-consumer-graph
+          path: |
+            ${{ runner.temp }}/consumer/pnpm-lock.yaml
+            ${{ runner.temp }}/consumer/forge-consumer-receipt.json
+            ${{ runner.temp }}/consumer/package.json
+            ${{ runner.temp }}/consumer/pnpm-workspace.yaml
+            ${{ runner.temp }}/consumer/pnpm-effective-config.json
+          retention-days: 14
+  native-compile:
+    needs: bundle
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: android
+          - os: xcode-27
+            platform: ios
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: corepack enable
+      - uses: actions/download-artifact@v4
+        with:
+          name: forge-candidate
+          path: ${{ runner.temp }}/candidate
+      - name: Prepare from identical archive bytes
+        run: node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage prepare
+      - uses: actions/download-artifact@v4
+        with:
+          name: forge-consumer-graph
+          path: ${{ runner.temp }}/graph
+      - name: Reuse Linux-resolved dependency graph
+        run: cp "$RUNNER_TEMP/graph/pnpm-lock.yaml" "$RUNNER_TEMP/consumer/pnpm-lock.yaml"
+      - name: Install, verify and ordinary prebuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          for stage in install verify prebuild; do
+            if [ "$stage" = install ]; then
+              node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage" --platform '${{ matrix.platform }}' --frozen-lockfile
+            else
+              node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage" --platform '${{ matrix.platform }}'
+            fi
+          done
+      - name: Compile bundled Android acceptance app; no consumer Rust build
+        if: matrix.platform == 'android'
+        working-directory: ${{ runner.temp }}/consumer/android
+        run: ./gradlew assembleRelease --no-daemon
+      - name: Compile iOS; retain documented Expo macros workaround
+        if: matrix.platform == 'ios'
+        working-directory: ${{ runner.temp }}/consumer/ios
+        shell: bash
+        run: |
+          set -euo pipefail
+          project=$(find . -maxdepth 1 -name '*.xcodeproj' -print -quit)
+          scheme=$(basename "$project" .xcodeproj)
+          xcodebuild -project "$project" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/consumer-derived" -IDEPackageEnablePrebuilts=NO CODE_SIGNING_ALLOWED=NO build
+      - name: Record successful compile separately from runtime
+        env:
+          FORGE_PLATFORM: ${{ matrix.platform }}
+        run: node -e 'const fs=require("node:fs"),p=require("node:path");const file=p.join(process.env.RUNNER_TEMP,"consumer/forge-consumer-receipt.json");const r=JSON.parse(fs.readFileSync(file,"utf8"));r.stages.push("compile:"+process.env.FORGE_PLATFORM);r.configuration="Release";r.nativeRuntime="NOT RUN";fs.writeFileSync(file,JSON.stringify(r,null,2)+"\n");'
+      - name: Retain verified bundled application for later visible runtime proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ '${{ matrix.platform }}' = android ]; then
+            tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+            node tooling/release/runtime-artifact.mjs --platform android --app "$RUNNER_TEMP/consumer/android/app/build/outputs/apk/release/app-release.apk" --android-tools "$tools" --manifest "$RUNNER_TEMP/candidate/candidate.json" --consumer "$RUNNER_TEMP/consumer" --output "$RUNNER_TEMP/runtime-app"
+          else
+            app=$(find "$RUNNER_TEMP/consumer-derived/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -print)
+            test -n "$app"
+            node tooling/release/runtime-artifact.mjs --platform ios --app "$app" --manifest "$RUNNER_TEMP/candidate/candidate.json" --consumer "$RUNNER_TEMP/consumer" --output "$RUNNER_TEMP/runtime-app"
+          fi
+      - name: Install exact official native OS touch driver
+        run: |
+          node tooling/release/native-ui/install-maestro.mjs "$RUNNER_TEMP/forge-maestro"
+          echo "MAESTRO_BIN=$RUNNER_TEMP/forge-maestro/maestro/bin/maestro" >> "$GITHUB_ENV"
+      - name: Execute installed iOS Release app through XCTest OS touches
+        if: matrix.platform == 'ios'
+        run: node tooling/release/native-ui/run.mjs --platform ios --artifact-root "$RUNNER_TEMP/runtime-app" --source "$GITHUB_SHA" --output "$RUNNER_TEMP/runtime-ui"
+      - name: Execute installed Android Release app through OS touches at 320px
+        if: matrix.platform == 'android'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_USER_HOME="$RUNNER_TEMP/forge-android-user"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "system-images;android-35;google_apis;x86_64" "emulator" "platform-tools"
+          printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force -n ForgeF6Acceptance -k "system-images;android-35;google_apis;x86_64" --path "$ANDROID_AVD_HOME/ForgeF6Acceptance.avd"
+          if [[ -e /dev/kvm ]]; then sudo chmod 666 /dev/kvm; fi
+          "$ANDROID_HOME/emulator/emulator" -avd ForgeF6Acceptance -port 5554 -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -memory 3072 > "$RUNNER_TEMP/forge-emulator.log" 2>&1 &
+          forge_emulator_pid=$!
+          trap 'kill "$forge_emulator_pid" 2>/dev/null || true' EXIT
+          node tooling/release/native-ui/run.mjs --platform android --artifact-root "$RUNNER_TEMP/runtime-app" --source "$GITHUB_SHA" --output "$RUNNER_TEMP/runtime-ui"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forge-consumer-${{ matrix.platform }}-compile-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/consumer/forge-consumer-receipt.json
+            ${{ runner.temp }}/consumer/pnpm-lock.yaml
+            ${{ runner.temp }}/consumer/ios/*.xcodeproj/project.pbxproj
+            ${{ runner.temp }}/consumer/ios/*.xcodeproj/.spm-injected.json
+            ${{ runner.temp }}/runtime-app/*
+            ${{ runner.temp }}/consumer/android/app/build/outputs/apk/release/*.apk
+            ${{ runner.temp }}/consumer/android/app/src/main/AndroidManifest.xml
+            ${{ runner.temp }}/consumer/android/app/build/intermediates/merged_manifests/**/AndroidManifest.xml
+            ${{ runner.temp }}/consumer/android/app/src/main/res/values/*.xml
+            ${{ runner.temp }}/consumer/ios/**/Info.plist
+            ${{ runner.temp }}/consumer/ios/**/Package.resolved
+            ${{ runner.temp }}/consumer-derived/Logs/Build/*.xcactivitylog
+          include-hidden-files: true
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forge-consumer-${{ matrix.platform }}-runtime-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/runtime-ui/**
+            !${{ runner.temp }}/runtime-ui/unpacked-app/**
+            ${{ runner.temp }}/forge-maestro/provenance.json
+            ${{ runner.temp }}/forge-emulator.log
+          include-hidden-files: true
+          retention-days: 14
+      # Executed JUnit/AX/OS-file receipts are separate from compilation.
+      # Independent source/runtime/visual review is still required for F6.

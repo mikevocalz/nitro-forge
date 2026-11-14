@@ -1,0 +1,640 @@
+{
+  "sourceCommit": "ed82495361f21407d27adf970374c8f79cb4822d",
+  "platform": "android",
+  "appId": "dev.nitroforge.f6.consumer",
+  "device": "emulator-5554",
+  "observedVia": "Pinned official Maestro Android OS touches and native accessibility",
+  "candidateManifestSha256": "f555e5ab3c99ab5b41f7579f30b5a6d7d705a40ee832f133d9b6991ff6db8cef",
+  "installedPackagesSha256": "8bccf9e9f7453d3f5f7a5dc2896e4d53431d24a38775cb858a6a006bf2e46a71",
+  "lockSha256": "d420d86300e988733804a28e00ae4eba490169ccd6cead0f22186905147a069b",
+  "applicationArchiveSha256": "0ed212e2a2f3e1b85fef2b931d16b182b7c1a005143758dd688023262dc0b745",
+  "embeddedBundleSha256": "13b731a37baff54f5ed72bf24cf589b5aa2fff5006d2ca6eb2e582ca0566c993",
+  "workspaceSha256": "44adf626caaa54f9a958b541e6aa14aca8e524b33735c4aeed1ebd39cd80e66b",
+  "pnpmConfigSha256": "64523a686286e14678b2b5efc44d0c1185dafb9cb3c3b06604d48869d63201bf",
+  "driver": {
+    "version": "2.12.1",
+    "revision": "67d8a677029261fa424a45a10d08eacd6aa0deed",
+    "archiveSha256": "54dbb0716425626604973cbb374c585ca30272375d9ce15177a1152765ddd9d7",
+    "url": "https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.12.1/maestro.zip"
+  },
+  "geometry": {
+    "screenshotWidth": 320,
+    "screenshotHeight": 800,
+    "viewportWidth": 320,
+    "viewportHeight": 800,
+    "units": "320 physical pixels at mdpi; 320 logical dp",
+    "options": [
+      {
+        "studio": "prism",
+        "bounds": [
+          20,
+          128,
+          81,
+          173
+        ]
+      },
+      {
+        "studio": "cadence",
+        "bounds": [
+          81,
+          128,
+          159,
+          173
+        ]
+      },
+      {
+        "studio": "splice",
+        "bounds": [
+          159,
+          128,
+          220,
+          173
+        ]
+      },
+      {
+        "studio": "folio",
+        "bounds": [
+          220,
+          128,
+          273,
+          173
+        ]
+      },
+      {
+        "studio": "pitch",
+        "bounds": [
+          20,
+          173,
+          77,
+          218
+        ]
+      },
+      {
+        "studio": "tally",
+        "bounds": [
+          77,
+          173,
+          129,
+          218
+        ]
+      },
+      {
+        "studio": "quill",
+        "bounds": [
+          129,
+          173,
+          180,
+          218
+        ]
+      }
+    ]
+  },
+  "stages": [
+    {
+      "name": "picker",
+      "executed": 1,
+      "failures": 0,
+      "skipped": 0,
+      "flowSha256": "80cd8336cd547b8f27907bee20f61a20d053d99c8c60a1a9cc8ace8be765f7ff",
+      "reportSha256": "c43ef9f0a4eb589f216d23f1e32147736ff97025d4d72d6521d798efb54fb6da",
+      "screenshots": [
+        {
+          "path": "picker/artifacts/2026-11-14_071339/Forge native studio picker/takeScreenshot/picker-picker.png",
+          "sha256": "908c65f2b55d088b148026ad9fffa78e360ced86a0c863b5954c080529ec7e35"
+        }
+      ]
+    },
+    {
+      "name": "pass-1",
+      "executed": 1,
+      "failures": 0,
+      "skipped": 0,
+      "flowSha256": "cb0216986db74e129c9305d893b73460871503c36b14cc851ddf1ce76a2ab084",
+      "reportSha256": "7b79319d6b7fbed4c04f445e687ae205d54c1ac0c387e1be66f4d9b7897fad0b",
+      "screenshots": [
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-bad-restore-rejected.png",
+          "sha256": "f98580ee50f216edb7813c3dc2debaf63ca17223afd3d58a7538f783413094e2"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-disk-save.png",
+          "sha256": "837139c3537e5c9ea38191e979af42723bdb06550cef34b5907b3dd748f396b0"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-fresh-host-reopen.png",
+          "sha256": "989434832873ca76f023482927a947ee40250413629603259c95341400dbe30b"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-picker.png",
+          "sha256": "a87beba240c9d854527a79dffd9d49c33649cb8c259daf833da63affa20bafde"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-process-relaunch-persistence.png",
+          "sha256": "215b59a8adef98e5ae7ecbe154828c829c0f95af03f1903adffd3fde2941d842"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-redo.png",
+          "sha256": "f98580ee50f216edb7813c3dc2debaf63ca17223afd3d58a7538f783413094e2"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-undo-fresh-edit.png",
+          "sha256": "55eaef251be4a49cef00088281be1626bdc8a51f32d6917f3cc0098db7ddb63e"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-bad-restore-rejected.png",
+          "sha256": "e1a36d37436c8cd81494d2c7be354265d1932d3cd8b8d16683d475071e38a402"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-disk-save.png",
+          "sha256": "a9372c68e3de946681301ddb6d761d339a23a26041f34b9b02c8ddd07f3a2f06"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-fresh-host-reopen.png",
+          "sha256": "557f1cea9da1d625e141fbf1866abe7b00bb42799bf5d396dc4f38882b2ec298"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-picker.png",
+          "sha256": "fc50ebbffc42b7d9b5e059973507db67cd88fcf59f69d89be179626be6054e20"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-process-relaunch-persistence.png",
+          "sha256": "435be04b72358aa74ea0e77184cd6c1845775d849ee9b1f4654d1bd1c3113afa"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-redo.png",
+          "sha256": "8b2df6e34f353a98503008bdbbedf2587f3fca0df00fbcd54c94ce0c0679b609"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-undo-fresh-edit.png",
+          "sha256": "91ad00a0533f3d7643ead30b3aa139aecd24a97f75c204060f0233e91ce5963f"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-bad-restore-rejected.png",
+          "sha256": "051621a7539dae8e935ce03cd6a6010f0c11bd6ece93dac4f59993ec9c2b6ba2"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-disk-save.png",
+          "sha256": "307f0ddf0963f966a868e59d904c8b1c187a3a8a9385c971b5bc92a79d7c54a2"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-fresh-host-reopen.png",
+          "sha256": "7c0124c9bb5cf9f21afdfcd53e5f3a4d5a7662e15ac9e54b6cf226d3dff26d9d"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-picker.png",
+          "sha256": "eaaac9a5f7f913909d111fc8bfbacfaa22119756c6a75dd90e5a3e7941901ac5"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-process-relaunch-persistence.png",
+          "sha256": "f851a60def63a6ad00225eb21eac6d6521208d8370bbb94f2159b7d3335625a0"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-redo.png",
+          "sha256": "fb45bea63bfd35cadc10b22d748f0b353275448f964cd06cc4b92eb610dbdefd"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-undo-fresh-edit.png",
+          "sha256": "dbf3a7e9de2458b3032495a826841f67f228aff22d3cc081712f50037fc28218"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-bad-restore-rejected.png",
+          "sha256": "269e16b74f07496d00348e89509a1be2e7e40a67462d2c90dbdae1d528391aef"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-disk-save.png",
+          "sha256": "623bd947f9f7699de8eee6c982f70c4fcd1d72f885280ccf74221546edbc5039"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-fresh-host-reopen.png",
+          "sha256": "32e70e720f0ed60001e8d4ae093ed6351e151527142ea16cc1388bafa3e2259d"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-picker.png",
+          "sha256": "908c65f2b55d088b148026ad9fffa78e360ced86a0c863b5954c080529ec7e35"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-process-relaunch-persistence.png",
+          "sha256": "a4de3fe5045ad231ace13eec1f6bf823e1b23620f94eb26b980d1dfe0141fe22"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-redo.png",
+          "sha256": "90cebf1ac62d3a727ba63f51445f252629ae08b30bf6e3420edb59641974e7af"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-undo-fresh-edit.png",
+          "sha256": "62966afb3647811ad123f787cdbd98bc5b8d99d23f94d0acf24a5b75ad9a920e"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-bad-restore-rejected.png",
+          "sha256": "19a0c1fb656e8fd5459111878355724fe4eccb01eeda13848bba8f5c69a506f2"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-disk-save.png",
+          "sha256": "c81bb2240a96f415a5070d6953f34a37a14365a7bc3dff4ac9d979801a4c5690"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-fresh-host-reopen.png",
+          "sha256": "909c51db7a8a0e7c8e09cf6d05eda22ba5835bda8e513cb030a6dc2ab91ffa49"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-picker.png",
+          "sha256": "cf9c9146dd4bbe83e6b01e4c2662d4dcc33a8c8f2d553ca518cd87a8a6c60b87"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-process-relaunch-persistence.png",
+          "sha256": "76f4c2d6a5864a0024fe6d7ccb6ac7c269ea0e23856ea7b5bd4069333520cb33"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-redo.png",
+          "sha256": "5e5d1e8257fc276f940721f7263d1244cfac2cf93e7d672f6e565246b020faa5"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-undo-fresh-edit.png",
+          "sha256": "87ec6d5a9c5ad01b762d88624261966eea3f5ce680dbc93ccb79a1b8d4f45b57"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-bad-restore-rejected.png",
+          "sha256": "ebefa3b642c30accb5fed971b857cc31c3a0e1d8534b600cade2bc3acabfe71a"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-disk-save.png",
+          "sha256": "5184efba539a642db7b39ecc275a8d88eb55b76a6bea04682edf42f9c721e6fc"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-fresh-host-reopen.png",
+          "sha256": "78436955ca21446c8f7a6026109d901fc79f81313c4e8f1bad969c23603c4d08"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-picker.png",
+          "sha256": "696ee9d54177e0673de27ef4f30664bda0550634409536b09d9ac0e8dd896eeb"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-process-relaunch-persistence.png",
+          "sha256": "452062390340c470f17d5cb9607a0dd061b7590754e5e74e174c3982b119009d"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-redo.png",
+          "sha256": "ebefa3b642c30accb5fed971b857cc31c3a0e1d8534b600cade2bc3acabfe71a"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-undo-fresh-edit.png",
+          "sha256": "ebefa3b642c30accb5fed971b857cc31c3a0e1d8534b600cade2bc3acabfe71a"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+          "sha256": "bbf081fe44b83d727d1c395a0938be010c60276e90c5781950cee47012463b30"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-disk-save.png",
+          "sha256": "6fe2c5e77852a8b9579985644d8e770169e1c557c89081eb43425f2e8247fefd"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-fresh-host-reopen.png",
+          "sha256": "340077bbe7bf7da9f2247cb8b943b25f87b25ddd4e53643228a9b4d7df216a6e"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-picker.png",
+          "sha256": "b47626635ba6a80bbfb0e627cd313764b3bb0422d12df306fd453386e576cb43"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-process-relaunch-persistence.png",
+          "sha256": "c75ad4105e21cbc9b9beddaf35a38a13b9d60978a3d49d9a9089ddefc56d07b9"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-redo.png",
+          "sha256": "50e5e4c281c940a47621b5883e9eb0ebaa9216d384958ae3d88c6b87c10ef979"
+        },
+        {
+          "path": "pass-1/artifacts/2026-11-14_071406/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-undo-fresh-edit.png",
+          "sha256": "69410db711f4ec37584f3a552efef70fc3f156f68c92a9a8b74311360bb7ad8d"
+        }
+      ],
+      "documents": [
+        {
+          "studio": "prism",
+          "file": "forge-f6-prism.nfd",
+          "bytes": 178,
+          "sha256": "c900227cd558bbeddccadd2731739c110eef8db94eba3412d2eeb565eb0c056c",
+          "expected": "forge-f6-prism.expected.json",
+          "expectedSha256": "9f25ee754bf5d6735a7f57a934ea185e06cd80bcf695dee1a4523dcf3e2945dc"
+        },
+        {
+          "studio": "cadence",
+          "file": "forge-f6-cadence.nfd",
+          "bytes": 141,
+          "sha256": "01c8fbe56526602250839cbc611727443e128b723b6bcb8f049ce2ceae1046bb",
+          "expected": "forge-f6-cadence.expected.json",
+          "expectedSha256": "38319f8e12f1c64d7cf12348bbb2fd02544353527c5abe437893d66cdd5da3df"
+        },
+        {
+          "studio": "splice",
+          "file": "forge-f6-splice.nfd",
+          "bytes": 112,
+          "sha256": "d011764e6cb136a154bad0360ff8924299b2b293ba324842fc3cb04e8743e303",
+          "expected": "forge-f6-splice.expected.json",
+          "expectedSha256": "792a33dd32e9c61b5089ea2533ea587eaf4733bbb661805073209f76262759b8"
+        },
+        {
+          "studio": "folio",
+          "file": "forge-f6-folio.nfd",
+          "bytes": 759,
+          "sha256": "02aaf28cc0b3ccb48a34b9da7baf52ef0328d64baef3e5fa4dbe69e9590de5d0",
+          "expected": "forge-f6-folio.expected.json",
+          "expectedSha256": "2393ccade9a4d87b58661076bddfe43dd5ca28a474200cf4480b0c3080c96e62"
+        },
+        {
+          "studio": "pitch",
+          "file": "forge-f6-pitch.nfd",
+          "bytes": 319,
+          "sha256": "f510b1effba7ed4e9b11d58140ce718a3f8562ead2249909c913a54aedfde58b",
+          "expected": "forge-f6-pitch.expected.json",
+          "expectedSha256": "6b245703b2ed728e7dcc57db0c806331967f54e21eff20e7813e1c23a5456dac"
+        },
+        {
+          "studio": "tally",
+          "file": "forge-f6-tally.nfd",
+          "bytes": 337,
+          "sha256": "ee574833c39dccc4211d9d2eef547ee52040bc73a663686c51fe8d2221494144",
+          "expected": "forge-f6-tally.expected.json",
+          "expectedSha256": "a96006d95f270ddf82b22adbe3f351e76ab73f0bb020ae3d9a728036654f1d42"
+        },
+        {
+          "studio": "quill",
+          "file": "forge-f6-quill.nfd",
+          "bytes": 135,
+          "sha256": "c787614fc6e649a1bec5960d499445b8a5a712f7c205376320a494acffe8b708",
+          "expected": "forge-f6-quill.expected.json",
+          "expectedSha256": "e77cca904e06d4038a6ba6d3800b774258082e41225d180dca0a196465556b54"
+        }
+      ]
+    },
+    {
+      "name": "pass-2",
+      "executed": 1,
+      "failures": 0,
+      "skipped": 0,
+      "flowSha256": "cb0216986db74e129c9305d893b73460871503c36b14cc851ddf1ce76a2ab084",
+      "reportSha256": "8b7f59399d9f8b32c08778fee592c35e2a664eedca72498886ff9919691902ee",
+      "screenshots": [
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-bad-restore-rejected.png",
+          "sha256": "cb89b0e54e75a1dd0a5200070c4ac2fd277d8b48fe9eb7595c3757bc0f44fe98"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-disk-save.png",
+          "sha256": "db82f9a477a119d8379c32253d1d6819cb1533a3d5c5e9064ac1ad131f6bbf10"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-fresh-host-reopen.png",
+          "sha256": "3bd2fc4187014cde7413a59e439f1e06c457a6027e8b3955d69cef991586696c"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-picker.png",
+          "sha256": "a87beba240c9d854527a79dffd9d49c33649cb8c259daf833da63affa20bafde"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-process-relaunch-persistence.png",
+          "sha256": "d68c044688364021f2be82214c1b8b13cde01d531942a4d71cccfe11d8898a83"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-redo.png",
+          "sha256": "760138dfcaeedada313c36df61da5b149115abb673a19943d92b062919ad3039"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-undo-fresh-edit.png",
+          "sha256": "5f4eb04013ddf3794f8a67504c4095c8f1c22f2f332d8fc890caedbe581c2bdb"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-bad-restore-rejected.png",
+          "sha256": "49e151124b1d9b0b4157e17f0d36468c81ef52c573e028e8cd6cb1b1bd00f788"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-disk-save.png",
+          "sha256": "f803d07ec6234e6ba86f94bb948164f9c3208397d7e4efc04954aaf19a7a15e2"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-fresh-host-reopen.png",
+          "sha256": "a6b30a1b168185e5837ef5f3d2a7969cddb68533a58cc289d89cab6fc30cb4df"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-picker.png",
+          "sha256": "fc50ebbffc42b7d9b5e059973507db67cd88fcf59f69d89be179626be6054e20"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-process-relaunch-persistence.png",
+          "sha256": "6cb131a94f248e506affd492e6c326b621e2843fccad8a9b8ed58637a22341f7"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-redo.png",
+          "sha256": "7691df47246baea936ffca7632133eecd484ea7dcc4e45b6cd11a54f214ffa37"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-undo-fresh-edit.png",
+          "sha256": "0f2c77fafe358838e1ca0e53119b5fe37653719e3a22288b5469a47556af7dab"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-bad-restore-rejected.png",
+          "sha256": "d16be766b674aef0fe72fa80994945b5c99d6a0d694e7876f750d788da0078e6"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-disk-save.png",
+          "sha256": "cd0635ce40ed09cd9fa89c54a7f275503884dca5765fd1c45f4c723aa67317d3"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-fresh-host-reopen.png",
+          "sha256": "44916865ac89e2b457964fa2bcda07338e73aed962b9462f071e27e95452fb79"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-picker.png",
+          "sha256": "eaaac9a5f7f913909d111fc8bfbacfaa22119756c6a75dd90e5a3e7941901ac5"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-process-relaunch-persistence.png",
+          "sha256": "0b513df5390d8e5166a227652d9f5aedd28caae5ecd5513d51133d00f0498ce5"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-redo.png",
+          "sha256": "a064d785454a96b17159d23bbc938b2675af6ab8270e3772acbe07cc10e36bf6"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-undo-fresh-edit.png",
+          "sha256": "905074324402e22e378b51f570d89a9963fac37191cb452878c5d98139c7458a"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-bad-restore-rejected.png",
+          "sha256": "147a34afbccdc98b89849c95e65989a3143d8795173ebe35d417d7eac2076f10"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-disk-save.png",
+          "sha256": "0bd883ac52d4f5903728ee58996d7cf78ae31a8a7164e72b642f8be77ea390d8"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-fresh-host-reopen.png",
+          "sha256": "e4c34334022c5d11fa57c8f03876faf0a321424247840ccf06a55f9af4fe8af6"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-picker.png",
+          "sha256": "908c65f2b55d088b148026ad9fffa78e360ced86a0c863b5954c080529ec7e35"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-process-relaunch-persistence.png",
+          "sha256": "f0657919ac0777a99124f0568eedad1e0707f5cbbb6881a705753e2bf5bae367"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-redo.png",
+          "sha256": "2ef0148b154a9acb6c335fd936569bb414531236283803a5bf983db077fa0c4f"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-undo-fresh-edit.png",
+          "sha256": "5d9a0737f2bc5c191c156a311cfaad81c042b2c03b1e0c6d9a1f72408cb4fb13"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-bad-restore-rejected.png",
+          "sha256": "3a3eb66f1c65be84be719198235571eee482fe4238911c23b90c90463893e13c"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-disk-save.png",
+          "sha256": "c032ba34ef9e23b8665c2540ed6cf873a5a0cf1fe118756104289d398a9c953d"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-fresh-host-reopen.png",
+          "sha256": "6846edbcfff8726f9bdb5fc10f4828a86dd366d94b22ef98ecc51bcf1df0d833"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-picker.png",
+          "sha256": "cf9c9146dd4bbe83e6b01e4c2662d4dcc33a8c8f2d553ca518cd87a8a6c60b87"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-process-relaunch-persistence.png",
+          "sha256": "df519f39751c1a0659e6ac9fb005a690dcb5b62f6b8bcc20ebbc3f334f7aa1d4"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-redo.png",
+          "sha256": "f1d1c140cac36a25ffe1384616d7576493efbd1733830e641f2dbe0cc5997472"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-undo-fresh-edit.png",
+          "sha256": "44d9113b903864b6ca5f33a11b9239454187cde91821b2bad39454b660c9134e"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-bad-restore-rejected.png",
+          "sha256": "7e5f046fc4d8ef2417185eadcab45c2d0e41fbe6e636b7a4df0f2f76b8536d0b"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-disk-save.png",
+          "sha256": "7ea606c8c01dd770210cd8e7df1f2f9f3bb56881e0759b535447662459e539d1"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-fresh-host-reopen.png",
+          "sha256": "e35a6bd11cec1bc35573f6006a75d389ea7e4b5ee1d4b413677cde1fcafa0a77"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-picker.png",
+          "sha256": "696ee9d54177e0673de27ef4f30664bda0550634409536b09d9ac0e8dd896eeb"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-process-relaunch-persistence.png",
+          "sha256": "c9a0acdab0a9376135c8cd56b974df756b9ddbf9c81ba3c2c4a55611d725cf9b"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-redo.png",
+          "sha256": "b95c9ca419015c5eecfd0d08123c3fc6443bd894503be4b7659b86664d26e864"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-undo-fresh-edit.png",
+          "sha256": "06d4eb2d95ec79b945d5b54fa63b087a8ea2650903c7d59551914d8f4ea1e984"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+          "sha256": "f752827aae0cfe958b5b408e83b8c109d257b1cc0e6af7f33d132380551e4e3e"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-disk-save.png",
+          "sha256": "4f1a001cb8fab1eab1ab6e1a724b91645fa6e97af98c7767f9344bc3f586c8fb"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-fresh-host-reopen.png",
+          "sha256": "9f0863d31c2de92e77f5d875ef06423e6dbb154ee2cdc18d042eebd32807dabc"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-picker.png",
+          "sha256": "b47626635ba6a80bbfb0e627cd313764b3bb0422d12df306fd453386e576cb43"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-process-relaunch-persistence.png",
+          "sha256": "577842a4a968bea204db889e3071548b2dac5b4d9ac9993017dc0adc6155cf5d"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-redo.png",
+          "sha256": "c66c1e35a9b188ac063f15d92a8909621286d225ce67c705d01f23269df71fef"
+        },
+        {
+          "path": "pass-2/artifacts/2026-11-14_072506/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-undo-fresh-edit.png",
+          "sha256": "712d4bed9223b526e7aad926be1db8f1eda672ccaecf194ed2633e44c0d93a90"
+        }
+      ],
+      "documents": [
+        {
+          "studio": "prism",
+          "file": "forge-f6-prism.nfd",
+          "bytes": 178,
+          "sha256": "c900227cd558bbeddccadd2731739c110eef8db94eba3412d2eeb565eb0c056c",
+          "expected": "forge-f6-prism.expected.json",
+          "expectedSha256": "9f25ee754bf5d6735a7f57a934ea185e06cd80bcf695dee1a4523dcf3e2945dc"
+        },
+        {
+          "studio": "cadence",
+          "file": "forge-f6-cadence.nfd",
+          "bytes": 141,
+          "sha256": "01c8fbe56526602250839cbc611727443e128b723b6bcb8f049ce2ceae1046bb",
+          "expected": "forge-f6-cadence.expected.json",
+          "expectedSha256": "38319f8e12f1c64d7cf12348bbb2fd02544353527c5abe437893d66cdd5da3df"
+        },
+        {
+          "studio": "splice",
+          "file": "forge-f6-splice.nfd",
+          "bytes": 112,
+          "sha256": "d011764e6cb136a154bad0360ff8924299b2b293ba324842fc3cb04e8743e303",
+          "expected": "forge-f6-splice.expected.json",
+          "expectedSha256": "792a33dd32e9c61b5089ea2533ea587eaf4733bbb661805073209f76262759b8"
+        },
+        {
+          "studio": "folio",
+          "file": "forge-f6-folio.nfd",
+          "bytes": 759,
+          "sha256": "02aaf28cc0b3ccb48a34b9da7baf52ef0328d64baef3e5fa4dbe69e9590de5d0",
+          "expected": "forge-f6-folio.expected.json",
+          "expectedSha256": "2393ccade9a4d87b58661076bddfe43dd5ca28a474200cf4480b0c3080c96e62"
+        },
+        {
+          "studio": "pitch",
+          "file": "forge-f6-pitch.nfd",
+          "bytes": 319,
+          "sha256": "f510b1effba7ed4e9b11d58140ce718a3f8562ead2249909c913a54aedfde58b",
+          "expected": "forge-f6-pitch.expected.json",
+          "expectedSha256": "6b245703b2ed728e7dcc57db0c806331967f54e21eff20e7813e1c23a5456dac"
+        },
+        {
+          "studio": "tally",
+          "file": "forge-f6-tally.nfd",
+          "bytes": 337,
+          "sha256": "ee574833c39dccc4211d9d2eef547ee52040bc73a663686c51fe8d2221494144",
+          "expected": "forge-f6-tally.expected.json",
+          "expectedSha256": "a96006d95f270ddf82b22adbe3f351e76ab73f0bb020ae3d9a728036654f1d42"
+        },
+        {
+          "studio": "quill",
+          "file": "forge-f6-quill.nfd",
+          "bytes": 135,
+          "sha256": "c787614fc6e649a1bec5960d499445b8a5a712f7c205376320a494acffe8b708",
+          "expected": "forge-f6-quill.expected.json",
+          "expectedSha256": "e77cca904e06d4038a6ba6d3800b774258082e41225d180dca0a196465556b54"
+        }
+      ]
+    }
+  ],
+  "nativeDurableWorkflows": "PASS: two executed full seven-studio flows; OS sandbox NFD/expected files retained",
+  "independentVisualReview": "PENDING",
+  "localArgent": "NOT RUN; CI-hosted native drivers used",
+  "f6Gate": "UNCHANGED; independent source, runtime and visual review still required"
+}

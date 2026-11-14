@@ -218,6 +218,11 @@ rejects duplicate brush ids or ids colliding with layer/artboard ids.
 
 ## tally-engine — `TallyEngine::new()`
 
+`addSheet` undo/redo restores the durable `next_sheet` allocator together with the
+sheet delta, following the shared counter contract above. Rejected additions leave
+the allocator and both history stacks unchanged; normal `removeSheet` inversion
+does not advance the allocator.
+
 State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], validations: [ValidationRule], next_validation, conditional_formats: [ConditionalRule], next_conditional, filters: [FilterRule], next_filter, charts: [ChartSpec], next_chart, sparklines: [SparklineSpec], next_sparkline, views: [SheetView], next_view, comments: [Comment], next_comment, pivots: [PivotSpec], next_pivot, tables: [TableSpec], next_table }`,
 `Sheet = { id, name, tone?: string | null, is_protected?: boolean, active_view?: number | null, cells: { "A1": { raw: string } }, formats?: { "A1": CellFormat }, merges?: [{c0,r0,c1,r1}] }` — computed values are
 derived, not stored. `formats` is durable per-cell display metadata keyed by

@@ -340,8 +340,8 @@ enum UndoEntry {
         addr: String,
         prev: Option<CellFormat>,
     },
-    /// A sheet was added; undo removes it.
-    AddSheet { sheet_id: u64 },
+    /// A sheet was added; undo removes it and restores the allocator.
+    AddSheet { sheet_id: u64, prev_next_sheet: u64 },
     /// A sheet was removed; undo re-inserts it at `index`, restores `active`
     /// and re-adds `dropped_names`/`dropped_validations`/
     /// `dropped_conditional_formats`/`dropped_filters`/`dropped_charts`/
@@ -358,6 +358,8 @@ enum UndoEntry {
     /// the invariants `restore` enforces; `active_view` references left
     /// dangling by skipped views are swept to `None`.
     RemoveSheet {
+        /// Allocator value before this inverse; swapped for redo as well.
+        prev_next_sheet: u64,
         index: usize,
         sheet: Sheet,
         prev_active: usize,
@@ -721,7 +723,7 @@ impl TallyEngine {
             active_view: None,
             merges: Vec::new(),
         };
-        self.journal.record(UndoEntry::AddSheet { sheet_id: id });
+        self.journal.record(UndoEntry::AddSheet { sheet_id: id, prev_next_sheet: self.doc.next_sheet });
         self.doc.next_sheet = next_id;
         self.doc.sheets.push(sheet);
         let index = self.doc.sheets.len() - 1;
@@ -853,6 +855,7 @@ impl TallyEngine {
             .cloned()
             .collect();
         let entry = UndoEntry::RemoveSheet {
+            prev_next_sheet: self.doc.next_sheet,
             index: idx,
             sheet: self.doc.sheets[idx].clone(),
             prev_active: self.doc.active,
@@ -1103,7 +1106,7 @@ impl TallyEngine {
                     prev: cur,
                 }
             }
-            UndoEntry::AddSheet { sheet_id } => {
+            UndoEntry::AddSheet { sheet_id, prev_next_sheet } => {
                 match self.doc.sheets.iter().position(|s| s.id == sheet_id) {
                     Some(idx) => {
                         let prev_active = self.doc.active;
@@ -1120,7 +1123,9 @@ impl TallyEngine {
                             dropped_pivots,
                             dropped_tables,
                         ) = self.remove_sheet_at(idx);
+                        let next_sheet = mem::replace(&mut self.doc.next_sheet, prev_next_sheet);
                         UndoEntry::RemoveSheet {
+                            prev_next_sheet: next_sheet,
                             index: idx,
                             sheet: removed,
                             prev_active,
@@ -1143,6 +1148,7 @@ impl TallyEngine {
                 }
             }
             UndoEntry::RemoveSheet {
+                prev_next_sheet,
                 index,
                 sheet,
                 prev_active,
@@ -1157,6 +1163,7 @@ impl TallyEngine {
                 dropped_pivots,
                 dropped_tables,
             } => {
+                let next_sheet = mem::replace(&mut self.doc.next_sheet, prev_next_sheet);
                 let idx = index.min(self.doc.sheets.len());
                 let sheet_id = sheet.id;
                 self.doc.sheets.insert(idx, sheet);
@@ -1294,7 +1301,7 @@ impl TallyEngine {
                         }
                     }
                 }
-                UndoEntry::AddSheet { sheet_id }
+                UndoEntry::AddSheet { sheet_id, prev_next_sheet: next_sheet }
             }
             UndoEntry::SetActive { prev } => {
                 let cur = self.doc.active;
@@ -2773,6 +2780,7 @@ mod tests {
         // strictly LIFO and `record` clears redo), so the entry is crafted
         // directly to pin the invariant.
         e.journal.record(UndoEntry::RemoveSheet {
+            prev_next_sheet: 78,
             index: 0,
             sheet: ghost_sheet(77),
             prev_active: 0,
@@ -2797,12 +2805,12 @@ mod tests {
         assert_eq!(ns[0]["name"], json!("foo"));
         assert_eq!(ns[1]["name"], json!("Bar"));
         assert_eq!(ns[1]["sheet"], json!("Ghost"));
-        // The document must still snapshot and restore cleanly (the crafted
-        // sheet id bumps `next_sheet` on restore, so compare name state, not
-        // envelope bytes).
+        // The restored cursor is canonical for the crafted sheet identity,
+        // so the complete document must round-trip without normalization.
         let saved = e.snapshot().unwrap();
         let mut reopened = TallyEngine::new();
         reopened.restore(&saved).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), saved);
         assert_eq!(
             data(&mut reopened, "listNames", json!({})),
             data(&mut e, "listNames", json!({}))
@@ -2822,6 +2830,7 @@ mod tests {
             })
             .collect();
         e.journal.record(UndoEntry::RemoveSheet {
+            prev_next_sheet: 78,
             index: 0,
             sheet: ghost_sheet(77),
             prev_active: 0,

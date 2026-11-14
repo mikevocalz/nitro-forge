@@ -1,0 +1,9 @@
+{"file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--version"],"elapsedMs":1801,"status":0}
+{"file":"xcrun","args":["simctl","list","devices","available","--json"],"elapsedMs":1712,"status":0}
+{"file":"xcrun","args":["simctl","boot","C898E3E4-5033-4085-B886-963EE2D0C478"],"elapsedMs":2897,"status":0}
+{"file":"xcrun","args":["simctl","bootstatus","C898E3E4-5033-4085-B886-963EE2D0C478","-b"],"elapsedMs":52361,"status":0}
+{"file":"xcrun","args":["simctl","install","C898E3E4-5033-4085-B886-963EE2D0C478","/Users/runner/work/_temp/runtime-ui/unpacked-app/ForgeConsumerSmoke.app"],"elapsedMs":90948,"status":null,"error":"spawnSync xcrun ETIMEDOUT"}
+{"file":"xcrun","args":["simctl","io","C898E3E4-5033-4085-B886-963EE2D0C478","screenshot","/Users/runner/work/_temp/runtime-ui/failure.png"],"elapsedMs":86204,"status":22}
+{"file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","C898E3E4-5033-4085-B886-963EE2D0C478","--platform","ios","--no-ansi","hierarchy","--no-reinstall-driver"],"elapsedMs":89110,"status":0}
+{"file":"xcrun","args":["simctl","spawn","C898E3E4-5033-4085-B886-963EE2D0C478","log","show","--last","10m","--style","compact","--predicate","eventMessage CONTAINS \"dev.nitroforge.f6.consumer\""],"elapsedMs":13214,"status":0}
+{"file":"xcrun","args":["simctl","shutdown","C898E3E4-5033-4085-B886-963EE2D0C478"],"elapsedMs":5319,"status":0}

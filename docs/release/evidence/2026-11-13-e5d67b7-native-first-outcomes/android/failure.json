@@ -1,0 +1,23 @@
+{
+  "sourceCommit": "cd75fc235cfbf2345c63d30efb3368cfa40d2779",
+  "platform": "android",
+  "appId": "dev.nitroforge.f6.consumer",
+  "device": "emulator-5554",
+  "error": "Error: /home/runner/work/_temp/forge-maestro/maestro/bin/maestro failed: \n    at run (file:///home/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:32:11)\n    at flow (file:///home/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:61:3)\n    at file:///home/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:155:5",
+  "completedStages": [
+    {
+      "name": "picker",
+      "executed": 1,
+      "failures": 0,
+      "skipped": 0,
+      "flowSha256": "80cd8336cd547b8f27907bee20f61a20d053d99c8c60a1a9cc8ace8be765f7ff",
+      "reportSha256": "3861bd615b14c427a09e9c8ac85892af56c24a1471e2d29affc31334c4e2840a",
+      "screenshots": [
+        {
+          "path": "picker/artifacts/2026-11-14_042032/Forge native studio picker/takeScreenshot/picker-picker.png",
+          "sha256": "908c65f2b55d088b148026ad9fffa78e360ced86a0c863b5954c080529ec7e35"
+        }
+      ]
+    }
+  ]
+}

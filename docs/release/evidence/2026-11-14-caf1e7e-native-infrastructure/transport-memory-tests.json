@@ -1,0 +1,10 @@
+{
+  "sourcePreview": "77f9e2c175f3d22b76dc1cb9fbe9ef7e822108dd",
+  "node": "v26.13.0",
+  "command": "env NODE_DISABLE_COMPILE_CACHE=1 NODE_COMPILE_CACHE= node --input-type=module -e 'await import(TEST_DATA_URL)'",
+  "sourceLoading": "Exact proposed transport.mjs and transport.test.mjs strings loaded as in-memory data URLs; only relative module import is mapped to the module data URL. No source/filesystem mutation, cache, install or native build.",
+  "status": 0,
+  "stdout": "✔ offline serial cannot be accepted because its ADB server remains reachable (1.973792ms)\n✔ CLI boundary diagnostics preserve an original driver failure without retrying it (0.477833ms)\n✔ offline transition stops execution before a command or immediately after it (0.130458ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 6.801958\n",
+  "stderr": "",
+  "limit": "Only three pure transport regressions; full58-test CI NOT RUN at this receipt."
+}

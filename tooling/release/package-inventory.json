@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "decisionDate": "2026-11-13",
+  "packages": [
+    "ignition",
+    "prism",
+    "cadence",
+    "splice",
+    "folio",
+    "pitch",
+    "tally",
+    "quill"
+  ],
+  "deferred": [
+    "photo",
+    "motion",
+    "design",
+    "draft",
+    "scene"
+  ],
+  "deferralReason": "Owner approved the seven named v1 studios; the five newer adapters are deferred. Native engine registrations remain intact.",
+  "androidAbis": [
+    "armeabi-v7a",
+    "arm64-v8a",
+    "x86",
+    "x86_64"
+  ],
+  "iosArchitectures": [
+    "arm64-device",
+    "arm64-simulator",
+    "x86_64-simulator"
+  ],
+  "runtime": {
+    "expo": "58.0.24",
+    "react": "19.3.1",
+    "react-native": "0.88.1",
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+    "nitro-core": "1.0.0-alpha.nightly.136.gdb81de61bd32"
+  },
+  "nativeFirstPartyPaths": [
+    "rust/nf-sys",
+    "rust/ignition-core",
+    "packages/prism/rust",
+    "packages/cadence/rust",
+    "packages/splice/rust",
+    "packages/folio/rust",
+    "packages/pitch/rust",
+    "packages/tally/rust",
+    "packages/quill/rust",
+    "packages/photo/rust",
+    "packages/motion/rust",
+    "packages/design/rust",
+    "packages/draft/rust",
+    "packages/scene/rust"
+  ]
+}
