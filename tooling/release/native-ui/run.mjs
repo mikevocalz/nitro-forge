@@ -42,8 +42,9 @@ function iosHealth(label) {
 }
 
 function run(file, args, { optional = false, timeout = 90000, log } = {}) {
+  const startedAt = new Date().toISOString();
   const started = Date.now(), result = spawnSync(file, args, { env, encoding: 'utf8', timeout, maxBuffer: 32 * 1024 * 1024 });
-  appendFileSync(resolve(output, 'commands.jsonl'), JSON.stringify({ file, args, elapsedMs: Date.now() - started, status: result.status, error: result.error?.message }) + '\n');
+  appendFileSync(resolve(output, 'commands.jsonl'), JSON.stringify({ startedAt, file, args, elapsedMs: Date.now() - started, status: result.status, error: result.error?.message }) + '\n');
   if (log) writeFileSync(inside(output, log), (result.stdout ?? '') + (result.stderr ?? ''));
   if (result.error || result.status !== 0) {
     if (optional) return '';
@@ -162,7 +163,9 @@ try {
     run('xcrun', ['simctl', 'bootstatus', device, '-b'], { timeout: 420000, log: 'simulator-bootstatus.log' });
     checkIosBootStatusFile(inside(output, 'simulator-bootstatus.log'));
     iosHealth('before-install');
-    run('xcrun', ['simctl', 'install', device, app], { log: 'install.log' });
+    // The retained cc77 OS log completed installation after the original 90s client budget.
+    // Still require a successful command before launch; no retry or post-timeout continuation.
+    run('xcrun', ['simctl', 'install', device, app], { timeout: 300000, log: 'install.log' });
   } else {
     assert.ok(process.env.ANDROID_HOME);
     adb = resolve(process.env.ANDROID_HOME, 'platform-tools/adb'); device = 'emulator-5554'; app = inside(artifacts, record.archive);
