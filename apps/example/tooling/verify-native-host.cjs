@@ -61,11 +61,12 @@ assert.equal(hostRequire('react-native-nitro-modules/package.json').version, nig
 assert.equal(hostRequire('nitro-core/package.json').version, nightly);
 const skiaRequire = createRequire(hostRequire.resolve('react-native-skia/package.json'));
 const webgpuRequire = createRequire(hostRequire.resolve('react-native-webgpu/package.json'));
-assert.equal(skiaRequire('./package.json').version, '3.9.1');
-assert.equal(webgpuRequire('./package.json').version, '0.21.0');
-assert.equal(skiaRequire('react-native-webgpu-dawn/package.json').version, '157.1.0');
-assert.equal(webgpuRequire('react-native-webgpu-dawn/package.json').version, '157.1.0');
-console.log('Skia/WebGPU share Dawn157.1.0; native host declares exact Nitro v1 runtime');
+assert.equal(skiaRequire('./package.json').version, '3.10.1');
+assert.equal(webgpuRequire('./package.json').version, '0.21.4');
+assert.equal(skiaRequire('react-native-webgpu-dawn/package.json').version, '158.0.0');
+assert.equal(webgpuRequire('react-native-webgpu-dawn/package.json').version, '158.0.0');
+assert.equal(fs.realpathSync(skiaRequire.resolve('react-native-webgpu-dawn/package.json')), fs.realpathSync(webgpuRequire.resolve('react-native-webgpu-dawn/package.json')), 'Skia and WebGPU must resolve the same physical Dawn package');
+console.log('Skia/WebGPU share Dawn158.0.0; native host declares exact Nitro v1 runtime');
 for (const platform of ['ios', 'android']) {
   const dependency = autolink('react-native-config', platform).dependencies['@nitro-forge/ignition'];
   assert.equal(dependency.root, path.resolve(root, '../../packages/ignition'));

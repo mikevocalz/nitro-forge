@@ -36,8 +36,8 @@
         ]
       },
       "status": "in-progress",
-      "statusReason": "Dependency baseline #78, cargo-audit #83 and F2 #85 are merged. The dated F1 routine slice records Expo58.0.25/tooling patches, both locks, all32 manifest/peer/override/source declarations and actual nonzero root/native pnpm outdated output. Skia/WebGPU/SVG have a separate stacked native trial planned; CLI20.2 is tied to the published RN0.88.1 template. Known Rust migration/vendor ABI holds and the macro workaround remain explicit. New CI collection covers full suites, both generators, dated audit database and freshness output, with original22 workflow coverage still requiring actual exact-head executions and independent review. No F1 pass is claimed.",
-      "evidence": "docs/release/evidence/2026-11-13-dab27e1-f1/README.md",
+      "statusReason": "The routine Expo/tooling slice and Persona isolated-generator correction are the parent of a staged Skia3.10.1/WebGPU0.21.4/Dawn158 and SVG15.16.1 native trial. Current dated inventory covers32manifests,3workspacefiles,286declarations and3ownedlocks; root915packages includes explicit RN-template CLI20.2 devtool closure. New actual apps/example Android/iOS-SPM jobs must establish compatibility before adoption or a final hold; local source checks and metadata cannot substitute. Full exact-head suites/generation/audit/original22/current checks, native startup and independent review remain pending. No F1 pass is claimed.",
+      "evidence": "docs/release/evidence/2026-11-13-f311355-native-trial/README.md",
       "commit": null,
       "reviewer": null,
       "reviewedAt": null

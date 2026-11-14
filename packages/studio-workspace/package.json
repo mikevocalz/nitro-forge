@@ -28,7 +28,7 @@
     "@nitro-forge/studio-layout": "workspace:*",
     "zustand": "5.1.0",
     "@nitro-forge/icons": "workspace:*",
-    "react-native-svg": "15.16.0",
+    "react-native-svg": "15.16.1",
     "@nitro-forge/ignition": "workspace:*",
     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz"
   },
