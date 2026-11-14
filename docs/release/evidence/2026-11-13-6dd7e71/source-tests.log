@@ -1,0 +1,26 @@
+✔ candidate dev-link isolates selected packages and keeps native runtime resolution in the app (2.213125ms)
+✔ forge-audio-lab keeps workspace assets visible without losing Expo or Uniwind configuration (1.048833ms)
+✔ forge-media-lab keeps workspace assets visible without losing Expo or Uniwind configuration (1.072084ms)
+✔ rejects a stale pnpm patch source even when its old directory still exists (6.261083ms)
+✔ releaseChannel splits stable and prerelease like Tron (0.9ms)
+✔ evidenceExists rejects missing, absolute, escaping and directory paths (0.3935ms)
+✔ evidenceExists rejects a symlink that leaves the repository (0.927417ms)
+✔ stable mode is ready only when every gate passed with evidence, commit and reviewer (1.373625ms)
+✔ stable mode blocks on any gate that has not passed (1.172834ms)
+✔ prerelease mode reports without failing (0.167209ms)
+✔ the signing reviewer matches the gate's role after trimming and case folding (0.632958ms)
+✔ a passed gate without existing evidence, full commit or reviewer is invalid in every mode (8.86775ms)
+✔ gate file structure: missing, duplicate, unknown ids and bad status are errors (0.276875ms)
+✔ an unfinished gate may cite partial evidence, but the path must exist (0.242917ms)
+✔ compatibility claims need an existing receipt at a full commit (0.448625ms)
+✔ formatTable prints one row per gate (0.559541ms)
+✔ the committed gate file and compatibility record are well formed (1.46425ms)
+✔ CLI: stable exits 1 with a table, prerelease exits 0 (404.301334ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 580.494542

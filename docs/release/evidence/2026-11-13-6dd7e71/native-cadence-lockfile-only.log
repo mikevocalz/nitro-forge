@@ -1,0 +1,6 @@
+npm notice run nitro-forge@0.0.0 npx
+npm notice run 'pnpm' --dir examples/native-cadence install --lockfile-only --ignore-scripts --no-frozen-lockfile
+Scope: all 5 workspace projects
+? Verifying lockfile against supply-chain policies (716 entries)...
+✓ Lockfile passes supply-chain policies (716 entries in 0ms)
+Done in 1.4s using pnpm v12.18.0

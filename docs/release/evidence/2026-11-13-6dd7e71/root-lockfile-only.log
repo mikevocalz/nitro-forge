@@ -1,0 +1,7 @@
+npm warn exec The following package was not found and will be installed: pnpm@12.18.0
+npm notice run nitro-forge@0.0.0 npx
+npm notice run 'pnpm' install --lockfile-only --ignore-scripts --no-frozen-lockfile
+Scope: all 30 workspace projects
+? Verifying lockfile against supply-chain policies (774 entries)...
+✓ Lockfile passes supply-chain policies (774 entries in 0ms)
+Done in 4.7s using pnpm v12.18.0

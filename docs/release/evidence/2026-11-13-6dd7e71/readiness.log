@@ -1,0 +1,13 @@
+Gate Status      Evidence                                              Commit    Reviewer  Title
+------------------------------------------------------------------------------------------------------------
+F1   not-started -                                                     -         -         Packages updated
+F2   in-progress -                                                     -         -         Tron pin
+F3   not-started -                                                     -         -         Deferred rows
+F4   in-progress design/F4-REFERENCE-DECISION-2026-11-13.md            -         -         App identity and rebranding
+F5   blocked     -                                                     -         -         Desktop target and window chrome
+F6   not-started -                                                     -         -         Expo consumer path
+F7   in-progress docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json -         -         Platform evidence
+F8   not-started -                                                     -         -         Design pass
+F9   blocked     -                                                     -         -         Release
+
+v1 readiness: candidate (prerelease); 0/9 gates passed; no gate status changed.
