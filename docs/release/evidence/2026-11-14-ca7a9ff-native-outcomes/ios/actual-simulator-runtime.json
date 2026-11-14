@@ -1,0 +1,9 @@
+{
+  "observedVia": "xcrun simctl list devices available --json",
+  "runtimeIdentifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4",
+  "udid": "C898E3E4-5033-4085-B886-963EE2D0C478",
+  "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-Duo",
+  "name": "iPhone Duo",
+  "isAvailable": true,
+  "inventorySha256": "24b4fca64cc1901b62af2a995e8e8b4c2feb715d02c1b6bf3e071c81ec68de68"
+}
