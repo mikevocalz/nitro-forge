@@ -7,7 +7,7 @@ import { files, hash, inside, json, requireDisk } from '../archive-files.mjs';
 import { unpackArchive } from '../unpack-archive.mjs';
 import { createFlow, createPickerFlow, serializeFlow } from './flow.mjs';
 import { MAESTRO, parseHierarchy, requirePassedFlow, requireSemanticLabels } from './ui-evidence.mjs';
-import { exactFlowScreenshot, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
+import { exactFlowScreenshot, iosRuntimeIdentity, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
 
 const { values } = parseArgs({ options: { platform: { type: 'string' }, 'artifact-root': { type: 'string' }, source: { type: 'string' }, output: { type: 'string' } } });
 assert.ok(['ios', 'android'].includes(values.platform));
@@ -120,15 +120,16 @@ try {
   if (platform === 'ios') {
     app = unpackArchive(inside(artifacts, record.archive), resolve(output, 'unpacked-app'), { prefix: record.applicationDirectory, sha256: record.sha256 });
     assert.equal(hash(resolve(app, 'main.jsbundle')), record.embeddedBundleSha256);
-    const devices = Object.entries(JSON.parse(run('xcrun', ['simctl', 'list', 'devices', 'available', '--json'], { log: 'simulators.log' })).devices)
+    const simulatorInventory = JSON.parse(run('xcrun', ['simctl', 'list', 'devices', 'available', '--json'], { log: 'simulators.log' }));
+    const devices = Object.entries(simulatorInventory.devices)
       .sort(([a], [b]) => b.localeCompare(a, undefined, { numeric: true })).flatMap(([, list]) => list);
     const chosen = devices.find(item => item.isAvailable && item.name.startsWith('iPhone') && item.state === 'Booted') ?? devices.find(item => item.isAvailable && item.name.startsWith('iPhone'));
     assert.ok(chosen, 'An actual available CI iPhone simulator runtime is required');
     writeFileSync(resolve(output, 'chosen-simulator.json'), JSON.stringify(chosen, null, 2) + '\n');
     device = chosen.udid;
+    writeFileSync(resolve(output, 'actual-simulator-runtime.json'), JSON.stringify({ ...iosRuntimeIdentity(simulatorInventory, device), inventorySha256: hash(resolve(output, 'simulators.log')) }, null, 2) + '\n');
     if (chosen.state !== 'Booted') { run('xcrun', ['simctl', 'boot', device], { log: 'simulator-boot.log' }); ownedSimulator = device; }
     run('xcrun', ['simctl', 'bootstatus', device, '-b'], { timeout: 420000, log: 'simulator-bootstatus.log' });
-    run('xcrun', ['simctl', 'list', 'runtimes', '--json'], { log: 'actual-simulator-runtimes.json' });
     run('xcrun', ['simctl', 'install', device, app], { log: 'install.log' });
   } else {
     assert.ok(process.env.ANDROID_HOME);

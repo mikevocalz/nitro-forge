@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { exactFlowScreenshot, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
+import { exactFlowScreenshot, iosRuntimeIdentity, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(resolve(tmpdir(), 'forge-os-evidence-'));
@@ -83,4 +83,19 @@ test('picker capture requires one exact executed PNG and a valid original hash',
   assert.throws(() => exactFlowScreenshot({ screenshots: [file, file] }, 'picker-picker.png'));
   assert.throws(() => exactFlowScreenshot({ screenshots: [{ ...file, path: 'picker/debug/picker-picker.png' }] }, 'picker-picker.png'));
   assert.throws(() => exactFlowScreenshot({ screenshots: [{ ...file, sha256: 'invalid' }] }, 'picker-picker.png'));
+});
+
+test('chosen iOS runtime is bound to the actual available-device inventory without a second global query', () => {
+  const inventory = JSON.parse(readFileSync(new URL('../test-fixtures/ios-simulator-inventory.json', import.meta.url), 'utf8'));
+  const udid = 'C898E3E4-5033-4085-B886-963EE2D0C478';
+  const actual = iosRuntimeIdentity(inventory, udid);
+  assert.equal(actual.runtimeIdentifier, 'com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4');
+  assert.equal(actual.deviceTypeIdentifier, 'com.apple.CoreSimulator.SimDeviceType.iPhone-Duo');
+  assert.throws(() => iosRuntimeIdentity(inventory, 'missing'), /one exact runtime/);
+  const device = inventory.devices[actual.runtimeIdentifier][0];
+  device.isAvailable = false;
+  assert.throws(() => iosRuntimeIdentity(inventory, udid), /must be available/);
+  device.isAvailable = true;
+  inventory.devices[actual.runtimeIdentifier].push({ ...device });
+  assert.throws(() => iosRuntimeIdentity(inventory, udid), /one exact runtime/);
 });

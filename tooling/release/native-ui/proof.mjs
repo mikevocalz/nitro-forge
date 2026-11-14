@@ -65,3 +65,17 @@ export function exactFlowScreenshot(stage, name) {
   assert.match(matches[0].sha256, /^[a-f0-9]{64}$/);
   return matches[0];
 }
+
+/** Bind the chosen device to the same fresh OS inventory used for selection. */
+export function iosRuntimeIdentity(inventory, udid) {
+  assert.ok(inventory && typeof inventory.devices === 'object');
+  const matches = Object.entries(inventory.devices).flatMap(([runtimeIdentifier, devices]) =>
+    devices.filter(device => device.udid === udid).map(device => ({ runtimeIdentifier, device })));
+  assert.equal(matches.length, 1, 'Chosen iOS device must have one exact runtime identity');
+  const { runtimeIdentifier, device } = matches[0];
+  assert.match(runtimeIdentifier, /^com\.apple\.CoreSimulator\.SimRuntime\.iOS-/);
+  assert.equal(device.isAvailable, true, 'Chosen iOS runtime/device must be available');
+  assert.match(device.deviceTypeIdentifier, /^com\.apple\.CoreSimulator\.SimDeviceType\.iPhone-/);
+  return { observedVia: 'xcrun simctl list devices available --json', runtimeIdentifier,
+    udid: device.udid, deviceTypeIdentifier: device.deviceTypeIdentifier, name: device.name, isAvailable: true };
+}
