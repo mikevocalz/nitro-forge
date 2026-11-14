@@ -1,4 +1,68 @@
-# Direction: the Prism persona turret
+# Forge suite design direction
+
+## Owner brief and view radius rule
+
+Synced 2026-11-13 from the owner's v1 program, revision 3 (2026-11-11),
+§2.5. This suite-wide direction overrides the older, narrower Prism turret
+brief below. The external program remains outside the repository.
+
+**The brief: design every Forge app as if the team behind the current Affinity app (v3, Affinity by Canva) had also designed Word, Excel, PowerPoint and every other app in the suite.** One team, one hand, one grammar, applied to documents, spreadsheets, slides, PDF, audio and video as well as image work.
+
+Primary reference: the current Affinity app and its Vector, Pixel and Layout studios (https://canva.com/newsroom/news/all-new-affinity, review with interface captures at https://www.techradar.com/pro/affinity-by-canva-2026-review). Use its iPad build as the reference, like every other Forge reference. It is the bar, not a source: study its structure and restraint, and draw original Forge artwork, icons and layouts.
+
+What that means per studio:
+
+| Forge studio | The question to answer |
+| --- | --- |
+| Prism (image) | Closest to the reference itself; this sets the grammar the others inherit |
+| Quill (rich text) | What would that team's Word look like? |
+| Tally (sheets) | What would that team's Excel look like? |
+| Pitch (slides) | What would that team's PowerPoint look like? |
+| Folio (PDF) | What would that team's Acrobat look like? |
+| Splice (video), Cadence (audio) | The same grammar carried to timelines and mixers |
+
+Shared grammar to carry across all of them: one studio switcher pattern; the same toolbar, context toolbar, panel, inspector and popover construction; dense, quiet, dark-first chrome with accent used only for state; panels that can be rearranged and saved as workspaces; identical spacing, type scale, icon grid and control sizes. An office studio must not fall back to a ribbon or to a generic mobile form layout.
+
+**Corner radius is a hard rule, and it is a rule about views: every rounded `View` is `rounded-sm` or `rounded-md`.**
+
+| Token | Value | Which views |
+| --- | --- | --- |
+| `rounded-md` | 6 px | Outer views: panels, cards, sheets, popovers, menus, dialogs, toasts, the studio switcher, document and canvas frames |
+| `rounded-sm` | 4 px | Inner views nested inside those: sections, grouped rows, list rows, wells, thumbnails, cells, inset surfaces |
+
+- Nesting rule: a view inside a `rounded-md` view is `rounded-sm` or square, never the same or larger than its parent.
+- Controls are views too and follow the inner rule: `rounded-sm`.
+- No view in Forge uses `rounded-lg` or larger. No pill-shaped rectangular views or controls.
+- `rounded-full` is allowed only for things that are circular by nature: knobs, colour wells, radio buttons, avatars, record buttons.
+- Values under 4 px are allowed only for hairline details such as meter segments and timeline ticks, through a named token.
+- Exempt: shapes the operating system owns (window corners, system sheets, the launcher's icon mask).
+- These values are Tailwind v4's `rounded-sm` and `rounded-md`. Forge sets them in its own theme; Tron stays palette- and radius-agnostic and takes them from the app.
+
+Other references, iPad builds only, never iPhone screens: Procreate (https://procreate.com), Logic Pro for iPad (https://www.apple.com/logic-pro-for-ipad/), DaVinci Resolve (https://www.blackmagicdesign.com/products/davinciresolve), Figma (https://www.figma.com), the Adobe iPad apps, and Microsoft Office for iPad for feature coverage of the office studios, not for their look.
+
+## Reference boundaries and F8 work remaining
+
+The reference pack remains private. Keep its existing indexes and access
+boundaries; do not commit restricted interface captures or copy reference
+artwork into Forge. The owner's acceptance of earlier iPhone Duo launcher
+captures applies only to the F4 launcher-reference basis; see
+[F4 reference decision](F4-REFERENCE-DECISION-2026-11-13.md). It does not
+replace the studio iPad reference requirement above or establish native
+studio runtime evidence.
+
+This document sync records the direction only. F8 remains incomplete:
+define the two shared Forge radius tokens, migrate existing values by view
+role, add the required radius check to `validate:v1`, and complete the
+per-studio design sequence, view-by-view inventory, cross-studio consistency
+table, iPad-size captures and critique records. No current styling,
+rendered hierarchy, visual compliance or design-sequence pass is asserted.
+
+## Historical Prism persona turret record
+
+The following self-authored brief and round results retain their original
+scope and historical claims. Their uniform “4 pt radius” shorthand is
+superseded by the owner-stated view rule above. They are not an F8 suite
+acceptance record.
 
 **Brief: SELF-AUTHORED.** The user said proceed, so the Step 0 questions in
 forge-designer-pro are answered here by the designer, not by the user.
