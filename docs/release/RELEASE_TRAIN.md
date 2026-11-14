@@ -116,6 +116,10 @@ a final hold/adoption decision. Retain the macro workaround until actual native
 proof replaces it. Full exact-head CI/evidence and independent F1 review remain
 pending; no gate is passed by this slice.
 
+The [Persona generator correction](evidence/2026-11-13-de1e36b-persona/README.md)
+records the actual first-head CI failure and adds its isolated frozen graph;
+no earlier suite result is promoted to the corrected source.
+
 ## Skills and standards
 - [No AI Slop](https://github.com/petergyang/no-ai-slop/blob/000650b156983f5159695b441477f4e63b25dc85/skills/no-ai-slop/SKILL.md) + [Everything Claude Code verification loop](https://github.com/WorldFlowAI/everything-claude-code/blob/432485ba6b92c14fb357276a98957f348bcff9ee/skills/verification-loop/SKILL.md).
 - [Expo overview/upgrade](https://github.com/expo/skills/tree/a9e5bd3fa00b4e61f632e43f85da73aee1942582/plugins/expo/skills) and [Callstack upgrading RN](https://github.com/callstackincubator/agent-skills/blob/59e9d17446a248b21d86f078fcd0bd2d36db1ca4/skills/upgrading-react-native/SKILL.md).

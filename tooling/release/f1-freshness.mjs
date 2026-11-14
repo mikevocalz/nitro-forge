@@ -78,7 +78,7 @@ export async function inventory({ registry = false } = {}) {
       }
     }));
   }
-  const inputPaths = [...files, ...workspaceFiles, 'pnpm-lock.yaml', 'examples/native-cadence/pnpm-lock.yaml', 'Cargo.lock', '.cargo/audit.toml', 'tooling/release/f1-holds-2026-11-13.json'];
+  const inputPaths = [...files, ...workspaceFiles, ...tracked.filter(path => path === 'pnpm-lock.yaml' || path.endsWith('/pnpm-lock.yaml')), 'Cargo.lock', '.cargo/audit.toml', 'tooling/release/f1-holds-2026-11-13.json'];
   const inputSHA256 = Object.fromEntries(inputPaths.map(path => [path, createHash('sha256').update(readFileSync(resolve(root, path))).digest('hex')]));
   const rows = uses.map(use => ({ ...use, latest: responses[use.name]?.latest ?? null, ...(registry ? disposition(use, responses[use.name]?.latest ?? null, holds) : { action: 'NOT RUN', reason: 'Offline inventory only' }) }));
   return { sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(), capturedAtUTC: new Date().toISOString(), inputSHA256, workingTreeStatus: execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }), registry, manifestCount: files.length, files, workspaceFiles, responses, uses: rows, unresolved: rows.filter(row => ['review-required', 'registry-unavailable'].includes(row.action)), note: 'Declared constraints only; not a full locked/transitive audit. pnpm outdated and native compatibility proofs remain separate. No source/lock mutation or F1 gate pass.' };

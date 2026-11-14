@@ -55,13 +55,13 @@ jobs:
       - name: Regenerate Ignition
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tooling/release/record-f1-command.mjs ignition-generation required -- pnpm --filter @nitro-forge/ignition codegen
-      - name: Regenerate Persona with the same installed Nitrogen
+      - name: Install Persona's own frozen generator graph
+        id: persona-install
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: |
-          NITROGEN_ENTRY="$(pnpm --filter @nitro-forge/ignition exec node -p 'require.resolve("nitrogen/bin/nitrogen.js")')"
-          # $1 is expanded by the child shell, not this shell.
-          # shellcheck disable=SC2016
-          node tooling/release/record-f1-command.mjs persona-generation required -- bash -c 'cd native/persona/nitro && node "$1"' f1 "$NITROGEN_ENTRY"
+        run: node tooling/release/record-f1-command.mjs persona-install required -- pnpm --dir native/persona/nitro install --frozen-lockfile --ignore-scripts
+      - name: Regenerate Persona from its isolated exact-pinned project
+        if: ${{ !cancelled() && steps.persona-install.outcome == 'success' }}
+        run: node tooling/release/record-f1-command.mjs persona-generation required -- pnpm --dir native/persona/nitro codegen
       - name: Generated source must match committed output
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tooling/release/record-f1-command.mjs generated-diff required -- git diff --exit-code -- packages/ignition/nitrogen packages/ignition/Package.swift native/persona/nitro/nitrogen native/persona/nitro/Package.swift
