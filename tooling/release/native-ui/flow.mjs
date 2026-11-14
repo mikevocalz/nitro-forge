@@ -44,7 +44,9 @@ function startup(commands) {
   commands.push({ extendedWaitUntil: { visible: { id: 'f6-selected' }, timeout: 90000 } });
 }
 function selectStudio(commands, kind) {
-  commands.push(scroll({ id: 'f6-studio' }, 'UP'));
+  // A group may be AX-visible at y10 while its first row lies under the iOS
+  // status area. Center it before touching an option; visibility alone is insufficient.
+  commands.push({ scrollUntilVisible: { ...scroll({ id: 'f6-studio' }, 'UP').scrollUntilVisible, centerElement: true } });
   commands.push({ tapOn: { text: `^${kind}$`, enabled: true } });
   commands.push(scroll({ id: 'f6-selected' }, 'DOWN'));
   commands.push({ assertVisible: selected(kind, 'closed') });

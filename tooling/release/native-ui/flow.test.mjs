@@ -129,6 +129,7 @@ test('picker selection scrolls up to the real group and checks the matching clos
     if (!command.tapOn?.text) continue;
     assert.deepEqual(commands[index - 1].scrollUntilVisible.element, { id: 'f6-studio' });
     assert.equal(commands[index - 1].scrollUntilVisible.direction, 'UP');
+    assert.equal(commands[index - 1].scrollUntilVisible.centerElement, true, 'A 100%-visible picker may still overlap the iOS status area');
     assert.equal(commands[index + 1].scrollUntilVisible.element.id, 'f6-selected');
     assert.equal(commands[index + 2].assertVisible.id, 'f6-selected');
     const studio = command.tapOn.text.slice(1, -1);
@@ -208,4 +209,21 @@ test('full pass restores the actual heading and closed final studio before host 
   assert.ok(appSource.includes('Forge clean consumer'));
   assert.deepEqual(tapIds(commands).slice(-2), ['f6-reopen', 'f6-close']);
   assert.equal(commands.filter(command => command.stopApp === null).length, 7);
+});
+
+// Actual iOS failure: AX visibility does not establish an unobstructed OS tap.
+test('picker centering guards the recorded iOS status-area tap without weakening studio identity', () => {
+  const receipt = JSON.parse(readFileSync(new URL('../test-fixtures/ios-status-area-picker.json', import.meta.url), 'utf8'));
+  assert.match(receipt.trace, /Element bounds: Bounds\(x=20, y=10, width=362, height=88\)/);
+  assert.match(receipt.trace, /Visibility Percent: 1\.0/);
+  assert.match(receipt.trace, /Try tapping at \(122, 32\)/);
+  assert.match(receipt.trace, /Studio: cadence · Document: closed/);
+  for (const definition of [createPickerFlow(), createFlow()]) {
+    for (const [index, command] of definition.commands.entries()) {
+      if (!command.tapOn?.text) continue;
+      assert.equal(definition.commands[index - 1].scrollUntilVisible.centerElement, true);
+      assert.equal(definition.commands[index + 2].assertVisible.text,
+        '^Studio: ' + command.tapOn.text.slice(1, -1) + ' · Document: closed$');
+    }
+  }
 });
