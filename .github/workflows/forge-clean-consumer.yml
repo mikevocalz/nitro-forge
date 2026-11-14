@@ -33,7 +33,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24.19.0'
-      - run: node --test tooling/release/archive-boundaries.test.mjs packages/ignition/plugin/withForge.test.cjs
+      - run: node --test tooling/release/archive-boundaries.test.mjs packages/ignition/plugin/withForge.node.cjs
       - run: node tooling/release/check-package-boundaries.mjs
   apple-payload:
     needs: source
@@ -100,6 +100,12 @@ jobs:
           path: ${{ runner.temp }}/native
       - name: Collect actual resolved nf-sys source/license materials before packing
         run: node tooling/release/collect-native-licenses.mjs --native "$RUNNER_TEMP/native"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forge-license-materials
+          path: ${{ runner.temp }}/native/licenses
+          retention-days: 14
       - name: Assemble once; internal candidate only, no release or tag
         run: node tooling/release/pack-candidate.mjs --native "$RUNNER_TEMP/native" --output "$RUNNER_TEMP/candidate" --version "1.0.0-f6.${{ github.run_id }}.${{ github.run_attempt }}"
       - uses: actions/upload-artifact@v4

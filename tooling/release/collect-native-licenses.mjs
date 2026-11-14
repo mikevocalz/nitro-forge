@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { files, hash, inside, json, requireDisk } from './archive-files.mjs';
 import { lockChecksums, nativeClosure, NITRO_LICENSE_SHA256 } from './license-materials.mjs';
+import { verifyRegistrySource } from './unpack-archive.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const { values } = parseArgs({ options: { native: { type: 'string' } } });
@@ -60,21 +62,27 @@ for (const pkg of selected) {
   assert.ok(pkg.source.startsWith('registry+'), `Non-registry source needs explicit source-admission materials: ${pkg.id}`);
   const checksum = checksums.get(`${pkg.name}@${pkg.version}|${pkg.source}`);
   assert.match(checksum ?? '', /^[0-9a-f]{64}$/, `Missing locked source checksum: ${pkg.id}`);
-  const fileChecksums = json(resolve(directory, '.cargo-checksum.json'));
-  assert.equal(fileChecksums.package, checksum, `Registry source identity mismatch: ${pkg.id}`);
   // Cargo's verified, unmodified .crate is shipped too: this preserves actual
   // file-level headers/embedded notices, not just manifest license identifiers.
   const archive = resolve(directory, '..', '..', '..', 'cache', dirname(directory).split(sep).at(-1), `${key}.crate`);
   assert.equal(hash(archive), checksum, `Missing/changed locked source archive: ${pkg.id}`);
   materials.push(copy(archive, `sources/${key}.crate`));
-  for (const [path, expected] of Object.entries(fileChecksums.files)) assert.equal(hash(inside(directory, path)), expected, `Changed registry source file: ${pkg.id}/${path}`);
-  const licenses = files(directory).filter(path => /(?:^|\/)(?:licen[cs]e|copying|copyright|notice|authors)(?:[.\/_-]|$)/i.test(path) || /(?:^|\/)LICENSES\//i.test(path));
-  if (pkg.license_file) licenses.push(relative(directory, resolve(directory, pkg.license_file)).split(sep).join('/'));
-  assert.ok(licenses.length > 0, `No actual license/notice text for ${pkg.id}; requires source review`);
-  for (const path of new Set(licenses)) materials.push(copy(inside(directory, path), `components/${key}/${path}`));
-  materials.push(copy(pkg.manifest_path, `components/${key}/Cargo.toml`));
-  materials.push(copy(resolve(directory, '.cargo-checksum.json'), `components/${key}/source-checksums.json`));
-  components.push({ id: pkg.id, name: pkg.name, version: pkg.version, source: pkg.source, repository: pkg.repository, checksum, licenseExpression: pkg.license, materials });
+  // Cargo cache layouts vary. Read materials only from the locked archive,
+  // never from an assumed cache checksum file or a mutable extraction tree.
+  const scratch = mkdtempSync(resolve(tmpdir(), 'forge-locked-crate-'));
+  try {
+    const source = verifyRegistrySource(archive, resolve(scratch, 'unpacked'), directory, { prefix: key, sha256: checksum });
+    const sourceFiles = files(source);
+    const licenses = sourceFiles.filter(path => /(?:^|\/)(?:licen[cs]e|copying|copyright|notice|authors)(?:[.\/_-]|$)/i.test(path) || /(?:^|\/)LICENSES\//i.test(path));
+    if (pkg.license_file) licenses.push(relative(directory, resolve(directory, pkg.license_file)).split(sep).join('/'));
+    assert.ok(licenses.length > 0, `No actual license/notice text for ${pkg.id}; requires source review`);
+    for (const path of new Set(licenses)) materials.push(copy(inside(source, path), `components/${key}/${path}`));
+    materials.push(copy(resolve(source, 'Cargo.toml'), `components/${key}/Cargo.toml`));
+    const hashes = resolve(scratch, 'source-checksums.json');
+    writeFileSync(hashes, JSON.stringify({ archiveSha256: checksum, files: Object.fromEntries(sourceFiles.map(path => [path, hash(inside(source, path))])) }, null, 2) + '\n');
+    materials.push(copy(hashes, `components/${key}/source-checksums.json`));
+    components.push({ id: pkg.id, name: pkg.name, version: pkg.version, source: pkg.source, repository: pkg.repository, checksum, licenseExpression: pkg.license, materials });
+  } finally { rmSync(scratch, { recursive: true, force: true }); }
 }
 const sysroot = execFileSync('rustc', ['--print', 'sysroot'], { encoding: 'utf8' }).trim();
 const toolchain = [];

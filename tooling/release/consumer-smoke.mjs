@@ -84,6 +84,9 @@ if (values.stage === 'prepare') {
       ...(existsSync(resolve(app, 'pnpm-lock.yaml')) ? ['--frozen-lockfile'] : [])]); break;
     case 'verify': {
       const appRequire = createRequire(resolve(app, 'package.json'));
+      for (const runtime of [...Object.keys(manifest.runtime), 'zustand', '@nyc-tron/ui', 'expo-file-system']) {
+        assertInstalledInside(app, appRequire.resolve(runtime));
+      }
       for (const archive of manifest.archives) {
         const entry = appRequire.resolve(archive.name);
         assertInstalledInside(app, entry);

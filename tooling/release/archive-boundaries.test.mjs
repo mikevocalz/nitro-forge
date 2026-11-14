@@ -5,8 +5,8 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { candidate } from './candidate-manifest.mjs';
-import { checkExports, checkSourceClosure, files, hash, inside } from './archive-files.mjs';
-import { unpackArchive } from './unpack-archive.mjs';
+import { assertInstalledInside, checkExports, checkSourceClosure, files, hash, inside } from './archive-files.mjs';
+import { unpackArchive, verifyRegistrySource } from './unpack-archive.mjs';
 import { fileURLToPath } from 'node:url';
 import { checkLicenseMembers, nativeClosure } from './license-materials.mjs';
 
@@ -15,6 +15,29 @@ function fixture(t) {
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return root;
 }
+test('locked crates bind cache bytes with present or absent Cargo bookkeeping', t => {
+  const root = fixture(t), source = resolve(root, 'source'), cache = resolve(root, 'cache');
+  mkdirSync(resolve(source, 'tiny-1.0.0'), { recursive: true });
+  writeFileSync(resolve(source, 'tiny-1.0.0/LICENSE'), 'Synthetic test notice');
+  writeFileSync(resolve(source, 'tiny-1.0.0/Cargo.toml'), '[package]\nname="tiny"\n');
+  cpSync(resolve(source, 'tiny-1.0.0'), cache, { recursive: true });
+  const archive = resolve(root, 'tiny.crate');
+  execFileSync('tar', ['-czf', archive, '-C', source, 'tiny-1.0.0']);
+  const identity = { prefix: 'tiny-1.0.0', sha256: hash(archive) };
+  verifyRegistrySource(archive, resolve(root, 'absent'), cache, identity);
+  writeFileSync(resolve(cache, '.cargo-ok'), 'generated');
+  writeFileSync(resolve(cache, '.cargo-checksum.json'), '{}');
+  verifyRegistrySource(archive, resolve(root, 'present'), cache, identity);
+  assert.throws(() => verifyRegistrySource(archive, resolve(root, 'wrong-hash'), cache, { ...identity, sha256: '0'.repeat(64) }), /checksum/);
+  assert.throws(() => verifyRegistrySource(resolve(root, 'missing.crate'), resolve(root, 'missing'), cache, identity), /ENOENT/);
+  assert.throws(() => verifyRegistrySource(archive, resolve(root, 'wrong-root'), cache, { ...identity, prefix: 'other-1.0.0' }), /prefix/);
+  writeFileSync(resolve(cache, 'LICENSE'), 'tampered');
+  assert.throws(() => verifyRegistrySource(archive, resolve(root, 'tampered'), cache, identity), /bytes differ/);
+  writeFileSync(resolve(cache, 'extra.rs'), 'unproven source');
+  assert.throws(() => verifyRegistrySource(archive, resolve(root, 'extra'), cache, identity), /inventory differs/);
+  writeFileSync(archive, 'tampered archive');
+  assert.throws(() => verifyRegistrySource(archive, resolve(root, 'changed-archive'), cache, identity), /checksum/);
+});
 function manifest(root) {
   const names = ['ignition', 'prism', 'cadence', 'splice', 'folio', 'pitch', 'tally', 'quill'];
   const value = { schemaVersion: 1, sourceCommit: 'a'.repeat(40), version: '1.0.0-test.1', originalLicenseSha256: 'c'.repeat(64), deferred: ['photo', 'motion', 'design', 'draft', 'scene'], archives: names.map(n => {
@@ -72,6 +95,15 @@ test('headless package cannot leave a workspace dependency or missing export', t
 });
 test('rooted package paths reject absolute paths and traversal', () => {
   for (const path of ['/tmp/file', '../file', 'a/../../file', 'a\\file', '']) assert.throws(() => inside('/package', path));
+});
+test('installed runtime resolution cannot escape into a global or checkout dependency', t => {
+  const root = fixture(t), app = resolve(root, 'app');
+  mkdirSync(resolve(app, 'node_modules'), { recursive: true });
+  writeFileSync(resolve(root, 'outside.js'), 'external runtime fixture');
+  symlinkSync(resolve(root, 'outside.js'), resolve(app, 'node_modules/runtime.js'));
+  assert.throws(() => assertInstalledInside(app, resolve(app, 'node_modules/runtime.js')), /escapes clean consumer/);
+  writeFileSync(resolve(app, 'node_modules/local.js'), 'local runtime fixture');
+  assert.doesNotThrow(() => assertInstalledInside(app, resolve(app, 'node_modules/local.js')));
 });
 test('per-package source closure cannot borrow an undeclared sibling from the all-studio app', t => {
   const root = fixture(t); mkdirSync(resolve(root, 'src'));
