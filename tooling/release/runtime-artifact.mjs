@@ -5,15 +5,21 @@ import { basename, dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { files, hash, inside, json, requireDisk } from './archive-files.mjs';
 
-const { values } = parseArgs({ options: { platform: { type: 'string' }, app: { type: 'string' }, consumer: { type: 'string' }, output: { type: 'string' }, 'android-tools': { type: 'string' } } });
+const { values } = parseArgs({ options: { platform: { type: 'string' }, app: { type: 'string' }, consumer: { type: 'string' }, output: { type: 'string' }, manifest: { type: 'string' }, 'android-tools': { type: 'string' } } });
 assert.ok(['android', 'ios'].includes(values.platform));
-assert.ok(values.app && values.consumer && values.output);
+assert.ok(values.app && values.consumer && values.output && values.manifest);
 const app = resolve(values.app), consumer = resolve(values.consumer), output = resolve(values.output);
 assert.ok(!existsSync(output), 'Runtime artifact output must be fresh');
 const receipt = json(resolve(consumer, 'forge-consumer-receipt.json'));
 assert.ok(receipt.stages.includes(`compile:${values.platform}`), 'Successful compile receipt required');
 assert.equal(receipt.nativeRuntime, 'NOT RUN', 'Artifact creation is not runtime acceptance');
 assert.equal(receipt.configuration, 'Release');
+assert.equal(hash(resolve(values.manifest)), receipt.manifestSha256);
+assert.equal(json(resolve(values.manifest)).sourceCommit, receipt.sourceCommit);
+const installed = json(resolve(consumer, 'installed-packages.json'));
+assert.equal(installed.sourceCommit, receipt.sourceCommit);
+assert.equal(installed.manifestSha256, receipt.manifestSha256);
+assert.equal(installed.lockSha256, hash(resolve(consumer, 'pnpm-lock.yaml')));
 requireDisk(consumer, 512 * 1024 * 1024);
 mkdirSync(output, { recursive: true });
 let archive, embeddedBundleSha256, applicationId, architectures, signingVerification;
@@ -53,11 +59,15 @@ if (values.platform === 'ios') {
 }
 copyFileSync(resolve(consumer, 'pnpm-lock.yaml'), resolve(output, 'pnpm-lock.yaml'));
 copyFileSync(resolve(consumer, 'forge-consumer-receipt.json'), resolve(output, 'forge-consumer-receipt.json'));
+copyFileSync(resolve(consumer, 'installed-packages.json'), resolve(output, 'installed-packages.json'));
+copyFileSync(resolve(values.manifest), resolve(output, 'candidate.json'));
 writeFileSync(resolve(output, 'runtime-artifact.json'), JSON.stringify({
   schemaVersion: 1, platform: values.platform, configuration: 'Release', sourceCommit: receipt.sourceCommit,
   manifestSha256: receipt.manifestSha256, lockSha256: hash(resolve(output, 'pnpm-lock.yaml')),
+  installedPackagesSha256: hash(resolve(output, 'installed-packages.json')),
   archive, sha256: hash(resolve(output, archive)), bytes: statSync(resolve(output, archive)).size,
   embeddedBundleSha256, applicationId, architectures,
+  applicationDirectory: values.platform === 'ios' ? basename(app) : undefined,
   signingVerification,
   signing: values.platform === 'android' ? 'Ordinary Expo template acceptance build; default debug signing, not a publication credential' : 'Unsigned iOS Simulator application',
   nativeRuntime: 'NOT RUN',

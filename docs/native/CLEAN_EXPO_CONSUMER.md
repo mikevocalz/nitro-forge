@@ -149,6 +149,19 @@ Generated/merged native manifests and metadata are retained for inspection.
 Creating these artifacts leaves runtime acceptance `NOT RUN`; actual launch,
 seven-studio durable workflows and independent visible review remain required.
 
+CI then installs those exact Release apps on its own available iOS Simulator
+and Android emulator and uses pinned official Maestro OS touches. Two unchanged
+complete seven-studio flows require exact action results, durable save/new-host
+and process-relaunch reopen, fresh undo/redo and malformed-restore atomicity.
+Actual JUnit, native accessibility trees, screenshots and OS sandbox NFD files
+are retained. Android separately proves the actual 320 px/mdpi picker geometry;
+iOS records its actual viewport without a 320 px claim. Installed package and
+Fabric renderer versions/hashes are recorded with the candidate/lock/app hashes.
+Local Argent or local runtime installation is not required. This implementation
+is unexecuted until CI reaches it, and even successful runs require independent
+source/runtime/visual review before F6 acceptance. See
+[the exact driver/evidence contract](../../tooling/release/native-ui/README.md).
+
 `consumer-smoke.mjs` requires an existing candidate manifest, exact expected
 source commit and an output directory outside the checkout. No package
 build/source/workspace fallback exists. It verifies archive hashes and

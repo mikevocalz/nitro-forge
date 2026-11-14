@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
@@ -84,33 +84,53 @@ if (values.stage === 'prepare') {
       ...(existsSync(resolve(app, 'pnpm-lock.yaml')) ? ['--frozen-lockfile'] : [])]); break;
     case 'verify': {
       const appRequire = createRequire(resolve(app, 'package.json'));
-      for (const runtime of [...Object.keys(manifest.runtime), 'zustand', '@nyc-tron/ui', 'expo-file-system']) {
-        assertInstalledInside(app, appRequire.resolve(runtime));
-      }
-      for (const archive of manifest.archives) {
-        const entry = appRequire.resolve(archive.name);
+      const observed = [];
+      function metadata(name, resolver = appRequire) {
+        const entry = resolver.resolve(name);
         assertInstalledInside(app, entry);
         let packageRoot = dirname(entry);
-        while (!existsSync(resolve(packageRoot, 'package.json'))) {
+        while (!existsSync(resolve(packageRoot, 'package.json')) || json(resolve(packageRoot, 'package.json')).name !== name) {
           const parent = dirname(packageRoot);
-          assert.notEqual(parent, packageRoot);
+          assert.notEqual(parent, packageRoot, `Installed package metadata missing: ${name}`);
+          assertInstalledInside(app, parent);
           packageRoot = parent;
         }
         assertInstalledInside(app, packageRoot);
-        const pkg = json(resolve(packageRoot, 'package.json'));
-        assert.equal(pkg.name, archive.name);
+        const file = resolve(packageRoot, 'package.json'), pkg = json(file);
+        assert.equal(pkg.name, name);
+        observed.push({ name, version: pkg.version, entry: realpathSync(entry), packageRoot: realpathSync(packageRoot), packageJsonSha256: hash(file) });
+        return { packageRoot, pkg };
+      }
+      for (const runtime of [...Object.keys(manifest.runtime), 'zustand', '@nyc-tron/ui', 'expo-file-system']) {
+        const { pkg } = metadata(runtime);
+        if (manifest.runtime[runtime]) assert.equal(pkg.version, manifest.runtime[runtime], `Installed runtime differs: ${runtime}`);
+      }
+      for (const archive of manifest.archives) {
+        const { packageRoot, pkg } = metadata(archive.name);
         assert.equal(pkg.version, manifest.version);
         checkExports(packageRoot, pkg);
         checkLicenseMembers(packageRoot, pkg, manifest.originalLicenseSha256, manifest.sourceCommit);
         for (const file of archive.contents) assert.equal(hash(inside(packageRoot, file.path)), file.sha256, `Installed bytes changed: ${archive.name}/${file.path}`);
       }
       const expoRequire = createRequire(appRequire.resolve('expo/package.json'));
+      for (const name of ['expo-modules-core', '@expo/cli', '@expo/config-plugins']) metadata(name, expoRequire);
       const { resolveConfigPluginFunctionWithInfo } = expoRequire('@expo/config-plugins/build/utils/plugin-resolver');
       const bare = resolveConfigPluginFunctionWithInfo(app, '@nitro-forge/ignition');
       const direct = resolveConfigPluginFunctionWithInfo(app, '@nitro-forge/ignition/app.plugin.cjs');
       assert.ok(bare.pluginFile.endsWith('/app.plugin.cjs') && bare.isPluginFile);
       assert.equal(bare.pluginFile, direct.pluginFile);
       bare.plugin({ ...json(resolve(app, 'app.json')).expo, _internal: { projectRoot: app } });
+      const rn = observed.find(pkg => pkg.name === 'react-native');
+      const reactNativeRenderer = ['dev', 'prod'].map(mode => {
+        const file = inside(rn.packageRoot, `Libraries/Renderer/implementations/ReactFabric-${mode}.js`);
+        const version = readFileSync(file, 'utf8').match(/version:\s*"([^"]+)",\s*rendererPackageName:\s*"react-native-renderer"/)?.[1];
+        assert.ok(version, 'Actual installed Fabric renderer version must be identifiable');
+        return { mode, version, sha256: hash(file) };
+      });
+      writeFileSync(resolve(app, 'installed-packages.json'), JSON.stringify({ sourceCommit: manifest.sourceCommit, manifestSha256: identity, reactNativeRenderer,
+        lockSha256: hash(resolve(app, 'pnpm-lock.yaml')), packages: observed,
+        archives: manifest.archives.map(({ name, sha256 }) => ({ name, sha256 })),
+      }, null, 2) + '\n');
       break;
     }
     case 'bundle':

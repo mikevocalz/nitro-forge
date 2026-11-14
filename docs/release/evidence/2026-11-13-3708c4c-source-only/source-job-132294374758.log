@@ -1,0 +1,222 @@
+﻿2026-11-14T02:15:25.0726027Z Current runner version: '2.338.2'
+2026-11-14T02:15:25.0745960Z ##[group]Runner Image Provisioner
+2026-11-14T02:15:25.0746640Z Hosted Compute Agent
+2026-11-14T02:15:25.0747014Z Version: 20261103.629
+2026-11-14T02:15:25.0747386Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-14T02:15:25.0747974Z Build Date: 2026-11-03T17:26:59Z
+2026-11-14T02:15:25.0748435Z Worker ID: {20254307-3ba4-45a2-aab3-77149bd589a2}
+2026-11-14T02:15:25.0749000Z Region: centralus
+2026-11-14T02:15:25.0749678Z Cloud: Azure
+2026-11-14T02:15:25.0750036Z ##[endgroup]
+2026-11-14T02:15:25.0751044Z ##[group]Operating System
+2026-11-14T02:15:25.0751425Z Ubuntu
+2026-11-14T02:15:25.0751869Z 26.04.1
+2026-11-14T02:15:25.0752207Z LTS
+2026-11-14T02:15:25.0752598Z ##[endgroup]
+2026-11-14T02:15:25.0752964Z ##[group]Runner Image
+2026-11-14T02:15:25.0753371Z Image: ubuntu-26.04
+2026-11-14T02:15:25.0753706Z Version: 20261111.196.1
+2026-11-14T02:15:25.0754568Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-14T02:15:25.0755607Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-14T02:15:25.0756171Z ##[endgroup]
+2026-11-14T02:15:25.0756920Z ##[group]GITHUB_TOKEN Permissions
+2026-11-14T02:15:25.0758214Z Contents: read
+2026-11-14T02:15:25.0758582Z Metadata: read
+2026-11-14T02:15:25.0758981Z ##[endgroup]
+2026-11-14T02:15:25.0760790Z Secret source: Actions
+2026-11-14T02:15:25.0761426Z Cache mode: write
+2026-11-14T02:15:25.0761891Z Prepare workflow directory
+2026-11-14T02:15:25.1050117Z Prepare all required actions
+2026-11-14T02:15:25.1083060Z Getting action download info
+2026-11-14T02:15:25.3276543Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-14T02:15:25.4361327Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-14T02:15:25.5933684Z Complete job name: source
+2026-11-14T02:15:25.6490663Z ##[group]Run actions/checkout@v4
+2026-11-14T02:15:25.6491130Z with:
+2026-11-14T02:15:25.6491397Z   repository: mikevocalz/nitro-forge
+2026-11-14T02:15:25.6493528Z   token: ***
+2026-11-14T02:15:25.6493779Z   ssh-strict: true
+2026-11-14T02:15:25.6494037Z   ssh-user: git
+2026-11-14T02:15:25.6494301Z   persist-credentials: true
+2026-11-14T02:15:25.6494585Z   clean: true
+2026-11-14T02:15:25.6494848Z   sparse-checkout-cone-mode: true
+2026-11-14T02:15:25.6495145Z   fetch-depth: 1
+2026-11-14T02:15:25.6495399Z   fetch-tags: false
+2026-11-14T02:15:25.6495657Z   show-progress: true
+2026-11-14T02:15:25.6495920Z   lfs: false
+2026-11-14T02:15:25.6496157Z   submodules: false
+2026-11-14T02:15:25.6496420Z   set-safe-directory: true
+2026-11-14T02:15:25.6496712Z   allow-unsafe-pr-checkout: false
+2026-11-14T02:15:25.6497073Z env:
+2026-11-14T02:15:25.6497301Z   CI: 1
+2026-11-14T02:15:25.6497534Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T02:15:25.6497796Z ##[endgroup]
+2026-11-14T02:15:25.8791528Z Syncing repository: mikevocalz/nitro-forge
+2026-11-14T02:15:25.8793098Z ##[group]Getting Git version info
+2026-11-14T02:15:25.8793532Z Working directory is '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T02:15:25.8794167Z [command]/usr/bin/git version
+2026-11-14T02:15:25.8794459Z git version 2.56.1
+2026-11-14T02:15:25.8806351Z ##[endgroup]
+2026-11-14T02:15:25.8817089Z Temporarily overriding HOME='/home/runner/work/_temp/0b55706e-d64e-4959-8597-3e9cd0ed1a17' before making global git config changes
+2026-11-14T02:15:25.8818372Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T02:15:25.8820749Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T02:15:25.8883019Z Deleting the contents of '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T02:15:25.8885769Z ##[group]Initializing the repository
+2026-11-14T02:15:25.8889288Z [command]/usr/bin/git init /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T02:15:25.8994446Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-14T02:15:25.8995831Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-14T02:15:25.8996746Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-14T02:15:25.8997450Z hint: call:
+2026-11-14T02:15:25.8997799Z hint:
+2026-11-14T02:15:25.8998267Z hint: 	git config --global init.defaultBranch <name>
+2026-11-14T02:15:25.8998810Z hint:
+2026-11-14T02:15:25.8999451Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-14T02:15:25.9000351Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-14T02:15:25.9001070Z hint:
+2026-11-14T02:15:25.9001443Z hint: 	git branch -m <name>
+2026-11-14T02:15:25.9001859Z hint:
+2026-11-14T02:15:25.9002422Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-14T02:15:25.9005144Z Initialized empty Git repository in /home/runner/work/nitro-forge/nitro-forge/.git/
+2026-11-14T02:15:25.9015413Z [command]/usr/bin/git remote add origin https://github.com/mikevocalz/nitro-forge
+2026-11-14T02:15:25.9067995Z ##[endgroup]
+2026-11-14T02:15:25.9068708Z ##[group]Disabling automatic garbage collection
+2026-11-14T02:15:25.9071877Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-14T02:15:25.9103949Z ##[endgroup]
+2026-11-14T02:15:25.9104799Z ##[group]Setting up auth
+2026-11-14T02:15:25.9110041Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T02:15:25.9141461Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T02:15:25.9542755Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T02:15:25.9572879Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T02:15:25.9802333Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T02:15:25.9832634Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T02:15:26.0064422Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-14T02:15:26.0100423Z ##[endgroup]
+2026-11-14T02:15:26.0100963Z ##[group]Fetching the repository
+2026-11-14T02:15:26.0107251Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +71a497e563b9040c65e5279428f2547c8e7a2e64:refs/remotes/pull/88/merge
+2026-11-14T02:15:27.0140346Z From https://github.com/mikevocalz/nitro-forge
+2026-11-14T02:15:27.0150019Z  * [new ref]         71a497e563b9040c65e5279428f2547c8e7a2e64 -> pull/88/merge
+2026-11-14T02:15:27.0152765Z ##[endgroup]
+2026-11-14T02:15:27.0153273Z ##[group]Determining the checkout info
+2026-11-14T02:15:27.0154086Z ##[endgroup]
+2026-11-14T02:15:27.0154590Z [command]/usr/bin/git sparse-checkout disable
+2026-11-14T02:15:27.0214602Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-14T02:15:27.0244362Z ##[group]Checking out the ref
+2026-11-14T02:15:27.0246145Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/88/merge
+2026-11-14T02:15:27.1613679Z Note: switching to 'refs/remotes/pull/88/merge'.
+2026-11-14T02:15:27.1614488Z 
+2026-11-14T02:15:27.1615044Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-14T02:15:27.1616172Z changes and commit them, and you can discard any commits you make in this
+2026-11-14T02:15:27.1617323Z state without impacting any branches by switching back to a branch.
+2026-11-14T02:15:27.1617995Z 
+2026-11-14T02:15:27.1618490Z If you want to create a new branch to retain commits you create, you may
+2026-11-14T02:15:27.1619798Z do so (now or later) by using -c with the switch command. Example:
+2026-11-14T02:15:27.1620643Z 
+2026-11-14T02:15:27.1620917Z   git switch -c <new-branch-name>
+2026-11-14T02:15:27.1621356Z 
+2026-11-14T02:15:27.1621696Z Or undo this operation with:
+2026-11-14T02:15:27.1622178Z 
+2026-11-14T02:15:27.1622465Z   git switch -
+2026-11-14T02:15:27.1622867Z 
+2026-11-14T02:15:27.1623519Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-14T02:15:27.1624444Z 
+2026-11-14T02:15:27.1625450Z HEAD is now at 71a497e Merge 3708c4c76fe6d19a8618b6c14cb82bf007b9dda0 into dab27e177f05a747f2a234e3892f62e2f7b8c28b
+2026-11-14T02:15:27.1628951Z ##[endgroup]
+2026-11-14T02:15:27.1673073Z [command]/usr/bin/git log -1 --format=%H
+2026-11-14T02:15:27.1696594Z 71a497e563b9040c65e5279428f2547c8e7a2e64
+2026-11-14T02:15:27.1972104Z ##[group]Run actions/setup-node@v4
+2026-11-14T02:15:27.1972830Z with:
+2026-11-14T02:15:27.1973399Z   node-version: 24.19.0
+2026-11-14T02:15:27.1974024Z   always-auth: false
+2026-11-14T02:15:27.1974639Z   check-latest: false
+2026-11-14T02:15:27.1979998Z   token: ***
+2026-11-14T02:15:27.1980546Z env:
+2026-11-14T02:15:27.1981087Z   CI: 1
+2026-11-14T02:15:27.1981633Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T02:15:27.1982237Z ##[endgroup]
+2026-11-14T02:15:27.3040700Z Attempting to download 24.19.0...
+2026-11-14T02:15:27.3157676Z (node:2202) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T02:15:27.3159371Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T02:15:28.0524690Z Acquiring 24.19.0 - x64 from https://github.com/actions/node-versions/releases/download/24.19.0-30872449280/node-24.19.0-linux-x64.tar.gz
+2026-11-14T02:15:28.4597091Z Extracting ...
+2026-11-14T02:15:28.4701984Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/717d9bd4-dc22-4acf-ac15-994b68f816e5 -f /home/runner/work/_temp/cb6207fd-bfb0-47e3-b28a-625e32f55add
+2026-11-14T02:15:29.0653372Z Adding to the cache ...
+2026-11-14T02:15:30.7689754Z ##[group]Environment details
+2026-11-14T02:15:30.9438024Z node: v24.19.0
+2026-11-14T02:15:30.9438451Z npm: 11.17.0
+2026-11-14T02:15:30.9438650Z yarn: 1.22.22
+2026-11-14T02:15:30.9439326Z ##[endgroup]
+2026-11-14T02:15:30.9634479Z ##[group]Run node --test tooling/release/archive-boundaries.test.mjs packages/ignition/plugin/withForge.node.cjs
+2026-11-14T02:15:30.9635053Z [36;1mnode --test tooling/release/archive-boundaries.test.mjs packages/ignition/plugin/withForge.node.cjs[0m
+2026-11-14T02:15:30.9683024Z shell: /usr/bin/bash -e {0}
+2026-11-14T02:15:30.9683190Z env:
+2026-11-14T02:15:30.9683304Z   CI: 1
+2026-11-14T02:15:30.9683441Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T02:15:30.9683611Z ##[endgroup]
+2026-11-14T02:15:31.0967382Z ✔ optionless CJS entry preserves config identity and all platform metadata, without runtime loading (6.836338ms)
+2026-11-14T02:15:31.0969043Z ✔ requires explicit initial SwiftPM opt-in for iOS and preserves the rejected input (5.135311ms)
+2026-11-14T02:15:31.0970810Z ✔ omitted platforms includes iOS and therefore needs explicit SwiftPM (3.203194ms)
+2026-11-14T02:15:31.0971896Z ✔ rejects options, missing project root and disabled architecture rather than mutating configuration (2.906707ms)
+2026-11-14T02:15:31.0972658Z ✔ reports actual and supported dependency versions (3.509266ms)
+2026-11-14T02:15:31.0973451Z ✔ missing dependency fails without fallback to a runtime (3.196264ms)
+2026-11-14T02:15:31.0974319Z ✔ metadata resolution handles package exports that hide package.json, without executing the exported module (4.895258ms)
+2026-11-14T02:15:31.0975182Z ✔ absent or malformed native manifest is an actionable package error (7.170202ms)
+2026-11-14T02:15:31.0975968Z ✔ retains exact declared architecture sets, including legacy Android ABIs (3.526682ms)
+2026-11-14T02:15:31.0976709Z ✔ rejects incomplete assets and missing files instead of compiling Rust (3.942961ms)
+2026-11-14T02:15:31.0977355Z ✔ rejects malformed source/runtime identities (4.072807ms)
+2026-11-14T02:15:31.0978626Z ✔ rejects traversal, duplicate entries and malformed hashes (5.424858ms)
+2026-11-14T02:15:31.0979733Z ✔ rejects a symlinked asset escaping the installed package (3.335254ms)
+2026-11-14T02:15:31.0980503Z ✔ rejects a native manifest symlink outside the package before reading it (3.043073ms)
+2026-11-14T02:15:31.4888920Z ✔ packed native materials bind notices, Cargo.lock and both producing source inventories (21.736866ms)
+2026-11-14T02:15:31.4890258Z ✔ both actual producer source inventories must match verified crate bytes and closure (0.657081ms)
+2026-11-14T02:15:31.4891186Z ✔ locked crates with SemVer build metadata bind cache bytes with present or absent Cargo bookkeeping (50.515575ms)
+2026-11-14T02:15:31.4891987Z ✔ candidate refuses stale native/source identity before consumption (1.306482ms)
+2026-11-14T02:15:31.4892635Z ✔ candidate refuses tampered archive bytes (1.322827ms)
+2026-11-14T02:15:31.4893202Z ✔ candidate refuses expanded or incomplete public inventory (1.057306ms)
+2026-11-14T02:15:31.4893833Z ✔ candidate rejects escape and duplicate content paths (1.369026ms)
+2026-11-14T02:15:31.4895488Z ✔ source staging and extraction reject symlink fallback (9.971269ms)
+2026-11-14T02:15:31.4896282Z ✔ extraction validates package-only names before writing (6.924766ms)
+2026-11-14T02:15:31.4899648Z ✔ headless package cannot leave a workspace dependency or missing export (1.074973ms)
+2026-11-14T02:15:31.4900276Z ✔ rooted package paths reject absolute paths and traversal (0.15226ms)
+2026-11-14T02:15:31.4900967Z ✔ installed runtime resolution cannot escape into a global or checkout dependency (0.915842ms)
+2026-11-14T02:15:31.4901905Z ✔ per-package source closure cannot borrow an undeclared sibling from the all-studio app (1.174142ms)
+2026-11-14T02:15:31.4903702Z ✔ incomplete producer output cannot be consumed even if candidate.json exists (0.889162ms)
+2026-11-14T02:15:31.4904635Z ✔ bundle check requires actual archive/runtime instances and rejects duplicates (71.807699ms)
+2026-11-14T02:15:31.4907790Z ✔ prepare keeps archive specifiers and hashes portable across distinct consumer and candidate roots (268.197582ms)
+2026-11-14T02:15:31.4909044Z ✔ required original and native license materials fail closed before packing/consumption (0.911847ms)
+2026-11-14T02:15:31.4910110Z ✔ resolved native closure excludes dev-only/unrelated roots and refuses unknown license declarations (0.319593ms)
+2026-11-14T02:15:31.4971760Z ℹ tests 32
+2026-11-14T02:15:31.4971926Z ℹ suites 0
+2026-11-14T02:15:31.4972058Z ℹ pass 32
+2026-11-14T02:15:31.4972219Z ℹ fail 0
+2026-11-14T02:15:31.4972401Z ℹ cancelled 0
+2026-11-14T02:15:31.4972540Z ℹ skipped 0
+2026-11-14T02:15:31.4972745Z ℹ todo 0
+2026-11-14T02:15:31.4972977Z ℹ duration_ms 499.702336
+2026-11-14T02:15:31.5083831Z ##[group]Run node tooling/release/check-package-boundaries.mjs
+2026-11-14T02:15:31.5084121Z [36;1mnode tooling/release/check-package-boundaries.mjs[0m
+2026-11-14T02:15:31.5127979Z shell: /usr/bin/bash -e {0}
+2026-11-14T02:15:31.5128131Z env:
+2026-11-14T02:15:31.5128249Z   CI: 1
+2026-11-14T02:15:31.5128394Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T02:15:31.5128524Z ##[endgroup]
+2026-11-14T02:15:31.5397376Z Ignition and seven headless public engines have no UI/renderer/Moyo production dependencies.
+2026-11-14T02:15:31.5398269Z This check does not validate generated native code, release tarballs, licenses or npm latest.
+2026-11-14T02:15:31.5504802Z Post job cleanup.
+2026-11-14T02:15:31.6332630Z (node:2464) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T02:15:31.6333226Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T02:15:31.6556421Z Post job cleanup.
+2026-11-14T02:15:31.7155347Z [command]/usr/bin/git version
+2026-11-14T02:15:31.7179452Z git version 2.56.1
+2026-11-14T02:15:31.7206427Z Temporarily overriding HOME='/home/runner/work/_temp/015c2875-1828-4e0c-bdc9-daf6e89c24fb' before making global git config changes
+2026-11-14T02:15:31.7207038Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T02:15:31.7209986Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T02:15:31.7248433Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T02:15:31.7280035Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T02:15:31.7555511Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T02:15:31.7600831Z http.https://github.com/.extraheader
+2026-11-14T02:15:31.7602889Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-14T02:15:31.7638626Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T02:15:31.7896985Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T02:15:31.7926889Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T02:15:31.8304728Z Cleaning up orphan processes
+2026-11-14T02:15:31.8623615Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
