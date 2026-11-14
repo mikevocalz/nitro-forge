@@ -1,0 +1,898 @@
+[
+  {
+    "path": "runtime-ui/actual-simulator-runtime.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 338,
+    "bytes": 530,
+    "offset": 0
+  },
+  {
+    "path": "runtime-ui/before-install-device-services.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2,
+    "bytes": 0,
+    "offset": 424
+  },
+  {
+    "path": "runtime-ui/before-install-host-capacity.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 36,
+    "bytes": 34,
+    "offset": 517
+  },
+  {
+    "path": "runtime-ui/before-install-host-memory.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 371,
+    "bytes": 1247,
+    "offset": 642
+  },
+  {
+    "path": "runtime-ui/before-install-host-processes.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 13771,
+    "bytes": 108344,
+    "offset": 1100
+  },
+  {
+    "path": "runtime-ui/candidate.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 37241,
+    "bytes": 168222,
+    "offset": 14961
+  },
+  {
+    "path": "runtime-ui/chosen-simulator.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 263,
+    "bytes": 479,
+    "offset": 52273
+  },
+  {
+    "path": "runtime-ui/commands.jsonl",
+    "flags": 8,
+    "method": 8,
+    "compressed": 981,
+    "bytes": 4993,
+    "offset": 52614
+  },
+  {
+    "path": "runtime-ui/execution.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 122,
+    "bytes": 145,
+    "offset": 53666
+  },
+  {
+    "path": "runtime-ui/failure-device-services.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 4092,
+    "bytes": 12910,
+    "offset": 53859
+  },
+  {
+    "path": "runtime-ui/failure-hierarchy-command.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2622,
+    "bytes": 49908,
+    "offset": 58035
+  },
+  {
+    "path": "runtime-ui/failure-hierarchy.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 3248,
+    "bytes": 74560,
+    "offset": 60743
+  },
+  {
+    "path": "runtime-ui/failure-host-capacity.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 36,
+    "bytes": 34,
+    "offset": 64070
+  },
+  {
+    "path": "runtime-ui/failure-host-memory.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 372,
+    "bytes": 1247,
+    "offset": 64188
+  },
+  {
+    "path": "runtime-ui/failure-host-processes.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 16442,
+    "bytes": 139974,
+    "offset": 64640
+  },
+  {
+    "path": "runtime-ui/failure-screenshot.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 184,
+    "bytes": 221,
+    "offset": 81165
+  },
+  {
+    "path": "runtime-ui/failure.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 5299,
+    "bytes": 48287,
+    "offset": 81428
+  },
+  {
+    "path": "runtime-ui/failure.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 428795,
+    "bytes": 477793,
+    "offset": 86796
+  },
+  {
+    "path": "runtime-ui/forge-consumer-receipt.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 227,
+    "bytes": 322,
+    "offset": 515659
+  },
+  {
+    "path": "runtime-ui/install.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2,
+    "bytes": 0,
+    "offset": 515970
+  },
+  {
+    "path": "runtime-ui/installed-packages.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2776,
+    "bytes": 13686,
+    "offset": 516040
+  },
+  {
+    "path": "runtime-ui/ios-app-system.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 61978,
+    "bytes": 675037,
+    "offset": 518896
+  },
+  {
+    "path": "runtime-ui/maestro-version.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 9,
+    "bytes": 7,
+    "offset": 580949
+  },
+  {
+    "path": "runtime-ui/owned-simulator-delete.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2,
+    "bytes": 0,
+    "offset": 581034
+  },
+  {
+    "path": "runtime-ui/owned-simulator-shutdown.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2,
+    "bytes": 0,
+    "offset": 581119
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/commands.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 25242,
+    "bytes": 719417,
+    "offset": 581206
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/logs/device-simulator.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 88911797,
+    "bytes": 752456728,
+    "offset": 606599
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/logs/device-xctest.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 238709,
+    "bytes": 3289250,
+    "offset": 89518559
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/logs/maestro.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 45114,
+    "bytes": 861848,
+    "offset": 89757428
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/manifest.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 345,
+    "bytes": 853,
+    "offset": 89802696
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-bad-restore-rejected.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 495709,
+    "bytes": 524750,
+    "offset": 89803192
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-disk-save.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 501405,
+    "bytes": 529953,
+    "offset": 90299089
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-fresh-host-reopen.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 492927,
+    "bytes": 521813,
+    "offset": 90800671
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-picker.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 307424,
+    "bytes": 345295,
+    "offset": 91293783
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-process-relaunch-persistence.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 423099,
+    "bytes": 458081,
+    "offset": 91601381
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-redo.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 502773,
+    "bytes": 531134,
+    "offset": 92024676
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-undo-fresh-edit.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 500222,
+    "bytes": 528703,
+    "offset": 92527621
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-bad-restore-rejected.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 510591,
+    "bytes": 538026,
+    "offset": 93028026
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-disk-save.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 521219,
+    "bytes": 548132,
+    "offset": 93538803
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-fresh-host-reopen.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 498461,
+    "bytes": 526984,
+    "offset": 94060197
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-picker.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 307278,
+    "bytes": 344964,
+    "offset": 94558841
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-process-relaunch-persistence.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 436720,
+    "bytes": 471119,
+    "offset": 94866291
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-redo.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 507333,
+    "bytes": 535146,
+    "offset": 95303205
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-undo-fresh-edit.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 512429,
+    "bytes": 539797,
+    "offset": 95810708
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-bad-restore-rejected.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 503837,
+    "bytes": 532429,
+    "offset": 96323318
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-fresh-host-reopen.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 507150,
+    "bytes": 535674,
+    "offset": 96827341
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-disk-save.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 511122,
+    "bytes": 538936,
+    "offset": 97334674
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-picker.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 307251,
+    "bytes": 344963,
+    "offset": 97845971
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-redo.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 501972,
+    "bytes": 529573,
+    "offset": 98153394
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-undo-fresh-edit.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 496725,
+    "bytes": 524948,
+    "offset": 98655536
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-process-relaunch-persistence.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 434371,
+    "bytes": 469381,
+    "offset": 99152442
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-bad-restore-rejected.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 510029,
+    "bytes": 537632,
+    "offset": 99587007
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-fresh-host-reopen.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 443301,
+    "bytes": 474256,
+    "offset": 100097222
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-disk-save.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 462570,
+    "bytes": 493014,
+    "offset": 100540706
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-picker.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 292061,
+    "bytes": 330952,
+    "offset": 101003451
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-process-relaunch-persistence.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 377205,
+    "bytes": 411559,
+    "offset": 101295684
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-redo.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 502390,
+    "bytes": 530213,
+    "offset": 101673083
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-undo-fresh-edit.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 455388,
+    "bytes": 484064,
+    "offset": 102175643
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-bad-restore-rejected.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 511038,
+    "bytes": 538914,
+    "offset": 102631212
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-disk-save.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 458354,
+    "bytes": 487762,
+    "offset": 103142436
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-fresh-host-reopen.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 461819,
+    "bytes": 491930,
+    "offset": 103600965
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-picker.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 307252,
+    "bytes": 345391,
+    "offset": 104062967
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-process-relaunch-persistence.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 368668,
+    "bytes": 403602,
+    "offset": 104370391
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-redo.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 513502,
+    "bytes": 541063,
+    "offset": 104739253
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-undo-fresh-edit.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 502126,
+    "bytes": 530413,
+    "offset": 105252925
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-bad-restore-rejected.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 496622,
+    "bytes": 525165,
+    "offset": 105755232
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-disk-save.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 475963,
+    "bytes": 504851,
+    "offset": 106252041
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-fresh-host-reopen.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 443683,
+    "bytes": 473680,
+    "offset": 106728180
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-picker.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 306866,
+    "bytes": 344586,
+    "offset": 107172047
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-process-relaunch-persistence.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 360150,
+    "bytes": 395774,
+    "offset": 107479086
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-redo.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 505351,
+    "bytes": 533368,
+    "offset": 107839431
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-undo-fresh-edit.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 508962,
+    "bytes": 536621,
+    "offset": 108344953
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 509942,
+    "bytes": 537705,
+    "offset": 108854097
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-disk-save.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 515346,
+    "bytes": 542391,
+    "offset": 109364225
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-fresh-host-reopen.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 509936,
+    "bytes": 537905,
+    "offset": 109879746
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-process-relaunch-persistence.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 431022,
+    "bytes": 466357,
+    "offset": 110389865
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-picker.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 308128,
+    "bytes": 345714,
+    "offset": 110821081
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-redo.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 502717,
+    "bytes": 530855,
+    "offset": 111129381
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-undo-fresh-edit.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 507770,
+    "bytes": 534842,
+    "offset": 111632268
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_110648/xctest_runner_2026-11-14_110724.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 239248,
+    "bytes": 3289613,
+    "offset": 112140219
+  },
+  {
+    "path": "runtime-ui/pass-1/debug/.maestro/tests/2026-11-14_110648/maestro.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 53464,
+    "bytes": 929489,
+    "offset": 112379594
+  },
+  {
+    "path": "runtime-ui/pass-1/flow.yaml",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2714,
+    "bytes": 103598,
+    "offset": 112433172
+  },
+  {
+    "path": "runtime-ui/pass-1/report.xml",
+    "flags": 8,
+    "method": 8,
+    "compressed": 313,
+    "bytes": 569,
+    "offset": 112435959
+  },
+  {
+    "path": "runtime-ui/pass-1-hierarchy-command.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2622,
+    "bytes": 49908,
+    "offset": 112436346
+  },
+  {
+    "path": "runtime-ui/pass-1-hierarchy.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 3248,
+    "bytes": 74560,
+    "offset": 112439053
+  },
+  {
+    "path": "runtime-ui/pass-1-maestro.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 110,
+    "bytes": 128,
+    "offset": 112442379
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_110433/Forge native studio picker/commands.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 1134,
+    "bytes": 7020,
+    "offset": 112442564
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_110433/Forge native studio picker/logs/device-simulator.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2025488,
+    "bytes": 14770130,
+    "offset": 112443830
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_110433/Forge native studio picker/logs/device-xctest.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 3079,
+    "bytes": 20977,
+    "offset": 114469462
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_110433/Forge native studio picker/logs/maestro.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 1329,
+    "bytes": 6083,
+    "offset": 114472682
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_110433/Forge native studio picker/manifest.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 337,
+    "bytes": 845,
+    "offset": 114474146
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_110433/Forge native studio picker/takeScreenshot/picker-picker.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 292236,
+    "bytes": 331090,
+    "offset": 114474615
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_110433/xctest_runner_2026-11-14_110506.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 3411,
+    "bytes": 21458,
+    "offset": 114767002
+  },
+  {
+    "path": "runtime-ui/picker/debug/.maestro/tests/2026-11-14_110433/maestro.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 3834,
+    "bytes": 32740,
+    "offset": 114770540
+  },
+  {
+    "path": "runtime-ui/picker/flow.yaml",
+    "flags": 8,
+    "method": 8,
+    "compressed": 300,
+    "bytes": 639,
+    "offset": 114774488
+  },
+  {
+    "path": "runtime-ui/picker/report.xml",
+    "flags": 8,
+    "method": 8,
+    "compressed": 295,
+    "bytes": 507,
+    "offset": 114774861
+  },
+  {
+    "path": "runtime-ui/picker-capture.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 211,
+    "bytes": 280,
+    "offset": 114775230
+  },
+  {
+    "path": "runtime-ui/picker-hierarchy.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 3221,
+    "bytes": 79604,
+    "offset": 114775517
+  },
+  {
+    "path": "runtime-ui/picker-maestro.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 92,
+    "bytes": 101,
+    "offset": 114778816
+  },
+  {
+    "path": "runtime-ui/picker-hierarchy-command.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2552,
+    "bytes": 52822,
+    "offset": 114778983
+  },
+  {
+    "path": "runtime-ui/picker-native.png",
+    "flags": 8,
+    "method": 8,
+    "compressed": 292236,
+    "bytes": 331090,
+    "offset": 114781620
+  },
+  {
+    "path": "runtime-ui/pnpm-effective-config.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 437,
+    "bytes": 1199,
+    "offset": 115073930
+  },
+  {
+    "path": "runtime-ui/pnpm-lock.yaml",
+    "flags": 8,
+    "method": 8,
+    "compressed": 55144,
+    "bytes": 208912,
+    "offset": 115074450
+  },
+  {
+    "path": "runtime-ui/pnpm-workspace.yaml",
+    "flags": 8,
+    "method": 8,
+    "compressed": 224,
+    "bytes": 819,
+    "offset": 115129665
+  },
+  {
+    "path": "runtime-ui/runtime-artifact.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 645,
+    "bytes": 1067,
+    "offset": 115129965
+  },
+  {
+    "path": "runtime-ui/simctl-create-help.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 308,
+    "bytes": 705,
+    "offset": 115130688
+  },
+  {
+    "path": "runtime-ui/simulator-boot.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2,
+    "bytes": 0,
+    "offset": 115131075
+  },
+  {
+    "path": "runtime-ui/simulator-bootstatus.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 118,
+    "bytes": 129,
+    "offset": 115131152
+  },
+  {
+    "path": "runtime-ui/simulator-create.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 39,
+    "bytes": 37,
+    "offset": 115131351
+  },
+  {
+    "path": "runtime-ui/simulators-created.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2189,
+    "bytes": 22665,
+    "offset": 115131467
+  },
+  {
+    "path": "runtime-ui/simulators.log",
+    "flags": 8,
+    "method": 8,
+    "compressed": 2130,
+    "bytes": 22131,
+    "offset": 115133735
+  },
+  {
+    "path": "forge-maestro/provenance.json",
+    "flags": 8,
+    "method": 8,
+    "compressed": 198,
+    "bytes": 266,
+    "offset": 115135936
+  }
+]

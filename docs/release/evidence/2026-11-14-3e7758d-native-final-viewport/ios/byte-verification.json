@@ -1,0 +1,1250 @@
+{
+  "screenshots": [
+    {
+      "stage": "picker",
+      "path": "picker/artifacts/2026-11-14_110433/Forge native studio picker/takeScreenshot/picker-picker.png",
+      "sha256": "12521ecbe338eb4f798ec156486abc1bc04e8ae8e244cc9467fb1fd07add094c",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-bad-restore-rejected.png",
+      "sha256": "db0d29a568984353177cd43bc3c3f238bb5af340482c96a5b8ec7dcceda88d8b",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-disk-save.png",
+      "sha256": "af60295984f40fe342d6fb60a026157a8c3c56826c11cda6a333400849072eac",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-fresh-host-reopen.png",
+      "sha256": "ba7d9d7d809e347abaa7c69119adaf20cfef7a6e6468c401bb25f1debba58cef",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-picker.png",
+      "sha256": "18eeac027aea90ebbd8bc684430b46a2f3dec7f861300704be810f7578b7dd88",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-process-relaunch-persistence.png",
+      "sha256": "8c1d83103ee973f757a08722ae9d5128363247859037ee2ac53162e5e4756ad6",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-redo.png",
+      "sha256": "9e87c52f78dc04280a18f04d8eccbed4698518aae47b08085aee479b4775e97d",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-undo-fresh-edit.png",
+      "sha256": "9e6c5b884bd0e505dfd66c6cc29df49334528008144a2e1bba818acaaa8fb8c2",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-bad-restore-rejected.png",
+      "sha256": "46d5e743353058a46093fb83e74ca91d64dc9c2c5b2999e43e3c92d7537d6de3",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-disk-save.png",
+      "sha256": "7246abc1822e8c06af5b25660287c88c7395f1af3673def607db2e4acbdf110b",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-fresh-host-reopen.png",
+      "sha256": "bb1f0e8dd68dd42d0f7159728df9ae7f02ac0840eb041b3295f30640fc745fed",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-picker.png",
+      "sha256": "a40a35940c68abb1c8bf5aa5cb8093582c979cba5edbff198fa50a3159349ea0",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-process-relaunch-persistence.png",
+      "sha256": "357a5f577a6326212821e89dff3b2ff3ae4cfcff7160b261d137542787d65c0f",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-redo.png",
+      "sha256": "04d042f1ab4200cc5908168f37e03985a812e9ad09a95816e37326711b831cf9",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-undo-fresh-edit.png",
+      "sha256": "398a9c1390842c8ec4b6fc2fee366621ed2b191875db7f38f2a92384370e5753",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-bad-restore-rejected.png",
+      "sha256": "a8013c0b347bee09bc268a892b91b9a5d9a6b4c8b8d3052e451de256a97f70c5",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-disk-save.png",
+      "sha256": "1054bac226c7349d3fe3dd186306eecb7f264d37335c4ef127d954a1e49e390e",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-fresh-host-reopen.png",
+      "sha256": "c1c3d97b2836872c2d6a8cc8884ddbc806a937a3dc2d13671683f6e58133b85c",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-picker.png",
+      "sha256": "704c992ec8e4ef71e05b1172cb1644b3f888727159461e0f7e45353385c5f710",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-process-relaunch-persistence.png",
+      "sha256": "e6063b051a142ce8b80222ba07b695921180b059f06d27473f1e33639b7429bc",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-redo.png",
+      "sha256": "27e08b2f2b188eb598963f182d1819d69e1134088a1dfce5c3b06846e9668333",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-undo-fresh-edit.png",
+      "sha256": "f7164b9cf46c95391a713a352e4c990ae235422b186aee6a83b48033abcad152",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-bad-restore-rejected.png",
+      "sha256": "510171708d5ce16b730d2638402b94614a33bc7b813bd5aabb5e39f113247c92",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-disk-save.png",
+      "sha256": "d18e33946dd378ae11c56cb3073adcf1d26b390449c2f090dad4b87450e59c8f",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-fresh-host-reopen.png",
+      "sha256": "4c8244920a2e2eafb7c34da4a636c10bb093569d95e9522f1fc7d02228ae2f7c",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-picker.png",
+      "sha256": "5a011a121acadcd961a0eb62ceccef27adba987caa2d4fa6e1d2a347fa44817d",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-process-relaunch-persistence.png",
+      "sha256": "9cd2a1bc6158e52fbb8928f3593a745fae0fe77ef532d7ef6c73d0dc76ba4ebb",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-redo.png",
+      "sha256": "57370a867a37a1982d4778e49041b839ca4e077000d9887c41789835c910c609",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-undo-fresh-edit.png",
+      "sha256": "886009cca1a33d7a27bf8f499b415c94f07e0b9deedc61aced55034e4be74dae",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-bad-restore-rejected.png",
+      "sha256": "2f45a1837db5b7ff96b04ee89aa402a6ee8962d3d666ac3e2ba433776945f9c1",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-disk-save.png",
+      "sha256": "ba4dfc41b7d51eef6b62aa5d127644cda9b3d438df2276f3e3541f777ec52a85",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-fresh-host-reopen.png",
+      "sha256": "51839d41e584ed194b27a26803c77fd18cfd1ed6ebaef15fd95101598ebfb0a5",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-picker.png",
+      "sha256": "a28bf007ac4ebc199200b6b2e00e8546a74392be854d81a1e871bc18129b0600",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-process-relaunch-persistence.png",
+      "sha256": "e64624c201a959f4ff818642569947f0ad0757d2d7d63abb594644db0ccdcb70",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-redo.png",
+      "sha256": "f12815d033388eedbea7026ce86469684419fc0bfe168ba469648e80353f55da",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-undo-fresh-edit.png",
+      "sha256": "269ccca887825d87b3e9067615de3fb431df90d225faa7b50a7f39b86ebf6016",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-bad-restore-rejected.png",
+      "sha256": "9a86bd4c359fd873147de4de0988ec02fdd41a99c30697d549c8daa6656699b3",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-disk-save.png",
+      "sha256": "f036fc4811e043723e5f228dd9181a39941eb83bfe791fa9473428c86728791e",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-fresh-host-reopen.png",
+      "sha256": "3b5e7bf3f172de6d71e161faa395a46d112d9b8e673f6d33a43774dbd2268c08",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-picker.png",
+      "sha256": "23b01e00ded00d4339e3e5914a708417312126a5e40d73cb497b5849d8459337",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-process-relaunch-persistence.png",
+      "sha256": "cc6dc8a69d837827e39c15fdd9ac1e049f65183544140f547190c21a60407ed9",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-redo.png",
+      "sha256": "589a39cde09152947ce3621b56602d4e8fb498435eb0454893fdf08327e33b0d",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-undo-fresh-edit.png",
+      "sha256": "a8c781b2432b5480e93f27ffb44407e0faeb932df59f9758a6043971dac669ed",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+      "sha256": "f3427975737cfe1ec313f50d26bb01dc5d55cb874458e4e869e264aeb62fe5cd",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-disk-save.png",
+      "sha256": "b21f6de0caebb4fec25cb9c114306c6733eec6c296df79df7791f0b8317d15c7",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-fresh-host-reopen.png",
+      "sha256": "44d4e2c8529359aa248a730207ab36e96389254a9084f2df7297e2889eb6eab8",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-picker.png",
+      "sha256": "639d5ee11086d92b4bd03320bf5684ec3a2dc262ddd529be14943af7ecbd6992",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-process-relaunch-persistence.png",
+      "sha256": "a3ab62428dde374064fad1143a128fd480a7dcb0f2791638df5cca6e393078bf",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-redo.png",
+      "sha256": "7848622e2ddac748965f9514037be2129097c381204e537bec427d62aeab2e17",
+      "width": 1206,
+      "height": 2622
+    },
+    {
+      "stage": "pass-1",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-undo-fresh-edit.png",
+      "sha256": "aec69f0416d08698046104319a30a08c1e220eea771ba49ce4c274eeba2bbbdb",
+      "width": 1206,
+      "height": 2622
+    }
+  ],
+  "captures": [
+    {
+      "stage": "pass-1",
+      "name": "f6-prism-disk-save",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 316,
+        "width": 362,
+        "height": 134
+      },
+      "nativeLogCommandIndex": 32,
+      "centeredAt": "11:08:22.910",
+      "assertedAt": "11:08:23.239",
+      "capturedAt": "11:08:23.451",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-disk-save.png",
+      "sha256": "d18e33946dd378ae11c56cb3073adcf1d26b390449c2f090dad4b87450e59c8f"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-prism-fresh-host-reopen",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 349,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 49,
+      "centeredAt": "11:08:38.620",
+      "assertedAt": "11:08:38.915",
+      "capturedAt": "11:08:39.089",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-fresh-host-reopen.png",
+      "sha256": "4c8244920a2e2eafb7c34da4a636c10bb093569d95e9522f1fc7d02228ae2f7c"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-prism-undo-fresh-edit",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 282,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 66,
+      "centeredAt": "11:08:53.829",
+      "assertedAt": "11:08:54.143",
+      "capturedAt": "11:08:54.327",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-undo-fresh-edit.png",
+      "sha256": "886009cca1a33d7a27bf8f499b415c94f07e0b9deedc61aced55034e4be74dae"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-prism-redo",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 250,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 76,
+      "centeredAt": "11:09:07.580",
+      "assertedAt": "11:09:07.782",
+      "capturedAt": "11:09:07.948",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-redo.png",
+      "sha256": "57370a867a37a1982d4778e49041b839ca4e077000d9887c41789835c910c609"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-prism-bad-restore-rejected",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 247,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 86,
+      "centeredAt": "11:09:21.245",
+      "assertedAt": "11:09:21.667",
+      "capturedAt": "11:09:21.988",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-bad-restore-rejected.png",
+      "sha256": "510171708d5ce16b730d2638402b94614a33bc7b813bd5aabb5e39f113247c92"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-prism-process-relaunch-persistence",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 583,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 110,
+      "centeredAt": "11:09:55.717",
+      "assertedAt": "11:09:56.015",
+      "capturedAt": "11:09:56.245",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-process-relaunch-persistence.png",
+      "sha256": "9cd2a1bc6158e52fbb8928f3593a745fae0fe77ef532d7ef6c73d0dc76ba4ebb"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-cadence-disk-save",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 250,
+        "width": 362,
+        "height": 134
+      },
+      "nativeLogCommandIndex": 148,
+      "centeredAt": "11:10:22.896",
+      "assertedAt": "11:10:23.246",
+      "capturedAt": "11:10:23.500",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-disk-save.png",
+      "sha256": "af60295984f40fe342d6fb60a026157a8c3c56826c11cda6a333400849072eac"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-cadence-fresh-host-reopen",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 256,
+        "width": 362,
+        "height": 50
+      },
+      "nativeLogCommandIndex": 165,
+      "centeredAt": "11:10:40.955",
+      "assertedAt": "11:10:41.318",
+      "capturedAt": "11:10:41.665",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-fresh-host-reopen.png",
+      "sha256": "ba7d9d7d809e347abaa7c69119adaf20cfef7a6e6468c401bb25f1debba58cef"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-cadence-undo-fresh-edit",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 250,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 182,
+      "centeredAt": "11:11:00.007",
+      "assertedAt": "11:11:00.385",
+      "capturedAt": "11:11:00.581",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-undo-fresh-edit.png",
+      "sha256": "9e6c5b884bd0e505dfd66c6cc29df49334528008144a2e1bba818acaaa8fb8c2"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-cadence-redo",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 254,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 192,
+      "centeredAt": "11:11:13.204",
+      "assertedAt": "11:11:13.550",
+      "capturedAt": "11:11:13.742",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-redo.png",
+      "sha256": "9e87c52f78dc04280a18f04d8eccbed4698518aae47b08085aee479b4775e97d"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-cadence-bad-restore-rejected",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 249,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 202,
+      "centeredAt": "11:11:26.639",
+      "assertedAt": "11:11:26.922",
+      "capturedAt": "11:11:27.097",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-bad-restore-rejected.png",
+      "sha256": "db0d29a568984353177cd43bc3c3f238bb5af340482c96a5b8ec7dcceda88d8b"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-cadence-process-relaunch-persistence",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 550,
+        "width": 362,
+        "height": 50
+      },
+      "nativeLogCommandIndex": 226,
+      "centeredAt": "11:12:13.135",
+      "assertedAt": "11:12:14.050",
+      "capturedAt": "11:12:14.553",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-process-relaunch-persistence.png",
+      "sha256": "8c1d83103ee973f757a08722ae9d5128363247859037ee2ac53162e5e4756ad6"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-splice-disk-save",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 265,
+        "width": 362,
+        "height": 134
+      },
+      "nativeLogCommandIndex": 264,
+      "centeredAt": "11:13:07.201",
+      "assertedAt": "11:13:07.576",
+      "capturedAt": "11:13:07.807",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-disk-save.png",
+      "sha256": "f036fc4811e043723e5f228dd9181a39941eb83bfe791fa9473428c86728791e"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-splice-fresh-host-reopen",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 299,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 281,
+      "centeredAt": "11:13:37.803",
+      "assertedAt": "11:13:38.194",
+      "capturedAt": "11:13:38.395",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-fresh-host-reopen.png",
+      "sha256": "3b5e7bf3f172de6d71e161faa395a46d112d9b8e673f6d33a43774dbd2268c08"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-splice-undo-fresh-edit",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 257,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 298,
+      "centeredAt": "11:13:55.077",
+      "assertedAt": "11:13:55.370",
+      "capturedAt": "11:13:55.561",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-undo-fresh-edit.png",
+      "sha256": "a8c781b2432b5480e93f27ffb44407e0faeb932df59f9758a6043971dac669ed"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-splice-redo",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 257,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 308,
+      "centeredAt": "11:14:08.873",
+      "assertedAt": "11:14:09.123",
+      "capturedAt": "11:14:09.323",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-redo.png",
+      "sha256": "589a39cde09152947ce3621b56602d4e8fb498435eb0454893fdf08327e33b0d"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-splice-bad-restore-rejected",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 264,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 318,
+      "centeredAt": "11:14:22.471",
+      "assertedAt": "11:14:22.774",
+      "capturedAt": "11:14:23.045",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-bad-restore-rejected.png",
+      "sha256": "9a86bd4c359fd873147de4de0988ec02fdd41a99c30697d549c8daa6656699b3"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-splice-process-relaunch-persistence",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 616,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 342,
+      "centeredAt": "11:15:12.665",
+      "assertedAt": "11:15:13.290",
+      "capturedAt": "11:15:13.584",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-process-relaunch-persistence.png",
+      "sha256": "cc6dc8a69d837827e39c15fdd9ac1e049f65183544140f547190c21a60407ed9"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-folio-disk-save",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 257,
+        "width": 362,
+        "height": 117
+      },
+      "nativeLogCommandIndex": 380,
+      "centeredAt": "11:15:42.231",
+      "assertedAt": "11:15:42.477",
+      "capturedAt": "11:15:42.686",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-disk-save.png",
+      "sha256": "7246abc1822e8c06af5b25660287c88c7395f1af3673def607db2e4acbdf110b"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-folio-fresh-host-reopen",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 249,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 397,
+      "centeredAt": "11:15:59.179",
+      "assertedAt": "11:15:59.555",
+      "capturedAt": "11:15:59.774",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-fresh-host-reopen.png",
+      "sha256": "bb1f0e8dd68dd42d0f7159728df9ae7f02ac0840eb041b3295f30640fc745fed"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-folio-undo-fresh-edit",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 248,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 414,
+      "centeredAt": "11:16:16.544",
+      "assertedAt": "11:16:16.899",
+      "capturedAt": "11:16:17.148",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-undo-fresh-edit.png",
+      "sha256": "398a9c1390842c8ec4b6fc2fee366621ed2b191875db7f38f2a92384370e5753"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-folio-redo",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 248,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 424,
+      "centeredAt": "11:16:31.529",
+      "assertedAt": "11:16:31.997",
+      "capturedAt": "11:16:32.326",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-redo.png",
+      "sha256": "04d042f1ab4200cc5908168f37e03985a812e9ad09a95816e37326711b831cf9"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-folio-bad-restore-rejected",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 254,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 434,
+      "centeredAt": "11:16:45.252",
+      "assertedAt": "11:16:45.515",
+      "capturedAt": "11:16:45.711",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-bad-restore-rejected.png",
+      "sha256": "46d5e743353058a46093fb83e74ca91d64dc9c2c5b2999e43e3c92d7537d6de3"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-folio-process-relaunch-persistence",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 533,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 458,
+      "centeredAt": "11:17:19.655",
+      "assertedAt": "11:17:19.939",
+      "capturedAt": "11:17:20.151",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-process-relaunch-persistence.png",
+      "sha256": "357a5f577a6326212821e89dff3b2ff3ae4cfcff7160b261d137542787d65c0f"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-pitch-disk-save",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 250,
+        "width": 362,
+        "height": 134
+      },
+      "nativeLogCommandIndex": 496,
+      "centeredAt": "11:17:46.740",
+      "assertedAt": "11:17:47.030",
+      "capturedAt": "11:17:47.277",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-disk-save.png",
+      "sha256": "1054bac226c7349d3fe3dd186306eecb7f264d37335c4ef127d954a1e49e390e"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-pitch-fresh-host-reopen",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 242,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 513,
+      "centeredAt": "11:18:05.417",
+      "assertedAt": "11:18:05.793",
+      "capturedAt": "11:18:06.078",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-fresh-host-reopen.png",
+      "sha256": "c1c3d97b2836872c2d6a8cc8884ddbc806a937a3dc2d13671683f6e58133b85c"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-pitch-undo-fresh-edit",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 247,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 530,
+      "centeredAt": "11:18:25.946",
+      "assertedAt": "11:18:26.192",
+      "capturedAt": "11:18:26.363",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-undo-fresh-edit.png",
+      "sha256": "f7164b9cf46c95391a713a352e4c990ae235422b186aee6a83b48033abcad152"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-pitch-redo",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 249,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 540,
+      "centeredAt": "11:18:40.220",
+      "assertedAt": "11:18:40.492",
+      "capturedAt": "11:18:40.710",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-redo.png",
+      "sha256": "27e08b2f2b188eb598963f182d1819d69e1134088a1dfce5c3b06846e9668333"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-pitch-bad-restore-rejected",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 248,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 550,
+      "centeredAt": "11:18:53.900",
+      "assertedAt": "11:18:54.262",
+      "capturedAt": "11:18:54.446",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-bad-restore-rejected.png",
+      "sha256": "a8013c0b347bee09bc268a892b91b9a5d9a6b4c8b8d3052e451de256a97f70c5"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-pitch-process-relaunch-persistence",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 516,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 574,
+      "centeredAt": "11:19:28.503",
+      "assertedAt": "11:19:28.775",
+      "capturedAt": "11:19:28.964",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-process-relaunch-persistence.png",
+      "sha256": "e6063b051a142ce8b80222ba07b695921180b059f06d27473f1e33639b7429bc"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-tally-disk-save",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 253,
+        "width": 362,
+        "height": 118
+      },
+      "nativeLogCommandIndex": 612,
+      "centeredAt": "11:19:55.214",
+      "assertedAt": "11:19:55.548",
+      "capturedAt": "11:19:55.799",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-disk-save.png",
+      "sha256": "b21f6de0caebb4fec25cb9c114306c6733eec6c296df79df7791f0b8317d15c7"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-tally-fresh-host-reopen",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 256,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 629,
+      "centeredAt": "11:20:18.901",
+      "assertedAt": "11:20:19.511",
+      "capturedAt": "11:20:20.523",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-fresh-host-reopen.png",
+      "sha256": "44d4e2c8529359aa248a730207ab36e96389254a9084f2df7297e2889eb6eab8"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-tally-undo-fresh-edit",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 250,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 646,
+      "centeredAt": "11:21:08.232",
+      "assertedAt": "11:21:08.508",
+      "capturedAt": "11:21:08.700",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-undo-fresh-edit.png",
+      "sha256": "aec69f0416d08698046104319a30a08c1e220eea771ba49ce4c274eeba2bbbdb"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-tally-redo",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 237,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 656,
+      "centeredAt": "11:21:22.272",
+      "assertedAt": "11:21:22.950",
+      "capturedAt": "11:21:23.334",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-redo.png",
+      "sha256": "7848622e2ddac748965f9514037be2129097c381204e537bec427d62aeab2e17"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-tally-bad-restore-rejected",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 225,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 666,
+      "centeredAt": "11:21:37.496",
+      "assertedAt": "11:21:37.829",
+      "capturedAt": "11:21:38.101",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+      "sha256": "f3427975737cfe1ec313f50d26bb01dc5d55cb874458e4e869e264aeb62fe5cd"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-tally-process-relaunch-persistence",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 516,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 690,
+      "centeredAt": "11:22:43.387",
+      "assertedAt": "11:22:44.176",
+      "capturedAt": "11:22:44.638",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-process-relaunch-persistence.png",
+      "sha256": "a3ab62428dde374064fad1143a128fd480a7dcb0f2791638df5cca6e393078bf"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-quill-disk-save",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 299,
+        "width": 362,
+        "height": 117
+      },
+      "nativeLogCommandIndex": 728,
+      "centeredAt": "11:23:13.318",
+      "assertedAt": "11:23:13.569",
+      "capturedAt": "11:23:13.818",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-disk-save.png",
+      "sha256": "ba4dfc41b7d51eef6b62aa5d127644cda9b3d438df2276f3e3541f777ec52a85"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-quill-fresh-host-reopen",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 315,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 745,
+      "centeredAt": "11:23:29.145",
+      "assertedAt": "11:23:29.401",
+      "capturedAt": "11:23:29.601",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-fresh-host-reopen.png",
+      "sha256": "51839d41e584ed194b27a26803c77fd18cfd1ed6ebaef15fd95101598ebfb0a5"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-quill-undo-fresh-edit",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 260,
+        "width": 362,
+        "height": 34
+      },
+      "nativeLogCommandIndex": 762,
+      "centeredAt": "11:23:52.904",
+      "assertedAt": "11:23:53.291",
+      "capturedAt": "11:23:53.487",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-undo-fresh-edit.png",
+      "sha256": "269ccca887825d87b3e9067615de3fb431df90d225faa7b50a7f39b86ebf6016"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-quill-redo",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 250,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 772,
+      "centeredAt": "11:24:07.066",
+      "assertedAt": "11:24:07.569",
+      "capturedAt": "11:24:07.829",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-redo.png",
+      "sha256": "f12815d033388eedbea7026ce86469684419fc0bfe168ba469648e80353f55da"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-quill-bad-restore-rejected",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 249,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 782,
+      "centeredAt": "11:24:24.357",
+      "assertedAt": "11:24:25.249",
+      "capturedAt": "11:24:25.553",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-bad-restore-rejected.png",
+      "sha256": "2f45a1837db5b7ff96b04ee89aa402a6ee8962d3d666ac3e2ba433776945f9c1"
+    },
+    {
+      "stage": "pass-1",
+      "name": "f6-quill-process-relaunch-persistence",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "bounds": {
+        "x": 20,
+        "y": 600,
+        "width": 362,
+        "height": 33
+      },
+      "nativeLogCommandIndex": 806,
+      "centeredAt": "11:25:12.243",
+      "assertedAt": "11:25:12.510",
+      "capturedAt": "11:25:12.675",
+      "scope": "Logged AX placement immediately before original PNG; independent visual readability review remains required",
+      "path": "pass-1/artifacts/2026-11-14_110648/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-process-relaunch-persistence.png",
+      "sha256": "e64624c201a959f4ff818642569947f0ad0757d2d7d63abb594644db0ccdcb70"
+    }
+  ],
+  "reports": {
+    "picker": "<?xml version='1.0' encoding='UTF-8'?>\n<testsuites>\n  <testsuite name=\"Test Suite\" device=\"Forge F6 baba7e1-30729 - iOS 27.2 - 681558D2-6FA2-4842-B575-90BC9DC02860\" tests=\"1\" failures=\"0\" time=\"22.75\" timestamp=\"2026-11-14T11:05:36\">\n    <testcase id=\"Forge native studio picker\" name=\"Forge native studio picker\" classname=\"Forge native studio picker\" file=\"/Users/runner/work/_temp/runtime-ui/picker/flow.yaml\" time=\"22.714\" timestamp=\"2026-11-14T11:05:36\" status=\"SUCCESS\"/>\n  </testsuite>\n</testsuites>\n",
+    "pass-1": "<?xml version='1.0' encoding='UTF-8'?>\n<testsuites>\n  <testsuite name=\"Test Suite\" device=\"Forge F6 baba7e1-30729 - iOS 27.2 - 681558D2-6FA2-4842-B575-90BC9DC02860\" tests=\"1\" failures=\"0\" time=\"1067.715\" timestamp=\"2026-11-14T11:07:43\">\n    <testcase id=\"Forge seven-studio durable document workflows\" name=\"Forge seven-studio durable document workflows\" classname=\"Forge seven-studio durable document workflows\" file=\"/Users/runner/work/_temp/runtime-ui/pass-1/flow.yaml\" time=\"1066.105\" timestamp=\"2026-11-14T11:07:45\" status=\"SUCCESS\"/>\n  </testsuite>\n</testsuites>\n"
+  },
+  "texts": {
+    "runtime-ui/execution.json": "{\n  \"runId\": \"43586120262\",\n  \"runAttempt\": \"1\",\n  \"job\": \"native-compile\",\n  \"driverSourceCommit\": \"baba7e13418de9f0f715c13e558af67c607e7e62\"\n}\n",
+    "runtime-ui/actual-simulator-runtime.json": "{\n  \"observedVia\": \"xcrun simctl list devices --json\",\n  \"runtimeIdentifier\": \"com.apple.CoreSimulator.SimRuntime.iOS-27-2\",\n  \"udid\": \"681558D2-6FA2-4842-B575-90BC9DC02860\",\n  \"deviceTypeIdentifier\": \"com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro\",\n  \"name\": \"Forge F6 baba7e1-30729\",\n  \"isAvailable\": true,\n  \"createdByThisRun\": true,\n  \"inventorySha256\": \"757cc84768f1f08d4258e3bec33282066add4c350732dc092127db79937512a2\",\n  \"templateInventorySha256\": \"63bc5554317d2efd0a48d2bf5ab03cd7eb57ff81ef90499809580e649553b25f\"\n}\n",
+    "runtime-ui/chosen-simulator.json": "{\n  \"dataPath\": \"/Users/runner/Library/Developer/CoreSimulator/Devices/681558D2-6FA2-4842-B575-90BC9DC02860/data\",\n  \"dataPathSize\": 18337792,\n  \"logPath\": \"/Users/runner/Library/Logs/CoreSimulator/681558D2-6FA2-4842-B575-90BC9DC02860\",\n  \"udid\": \"681558D2-6FA2-4842-B575-90BC9DC02860\",\n  \"isAvailable\": true,\n  \"deviceTypeIdentifier\": \"com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro\",\n  \"state\": \"Shutdown\",\n  \"name\": \"Forge F6 baba7e1-30729\",\n  \"createdByThisRun\": true\n}\n",
+    "runtime-ui/simulator-bootstatus.log": "Monitoring boot status for Forge F6 baba7e1-30729 (681558D2-6FA2-4842-B575-90BC9DC02860).\nDevice already booted, nothing to do.\n\n",
+    "runtime-ui/owned-simulator-shutdown.log": "",
+    "runtime-ui/owned-simulator-delete.log": ""
+  }
+}
