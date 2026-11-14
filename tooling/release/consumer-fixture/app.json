@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Forge Consumer Smoke",
+    "slug": "forge-consumer-smoke",
+    "version": "0.1.0",
+    "orientation": "default",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "newArchEnabled": true,
+    "experiments": {
+      "swiftPackageManager": true
+    },
+    "ios": {
+      "bundleIdentifier": "dev.nitroforge.f6.consumer",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "dev.nitroforge.f6.consumer"
+    },
+    "plugins": [
+      "@nitro-forge/ignition"
+    ]
+  }
+}

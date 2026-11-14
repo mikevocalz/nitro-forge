@@ -18,7 +18,11 @@
     "./transactions": "./src/transactions.ts",
     "./collaboration": "./src/collaboration.ts",
     "./collaboration-http": "./src/collaboration-http.ts",
-    "./collaboration-checkpoint": "./src/collaboration-checkpoint.ts"
+    "./collaboration-checkpoint": "./src/collaboration-checkpoint.ts",
+    "./app.plugin.cjs": {
+      "types": "./app.plugin.d.cts",
+      "default": "./app.plugin.cjs"
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -44,5 +48,21 @@
     "dependencies": [
       "react-native-nitro-modules"
     ]
-  }
+  },
+  "files": [
+    "src",
+    "react-native.config.cjs",
+    "Package.swift",
+    "NitroForgeV1.podspec",
+    "nitro.json",
+    "cpp",
+    "nitrogen/generated",
+    "android/build.gradle",
+    "android/CMakeLists.txt",
+    "android/src",
+    "native",
+    "app.plugin.cjs",
+    "plugin/withForge.cjs",
+    "app.plugin.d.cts"
+  ]
 }
