@@ -20,6 +20,6 @@ export function observedCommand(command, observe) {
   catch (error) { failed = true; throw error; }
   finally {
     try { observe('after', !failed); }
-    catch (error) { if (!originalFailure) throw error; }
+    catch (error) { if (!failed) throw error; }
   }
 }
