@@ -14,6 +14,7 @@ const native = resolve(values.native), output = resolve(native, 'licenses');
 assert.ok(!existsSync(output), 'License packet already exists; do not mutate candidate inputs');
 requireDisk(root);
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+const inventory = json(resolve(root, 'tooling/release/package-inventory.json'));
 const rust = execFileSync('rustc', ['--version'], { encoding: 'utf8' }).trim();
 const lockSha = hash(resolve(root, 'Cargo.lock'));
 for (const platform of ['apple', 'android']) {
@@ -46,6 +47,7 @@ for (const pkg of selected) {
   if (!pkg.source) {
     const path = relative(root, directory);
     assert.ok(path && path !== '..' && !path.startsWith(`..${sep}`), `Unadmitted local dependency: ${pkg.id}`);
+    assert.ok(inventory.nativeFirstPartyPaths.includes(path.split(sep).join('/')), `Local dependency needs file-level source admission; do not assume original ownership: ${pkg.id}`);
     assert.equal(pkg.license, 'MIT', `Original-code grant does not replace separate terms for ${pkg.id}`);
     for (const dir of [directory, dirname(directory)]) {
       const notice = resolve(dir, 'THIRD_PARTY_NOTICES.md');
