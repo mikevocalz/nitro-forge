@@ -76,7 +76,7 @@ export function iosRuntimeIdentity(inventory, udid) {
   assert.match(runtimeIdentifier, /^com\.apple\.CoreSimulator\.SimRuntime\.iOS-/);
   assert.equal(device.isAvailable, true, 'Chosen iOS runtime/device must be available');
   assert.match(device.deviceTypeIdentifier, /^com\.apple\.CoreSimulator\.SimDeviceType\.iPhone-/);
-  return { observedVia: 'xcrun simctl list devices available --json', runtimeIdentifier,
+  return { observedVia: 'xcrun simctl list devices --json', runtimeIdentifier,
     udid: device.udid, deviceTypeIdentifier: device.deviceTypeIdentifier, name: device.name, isAvailable: true };
 }
 
@@ -95,12 +95,15 @@ export function iosSimulatorTemplate(inventory) {
 /** Never acquire/delete an existing simulator based on create output. */
 export function newIosSimulatorId(inventory, udid) {
   assert.match(udid, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-  assert.ok(!Object.values(inventory.devices).some(devices => devices.some(device => device.udid === udid)), 'Created simulator must not be an existing device');
+  const identity = udid.toLowerCase();
+  assert.ok(!Object.values(inventory.devices).some(devices => devices.some(device => typeof device.udid === 'string' && device.udid.toLowerCase() === identity)), 'Created simulator must not be an existing device');
   return udid;
 }
 
-/** CoreSimulator can return exit 0 with a terminal failed migration log. */
-export function checkIosBootStatus(output) {
+/** CoreSimulator can return exit 0 with failure on either stream. Read the
+ * exact retained stdout+stderr record, not run()'s stdout-only return value. */
+export function checkIosBootStatusFile(file) {
+  const output = readFileSync(file, 'utf8');
   assert.ok(typeof output === 'string' && output.trim().length > 0, 'Actual bootstatus output required');
   assert.ok(!/\b(?:failed|failure|fatal)\b/i.test(output), 'CoreSimulator reported a failed boot/migration; installation must not proceed');
 }

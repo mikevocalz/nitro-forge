@@ -7,7 +7,7 @@ import { files, hash, inside, json, requireDisk } from '../archive-files.mjs';
 import { unpackArchive } from '../unpack-archive.mjs';
 import { createFlow, createPickerFlow, serializeFlow } from './flow.mjs';
 import { MAESTRO, parseHierarchy, requirePassedFlow, requireSemanticLabels } from './ui-evidence.mjs';
-import { checkIosBootStatus, exactFlowScreenshot, iosRuntimeIdentity, iosSimulatorTemplate, newIosSimulatorId, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
+import { checkIosBootStatusFile, exactFlowScreenshot, iosRuntimeIdentity, iosSimulatorTemplate, newIosSimulatorId, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
 
 const { values } = parseArgs({ options: { platform: { type: 'string' }, 'artifact-root': { type: 'string' }, source: { type: 'string' }, output: { type: 'string' } } });
 assert.ok(['ios', 'android'].includes(values.platform));
@@ -120,7 +120,7 @@ try {
   if (platform === 'ios') {
     app = unpackArchive(inside(artifacts, record.archive), resolve(output, 'unpacked-app'), { prefix: record.applicationDirectory, sha256: record.sha256 });
     assert.equal(hash(resolve(app, 'main.jsbundle')), record.embeddedBundleSha256);
-    const simulatorInventory = JSON.parse(run('xcrun', ['simctl', 'list', 'devices', 'available', '--json'], { log: 'simulators.log' }));
+    const simulatorInventory = JSON.parse(run('xcrun', ['simctl', 'list', 'devices', '--json'], { log: 'simulators.log' }));
     const template = iosSimulatorTemplate(simulatorInventory);
     const templateDevice = Object.values(simulatorInventory.devices).flat().find(item => item.udid === template.udid);
     assert.ok(typeof templateDevice.dataPath === 'string' && templateDevice.dataPath.startsWith('/'), 'Actual simulator data volume required');
@@ -131,7 +131,7 @@ try {
       run('xcrun', ['simctl', 'create', creationName, template.deviceTypeIdentifier, template.runtimeIdentifier], { log: 'simulator-create.log' }).trim());
     // Ownership is acquired only for a new OS UUID, never the template device.
     ownedSimulator = device;
-    const createdInventory = JSON.parse(run('xcrun', ['simctl', 'list', 'devices', 'available', '--json'], { log: 'simulators-created.log' }));
+    const createdInventory = JSON.parse(run('xcrun', ['simctl', 'list', 'devices', '--json'], { log: 'simulators-created.log' }));
     const identity = iosRuntimeIdentity(createdInventory, device);
     assert.equal(identity.runtimeIdentifier, template.runtimeIdentifier);
     assert.equal(identity.deviceTypeIdentifier, template.deviceTypeIdentifier);
@@ -141,8 +141,8 @@ try {
     writeFileSync(resolve(output, 'actual-simulator-runtime.json'), JSON.stringify({ ...identity, createdByThisRun: true,
       inventorySha256: hash(resolve(output, 'simulators-created.log')), templateInventorySha256: hash(resolve(output, 'simulators.log')) }, null, 2) + '\n');
     if (chosen.state !== 'Booted') run('xcrun', ['simctl', 'boot', device], { log: 'simulator-boot.log' });
-    const bootStatus = run('xcrun', ['simctl', 'bootstatus', device, '-b'], { timeout: 420000, log: 'simulator-bootstatus.log' });
-    checkIosBootStatus(bootStatus);
+    run('xcrun', ['simctl', 'bootstatus', device, '-b'], { timeout: 420000, log: 'simulator-bootstatus.log' });
+    checkIosBootStatusFile(inside(output, 'simulator-bootstatus.log'));
     run('xcrun', ['simctl', 'install', device, app], { log: 'install.log' });
   } else {
     assert.ok(process.env.ANDROID_HOME);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { checkIosBootStatus, exactFlowScreenshot, iosRuntimeIdentity, iosSimulatorTemplate, newIosSimulatorId, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
+import { checkIosBootStatusFile, exactFlowScreenshot, iosRuntimeIdentity, iosSimulatorTemplate, newIosSimulatorId, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(resolve(tmpdir(), 'forge-os-evidence-'));
@@ -117,18 +117,31 @@ test('created simulator ownership rejects existing or invalid identities', () =>
   const inventory = JSON.parse(readFileSync(new URL('../test-fixtures/ios-simulator-inventory.json', import.meta.url), 'utf8'));
   const template = iosSimulatorTemplate(inventory), before = JSON.stringify(inventory);
   assert.throws(() => newIosSimulatorId(inventory, template.udid), /must not be an existing/);
+  assert.throws(() => newIosSimulatorId(inventory, template.udid.toLowerCase()), /must not be an existing/);
+  inventory.devices['unavailable-runtime'] = [{ udid: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', isAvailable: false }];
+  assert.throws(() => newIosSimulatorId(inventory, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'), /must not be an existing/);
+  delete inventory.devices['unavailable-runtime'];
   assert.throws(() => newIosSimulatorId(inventory, 'not-an-os-uuid'));
   const fresh = '11111111-2222-3333-4444-555555555555';
   assert.equal(newIosSimulatorId(inventory, fresh), fresh);
   assert.equal(JSON.stringify(inventory), before);
 });
-test('exit-zero bootstatus with actual failed migration text is rejected before install', () => {
-  const failed = readFileSync(new URL('../test-fixtures/ios-duo-failed-bootstatus.log', import.meta.url), 'utf8');
-  assert.match(failed, /isTerminal=YES/);
-  assert.match(failed, /Data Migration Failed/);
-  assert.throws(() => checkIosBootStatus(failed), /failed boot\/migration/);
-  // Observed successful CLI text; neither string is native workflow evidence.
-  checkIosBootStatus('Monitoring boot status for iPhone.\nDevice already booted, nothing to do.\n');
-  checkIosBootStatus('Status=4294967295, isTerminal=YES.\nFinished\n');
-  assert.throws(() => checkIosBootStatus(''), /Actual bootstatus/);
+test('exit-zero bootstatus rejects failure on either recorded stream before install', t => {
+  const root = fixture(t), path = resolve(root, 'bootstatus.log');
+  const failed = new URL('../test-fixtures/ios-duo-failed-bootstatus.log', import.meta.url);
+  const captured = readFileSync(failed, 'utf8');
+  assert.match(captured, /isTerminal=YES/);
+  assert.match(captured, /Data Migration Failed/);
+  assert.throws(() => checkIosBootStatusFile(failed), /failed boot\/migration/);
+  const stdout = 'Monitoring boot status for iPhone.\nDevice already booted, nothing to do.\n';
+  writeFileSync(path, stdout);
+  checkIosBootStatusFile(path);
+  // run() returns only stdout but retains both streams in this exact log.
+  const stderr = 'Status=3, isTerminal=YES.\nData Migration Failed\n';
+  writeFileSync(path, stdout + stderr);
+  assert.throws(() => checkIosBootStatusFile(path), /failed boot\/migration/);
+  writeFileSync(path, 'Status=4294967295, isTerminal=YES.\nFinished\n');
+  checkIosBootStatusFile(path);
+  writeFileSync(path, '');
+  assert.throws(() => checkIosBootStatusFile(path), /Actual bootstatus/);
 });
