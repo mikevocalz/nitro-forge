@@ -247,7 +247,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: forge-consumer-${{ matrix.platform }}-compile
+          name: forge-consumer-${{ matrix.platform }}-compile-attempt-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/consumer/forge-consumer-receipt.json
             ${{ runner.temp }}/consumer/pnpm-lock.yaml
@@ -266,7 +266,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: forge-consumer-${{ matrix.platform }}-runtime
+          name: forge-consumer-${{ matrix.platform }}-runtime-attempt-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/runtime-ui/**
             !${{ runner.temp }}/runtime-ui/unpacked-app/**

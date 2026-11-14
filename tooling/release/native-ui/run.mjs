@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { files, hash, inside, json, requireDisk } from '../archive-files.mjs';
 import { unpackArchive } from '../unpack-archive.mjs';
+import { androidTransport, observedCommand } from './transport.mjs';
 import { createFlow, createPickerFlow, serializeFlow } from './flow.mjs';
 import { MAESTRO, parseHierarchy, requirePassedFlow, requireSemanticLabels } from './ui-evidence.mjs';
 import { checkIosBootStatusFile, exactFlowScreenshot, iosRuntimeIdentity, iosSimulatorTemplate, newIosSimulatorId, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
@@ -23,6 +24,23 @@ assert.ok(maestro && existsSync(maestro), 'Verified pinned Maestro binary requir
 const env = { ...process.env, CI: '1', MAESTRO_CLI_NO_ANALYTICS: '1', MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED: 'true', MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000' };
 let device, ownedSimulator, adb, app, iosContainer;
 const stages = [];
+let cliSequence = 0;
+const execution = { runId: process.env.GITHUB_RUN_ID ?? null, runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
+  job: process.env.GITHUB_JOB ?? null, driverSourceCommit: values.source };
+writeFileSync(resolve(output, 'execution.json'), JSON.stringify(execution, null, 2) + '\n');
+function driver(args, options, label) {
+  if (platform !== 'android') return run(maestro, args, options);
+  const prefix = 'transport-' + (++cliSequence) + '-' + label;
+  return observedCommand(() => run(maestro, args, options), (phase, requireOnline) =>
+    androidTransport(run, { adb, device, prefix: prefix + '-' + phase, requireOnline }));
+}
+function iosHealth(label) {
+  run('ps', ['-eo', 'pid,ppid,etime,comm'], { optional: true, timeout: 10000, log: label + '-host-processes.log' });
+  run('sysctl', ['hw.memsize', 'hw.ncpu'], { optional: true, timeout: 10000, log: label + '-host-capacity.log' });
+  run('vm_stat', [], { optional: true, timeout: 10000, log: label + '-host-memory.log' });
+  run('xcrun', ['simctl', 'spawn', device, 'launchctl', 'list'], { optional: true, timeout: 10000, log: label + '-device-services.log' });
+}
+
 function run(file, args, { optional = false, timeout = 90000, log } = {}) {
   const started = Date.now(), result = spawnSync(file, args, { env, encoding: 'utf8', timeout, maxBuffer: 32 * 1024 * 1024 });
   appendFileSync(resolve(output, 'commands.jsonl'), JSON.stringify({ file, args, elapsedMs: Date.now() - started, status: result.status, error: result.error?.message }) + '\n');
@@ -48,7 +66,7 @@ function screenshot(name) {
   return path;
 }
 function hierarchy(name) {
-  const raw = run(maestro, ['--device', device, '--platform', platform, '--no-ansi', 'hierarchy', '--no-reinstall-driver'], { timeout: 240000, log: `${name}-hierarchy-command.log` });
+  const raw = driver(['--device', device, '--platform', platform, '--no-ansi', 'hierarchy', '--no-reinstall-driver'], { timeout: 240000, log: `${name}-hierarchy-command.log` }, 'hierarchy-' + name);
   const tree = parseHierarchy(raw);
   writeFileSync(inside(output, `${name}-hierarchy.json`), JSON.stringify(tree, null, 2) + '\n');
   return tree;
@@ -58,9 +76,9 @@ function flow(name, definition) {
   mkdirSync(directory);
   const path = inside(directory, 'flow.yaml'), report = inside(directory, 'report.xml');
   writeFileSync(path, serializeFlow(definition));
-  run(maestro, ['--device', device, '--platform', platform, '--no-ansi', 'test', '--no-reinstall-driver',
+  driver(['--device', device, '--platform', platform, '--no-ansi', 'test', '--no-reinstall-driver',
     '--format', 'junit', '--output', report, '--test-output-dir', inside(directory, 'artifacts'), '--debug-output', inside(directory, 'debug'), path],
-  { timeout: 1200000, log: `${name}-maestro.log` });
+  { timeout: 1200000, log: `${name}-maestro.log` }, 'flow-' + name);
   const passed = requirePassedFlow(readFileSync(report, 'utf8'));
   const images = files(directory).filter(file => file.endsWith('.png'));
   const expectedImages = definition.commands.filter(command => typeof command.takeScreenshot === 'string').map(command => `${command.takeScreenshot}.png`);
@@ -143,6 +161,7 @@ try {
     if (chosen.state !== 'Booted') run('xcrun', ['simctl', 'boot', device], { log: 'simulator-boot.log' });
     run('xcrun', ['simctl', 'bootstatus', device, '-b'], { timeout: 420000, log: 'simulator-bootstatus.log' });
     checkIosBootStatusFile(inside(output, 'simulator-bootstatus.log'));
+    iosHealth('before-install');
     run('xcrun', ['simctl', 'install', device, app], { log: 'install.log' });
   } else {
     assert.ok(process.env.ANDROID_HOME);
@@ -185,7 +204,7 @@ try {
     stages.at(-1).documents = collectDocuments(`pass-${pass}`);
   }
   assert.equal(stages[1].flowSha256, stages[2].flowSha256, 'Two unchanged complete native flows required');
-  writeFileSync(resolve(output, 'runtime-proof.json'), JSON.stringify({ sourceCommit: values.source, platform, appId, device,
+  writeFileSync(resolve(output, 'runtime-proof.json'), JSON.stringify({ sourceCommit: values.source, execution, platform, appId, device,
     observedVia: platform === 'ios' ? 'Pinned official Maestro XCTest OS touches and native accessibility' : 'Pinned official Maestro Android OS touches and native accessibility',
     candidateManifestSha256: record.manifestSha256, installedPackagesSha256: record.installedPackagesSha256, lockSha256: record.lockSha256,
     applicationArchiveSha256: record.sha256, embeddedBundleSha256: record.embeddedBundleSha256,
@@ -194,8 +213,9 @@ try {
     localArgent: 'NOT RUN; CI-hosted native drivers used', f6Gate: 'UNCHANGED; independent source, runtime and visual review still required',
   }, null, 2) + '\n');
 } catch (error) {
-  writeFileSync(resolve(output, 'failure.json'), JSON.stringify({ sourceCommit: values.source, platform, appId, device, error: error.stack, completedStages: stages }, null, 2) + '\n');
+  writeFileSync(resolve(output, 'failure.json'), JSON.stringify({ sourceCommit: values.source, execution, platform, appId, device, error: error.stack, completedStages: stages }, null, 2) + '\n');
   if (device) {
+    if (platform === 'ios') { try { iosHealth('failure'); } catch { /* Preserve original failure. */ } }
     try { screenshot('failure'); } catch { /* Original failure remains authoritative. */ }
     try { hierarchy('failure'); } catch { /* Driver failure must not erase original evidence. */ }
   }
