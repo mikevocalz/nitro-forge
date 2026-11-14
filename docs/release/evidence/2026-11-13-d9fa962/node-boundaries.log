@@ -1,0 +1,33 @@
+✔ optionless CJS entry preserves config identity and all platform metadata, without runtime loading (16.5815ms)
+✔ requires explicit initial SwiftPM opt-in for iOS and preserves the rejected input (11.689666ms)
+✔ omitted platforms includes iOS and therefore needs explicit SwiftPM (8.685709ms)
+✔ rejects options, missing project root and disabled architecture rather than mutating configuration (10.448583ms)
+✔ reports actual and supported dependency versions (10.072708ms)
+✔ missing dependency fails without fallback to a runtime (9.139916ms)
+✔ metadata resolution handles package exports that hide package.json, without executing the exported module (10.814625ms)
+✔ absent or malformed native manifest is an actionable package error (9.934708ms)
+✔ retains exact declared architecture sets, including legacy Android ABIs (9.800959ms)
+✔ rejects incomplete assets and missing files instead of compiling Rust (9.5055ms)
+✔ rejects malformed source/runtime identities (10.204375ms)
+✔ rejects traversal, duplicate entries and malformed hashes (10.613333ms)
+✔ rejects a symlinked asset escaping the installed package (8.890791ms)
+✔ rejects a native manifest symlink outside the package before reading it (9.902792ms)
+✔ candidate refuses stale native/source identity before consumption (7.388709ms)
+✔ candidate refuses tampered archive bytes (4.50075ms)
+✔ candidate refuses expanded or incomplete public inventory (2.431583ms)
+✔ candidate rejects escape and duplicate content paths (2.514125ms)
+✔ source staging and extraction reject symlink fallback (18.664208ms)
+✔ extraction validates package-only names before writing (12.611792ms)
+✔ headless package cannot leave a workspace dependency or missing export (0.919666ms)
+✔ rooted package paths reject absolute paths and traversal (0.21275ms)
+✔ per-package source closure cannot borrow an undeclared sibling from the all-studio app (1.952791ms)
+✔ incomplete producer output cannot be consumed even if candidate.json exists (2.89575ms)
+✔ bundle check requires actual archive/runtime instances and rejects duplicates (437.498667ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 655.002875

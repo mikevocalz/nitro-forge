@@ -1,0 +1,11 @@
+{
+  "observedVia": "xcrun simctl list devices --json",
+  "runtimeIdentifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-2",
+  "udid": "E5912B64-59B1-4283-A4D7-C12890F42140",
+  "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro",
+  "name": "Forge F6 a0c7f23-57588",
+  "isAvailable": true,
+  "createdByThisRun": true,
+  "inventorySha256": "0d553996c9d9b4aa4e8f52ebe55bac9b7996ed639a4b9771d7afef363c88af93",
+  "templateInventorySha256": "98d36717798ad15b8cfe7d3facd4f815d3326cfd90b7a24ff03266b84e364b32"
+}

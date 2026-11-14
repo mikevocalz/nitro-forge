@@ -1,0 +1,29 @@
+{
+  "sourceCommit": "ea8d09feb06825d9e8e912bcc97c2c82ed376b66",
+  "execution": {
+    "runId": "43591126766",
+    "runAttempt": "2",
+    "job": "native-compile",
+    "driverSourceCommit": "ea8d09feb06825d9e8e912bcc97c2c82ed376b66"
+  },
+  "platform": "ios",
+  "appId": "dev.nitroforge.f6.consumer",
+  "device": "0263B476-D4CD-4065-930D-286428D1F648",
+  "error": "Error: /Users/runner/work/_temp/forge-maestro/maestro/bin/maestro failed: \n    at run (file:///Users/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:52:11)\n    at driver (file:///Users/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:33:38)\n    at flow (file:///Users/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:81:3)\n    at file:///Users/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:218:5\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)",
+  "completedStages": [
+    {
+      "name": "picker",
+      "executed": 1,
+      "failures": 0,
+      "skipped": 0,
+      "flowSha256": "80cd8336cd547b8f27907bee20f61a20d053d99c8c60a1a9cc8ace8be765f7ff",
+      "reportSha256": "1e5a20cc1ae1491022cc311927bf5be489fc148b87fe31f7b7db5f7cf46a0509",
+      "screenshots": [
+        {
+          "path": "picker/artifacts/2026-11-14_125819/Forge native studio picker/takeScreenshot/picker-picker.png",
+          "sha256": "da21e552c4a4cef4a7afdf899ff8fdbf95e72d406a609d87974c2d030a488ac4"
+        }
+      ]
+    }
+  ]
+}

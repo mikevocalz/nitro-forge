@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "platform": "android",
+  "sourceCommit": "65fe6dad5567c3ebd02e233ed4eda30ac162012e",
+  "nitroVersion": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+  "toolchain": {
+    "rust": "rustc 1.100.0 (0ef1bc386 2026-11-09)",
+    "cargo": "cargo 1.100.0 (3acc79c0c 2026-11-05)",
+    "cargoLockSha256": "204b348987299a05fb5f76a9e4e18ba5e512f44e2b5f58a1969403f201dd769f",
+    "readobj": "LLVM (http://llvm.org/):\n  LLVM version 18.0.2\n  Optimized build."
+  },
+  "files": [
+    {
+      "path": "android/arm64-v8a/libnf_sys.a",
+      "sha256": "86840b4078f1a4acb7ae098c78bdd71b1b8289256ca0c44bfadc032c227934e6"
+    },
+    {
+      "path": "android/armeabi-v7a/libnf_sys.a",
+      "sha256": "8055f0c79dbf7aaee9550c41ffb36d701b64affc08bc5803cb118c606e3cfacf"
+    },
+    {
+      "path": "android/x86/libnf_sys.a",
+      "sha256": "3951cec4b6bf2e77f99d91f23be05000b677e2fa7b8337ae0ddfcdf86a410f7d"
+    },
+    {
+      "path": "android/x86_64/libnf_sys.a",
+      "sha256": "341bc36cba7253b2784420d7e8f91cd8b9682cbdee2deee447cb32b3101a9006"
+    }
+  ]
+}

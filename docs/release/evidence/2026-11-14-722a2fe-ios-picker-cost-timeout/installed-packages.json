@@ -1,0 +1,193 @@
+{
+  "sourceCommit": "6d8b13fc90396683b251cc6d929d6d6a06d51515",
+  "manifestSha256": "8ab1bb6b2c1a97b7f3618b845e237c81acbfcfc2670dc25d22c2486a36421275",
+  "reactNativeRenderer": [
+    {
+      "mode": "dev",
+      "version": "19.3.0",
+      "sha256": "416ebef1c631eebfd0372a439e1ee74ad2f179018f427ef9ef3d2100c423522f"
+    },
+    {
+      "mode": "prod",
+      "version": "19.3.0",
+      "sha256": "c58d269588bac258318b23b1fcbd5e77afb83b9702d2a11349cdc90610489dbc"
+    }
+  ],
+  "lockSha256": "215c398515bad51a33184e5be4d7745c84d56bf6d71ce7d5e07cfe9c932e9b9c",
+  "packages": [
+    {
+      "name": "expo",
+      "version": "58.0.24",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/build/Expo.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo",
+      "packageJsonSha256": "a818f429d76946b5fddaa804ac67ebcc45cfe232a47b1bf7a30b66f1c0c3c9ac"
+    },
+    {
+      "name": "react",
+      "version": "19.3.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/react@19.3.1/node_modules/react/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/react@19.3.1/node_modules/react",
+      "packageJsonSha256": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67"
+    },
+    {
+      "name": "react-native",
+      "version": "0.88.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1__@types+react@19.3.0_react@19.3.1_supports-color@8.1.1/node_modules/react-native/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1__@types+react@19.3.0_react@19.3.1_supports-color@8.1.1/node_modules/react-native",
+      "packageJsonSha256": "3f2bf69ed883e97a295b1de43f5a2d75d112ab45495153360c2fb521023c7f3f"
+    },
+    {
+      "name": "react-native-nitro-modules",
+      "version": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/react-native-nitro-modules@1.0.0-alpha.nightly.136.gdb81de61bd32_react-native@0.88.1_@b_3e921eb7eec80eaab1f9b9a3a3f82766/node_modules/react-native-nitro-modules/lib/commonjs/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/react-native-nitro-modules@1.0.0-alpha.nightly.136.gdb81de61bd32_react-native@0.88.1_@b_3e921eb7eec80eaab1f9b9a3a3f82766/node_modules/react-native-nitro-modules",
+      "packageJsonSha256": "e1c3f267c0f1e8f474e936a96b55593ea4373a0e0aeab1dceda112d631a2c92b"
+    },
+    {
+      "name": "nitro-core",
+      "version": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/nitro-core@1.0.0-alpha.nightly.136.gdb81de61bd32/node_modules/nitro-core/js/lib/commonjs/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/nitro-core@1.0.0-alpha.nightly.136.gdb81de61bd32/node_modules/nitro-core",
+      "packageJsonSha256": "4a7c5c21e67d1d010d790d60962dba6e63fcd2609be4d9da1e4dd29c3fe76c9c"
+    },
+    {
+      "name": "zustand",
+      "version": "5.1.0",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/zustand@5.1.0_@types+react@19.3.0_react@19.3.1/node_modules/zustand/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/zustand@5.1.0_@types+react@19.3.0_react@19.3.1/node_modules/zustand",
+      "packageJsonSha256": "13ff243063391fd8aef299e96be141f20f1f59ae5e11bafa3a3103976ec662a7"
+    },
+    {
+      "name": "@nyc-tron/ui",
+      "version": "1.0.0-rc.2",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nyc-tron+ui@https+++github.com+mikevocalz+NYC-Tron-UI+releases+download+v1.0.0-rc.2+ny_365dcce80fa2021ec712a9afc61c12da/node_modules/@nyc-tron/ui/dist/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nyc-tron+ui@https+++github.com+mikevocalz+NYC-Tron-UI+releases+download+v1.0.0-rc.2+ny_365dcce80fa2021ec712a9afc61c12da/node_modules/@nyc-tron/ui",
+      "packageJsonSha256": "23812e70dd58d254bfeeda165854996514e8591282908edad3f8630c5ef07b9a"
+    },
+    {
+      "name": "expo-file-system",
+      "version": "58.0.13",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/expo-file-system@58.0.13_expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-n_6004a69e41348d6ea1f958915d899e8a/node_modules/expo-file-system/build/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/expo-file-system@58.0.13_expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-n_6004a69e41348d6ea1f958915d899e8a/node_modules/expo-file-system",
+      "packageJsonSha256": "7a5f05dffbdfb6071054dc164f44be739b25397f846845a38989686ef7b32cac"
+    },
+    {
+      "name": "expo-constants",
+      "version": "58.0.16",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/expo-constants@58.0.16_expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-nat_85ac679032470acda3974ec6a5bee108/node_modules/expo-constants/build/Constants.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/expo-constants@58.0.16_expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-nat_85ac679032470acda3974ec6a5bee108/node_modules/expo-constants",
+      "packageJsonSha256": "d993120267b9e8b8b65b92f605d0cbc7ddb2e3bfe295df6c4a97bfe81e06247a"
+    },
+    {
+      "name": "@nitro-forge/ignition",
+      "version": "1.0.0-f6.43598783276.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+ignition@file+artifacts+nitro-forge-ignition-1.0.0-f6.43598783276.1.tgz_ni_88d15e1293c57a6ced0b5b87f6420064/node_modules/@nitro-forge/ignition/src/index.ts",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+ignition@file+artifacts+nitro-forge-ignition-1.0.0-f6.43598783276.1.tgz_ni_88d15e1293c57a6ced0b5b87f6420064/node_modules/@nitro-forge/ignition",
+      "packageJsonSha256": "ddce4247495cab3fe57e86dd4c9103a2b8a2ebf2394c52592970f08926fff32e"
+    },
+    {
+      "name": "@nitro-forge/prism",
+      "version": "1.0.0-f6.43598783276.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+prism@file+artifacts+nitro-forge-prism-1.0.0-f6.43598783276.1.tgz_nitro-co_113456e0a4e93055d2b76bc25234066a/node_modules/@nitro-forge/prism/src/index.ts",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+prism@file+artifacts+nitro-forge-prism-1.0.0-f6.43598783276.1.tgz_nitro-co_113456e0a4e93055d2b76bc25234066a/node_modules/@nitro-forge/prism",
+      "packageJsonSha256": "f006a1f158ab60bab8d7e2bd8dc2e0dfeb34cf905721b96dd105a122f280dbf3"
+    },
+    {
+      "name": "@nitro-forge/cadence",
+      "version": "1.0.0-f6.43598783276.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+cadence@file+artifacts+nitro-forge-cadence-1.0.0-f6.43598783276.1.tgz_nitr_185945db6704715ca9fe7ce661e60de1/node_modules/@nitro-forge/cadence/src/index.ts",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+cadence@file+artifacts+nitro-forge-cadence-1.0.0-f6.43598783276.1.tgz_nitr_185945db6704715ca9fe7ce661e60de1/node_modules/@nitro-forge/cadence",
+      "packageJsonSha256": "9b1fd62319a12eb602bc4cae12a5364cf5970083e4bd9ece4dbf2de2552f7fc9"
+    },
+    {
+      "name": "@nitro-forge/splice",
+      "version": "1.0.0-f6.43598783276.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+splice@file+artifacts+nitro-forge-splice-1.0.0-f6.43598783276.1.tgz_nitro-_815433b3aa4d9be0ab43712f03a828e0/node_modules/@nitro-forge/splice/src/index.ts",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+splice@file+artifacts+nitro-forge-splice-1.0.0-f6.43598783276.1.tgz_nitro-_815433b3aa4d9be0ab43712f03a828e0/node_modules/@nitro-forge/splice",
+      "packageJsonSha256": "623384ae029ab9986fd135a723ba9cc579553c00e11edc5c63b3a97b58ddbea0"
+    },
+    {
+      "name": "@nitro-forge/folio",
+      "version": "1.0.0-f6.43598783276.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+folio@file+artifacts+nitro-forge-folio-1.0.0-f6.43598783276.1.tgz_nitro-co_323ed9b753d897fbaa3c57422da01bfa/node_modules/@nitro-forge/folio/src/index.ts",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+folio@file+artifacts+nitro-forge-folio-1.0.0-f6.43598783276.1.tgz_nitro-co_323ed9b753d897fbaa3c57422da01bfa/node_modules/@nitro-forge/folio",
+      "packageJsonSha256": "96f5658ab69a5a5de8ac341d3311949101b44fc00f8c7137b12dfb9c8a5de3be"
+    },
+    {
+      "name": "@nitro-forge/pitch",
+      "version": "1.0.0-f6.43598783276.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+pitch@file+artifacts+nitro-forge-pitch-1.0.0-f6.43598783276.1.tgz_nitro-co_21a756b250215179787ab5d7f8f25098/node_modules/@nitro-forge/pitch/src/index.ts",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+pitch@file+artifacts+nitro-forge-pitch-1.0.0-f6.43598783276.1.tgz_nitro-co_21a756b250215179787ab5d7f8f25098/node_modules/@nitro-forge/pitch",
+      "packageJsonSha256": "1a2aba5e51fea02ad9fc485a98367c46d11815cf02909dded0ba3ddcdf72b4db"
+    },
+    {
+      "name": "@nitro-forge/tally",
+      "version": "1.0.0-f6.43598783276.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+tally@file+artifacts+nitro-forge-tally-1.0.0-f6.43598783276.1.tgz_nitro-co_7ef420eb48027a7e5fd4b9b25da55948/node_modules/@nitro-forge/tally/src/index.ts",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+tally@file+artifacts+nitro-forge-tally-1.0.0-f6.43598783276.1.tgz_nitro-co_7ef420eb48027a7e5fd4b9b25da55948/node_modules/@nitro-forge/tally",
+      "packageJsonSha256": "57a7cce6e95c684d81fc99d0d9cbcbf5e6ac843fab825341d56aa0715b695914"
+    },
+    {
+      "name": "@nitro-forge/quill",
+      "version": "1.0.0-f6.43598783276.1",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+quill@file+artifacts+nitro-forge-quill-1.0.0-f6.43598783276.1.tgz_nitro-co_4fc68cd92be73ca1824dc469b91958e2/node_modules/@nitro-forge/quill/src/index.ts",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+quill@file+artifacts+nitro-forge-quill-1.0.0-f6.43598783276.1.tgz_nitro-co_4fc68cd92be73ca1824dc469b91958e2/node_modules/@nitro-forge/quill",
+      "packageJsonSha256": "2196657d2da3e723aff372085d00afd531aeb99fcf826428abd8c956cd731549"
+    },
+    {
+      "name": "expo-modules-core",
+      "version": "58.1.0",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/build/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core",
+      "packageJsonSha256": "285de31be98571eea2a85f8eac1d30fce6a1474e2dc4b1772dd4465333762004"
+    },
+    {
+      "name": "@expo/cli",
+      "version": "58.1.20",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@expo+cli@58.1.20_43850f63f904ffc65ce8eef43ee4ed7f/node_modules/@expo/cli/build/src/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@expo+cli@58.1.20_43850f63f904ffc65ce8eef43ee4ed7f/node_modules/@expo/cli",
+      "packageJsonSha256": "98f35dbe2ac27fd7ee90905352ab6215fc157f80094f6e7c2bce87ebd1e85c39"
+    },
+    {
+      "name": "@expo/config-plugins",
+      "version": "58.0.13",
+      "entry": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@expo+config-plugins@58.0.13_supports-color@8.1.1_typescript@7.0.2/node_modules/@expo/config-plugins/build/index.js",
+      "packageRoot": "/Users/runner/work/_temp/consumer/node_modules/.pnpm/@expo+config-plugins@58.0.13_supports-color@8.1.1_typescript@7.0.2/node_modules/@expo/config-plugins",
+      "packageJsonSha256": "6d3b1141f36fa8c97b43daea16965c25ea17270ba9d328c150024c4bbd816cb5"
+    }
+  ],
+  "archives": [
+    {
+      "name": "@nitro-forge/ignition",
+      "sha256": "efb33273c90bbdc59c655c3529835417e9b3f018aa84c4482210b0b2811c8614"
+    },
+    {
+      "name": "@nitro-forge/prism",
+      "sha256": "5560ad477313ebc153ed88288ff37a67443ce9787a207b6c586edcc4179316ab"
+    },
+    {
+      "name": "@nitro-forge/cadence",
+      "sha256": "83cf690bbee92dd8dd60bcb6d56c7e8e848c4425e4581e964e4365d9e7b46d6e"
+    },
+    {
+      "name": "@nitro-forge/splice",
+      "sha256": "79fc7fcced649ded4850d366a3f85346869ea55cfb294b6d8e7d86a88a5ebe8a"
+    },
+    {
+      "name": "@nitro-forge/folio",
+      "sha256": "42331e9e5a15c7dd59d32ba18542a37765ab922dd23887e01c542f8e8d24925f"
+    },
+    {
+      "name": "@nitro-forge/pitch",
+      "sha256": "feeca1d9f17522e0aae118c409de9a97bd58863068a57685dc94f654d37a5dce"
+    },
+    {
+      "name": "@nitro-forge/tally",
+      "sha256": "71c3ba539e1109cad603eea5d22098b0fd0a7b65479070491362c71478d5316c"
+    },
+    {
+      "name": "@nitro-forge/quill",
+      "sha256": "8d5d41023ee46687d88ae3b7eda70fd246122f20d009a3dc3861cbb3a3a8d0e2"
+    }
+  ]
+}

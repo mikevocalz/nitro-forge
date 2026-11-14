@@ -1,0 +1,60 @@
+{
+  "scope": "CLI parser isolation against existing system Mach-O; not Forge native build proof",
+  "results": [
+    {
+      "command": [
+        "lipo",
+        "-archs",
+        "/usr/bin/true"
+      ],
+      "exitCode": 0,
+      "stdout": "x86_64 arm64e arm64e.x1\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "lipo",
+        "/usr/bin/true",
+        "-verify_arch",
+        "x86_64",
+        "arm64e"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "lipo: -verify_arch requires exactly one input file\n"
+    },
+    {
+      "command": [
+        "lipo",
+        "/usr/bin/true",
+        "-verify_arch",
+        "x86_64"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "lipo",
+        "/usr/bin/true",
+        "-verify_arch",
+        "arm64e"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "lipo",
+        "/usr/bin/true",
+        "-verify_arch",
+        "armv7"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}

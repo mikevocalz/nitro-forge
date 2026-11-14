@@ -1,0 +1,186 @@
+[
+  {
+    "path": "runtime-ui/actual-android-properties.log",
+    "bytes": 36544
+  },
+  {
+    "path": "runtime-ui/actual-viewport-density.log",
+    "bytes": 22
+  },
+  {
+    "path": "runtime-ui/actual-android-read-access.log",
+    "bytes": 261
+  },
+  {
+    "path": "runtime-ui/actual-viewport-size.log",
+    "bytes": 46
+  },
+  {
+    "path": "runtime-ui/adb-root.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/candidate.json",
+    "bytes": 168222
+  },
+  {
+    "path": "runtime-ui/commands.jsonl",
+    "bytes": 13073
+  },
+  {
+    "path": "runtime-ui/failure-hierarchy-command.log",
+    "bytes": 72805
+  },
+  {
+    "path": "runtime-ui/failure-hierarchy.json",
+    "bytes": 105518
+  },
+  {
+    "path": "runtime-ui/failure-screenshot.log",
+    "bytes": 89
+  },
+  {
+    "path": "runtime-ui/failure.json",
+    "bytes": 1109
+  },
+  {
+    "path": "runtime-ui/failure.png",
+    "bytes": 40185
+  },
+  {
+    "path": "runtime-ui/forge-consumer-receipt.json",
+    "bytes": 338
+  },
+  {
+    "path": "runtime-ui/install.log",
+    "bytes": 36
+  },
+  {
+    "path": "runtime-ui/installed-packages.json",
+    "bytes": 13646
+  },
+  {
+    "path": "runtime-ui/logcat.log",
+    "bytes": 392087
+  },
+  {
+    "path": "runtime-ui/maestro-version.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_080804/Forge seven-studio durable document workflows/commands.json",
+    "bytes": 2425
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_080804/Forge seven-studio durable document workflows/logs/device-logcat.txt",
+    "bytes": 22468
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_080804/Forge seven-studio durable document workflows/logs/maestro.log",
+    "bytes": 4681
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_080804/Forge seven-studio durable document workflows/manifest.json",
+    "bytes": 543
+  },
+  {
+    "path": "runtime-ui/pass-1/debug/.maestro/tests/2026-11-14_080804/maestro.log",
+    "bytes": 6938
+  },
+  {
+    "path": "runtime-ui/pass-1/flow.yaml",
+    "bytes": 84992
+  },
+  {
+    "path": "runtime-ui/pass-1/report.xml",
+    "bytes": 555
+  },
+  {
+    "path": "runtime-ui/pass-1-maestro.log",
+    "bytes": 112
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_080717/Forge native studio picker/commands.json",
+    "bytes": 6973
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_080717/Forge native studio picker/logs/device-logcat.txt",
+    "bytes": 1146333
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_080717/Forge native studio picker/logs/maestro.log",
+    "bytes": 5784
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_080717/Forge native studio picker/manifest.json",
+    "bytes": 661
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_080717/Forge native studio picker/takeScreenshot/picker-picker.png",
+    "bytes": 34438
+  },
+  {
+    "path": "runtime-ui/picker/debug/.maestro/tests/2026-11-14_080717/maestro.log",
+    "bytes": 8307
+  },
+  {
+    "path": "runtime-ui/picker/flow.yaml",
+    "bytes": 639
+  },
+  {
+    "path": "runtime-ui/picker/report.xml",
+    "bytes": 448
+  },
+  {
+    "path": "runtime-ui/picker-hierarchy-command.log",
+    "bytes": 72804
+  },
+  {
+    "path": "runtime-ui/picker-hierarchy.json",
+    "bytes": 105517
+  },
+  {
+    "path": "runtime-ui/picker-maestro.log",
+    "bytes": 101
+  },
+  {
+    "path": "runtime-ui/picker-native-screenshot.log",
+    "bytes": 95
+  },
+  {
+    "path": "runtime-ui/picker-native.png",
+    "bytes": 40185
+  },
+  {
+    "path": "runtime-ui/pnpm-effective-config.json",
+    "bytes": 1199
+  },
+  {
+    "path": "runtime-ui/pnpm-lock.yaml",
+    "bytes": 208912
+  },
+  {
+    "path": "runtime-ui/pnpm-workspace.yaml",
+    "bytes": 819
+  },
+  {
+    "path": "runtime-ui/runtime-artifact.json",
+    "bytes": 1482
+  },
+  {
+    "path": "runtime-ui/viewport-density.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/viewport-size.log",
+    "bytes": 0
+  },
+  {
+    "path": "forge-maestro/provenance.json",
+    "bytes": 266
+  },
+  {
+    "path": "forge-emulator.log",
+    "bytes": 9162
+  }
+]

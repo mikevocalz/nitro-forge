@@ -1,0 +1,190 @@
+--------- beginning of main
+11-14 08:08:17.416 I/SP      ( 1409): Sync for emoji succeeded in 2677 ms: {added: [2ada3c9a4a17d6bb81b1fe8d51502d60], metadata: false
+--------- beginning of system
+11-14 08:08:17.423 D/MediaMetricsManagerService(  570): failed to get player_metrics_app_blocklist from DeviceConfig
+11-14 08:08:17.423 I/ExoPlayerImpl( 2336): Init 9fe1532 [AndroidXMedia3/1.3.0] [emu64xa, sdk_gphone64_x86_64, Google, 35]
+11-14 08:08:17.423 V/MediaMetricsManagerService(  570): Logging level blocked: Failed to get PLAYER_METRICS_APP_BLOCKLIST.
+11-14 08:08:17.434 I/RescueParty(  570): Starting to observe: [android, com.google.android.networkstack], updated namespace: connectivity
+11-14 08:08:17.435 I/PackageWatchdog(  570): Syncing state, reason: observing new packages
+11-14 08:08:17.435 D/PackageWatchdog(  570): rescue-party-observer added the following packages to monitor [android, com.google.android.networkstack]
+11-14 08:08:17.435 I/PackageWatchdog(  570): Syncing state, reason: updated observers
+11-14 08:08:17.435 I/PackageWatchdog(  570): Saving observer state to file
+11-14 08:08:17.440 I/PackageWatchdog(  570): Syncing health check requests for packages: {}
+11-14 08:08:17.440 I/ExplicitHealthCheckController(  570): Service not ready to get health check supported packages. Binding...
+11-14 08:08:17.447 D/MediaMetricsManagerService(  570): failed to get player_metrics_app_blocklist from DeviceConfig
+11-14 08:08:17.448 V/MediaMetricsManagerService(  570): Logging level blocked: Failed to get PLAYER_METRICS_APP_BLOCKLIST.
+11-14 08:08:17.464 I/ExplicitHealthCheckController(  570): Explicit health check service is bound
+11-14 08:08:17.478 I/ExplicitHealthCheckController(  570): Explicit health check service is connected ComponentInfo{com.google.android.ext.services/android.ext.services.watchdog.ExplicitHealthCheckServiceImpl}
+11-14 08:08:17.478 I/ExplicitHealthCheckController(  570): Service initialized, syncing requests
+11-14 08:08:17.478 I/PackageWatchdog(  570): Syncing health check requests for packages: {}
+11-14 08:08:17.478 D/ExplicitHealthCheckController(  570): Getting health check supported packages
+11-14 08:08:17.481 I/ExplicitHealthCheckController(  570): Explicit health check supported packages [PackageConfig{com.google.android.networkstack, 86400000}]
+11-14 08:08:17.481 D/PackageWatchdog(  570): Received supported packages [PackageConfig{com.google.android.networkstack, 86400000}]
+11-14 08:08:17.481 D/ExplicitHealthCheckController(  570): Getting health check requested packages
+11-14 08:08:17.485 I/ExplicitHealthCheckController(  570): Explicit health check requested packages []
+11-14 08:08:17.485 I/ExplicitHealthCheckController(  570): No more health check requests, unbinding...
+11-14 08:08:17.488 I/ExplicitHealthCheckController(  570): Explicit health check service is unbound
+11-14 08:08:17.503 I/PipelineReaderImpl( 2336): Initializing en-us-x-iog-lstm-embedded from disk
+11-14 08:08:17.523 I/PhenotypeBackgroundRecv( 1554): Skipping googledata.experiments.mobile.assistant.client_packages.component.assistant_suw.user#com.google.android.googlequicksearchbox which doesn't use ProcessStable flags.
+11-14 08:08:17.580 W/ModernMediaScanner( 1476): Failed to visit /data/data/com.android.providers.downloads/cache/model.smfb: java.nio.file.NoSuchFileException: /data/data/com.android.providers.downloads/cache/model.smfb
+11-14 08:08:17.674 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+11-14 08:08:17.677 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+11-14 08:08:17.677 D/InetDiagMessage(  570): Destroyed live tcp sockets for uids={10166} in 4ms
+11-14 08:08:17.677 I/MediaProvider( 1476): Scanned internal due to REASON_DEMAND, found 0 items in 111ms, 0 inserts 0 updates 0 deletes
+11-14 08:08:17.689 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+11-14 08:08:17.690 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+11-14 08:08:17.690 D/InetDiagMessage(  570): Destroyed live tcp sockets for uids={20166} in 13ms
+11-14 08:08:17.697 W/ogle.android.as( 1485): Long monitor contention with owner aiai-speech-rs-bg-0 (1910) at java.util.Map android.provider.Settings$NameValueCache.getStringsForPrefixStripPrefix(android.content.ContentResolver, java.lang.String, java.util.List)(Settings.java:3741) waiters=0 in java.util.Map android.provider.Settings$NameValueCache.getStringsForPrefixStripPrefix(android.content.ContentResolver, java.lang.String, java.util.List) for 416ms
+11-14 08:08:17.700 I/netd    (  366): tetherGetStats() -> {[]} <0.52ms>
+11-14 08:08:17.712 E/AiAiEcho( 1485): Reading elements from Geller failed with cause
+11-14 08:08:17.712 E/AiAiEcho( 1485): iey: Code: UNKNOWN, Message: Geller data fetch is not enabled
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at ifp.a(PG:17)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at kzb.b(PG:22)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at aaer.g(PG:13)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at kotlinx.coroutines.DispatchedTask.run(PG:114)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:487)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at wqm.a(PG:3)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at wpo.run(PG:21)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at wqn.run(PG:5)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:487)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at java.util.concurrent.FutureTask.run(FutureTask.java:264)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:307)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at hqv.run(PG:221)
+11-14 08:08:17.712 E/AiAiEcho( 1485): 	at java.lang.Thread.run(Thread.java:1012)
+11-14 08:08:17.743 I/GMS_MM_Logger( 1635): Memory Metric Logging not allowed. Stopping.
+11-14 08:08:17.773 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_en-US is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.774 E/SP.Service.AiAi( 1485): captions_i18n_v0_mandatory is opened by other clients. It will stay open until all clients close it.
+11-14 08:08:17.774 I/SP.Service.AiAi( 1485): UnspecifiedLegacyClient is already not in the set of current clients for captions_i18n_v0_mandatory
+11-14 08:08:17.781 I/adbd    ( 1475): host-19: connection terminated: write failed
+11-14 08:08:17.781 I/adbd    ( 1475): host-19: offline
+11-14 08:08:17.785 I/adbd    ( 1475): destroying transport host-19
+11-14 08:08:17.788 I/netd    (  366): bandwidthSetGlobalAlert(2097152) <0.09ms>
+11-14 08:08:17.788 I/adbd    ( 1475): BlockingConnectionAdapter(host-19): stopping
+11-14 08:08:17.788 I/adbd    ( 1475): host-19: read failed: Success
+11-14 08:08:17.788 I/adbd    ( 1475): BlockingConnectionAdapter(host-19): stopped
+11-14 08:08:17.791 I/adbd    ( 1475): BlockingConnectionAdapter(host-19): destructing
+11-14 08:08:17.791 I/adbd    ( 1475): BlockingConnectionAdapter(host-19): already stopped
+11-14 08:08:17.791 D/DownloadManager( 1807): [12] Finished with status SUCCESS
+11-14 08:08:17.792 D/DownloadManager( 1807): [11] Finished with status SUCCESS
+11-14 08:08:17.838 I/DownloadManager( 1409): DownloadManager$3.onProgress():503 Downloading __KLP_delight__en-840 with size 6456431
+11-14 08:08:17.875 I/SP      ( 1409): GC for 'dynamic_art' (10) with ttl of 0 ms took 1 ms (0/1/0)
+11-14 08:08:17.879 I/PhenotypeResourceReader( 1315): unable to find any Phenotype resource metadata for com.google.android.gsf
+11-14 08:08:17.891 I/PhenotypeBackgroundRecv( 1554): Successfully updated snapshot for com.google.android.libraries.notifications.platform#com.google.android.googlequicksearchbox
+11-14 08:08:17.906 I/SP      ( 1409): GC for 'transformer_concept' (10) with ttl of 0 ms took 0 ms (0/0/0)
+11-14 08:08:17.907 I/SP      ( 1409): GC for 'emoji' (10) with ttl of 0 ms took 0 ms (0/0/0)
+11-14 08:08:17.922 I/PhenotypeResourceReader( 1315): unable to find any Phenotype resource metadata for com.google.android.tag
+11-14 08:08:17.939 I/RescueParty(  570): Starting to observe: [android, com.google.android.permissioncontroller], updated namespace: permissions
+11-14 08:08:17.975 I/PhenotypeBackgroundRecv( 1554): Skipping com.google.android.apps.search.hsi.device#com.google.android.googlequicksearchbox which doesn't use ProcessStable flags.
+11-14 08:08:18.001 I/PhenotypeResourceReader( 1315): unable to find any Phenotype resource metadata for com.google.android.apps.nexuslauncher
+11-14 08:08:18.010 I/PhenotypeResourceReader( 1315): unable to find any Phenotype resource metadata for com.google.android.feedback
+11-14 08:08:18.055 I/PackageWatchdog(  570): Syncing state, reason: observing new packages
+11-14 08:08:18.056 D/PackageWatchdog(  570): rescue-party-observer added the following packages to monitor [android, com.google.android.permissioncontroller]
+11-14 08:08:18.065 I/PackageWatchdog(  570): Syncing state, reason: updated observers
+11-14 08:08:18.065 I/PackageWatchdog(  570): Saving observer state to file
+11-14 08:08:18.065 I/EmojiSuperpacksManager( 1409): EmojiSuperpacksManager.processPackSet():504 processPackSet() : isBundled = false
+11-14 08:08:18.066 I/Environment( 1409): Environment.isPackageInstalled():234 com.bitstrips.imoji is not installed
+11-14 08:08:18.067 I/EmojiShortcutsLoader( 1409): EmojiShortcutsLoader.call():71 0 emoji shortcut maps loaded.
+11-14 08:08:18.067 I/EmojiShortcutsLoader( 1409): EmojiShortcutsLoader.call():82 Finished loading emoji shortcuts
+11-14 08:08:18.103 I/SP      ( 1409): <==== Finishing job {m:b:u:l, fg}, 930 ms. elapsed since start
+11-14 08:08:18.104 I/SuperpacksForegroundTaskService( 1409): SuperpacksForegroundTaskService.finishJob():56 SuperpacksForegroundTaskService.finishJob()
+11-14 08:08:18.121 W/ForegroundServiceTypeLoggerModule(  570): FGS stop call for: 10151 has no types!
+11-14 08:08:18.175 I/PackageWatchdog(  570): Syncing health check requests for packages: {}
+11-14 08:08:18.175 I/ExplicitHealthCheckController(  570): Service not ready to get health check supported packages. Binding...
+11-14 08:08:18.190 I/SP      ( 1409): Download stopped: handwriting_recognition:pack_mapping_v1_lstm_20231127, succeeded foreground, size: 125598
+11-14 08:08:18.207 I/ExplicitHealthCheckController(  570): Explicit health check service is bound
+11-14 08:08:18.207 W/Looper  (  570): Slow dispatch took 152ms main h=android.os.Handler c=com.android.server.PackageWatchdog$$ExternalSyntheticLambda0@a168bc6 m=0
+11-14 08:08:18.207 I/PackageWatchdog(  570): Syncing health check requests for packages: {}
+11-14 08:08:18.207 I/ExplicitHealthCheckController(  570): Service not ready to get health check supported packages. Binding...
+11-14 08:08:18.207 I/ExplicitHealthCheckController(  570): Not binding to service, service already connecting
+11-14 08:08:18.222 I/adbd    ( 1475): host-20: read thread spawning
+11-14 08:08:18.225 I/adbd    ( 1475): host-20: write thread spawning
+11-14 08:08:18.227 I/adbd    ( 1475): host-20: already offline
+11-14 08:08:18.227 I/adbd    ( 1475): authentication not required
+11-14 08:08:18.250 I/ExplicitHealthCheckController(  570): Explicit health check service is connected ComponentInfo{com.google.android.ext.services/android.ext.services.watchdog.ExplicitHealthCheckServiceImpl}
+11-14 08:08:18.264 I/ExplicitHealthCheckController(  570): Service initialized, syncing requests
+11-14 08:08:18.273 I/PackageWatchdog(  570): Syncing health check requests for packages: {}
+11-14 08:08:18.293 D/ExplicitHealthCheckController(  570): Getting health check supported packages
+11-14 08:08:18.309 I/ExplicitHealthCheckController(  570): Explicit health check supported packages [PackageConfig{com.google.android.networkstack, 86400000}]
+11-14 08:08:18.311 D/PackageWatchdog(  570): Received supported packages [PackageConfig{com.google.android.networkstack, 86400000}]
+11-14 08:08:18.311 D/ExplicitHealthCheckController(  570): Getting health check requested packages
+11-14 08:08:18.316 I/ExplicitHealthCheckController(  570): Explicit health check requested packages []
+11-14 08:08:18.316 I/ExplicitHealthCheckController(  570): No more health check requests, unbinding...
+11-14 08:08:18.317 I/ExplicitHealthCheckController(  570): Explicit health check service is unbound
+11-14 08:08:18.404 I/netd    (  366): tetherGetStats() -> {[]} <0.56ms>
+11-14 08:08:18.449 I/SP      ( 1409): Scheduling job with delay of 0s for {W:b:u:l, bg}, 1 candidates
+11-14 08:08:18.451 W/d.process.media( 1807): Long monitor contention with owner Thread-13 (4198) at android.content.IContentProvider android.app.ActivityThread.acquireExistingProvider(android.content.Context, java.lang.String, int, boolean)(ActivityThread.java:7991) waiters=1 in android.content.IContentProvider android.app.ActivityThread.acquireExistingProvider(android.content.Context, java.lang.String, int, boolean) for 239ms
+11-14 08:08:18.575 W/TimedProcessReaper( 1554): Scheduling killing of process to refresh configuration
+11-14 08:08:18.681 I/PhenotypeBackgroundRecv( 1554): Skipping com.google.android.apps.search.readaloud#com.google.android.googlequicksearchbox which doesn't use ProcessStable flags.
+11-14 08:08:18.695 I/ConfigUpdater( 3004): Update downloaded, starting installation
+11-14 08:08:18.696 I/RescueParty(  570): Starting to observe: [android], updated namespace: app_compat
+11-14 08:08:18.702 I/PackageWatchdog(  570): Syncing state, reason: observing new packages
+11-14 08:08:18.702 D/PackageWatchdog(  570): rescue-party-observer added the following packages to monitor [android]
+11-14 08:08:18.702 I/PackageWatchdog(  570): Syncing state, reason: updated observers
+11-14 08:08:18.702 I/PackageWatchdog(  570): Not pruning observers, elapsed time: 0ms
+11-14 08:08:18.702 I/PackageWatchdog(  570): Saving observer state to file
+11-14 08:08:18.707 W/Zygote  (  371): forkRepeatedly terminated due to non-simple command
+11-14 08:08:18.707 D/Zygote  (  371): mbuffer starts with 1 , nice name is , mEnd = 35, mNext = 35, mLinesLeft = 0, mFd = 6
+11-14 08:08:18.709 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+11-14 08:08:18.710 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+11-14 08:08:18.710 D/InetDiagMessage(  570): Destroyed live tcp sockets for uids={10136} in 1ms
+11-14 08:08:18.713 I/PackageWatchdog(  570): Syncing health check requests for packages: {}
+11-14 08:08:18.713 I/ExplicitHealthCheckController(  570): Service not ready to get health check supported packages. Binding...
+11-14 08:08:18.714 I/ExplicitHealthCheckController(  570): Explicit health check service is bound
+11-14 08:08:18.721 I/ExplicitHealthCheckController(  570): Explicit health check service is connected ComponentInfo{com.google.android.ext.services/android.ext.services.watchdog.ExplicitHealthCheckServiceImpl}
+11-14 08:08:18.722 I/ExplicitHealthCheckController(  570): Service initialized, syncing requests
+11-14 08:08:18.722 I/PackageWatchdog(  570): Syncing health check requests for packages: {}
+11-14 08:08:18.722 D/ExplicitHealthCheckController(  570): Getting health check supported packages
+11-14 08:08:18.723 I/ExplicitHealthCheckController(  570): Explicit health check supported packages [PackageConfig{com.google.android.networkstack, 86400000}]
+11-14 08:08:18.724 D/PackageWatchdog(  570): Received supported packages [PackageConfig{com.google.android.networkstack, 86400000}]
+11-14 08:08:18.724 D/ExplicitHealthCheckController(  570): Getting health check requested packages
+11-14 08:08:18.724 I/ExplicitHealthCheckController(  570): Explicit health check requested packages []
+11-14 08:08:18.724 I/ExplicitHealthCheckController(  570): No more health check requests, unbinding...
+11-14 08:08:18.725 I/ExplicitHealthCheckController(  570): Explicit health check service is unbound
+11-14 08:08:18.736 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+11-14 08:08:18.763 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+11-14 08:08:18.765 D/InetDiagMessage(  570): Destroyed live tcp sockets for uids={20136} in 29ms
+11-14 08:08:18.776 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+11-14 08:08:18.779 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+11-14 08:08:18.782 D/InetDiagMessage(  570): Destroyed live tcp sockets for uids={10146} in 8ms
+11-14 08:08:18.787 W/adbd    ( 1475): timeout expired while flushing socket, closing
+11-14 08:08:18.802 W/JobService( 1409): onNetworkChanged() not implemented in androidx.work.impl.background.systemjob.SystemJobService. Must override in a subclass.
+11-14 08:08:18.843 I/IPCThreadState( 1515): oneway function results for code 2 on binder at 0x73a07466ba10 will be dropped but finished with status UNKNOWN_TRANSACTION
+11-14 08:08:18.855 I/DownloadManager( 1409): DownloadManager$3.onProgress():503 Downloading __KLP_delight__en-840 with size 6808687
+11-14 08:08:18.871 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+11-14 08:08:18.900 D/InetDiagMessage(  570): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+11-14 08:08:18.900 D/InetDiagMessage(  570): Destroyed live tcp sockets for uids={20146} in 30ms
+11-14 08:08:18.901 I/BugleRcsEngine( 3754): handleMessage processing message:[NOTIFY_UPTIME_IGNORE_STATE_CHANGED] with [non-null]:RcsEngineImpl reference [CONTEXT log_prefix="RcsEngineImpl[DUAL_REG]:[38536b58-1844]>Handler" thread_id=60 ]
+11-14 08:08:18.914 I/BugleRcsEngine( 3754): Connected state: [1], networkType: [WIFI] [CONTEXT thread_id=61 ]
+11-14 08:08:18.926 I/ChimeraSrvcProxy( 1315): NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl
+11-14 08:08:18.926 W/.gms.persistent( 1315): Large reply transaction of 1056768 bytes, interface descriptor , code 1
+--------- beginning of kernel
+11-14 08:08:19.108 I/logd    (    0): logdr: UID=0 GID=0 PID=4238 n tail=0 logMask=99 pid=0 start=0ns deadline=0ns

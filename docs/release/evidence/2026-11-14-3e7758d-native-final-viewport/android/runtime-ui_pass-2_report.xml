@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="emulator-5554" tests="1" failures="0" time="700.861" timestamp="2026-11-14T11:12:59">
+    <testcase id="Forge seven-studio durable document workflows" name="Forge seven-studio durable document workflows" classname="Forge seven-studio durable document workflows" file="/home/runner/work/_temp/runtime-ui/pass-2/flow.yaml" time="700.741" timestamp="2026-11-14T11:12:59" status="SUCCESS"/>
+  </testsuite>
+</testsuites>

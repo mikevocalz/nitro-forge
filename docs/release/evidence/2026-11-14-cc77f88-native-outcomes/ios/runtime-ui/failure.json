@@ -1,0 +1,14 @@
+{
+  "sourceCommit": "ea79ef8a105714673b84ead58469c9186e62a81c",
+  "execution": {
+    "runId": "43576021743",
+    "runAttempt": "1",
+    "job": "native-compile",
+    "driverSourceCommit": "ea79ef8a105714673b84ead58469c9186e62a81c"
+  },
+  "platform": "ios",
+  "appId": "dev.nitroforge.f6.consumer",
+  "device": "1433EBEF-B3F6-496F-84EA-12DA3DAEBFB0",
+  "error": "Error: xcrun failed: spawnSync xcrun ETIMEDOUT\n    at run (file:///Users/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:50:11)\n    at file:///Users/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:165:5\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)",
+  "completedStages": []
+}

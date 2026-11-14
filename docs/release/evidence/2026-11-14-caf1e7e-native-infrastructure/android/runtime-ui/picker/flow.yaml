@@ -1,0 +1,30 @@
+appId: "dev.nitroforge.f6.consumer"
+name: "Forge native studio picker"
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "f6-selected"
+    timeout: 90000
+- scrollUntilVisible:
+    element:
+      id: "f6-studio"
+    direction: "UP"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- tapOn:
+    text: "^prism$"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "f6-selected"
+    direction: "DOWN"
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 100
+- assertVisible:
+    id: "f6-selected"
+    text: "^Studio: prism · Document: closed$"
+- takeScreenshot: "picker-picker"

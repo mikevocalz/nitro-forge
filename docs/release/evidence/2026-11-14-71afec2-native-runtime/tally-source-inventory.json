@@ -1,0 +1,12 @@
+{
+  "sourceCommit": "71afec23c75fb84f47cbc68541bca2173684110c",
+  "path": "packages/tally/rust/src/lib.rs",
+  "blobSha": "552af5fe7dd6ac41d4bea94ac80420ce99c030ba",
+  "observations": [
+    "op_describe returns serialized Workbook including next_sheet",
+    "op_add_sheet records UndoEntry::AddSheet { sheet_id }, advances next_sheet and pushes sheet",
+    "invert AddSheet removes sheet and constructs RemoveSheet inverse without restoring next_sheet",
+    "Observed native full-state undo mismatch is retained; exact expected/actual difference excerpt still pending corrected diagnostic run"
+  ],
+  "changed": false
+}

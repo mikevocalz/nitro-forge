@@ -1,0 +1,10 @@
+{
+  "dataPath": "/Users/runner/Library/Developer/CoreSimulator/Devices/C898E3E4-5033-4085-B886-963EE2D0C478/data",
+  "dataPathSize": 18337792,
+  "logPath": "/Users/runner/Library/Logs/CoreSimulator/C898E3E4-5033-4085-B886-963EE2D0C478",
+  "udid": "C898E3E4-5033-4085-B886-963EE2D0C478",
+  "isAvailable": true,
+  "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-Duo",
+  "state": "Shutdown",
+  "name": "iPhone Duo"
+}

@@ -1,0 +1,24 @@
+{"startedAt":"2026-11-14T13:37:21.297Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--version"],"elapsedMs":2147,"status":0}
+{"startedAt":"2026-11-14T13:37:24.190Z","file":"xcrun","args":["simctl","list","devices","--json"],"elapsedMs":1658,"status":0}
+{"startedAt":"2026-11-14T13:37:25.870Z","file":"xcrun","args":["simctl","help","create"],"elapsedMs":215,"status":0}
+{"startedAt":"2026-11-14T13:37:26.085Z","file":"xcrun","args":["simctl","create","Forge F6 6d8b13f-46384","com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro","com.apple.CoreSimulator.SimRuntime.iOS-27-2"],"elapsedMs":347,"status":0}
+{"startedAt":"2026-11-14T13:37:26.433Z","file":"xcrun","args":["simctl","list","devices","--json"],"elapsedMs":176,"status":0}
+{"startedAt":"2026-11-14T13:37:26.610Z","file":"xcrun","args":["simctl","boot","6EA537CA-5902-4C99-8777-C2E247FAC370"],"elapsedMs":5209,"status":0}
+{"startedAt":"2026-11-14T13:37:31.820Z","file":"xcrun","args":["simctl","bootstatus","6EA537CA-5902-4C99-8777-C2E247FAC370","-b"],"elapsedMs":101853,"status":0}
+{"startedAt":"2026-11-14T13:39:14.254Z","file":"ps","args":["-eo","pid,ppid,etime,comm"],"elapsedMs":6014,"status":0}
+{"startedAt":"2026-11-14T13:39:20.516Z","file":"sysctl","args":["hw.memsize","hw.ncpu"],"elapsedMs":5877,"status":0}
+{"startedAt":"2026-11-14T13:39:26.660Z","file":"vm_stat","args":[],"elapsedMs":1402,"status":0}
+{"startedAt":"2026-11-14T13:39:28.311Z","file":"xcrun","args":["simctl","spawn","6EA537CA-5902-4C99-8777-C2E247FAC370","launchctl","list"],"elapsedMs":10840,"status":null,"error":"spawnSync xcrun ETIMEDOUT"}
+{"startedAt":"2026-11-14T13:39:41.610Z","file":"xcrun","args":["simctl","install","6EA537CA-5902-4C99-8777-C2E247FAC370","/Users/runner/work/_temp/runtime-ui/unpacked-app/ForgeConsumerSmoke.app"],"elapsedMs":104126,"status":0}
+{"startedAt":"2026-11-14T13:41:27.574Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","6EA537CA-5902-4C99-8777-C2E247FAC370","--platform","ios","--no-ansi","test","--no-reinstall-driver","--format","junit","--output","/Users/runner/work/_temp/runtime-ui/picker/report.xml","--test-output-dir","/Users/runner/work/_temp/runtime-ui/picker/artifacts","--debug-output","/Users/runner/work/_temp/runtime-ui/picker/debug","/Users/runner/work/_temp/runtime-ui/picker/flow.yaml"],"elapsedMs":134993,"status":0}
+{"startedAt":"2026-11-14T13:43:42.951Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","6EA537CA-5902-4C99-8777-C2E247FAC370","--platform","ios","--no-ansi","hierarchy","--no-reinstall-driver"],"elapsedMs":32668,"status":0}
+{"startedAt":"2026-11-14T13:44:15.662Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","6EA537CA-5902-4C99-8777-C2E247FAC370","--platform","ios","--no-ansi","test","--no-reinstall-driver","--format","junit","--output","/Users/runner/work/_temp/runtime-ui/pass-1/report.xml","--test-output-dir","/Users/runner/work/_temp/runtime-ui/pass-1/artifacts","--debug-output","/Users/runner/work/_temp/runtime-ui/pass-1/debug","/Users/runner/work/_temp/runtime-ui/pass-1/flow.yaml"],"elapsedMs":1206494,"status":143,"error":"spawnSync /Users/runner/work/_temp/forge-maestro/maestro/bin/maestro ETIMEDOUT"}
+{"startedAt":"2026-11-14T14:04:22.222Z","file":"ps","args":["-eo","pid,ppid,etime,comm"],"elapsedMs":394,"status":0}
+{"startedAt":"2026-11-14T14:04:22.627Z","file":"sysctl","args":["hw.memsize","hw.ncpu"],"elapsedMs":45,"status":0}
+{"startedAt":"2026-11-14T14:04:22.672Z","file":"vm_stat","args":[],"elapsedMs":25,"status":0}
+{"startedAt":"2026-11-14T14:04:22.698Z","file":"xcrun","args":["simctl","spawn","6EA537CA-5902-4C99-8777-C2E247FAC370","launchctl","list"],"elapsedMs":3180,"status":0}
+{"startedAt":"2026-11-14T14:04:25.904Z","file":"xcrun","args":["simctl","io","6EA537CA-5902-4C99-8777-C2E247FAC370","screenshot","/Users/runner/work/_temp/runtime-ui/failure.png"],"elapsedMs":1988,"status":0}
+{"startedAt":"2026-11-14T14:04:27.896Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","6EA537CA-5902-4C99-8777-C2E247FAC370","--platform","ios","--no-ansi","hierarchy","--no-reinstall-driver"],"elapsedMs":64548,"status":0}
+{"startedAt":"2026-11-14T14:05:32.997Z","file":"xcrun","args":["simctl","spawn","6EA537CA-5902-4C99-8777-C2E247FAC370","log","show","--last","10m","--style","compact","--predicate","eventMessage CONTAINS \"dev.nitroforge.f6.consumer\""],"elapsedMs":50582,"status":0}
+{"startedAt":"2026-11-14T14:06:23.592Z","file":"xcrun","args":["simctl","shutdown","6EA537CA-5902-4C99-8777-C2E247FAC370"],"elapsedMs":8589,"status":0}
+{"startedAt":"2026-11-14T14:06:32.629Z","file":"xcrun","args":["simctl","delete","6EA537CA-5902-4C99-8777-C2E247FAC370"],"elapsedMs":1492,"status":0}

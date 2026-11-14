@@ -1,0 +1,102 @@
+[
+  {
+    "path": "runtime-ui/actual-simulator-runtime.json",
+    "bytes": 530
+  },
+  {
+    "path": "runtime-ui/candidate.json",
+    "bytes": 168222
+  },
+  {
+    "path": "runtime-ui/chosen-simulator.json",
+    "bytes": 479
+  },
+  {
+    "path": "runtime-ui/commands.jsonl",
+    "bytes": 2006
+  },
+  {
+    "path": "runtime-ui/failure-hierarchy-command.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/failure-screenshot.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/failure.json",
+    "bytes": 674
+  },
+  {
+    "path": "runtime-ui/forge-consumer-receipt.json",
+    "bytes": 322
+  },
+  {
+    "path": "runtime-ui/install.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/installed-packages.json",
+    "bytes": 13686
+  },
+  {
+    "path": "runtime-ui/ios-app-system.log",
+    "bytes": 321
+  },
+  {
+    "path": "runtime-ui/maestro-version.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/owned-simulator-delete.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/owned-simulator-shutdown.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/pnpm-effective-config.json",
+    "bytes": 1199
+  },
+  {
+    "path": "runtime-ui/pnpm-lock.yaml",
+    "bytes": 208912
+  },
+  {
+    "path": "runtime-ui/pnpm-workspace.yaml",
+    "bytes": 819
+  },
+  {
+    "path": "runtime-ui/runtime-artifact.json",
+    "bytes": 1067
+  },
+  {
+    "path": "runtime-ui/simctl-create-help.log",
+    "bytes": 705
+  },
+  {
+    "path": "runtime-ui/simulator-boot.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/simulator-bootstatus.log",
+    "bytes": 129
+  },
+  {
+    "path": "runtime-ui/simulator-create.log",
+    "bytes": 37
+  },
+  {
+    "path": "runtime-ui/simulators-created.log",
+    "bytes": 22618
+  },
+  {
+    "path": "runtime-ui/simulators.log",
+    "bytes": 22084
+  },
+  {
+    "path": "forge-maestro/provenance.json",
+    "bytes": 266
+  }
+]

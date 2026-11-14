@@ -1,0 +1,1401 @@
+﻿2026-11-14T08:41:11.5832175Z Current runner version: '2.338.2'
+2026-11-14T08:41:11.5862401Z ##[group]Runner Image Provisioner
+2026-11-14T08:41:11.5863286Z Hosted Compute Agent
+2026-11-14T08:41:11.5864098Z Version: 20261103.629
+2026-11-14T08:41:11.5864847Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-14T08:41:11.5865500Z Build Date: 2026-11-03T17:26:59Z
+2026-11-14T08:41:11.5866466Z Worker ID: {5fea72b5-9414-4f56-8315-cbd84567a704}
+2026-11-14T08:41:11.5867054Z Region: westus2
+2026-11-14T08:41:11.5867542Z Cloud: Azure
+2026-11-14T08:41:11.5868005Z ##[endgroup]
+2026-11-14T08:41:11.5869121Z ##[group]Operating System
+2026-11-14T08:41:11.5869680Z Ubuntu
+2026-11-14T08:41:11.5870111Z 26.04.1
+2026-11-14T08:41:11.5870514Z LTS
+2026-11-14T08:41:11.5870997Z ##[endgroup]
+2026-11-14T08:41:11.5871481Z ##[group]Runner Image
+2026-11-14T08:41:11.5872032Z Image: ubuntu-26.04
+2026-11-14T08:41:11.5872492Z Version: 20261111.196.1
+2026-11-14T08:41:11.5873758Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-14T08:41:11.5875095Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-14T08:41:11.5875965Z ##[endgroup]
+2026-11-14T08:41:11.5876844Z ##[group]GITHUB_TOKEN Permissions
+2026-11-14T08:41:11.5878549Z Contents: read
+2026-11-14T08:41:11.5879071Z Metadata: read
+2026-11-14T08:41:11.5879538Z ##[endgroup]
+2026-11-14T08:41:11.5881639Z Secret source: Actions
+2026-11-14T08:41:11.5882414Z Cache mode: write
+2026-11-14T08:41:11.5883112Z Prepare workflow directory
+2026-11-14T08:41:11.6197122Z Prepare all required actions
+2026-11-14T08:41:11.6236604Z Getting action download info
+2026-11-14T08:41:11.9603489Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-14T08:41:12.0684407Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-14T08:41:12.1703084Z Download action repository 'actions/setup-java@v4' (SHA:cf277c60eb25467037889841efdb72551f06f6c3)
+2026-11-14T08:41:12.4791537Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2026-11-14T08:41:12.7037075Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-14T08:41:12.9496320Z Complete job name: native-compile (ubuntu-latest, android)
+2026-11-14T08:41:13.0491583Z ##[group]Run actions/checkout@v4
+2026-11-14T08:41:13.0492662Z with:
+2026-11-14T08:41:13.0493368Z   repository: mikevocalz/nitro-forge
+2026-11-14T08:41:13.0501070Z   token: ***
+2026-11-14T08:41:13.0501765Z   ssh-strict: true
+2026-11-14T08:41:13.0502471Z   ssh-user: git
+2026-11-14T08:41:13.0503186Z   persist-credentials: true
+2026-11-14T08:41:13.0504058Z   clean: true
+2026-11-14T08:41:13.0504808Z   sparse-checkout-cone-mode: true
+2026-11-14T08:41:13.0505647Z   fetch-depth: 1
+2026-11-14T08:41:13.0506344Z   fetch-tags: false
+2026-11-14T08:41:13.0507072Z   show-progress: true
+2026-11-14T08:41:13.0507816Z   lfs: false
+2026-11-14T08:41:13.0508523Z   submodules: false
+2026-11-14T08:41:13.0509245Z   set-safe-directory: true
+2026-11-14T08:41:13.0510061Z   allow-unsafe-pr-checkout: false
+2026-11-14T08:41:13.0511064Z env:
+2026-11-14T08:41:13.0511692Z   CI: 1
+2026-11-14T08:41:13.0512342Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:13.0513067Z ##[endgroup]
+2026-11-14T08:41:13.6360975Z Syncing repository: mikevocalz/nitro-forge
+2026-11-14T08:41:13.6364707Z ##[group]Getting Git version info
+2026-11-14T08:41:13.6366649Z Working directory is '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T08:41:13.6369359Z [command]/usr/bin/git version
+2026-11-14T08:41:13.6370786Z git version 2.56.1
+2026-11-14T08:41:13.6404421Z ##[endgroup]
+2026-11-14T08:41:13.6411302Z Temporarily overriding HOME='/home/runner/work/_temp/b4854ff0-8029-4834-9494-e046c5919702' before making global git config changes
+2026-11-14T08:41:13.6415537Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T08:41:13.6418396Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T08:41:13.6469873Z Deleting the contents of '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T08:41:13.6473153Z ##[group]Initializing the repository
+2026-11-14T08:41:13.6479288Z [command]/usr/bin/git init /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T08:41:13.6576376Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-14T08:41:13.6578519Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-14T08:41:13.6580333Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-14T08:41:13.6581694Z hint: call:
+2026-11-14T08:41:13.6582487Z hint:
+2026-11-14T08:41:13.6583445Z hint: 	git config --global init.defaultBranch <name>
+2026-11-14T08:41:13.6584777Z hint:
+2026-11-14T08:41:13.6585887Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-14T08:41:13.6587521Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-14T08:41:13.6588841Z hint:
+2026-11-14T08:41:13.6589646Z hint: 	git branch -m <name>
+2026-11-14T08:41:13.6590550Z hint:
+2026-11-14T08:41:13.6591687Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-14T08:41:13.6625022Z Initialized empty Git repository in /home/runner/work/nitro-forge/nitro-forge/.git/
+2026-11-14T08:41:13.6638405Z [command]/usr/bin/git remote add origin https://github.com/mikevocalz/nitro-forge
+2026-11-14T08:41:13.6748167Z ##[endgroup]
+2026-11-14T08:41:13.6750111Z ##[group]Disabling automatic garbage collection
+2026-11-14T08:41:13.6752285Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-14T08:41:13.6794439Z ##[endgroup]
+2026-11-14T08:41:13.6796478Z ##[group]Setting up auth
+2026-11-14T08:41:13.6798351Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T08:41:13.6887599Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T08:41:13.7294325Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T08:41:13.7325302Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T08:41:13.7565055Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T08:41:13.7595261Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T08:41:13.7830555Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-14T08:41:13.7866106Z ##[endgroup]
+2026-11-14T08:41:13.7867522Z ##[group]Fetching the repository
+2026-11-14T08:41:13.7874593Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ea79ef8a105714673b84ead58469c9186e62a81c:refs/remotes/pull/88/merge
+2026-11-14T08:41:16.9704460Z From https://github.com/mikevocalz/nitro-forge
+2026-11-14T08:41:16.9707173Z  * [new ref]         ea79ef8a105714673b84ead58469c9186e62a81c -> pull/88/merge
+2026-11-14T08:41:16.9709248Z ##[endgroup]
+2026-11-14T08:41:16.9709860Z ##[group]Determining the checkout info
+2026-11-14T08:41:16.9711111Z ##[endgroup]
+2026-11-14T08:41:16.9723212Z [command]/usr/bin/git sparse-checkout disable
+2026-11-14T08:41:16.9766578Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-14T08:41:16.9790793Z ##[group]Checking out the ref
+2026-11-14T08:41:16.9793501Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/88/merge
+2026-11-14T08:41:17.1916462Z Note: switching to 'refs/remotes/pull/88/merge'.
+2026-11-14T08:41:17.1916911Z 
+2026-11-14T08:41:17.1917142Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-14T08:41:17.1917926Z changes and commit them, and you can discard any commits you make in this
+2026-11-14T08:41:17.1918389Z state without impacting any branches by switching back to a branch.
+2026-11-14T08:41:17.1918656Z 
+2026-11-14T08:41:17.1918866Z If you want to create a new branch to retain commits you create, you may
+2026-11-14T08:41:17.1919280Z do so (now or later) by using -c with the switch command. Example:
+2026-11-14T08:41:17.1919508Z 
+2026-11-14T08:41:17.1919622Z   git switch -c <new-branch-name>
+2026-11-14T08:41:17.1919791Z 
+2026-11-14T08:41:17.1919918Z Or undo this operation with:
+2026-11-14T08:41:17.1920075Z 
+2026-11-14T08:41:17.1920168Z   git switch -
+2026-11-14T08:41:17.1920314Z 
+2026-11-14T08:41:17.1920587Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-14T08:41:17.1920884Z 
+2026-11-14T08:41:17.1921179Z HEAD is now at ea79ef8 Merge cc77f88dcd8f4c2aac874662e326c82073a660dc into dab27e177f05a747f2a234e3892f62e2f7b8c28b
+2026-11-14T08:41:17.1924725Z ##[endgroup]
+2026-11-14T08:41:17.1966474Z [command]/usr/bin/git log -1 --format=%H
+2026-11-14T08:41:17.1987199Z ea79ef8a105714673b84ead58469c9186e62a81c
+2026-11-14T08:41:17.2221789Z ##[group]Run actions/setup-node@v4
+2026-11-14T08:41:17.2222072Z with:
+2026-11-14T08:41:17.2222290Z   node-version: 24.19.0
+2026-11-14T08:41:17.2222519Z   always-auth: false
+2026-11-14T08:41:17.2222736Z   check-latest: false
+2026-11-14T08:41:17.2225019Z   token: ***
+2026-11-14T08:41:17.2225226Z env:
+2026-11-14T08:41:17.2225442Z   CI: 1
+2026-11-14T08:41:17.2225641Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:17.2225861Z ##[endgroup]
+2026-11-14T08:41:17.3373108Z Attempting to download 24.19.0...
+2026-11-14T08:41:17.3529815Z (node:2295) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T08:41:17.3530615Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T08:41:17.9388657Z Acquiring 24.19.0 - x64 from https://github.com/actions/node-versions/releases/download/24.19.0-30872449280/node-24.19.0-linux-x64.tar.gz
+2026-11-14T08:41:18.4450181Z Extracting ...
+2026-11-14T08:41:18.4558962Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/7d56e6e3-7845-49d7-92f3-30f5a725f284 -f /home/runner/work/_temp/f0444e13-9b7e-4c5c-a657-4b86a9592072
+2026-11-14T08:41:19.1027268Z Adding to the cache ...
+2026-11-14T08:41:21.1228710Z ##[group]Environment details
+2026-11-14T08:41:21.3786516Z node: v24.19.0
+2026-11-14T08:41:21.3786777Z npm: 11.17.0
+2026-11-14T08:41:21.3787013Z yarn: 1.22.22
+2026-11-14T08:41:21.3787532Z ##[endgroup]
+2026-11-14T08:41:21.4033309Z ##[group]Run actions/setup-java@v4
+2026-11-14T08:41:21.4033534Z with:
+2026-11-14T08:41:21.4033850Z   distribution: temurin
+2026-11-14T08:41:21.4034037Z   java-version: 17
+2026-11-14T08:41:21.4034208Z   java-package: jdk
+2026-11-14T08:41:21.4034382Z   check-latest: false
+2026-11-14T08:41:21.4034554Z   server-id: github
+2026-11-14T08:41:21.4034743Z   server-username: GITHUB_ACTOR
+2026-11-14T08:41:21.4034964Z   server-password: GITHUB_TOKEN
+2026-11-14T08:41:21.4035160Z   overwrite-settings: true
+2026-11-14T08:41:21.4035346Z   job-status: success
+2026-11-14T08:41:21.4037358Z   token: ***
+2026-11-14T08:41:21.4037518Z env:
+2026-11-14T08:41:21.4037673Z   CI: 1
+2026-11-14T08:41:21.4037829Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:21.4038007Z ##[endgroup]
+2026-11-14T08:41:21.5380030Z ##[warning]setup-java v4 is deprecated and will no longer receive updates. Please migrate to actions/setup-java@v5.
+2026-11-14T08:41:21.5387311Z ##[group]Installed distributions
+2026-11-14T08:41:21.5474066Z Resolved Java 17.0.21+9 from tool-cache
+2026-11-14T08:41:21.5474559Z Setting Java 17.0.21+9 as the default
+2026-11-14T08:41:21.5477587Z (node:2333) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T08:41:21.5478189Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T08:41:21.5480889Z Creating toolchains.xml for JDK version 17 from temurin
+2026-11-14T08:41:21.5536821Z Writing to /home/runner/.m2/toolchains.xml
+2026-11-14T08:41:21.5537097Z 
+2026-11-14T08:41:21.5537238Z Java configuration:
+2026-11-14T08:41:21.5537519Z   Distribution: temurin
+2026-11-14T08:41:21.5537798Z   Version: 17.0.21+9
+2026-11-14T08:41:21.5538243Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:21.5538578Z 
+2026-11-14T08:41:21.5538931Z ##[endgroup]
+2026-11-14T08:41:21.5542144Z Creating settings.xml with server-id: github
+2026-11-14T08:41:21.5577183Z Writing to /home/runner/.m2/settings.xml
+2026-11-14T08:41:21.5734581Z ##[group]Run corepack enable
+2026-11-14T08:41:21.5734971Z [36;1mcorepack enable[0m
+2026-11-14T08:41:21.5800437Z shell: /usr/bin/bash -e {0}
+2026-11-14T08:41:21.5800777Z env:
+2026-11-14T08:41:21.5801012Z   CI: 1
+2026-11-14T08:41:21.5801243Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:21.5801667Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:21.5802324Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:21.5802808Z ##[endgroup]
+2026-11-14T08:41:21.6482631Z ##[group]Run actions/download-artifact@v4
+2026-11-14T08:41:21.6482878Z with:
+2026-11-14T08:41:21.6483047Z   name: forge-candidate
+2026-11-14T08:41:21.6483247Z   path: /home/runner/work/_temp/candidate
+2026-11-14T08:41:21.6483469Z   merge-multiple: false
+2026-11-14T08:41:21.6483897Z   repository: mikevocalz/nitro-forge
+2026-11-14T08:41:21.6484111Z   run-id: 43576021743
+2026-11-14T08:41:21.6484289Z env:
+2026-11-14T08:41:21.6484439Z   CI: 1
+2026-11-14T08:41:21.6484593Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:21.6484864Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:21.6485237Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:21.6485539Z ##[endgroup]
+2026-11-14T08:41:21.7645236Z Downloading single artifact
+2026-11-14T08:41:21.7758029Z (node:2357) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T08:41:21.7758903Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T08:41:22.0162575Z Preparing to download the following artifacts:
+2026-11-14T08:41:22.0164222Z - forge-candidate (ID: 14106766399, Size: 147259307, Expected Digest: sha256:0bec62da712d0357396136b5cf7059b6da8538264bc0928235840e94ec75717d)
+2026-11-14T08:41:22.2605735Z Redirecting to blob download url: https://productionresultssa4.blob.core.windows.net/actions-results/2360ff8b-e8fd-8da9-ba1e-8aff3d52c59d/workflow-job-run-9b3f34d3-5bd0-5bb9-a4fc-0b6d216f745c/artifacts/9d0189f3144c9ecef10a6a19cf742fd2830fae4619675c988b09ec3740dfe973.zip
+2026-11-14T08:41:22.2607555Z Starting download of artifact to: /home/runner/work/_temp/candidate
+2026-11-14T08:41:22.5570290Z (node:2357) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-11-14T08:41:26.1492479Z SHA256 digest of downloaded artifact is 0bec62da712d0357396136b5cf7059b6da8538264bc0928235840e94ec75717d
+2026-11-14T08:41:26.1493265Z Artifact download completed successfully.
+2026-11-14T08:41:26.1493898Z Total of 1 artifact(s) downloaded
+2026-11-14T08:41:26.1497783Z Download artifact has finished successfully
+2026-11-14T08:41:26.1635529Z ##[group]Run node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage prepare
+2026-11-14T08:41:26.1636584Z [36;1mnode tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage prepare[0m
+2026-11-14T08:41:26.1682340Z shell: /usr/bin/bash -e {0}
+2026-11-14T08:41:26.1682547Z env:
+2026-11-14T08:41:26.1682700Z   CI: 1
+2026-11-14T08:41:26.1682873Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:26.1683368Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:26.1683982Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:26.1684304Z ##[endgroup]
+2026-11-14T08:41:32.3198004Z {"stage":"prepare","app":"/home/runner/work/_temp/consumer","sourceCommit":"ea79ef8a105714673b84ead58469c9186e62a81c","manifestSha256":"3579c5669081f691f875f4a0217129f2437c2e275ca920d64b69c1758fdbbdb1"}
+2026-11-14T08:41:32.3426370Z ##[group]Run actions/download-artifact@v4
+2026-11-14T08:41:32.3426625Z with:
+2026-11-14T08:41:32.3426804Z   name: forge-consumer-graph
+2026-11-14T08:41:32.3427030Z   path: /home/runner/work/_temp/graph
+2026-11-14T08:41:32.3427258Z   merge-multiple: false
+2026-11-14T08:41:32.3427459Z   repository: mikevocalz/nitro-forge
+2026-11-14T08:41:32.3427673Z   run-id: 43576021743
+2026-11-14T08:41:32.3427845Z env:
+2026-11-14T08:41:32.3428005Z   CI: 1
+2026-11-14T08:41:32.3428166Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:32.3428451Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:32.3428830Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:32.3429135Z ##[endgroup]
+2026-11-14T08:41:32.4702589Z Downloading single artifact
+2026-11-14T08:41:32.4819099Z (node:2428) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T08:41:32.4819911Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T08:41:32.7379072Z Preparing to download the following artifacts:
+2026-11-14T08:41:32.7380159Z - forge-consumer-graph (ID: 14107045709, Size: 57155, Expected Digest: sha256:034988ff5233e955d9d701bc5496d4476737baba201ea24453999512f5307aea)
+2026-11-14T08:41:32.9558772Z Redirecting to blob download url: https://productionresultssa4.blob.core.windows.net/actions-results/2360ff8b-e8fd-8da9-ba1e-8aff3d52c59d/workflow-job-run-47eb0be2-f47c-5d0d-80c6-e51e861d8604/artifacts/dc189230663271588b9481d54188989ce66323a406daffbeb5f17f2be20fba76.zip
+2026-11-14T08:41:32.9560441Z Starting download of artifact to: /home/runner/work/_temp/graph
+2026-11-14T08:41:33.2165890Z (node:2428) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-11-14T08:41:33.2799219Z SHA256 digest of downloaded artifact is 034988ff5233e955d9d701bc5496d4476737baba201ea24453999512f5307aea
+2026-11-14T08:41:33.2799982Z Artifact download completed successfully.
+2026-11-14T08:41:33.2800435Z Total of 1 artifact(s) downloaded
+2026-11-14T08:41:33.2803014Z Download artifact has finished successfully
+2026-11-14T08:41:33.2932561Z ##[group]Run cp "$RUNNER_TEMP/graph/pnpm-lock.yaml" "$RUNNER_TEMP/consumer/pnpm-lock.yaml"
+2026-11-14T08:41:33.2933063Z [36;1mcp "$RUNNER_TEMP/graph/pnpm-lock.yaml" "$RUNNER_TEMP/consumer/pnpm-lock.yaml"[0m
+2026-11-14T08:41:33.2977758Z shell: /usr/bin/bash -e {0}
+2026-11-14T08:41:33.2977995Z env:
+2026-11-14T08:41:33.2978157Z   CI: 1
+2026-11-14T08:41:33.2978323Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:33.2978604Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:33.2979004Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:33.2979306Z ##[endgroup]
+2026-11-14T08:41:33.3078919Z ##[group]Run set -euo pipefail
+2026-11-14T08:41:33.3079174Z [36;1mset -euo pipefail[0m
+2026-11-14T08:41:33.3079404Z [36;1mfor stage in install verify prebuild; do[0m
+2026-11-14T08:41:33.3079679Z [36;1m  if [ "$stage" = install ]; then[0m
+2026-11-14T08:41:33.3080364Z [36;1m    node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage" --platform 'android' --frozen-lockfile[0m
+2026-11-14T08:41:33.3081017Z [36;1m  else[0m
+2026-11-14T08:41:33.3081571Z [36;1m    node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage" --platform 'android'[0m
+2026-11-14T08:41:33.3082370Z [36;1m  fi[0m
+2026-11-14T08:41:33.3082545Z [36;1mdone[0m
+2026-11-14T08:41:33.3121408Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T08:41:33.3121726Z env:
+2026-11-14T08:41:33.3121892Z   CI: 1
+2026-11-14T08:41:33.3122055Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:33.3122342Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:33.3122731Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:33.3123042Z ##[endgroup]
+2026-11-14T08:41:34.6872218Z Downloading the pnpm 12.18.0 binary for linux-x64...
+2026-11-14T08:41:34.9488327Z {"stage":"effective-pnpm-config","pnpmVersion":"12.18.0","overrides":{"@nitro-forge/ignition":"file:./artifacts/nitro-forge-ignition-1.0.0-f6.43576021743.1.tgz","@nitro-forge/prism":"file:./artifacts/nitro-forge-prism-1.0.0-f6.43576021743.1.tgz","@nitro-forge/cadence":"file:./artifacts/nitro-forge-cadence-1.0.0-f6.43576021743.1.tgz","@nitro-forge/splice":"file:./artifacts/nitro-forge-splice-1.0.0-f6.43576021743.1.tgz","@nitro-forge/folio":"file:./artifacts/nitro-forge-folio-1.0.0-f6.43576021743.1.tgz","@nitro-forge/pitch":"file:./artifacts/nitro-forge-pitch-1.0.0-f6.43576021743.1.tgz","@nitro-forge/tally":"file:./artifacts/nitro-forge-tally-1.0.0-f6.43576021743.1.tgz","@nitro-forge/quill":"file:./artifacts/nitro-forge-quill-1.0.0-f6.43576021743.1.tgz"},"nodeLinker":"isolated","enableGlobalVirtualStore":false,"minimumReleaseAge":0}
+2026-11-14T08:41:35.2976205Z ? Verifying lockfile against supply-chain policies (500 entries)...
+2026-11-14T08:41:35.2976952Z ✓ Lockfile passes supply-chain policies (500 entries in 0ms)
+2026-11-14T08:41:35.2977339Z Lockfile is up to date, resolution step is skipped
+2026-11-14T08:41:35.3329710Z Downloading file:artifacts/nitro-forge-ignition-1.0.0-f6.43576021743.1.tgz: 0.00 B/147.91 MB
+2026-11-14T08:41:35.3395474Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-14T08:41:35.3397235Z   Content-addressable store is at: /home/runner/.local/share/pnpm/store/v11
+2026-11-14T08:41:35.3397971Z   Virtual store is at:             node_modules/.pnpm
+2026-11-14T08:41:35.4601210Z Downloading @typescript/typescript-linux-x64@7.0.2: 0.00 B/9.66 MB
+2026-11-14T08:41:35.4610833Z Downloading hermes-compiler@260318099.0.5: 0.00 B/19.35 MB
+2026-11-14T08:41:35.5510765Z Downloading expo-file-system@58.0.13: 0.00 B/8.61 MB
+2026-11-14T08:41:35.5564708Z Downloading @expo/modules-macros-linux-x64@0.33.0: 0.00 B/9.09 MB
+2026-11-14T08:41:35.6219365Z Downloading expo-modules-macros@0.33.0: 0.00 B/6.40 MB
+2026-11-14T08:41:35.6577450Z Downloading expo-modules-core@58.1.0: 0.00 B/35.54 MB
+2026-11-14T08:41:36.6555451Z Progress: resolved 461, reused 0, downloaded 450, added 447
+2026-11-14T08:41:39.6458951Z Progress: resolved 461, reused 0, downloaded 461, added 460
+2026-11-14T08:41:39.6600718Z Packages: +461
+2026-11-14T08:41:39.6601255Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-14T08:41:39.6911765Z Progress: resolved 461, reused 0, downloaded 461, added 461, done
+2026-11-14T08:41:40.1556477Z 
+2026-11-14T08:41:40.1557111Z dependencies:
+2026-11-14T08:41:40.1557862Z + @nitro-forge/cadence 1.0.0-f6.43576021743.1
+2026-11-14T08:41:40.1558203Z + @nitro-forge/folio 1.0.0-f6.43576021743.1
+2026-11-14T08:41:40.1558496Z + @nitro-forge/ignition 1.0.0-f6.43576021743.1
+2026-11-14T08:41:40.1558774Z + @nitro-forge/pitch 1.0.0-f6.43576021743.1
+2026-11-14T08:41:40.1559040Z + @nitro-forge/prism 1.0.0-f6.43576021743.1
+2026-11-14T08:41:40.1559306Z + @nitro-forge/quill 1.0.0-f6.43576021743.1
+2026-11-14T08:41:40.1559567Z + @nitro-forge/splice 1.0.0-f6.43576021743.1
+2026-11-14T08:41:40.1559846Z + @nitro-forge/tally 1.0.0-f6.43576021743.1
+2026-11-14T08:41:40.1560091Z + @nyc-tron/ui 1.0.0-rc.2
+2026-11-14T08:41:40.1560297Z + expo 58.0.24
+2026-11-14T08:41:40.1560647Z + expo-constants 58.0.16
+2026-11-14T08:41:40.1560865Z + expo-file-system 58.0.13
+2026-11-14T08:41:40.1561143Z + nitro-core 1.0.0-alpha.nightly.136.gdb81de61bd32
+2026-11-14T08:41:40.1561391Z + react 19.3.1
+2026-11-14T08:41:40.1561586Z + react-native 0.88.1
+2026-11-14T08:41:40.1561907Z + react-native-nitro-modules 1.0.0-alpha.nightly.136.gdb81de61bd32
+2026-11-14T08:41:40.1562211Z + zustand 5.1.0
+2026-11-14T08:41:40.1562319Z 
+2026-11-14T08:41:40.1562584Z devDependencies:
+2026-11-14T08:41:40.1562854Z + @types/react 19.3.0
+2026-11-14T08:41:40.1563142Z + typescript 7.0.2
+2026-11-14T08:41:40.1563311Z 
+2026-11-14T08:41:40.1592105Z Done in 5.2s using pnpm v12.18.0
+2026-11-14T08:41:40.1746273Z {"stage":"install","app":"/home/runner/work/_temp/consumer","sourceCommit":"ea79ef8a105714673b84ead58469c9186e62a81c","manifestSha256":"3579c5669081f691f875f4a0217129f2437c2e275ca920d64b69c1758fdbbdb1"}
+2026-11-14T08:41:41.0922533Z {"stage":"verify","app":"/home/runner/work/_temp/consumer","sourceCommit":"ea79ef8a105714673b84ead58469c9186e62a81c","manifestSha256":"3579c5669081f691f875f4a0217129f2437c2e275ca920d64b69c1758fdbbdb1"}
+2026-11-14T08:41:41.6440652Z - Creating native directory (./android)
+2026-11-14T08:41:41.8108044Z ✔ Created native directory
+2026-11-14T08:41:41.8111379Z - Updating package.json
+2026-11-14T08:41:41.8233091Z ✔ Updated package.json | no changes
+2026-11-14T08:41:41.8233956Z - Running prebuild
+2026-11-14T08:41:42.0785770Z » android: userInterfaceStyle: Install expo-system-ui in your project to enable this feature.
+2026-11-14T08:41:42.0786586Z - Running prebuild
+2026-11-14T08:41:42.1600032Z ✔ Finished prebuild
+2026-11-14T08:41:42.2020121Z {"stage":"prebuild","app":"/home/runner/work/_temp/consumer","sourceCommit":"ea79ef8a105714673b84ead58469c9186e62a81c","manifestSha256":"3579c5669081f691f875f4a0217129f2437c2e275ca920d64b69c1758fdbbdb1"}
+2026-11-14T08:41:42.3072201Z ##[group]Run ./gradlew assembleRelease --no-daemon
+2026-11-14T08:41:42.3072683Z [36;1m./gradlew assembleRelease --no-daemon[0m
+2026-11-14T08:41:42.3122113Z shell: /usr/bin/bash -e {0}
+2026-11-14T08:41:42.3122341Z env:
+2026-11-14T08:41:42.3122510Z   CI: 1
+2026-11-14T08:41:42.3122684Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:41:42.3122968Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:42.3123368Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:41:42.3123807Z ##[endgroup]
+2026-11-14T08:41:44.5259188Z Downloading https://services.gradle.org/distributions/gradle-9.4.1-bin.zip
+2026-11-14T08:41:47.3359724Z .............10%.............20%.............30%.............40%.............50%.............60%..............70%.............80%.............90%.............100%
+2026-11-14T08:41:49.0502810Z 
+2026-11-14T08:41:49.0503936Z Welcome to Gradle 9.4.1!
+2026-11-14T08:41:49.0504231Z 
+2026-11-14T08:41:49.0505136Z Here are the highlights of this release:
+2026-11-14T08:41:49.0510754Z  - Java 26 support
+2026-11-14T08:41:49.0511175Z  - Non-class-based JVM tests
+2026-11-14T08:41:49.0511659Z  - Enhanced console progress bar
+2026-11-14T08:41:49.0511948Z 
+2026-11-14T08:41:49.0512388Z For more details see https://docs.gradle.org/9.4.1/release-notes.html
+2026-11-14T08:41:49.0512778Z 
+2026-11-14T08:41:49.1513485Z To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+2026-11-14T08:41:50.4497447Z Daemon will be stopped at the end of the build 
+2026-11-14T08:42:41.0535584Z > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:42:41.0576173Z > Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:42:41.0577648Z > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:42:41.0586203Z > Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:42:41.1508120Z > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:pluginDescriptors
+2026-11-14T08:42:41.1509161Z > Task :gradle-plugin:settings-plugin:pluginDescriptors
+2026-11-14T08:42:41.1510033Z > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:processResources
+2026-11-14T08:42:41.1511554Z > Task :gradle-plugin:settings-plugin:processResources
+2026-11-14T08:42:45.7505492Z > Task :gradle-plugin:shared:processResources NO-SOURCE
+2026-11-14T08:42:45.8504799Z > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:processResources NO-SOURCE
+2026-11-14T08:42:52.9514950Z > Task :gradle-plugin:shared:compileKotlin
+2026-11-14T08:42:52.9544554Z > Task :gradle-plugin:shared:compileJava NO-SOURCE
+2026-11-14T08:42:52.9564215Z > Task :gradle-plugin:shared:classes UP-TO-DATE
+2026-11-14T08:42:52.9584308Z > Task :gradle-plugin:shared:jar
+2026-11-14T08:42:55.8499548Z > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileKotlin
+2026-11-14T08:42:55.8514529Z > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileJava NO-SOURCE
+2026-11-14T08:42:55.8546286Z > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:classes UP-TO-DATE
+2026-11-14T08:42:55.9525050Z > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:jar
+2026-11-14T08:43:01.9497247Z > Task :gradle-plugin:settings-plugin:compileKotlin
+2026-11-14T08:43:01.9511393Z > Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+2026-11-14T08:43:01.9514193Z > Task :gradle-plugin:settings-plugin:classes
+2026-11-14T08:43:01.9515073Z > Task :gradle-plugin:settings-plugin:jar
+2026-11-14T08:43:05.3499856Z > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileKotlin
+2026-11-14T08:43:05.3500797Z > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileJava NO-SOURCE
+2026-11-14T08:43:05.3502209Z > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:classes
+2026-11-14T08:43:05.3502953Z > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:jar
+2026-11-14T08:43:14.0504622Z > Task :expo-gradle-plugin:expo-max-sdk-override-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:43:14.0570316Z > Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:43:14.0625418Z > Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:43:14.0665451Z > Task :expo-module-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:43:14.0705152Z > Task :expo-module-gradle-plugin:pluginDescriptors
+2026-11-14T08:43:14.0725537Z > Task :expo-module-gradle-plugin:processResources
+2026-11-14T08:43:14.2555133Z > Task :expo-gradle-plugin:expo-max-sdk-override-plugin:pluginDescriptors
+2026-11-14T08:43:14.2556328Z > Task :expo-gradle-plugin:expo-max-sdk-override-plugin:processResources
+2026-11-14T08:43:17.5525483Z > Task :expo-gradle-plugin:expo-autolinking-plugin:pluginDescriptors
+2026-11-14T08:43:17.5542057Z > Task :expo-gradle-plugin:expo-autolinking-plugin:processResources
+2026-11-14T08:43:18.1525201Z > Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors
+2026-11-14T08:43:18.1580725Z > Task :gradle-plugin:react-native-gradle-plugin:processResources
+2026-11-14T08:43:18.4505019Z > Task :expo-gradle-plugin:expo-max-sdk-override-plugin:compileKotlin
+2026-11-14T08:43:18.4535111Z > Task :expo-gradle-plugin:expo-max-sdk-override-plugin:compileJava NO-SOURCE
+2026-11-14T08:43:18.4564726Z > Task :expo-gradle-plugin:expo-max-sdk-override-plugin:classes
+2026-11-14T08:43:18.4565799Z > Task :expo-gradle-plugin:expo-max-sdk-override-plugin:jar
+2026-11-14T08:43:20.6497966Z > Task :expo-gradle-plugin:expo-autolinking-plugin:compileKotlin
+2026-11-14T08:43:20.6514815Z > Task :expo-gradle-plugin:expo-autolinking-plugin:compileJava NO-SOURCE
+2026-11-14T08:43:20.6519016Z > Task :expo-gradle-plugin:expo-autolinking-plugin:classes
+2026-11-14T08:43:20.6519826Z > Task :expo-gradle-plugin:expo-autolinking-plugin:jar
+2026-11-14T08:43:24.8517205Z > Task :gradle-plugin:react-native-gradle-plugin:compileKotlin
+2026-11-14T08:43:24.8544904Z > Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+2026-11-14T08:43:24.8545737Z > Task :gradle-plugin:react-native-gradle-plugin:classes
+2026-11-14T08:43:24.9500233Z > Task :gradle-plugin:react-native-gradle-plugin:jar
+2026-11-14T08:43:26.7496545Z > Task :expo-module-gradle-plugin:compileKotlin
+2026-11-14T08:43:26.7497379Z > Task :expo-module-gradle-plugin:compileJava NO-SOURCE
+2026-11-14T08:43:26.7498055Z > Task :expo-module-gradle-plugin:classes
+2026-11-14T08:43:26.7498541Z > Task :expo-module-gradle-plugin:jar
+2026-11-14T08:43:33.4514872Z 
+2026-11-14T08:43:33.4544895Z > Configure project :
+2026-11-14T08:43:33.4568164Z [32m[ExpoRootProject][0m The Kotlin Gradle plugin used by this build is [32m2.2.10[0m, but the version catalog declares [33m2.2.0[0m. Using the plugin version.
+2026-11-14T08:43:33.4569437Z [32m[ExpoRootProject][0m Using the following versions:
+2026-11-14T08:43:33.4570142Z   - buildTools:  [32m37.0.0[0m
+2026-11-14T08:43:33.4570686Z   - minSdk:      [32m24[0m
+2026-11-14T08:43:33.4571199Z   - compileSdk:  [32m37[0m
+2026-11-14T08:43:33.4571673Z   - targetSdk:   [32m36[0m
+2026-11-14T08:43:33.4572216Z   - ndk:         [32m27.1.12297006[0m
+2026-11-14T08:43:33.4572772Z   - kotlin:      [32m2.2.10[0m
+2026-11-14T08:43:33.4573324Z   - ksp:         [32m2.2.10-2.0.2[0m
+2026-11-14T08:44:00.2504627Z 
+2026-11-14T08:44:00.2544828Z > Configure project :app
+2026-11-14T08:44:00.2574639Z WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+2026-11-14T08:44:00.2604235Z The current default is 'true'.
+2026-11-14T08:44:00.2605034Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-11-14T08:44:00.2634355Z WARNING: The option setting 'android.newDsl=false' is deprecated.
+2026-11-14T08:44:00.2664686Z The current default is 'true'.
+2026-11-14T08:44:00.2675774Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-11-14T08:44:00.2677000Z  ℹ️  [33mApplying gradle plugin[0m '[32mexpo-max-sdk-override-plugin[0m'
+2026-11-14T08:44:00.2679354Z   [expo-max-sdk-override-plugin] This plugin will find all permissions declared with `android:maxSdkVersion`. If there exists a declaration with the `android:maxSdkVersion` annotation and another one without, the plugin will remove the annotation from the final merged manifest. In order to see a log with the changes run a clean build of the app.
+2026-11-14T08:44:00.2681722Z WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+2026-11-14T08:44:00.2682744Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-11-14T08:44:00.2683820Z The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+2026-11-14T08:44:00.2684552Z     android.newDsl=false
+2026-11-14T08:44:00.2685190Z to this project's gradle.properties file.
+2026-11-14T08:44:00.2696041Z For more information, see http://developer.android.com/build/r/new-dsl.
+2026-11-14T08:44:00.2696486Z 
+2026-11-14T08:44:00.2697281Z To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+2026-11-14T08:44:00.2698502Z WARNING: API 'testVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+2026-11-14T08:44:00.2699309Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-11-14T08:44:00.2700086Z The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+2026-11-14T08:44:00.2700679Z     android.newDsl=false
+2026-11-14T08:44:00.2701093Z to this project's gradle.properties file.
+2026-11-14T08:44:00.2701731Z For more information, see http://developer.android.com/build/r/new-dsl.
+2026-11-14T08:44:00.2702123Z 
+2026-11-14T08:44:00.2702844Z To determine what is calling testVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+2026-11-14T08:44:00.2704188Z WARNING: API 'unitTestVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+2026-11-14T08:44:00.2705295Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-11-14T08:44:00.2706040Z The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+2026-11-14T08:44:00.2706618Z     android.newDsl=false
+2026-11-14T08:44:00.2707033Z to this project's gradle.properties file.
+2026-11-14T08:44:00.2707667Z For more information, see http://developer.android.com/build/r/new-dsl.
+2026-11-14T08:44:00.2708060Z 
+2026-11-14T08:44:00.2708768Z To determine what is calling unitTestVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+2026-11-14T08:44:00.2709943Z Checking the license for package NDK (Side by side) 27.1.12297006 in /usr/local/lib/android/sdk/licenses
+2026-11-14T08:44:00.2710756Z License for package NDK (Side by side) 27.1.12297006 accepted.
+2026-11-14T08:44:00.2711430Z Preparing "Install NDK (Side by side) 27.1.12297006 v.27.1.12297006".
+2026-11-14T08:44:00.2712085Z "Install NDK (Side by side) 27.1.12297006 v.27.1.12297006" ready.
+2026-11-14T08:44:00.2712854Z Installing NDK (Side by side) 27.1.12297006 in /usr/local/lib/android/sdk/ndk/27.1.12297006
+2026-11-14T08:44:00.2713725Z "Install NDK (Side by side) 27.1.12297006 v.27.1.12297006" complete.
+2026-11-14T08:44:00.2714353Z "Install NDK (Side by side) 27.1.12297006 v.27.1.12297006" finished.
+2026-11-14T08:44:02.2504218Z 
+2026-11-14T08:44:02.2524638Z > Configure project :expo
+2026-11-14T08:44:02.2528434Z WARNING: API 'libraryVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+2026-11-14T08:44:02.2531017Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-11-14T08:44:02.2531638Z The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+2026-11-14T08:44:02.2532340Z     android.newDsl=false
+2026-11-14T08:44:02.2532685Z to this project's gradle.properties file.
+2026-11-14T08:44:02.2533165Z For more information, see http://developer.android.com/build/r/new-dsl.
+2026-11-14T08:44:02.2533496Z 
+2026-11-14T08:44:02.2534363Z To determine what is calling libraryVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+2026-11-14T08:44:02.2534939Z 
+2026-11-14T08:44:02.2535086Z Using expo modules
+2026-11-14T08:44:02.2535684Z   - [32mexpo-dom-webview[0m (58.0.2)
+2026-11-14T08:44:02.2536037Z   - [32mexpo-log-box[0m (58.0.15)
+2026-11-14T08:44:02.2536311Z   - [32mexpo-constants[0m (58.0.16)
+2026-11-14T08:44:03.4517652Z   - [32mexpo-modules-core[0m (58.1.0)
+2026-11-14T08:44:03.4518665Z   - [33m[📦][0m [32mexpo-asset[0m (58.0.21)
+2026-11-14T08:44:03.4519323Z   - [33m[📦][0m [32mexpo-file-system[0m (58.0.13)
+2026-11-14T08:44:03.4519905Z   - [33m[📦][0m [32mexpo-font[0m (58.0.12)
+2026-11-14T08:44:03.4520529Z   - [33m[📦][0m [32mexpo-keep-awake[0m (58.0.4)
+2026-11-14T08:44:03.4520936Z 
+2026-11-14T08:44:08.0504632Z 
+2026-11-14T08:44:08.0515020Z > Configure project :react-native-nitro-modules
+2026-11-14T08:44:08.0516200Z [NitroModules] 🔥 Your app is boosted by nitro modules!
+2026-11-14T08:44:15.0530837Z 
+2026-11-14T08:44:15.0548090Z > Task :expo-constants:preBuild UP-TO-DATE
+2026-11-14T08:44:15.0574915Z > Task :expo-dom-webview:preBuild UP-TO-DATE
+2026-11-14T08:44:15.0601193Z > Task :expo-log-box:preBuild UP-TO-DATE
+2026-11-14T08:44:15.0624683Z > Task :nitro-forge_ignition:preBuild UP-TO-DATE
+2026-11-14T08:44:15.0664539Z > Task :app:generateAutolinkingNewArchitectureFiles
+2026-11-14T08:44:15.0665364Z > Task :app:generateAutolinkingPackageList
+2026-11-14T08:44:15.0695247Z > Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+2026-11-14T08:44:15.0724715Z > Task :app:generateCodegenArtifactsFromSchema SKIPPED
+2026-11-14T08:44:15.0734442Z > Task :app:generateReactNativeEntryPoint
+2026-11-14T08:44:15.1504988Z > Task :expo:generateInlineModules
+2026-11-14T08:44:15.1507623Z > Task :expo:generatePackagesList
+2026-11-14T08:44:15.1508155Z > Task :expo:preBuild
+2026-11-14T08:44:15.1508623Z > Task :expo:preReleaseBuild
+2026-11-14T08:44:15.2531955Z > Task :react-native-nitro-modules:generateCodegenSchemaFromJavaScript
+2026-11-14T08:44:15.3535127Z > Task :expo-constants:createReleaseExpoConfig
+2026-11-14T08:44:15.3541028Z > Task :expo-constants:preReleaseBuild
+2026-11-14T08:44:15.4544992Z > Task :expo-constants:mergeReleaseJniLibFolders
+2026-11-14T08:44:15.4604575Z > Task :expo:mergeReleaseJniLibFolders
+2026-11-14T08:44:15.4634518Z > Task :expo:mergeReleaseNativeLibs NO-SOURCE
+2026-11-14T08:44:15.4684616Z > Task :expo-constants:mergeReleaseNativeLibs NO-SOURCE
+2026-11-14T08:44:15.4744427Z > Task :expo:copyReleaseJniLibsProjectOnly
+2026-11-14T08:44:15.4774403Z > Task :expo-dom-webview:preReleaseBuild UP-TO-DATE
+2026-11-14T08:44:15.4864590Z > Task :expo-constants:copyReleaseJniLibsProjectOnly
+2026-11-14T08:44:15.4894469Z > Task :expo-log-box:preReleaseBuild UP-TO-DATE
+2026-11-14T08:44:15.4954433Z > Task :expo-log-box:mergeReleaseJniLibFolders
+2026-11-14T08:44:15.5014401Z > Task :expo-dom-webview:mergeReleaseJniLibFolders
+2026-11-14T08:44:15.5044418Z > Task :expo-log-box:mergeReleaseNativeLibs NO-SOURCE
+2026-11-14T08:44:15.5104342Z > Task :expo-dom-webview:mergeReleaseNativeLibs NO-SOURCE
+2026-11-14T08:44:15.5134312Z > Task :expo-log-box:copyReleaseJniLibsProjectOnly
+2026-11-14T08:44:15.5184406Z > Task :nitro-forge_ignition:preReleaseBuild UP-TO-DATE
+2026-11-14T08:44:15.5214510Z > Task :expo-dom-webview:copyReleaseJniLibsProjectOnly
+2026-11-14T08:44:15.5244376Z > Task :expo:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:44:15.5255153Z > Task :nitro-forge_ignition:mergeReleaseJniLibFolders
+2026-11-14T08:44:15.5514784Z > Task :expo:generateReleaseResources
+2026-11-14T08:44:15.5544553Z > Task :nitro-forge_ignition:generateReleaseResources
+2026-11-14T08:44:15.5570429Z > Task :react-native-nitro-modules:generateCodegenArtifactsFromSchema
+2026-11-14T08:44:15.5604602Z > Task :nitro-forge_ignition:packageReleaseResources
+2026-11-14T08:44:15.5624129Z > Task :expo:packageReleaseResources
+2026-11-14T08:44:15.5624754Z > Task :nitro-forge_ignition:processReleaseNavigationResources
+2026-11-14T08:44:15.5625388Z > Task :expo:processReleaseNavigationResources
+2026-11-14T08:44:15.6501158Z > Task :react-native-nitro-modules:prepareHeaders
+2026-11-14T08:44:15.6514591Z > Task :react-native-nitro-modules:preBuild
+2026-11-14T08:44:15.6544382Z > Task :react-native-nitro-modules:preReleaseBuild
+2026-11-14T08:44:15.8496216Z > Task :expo-modules-core:decompressPrebuiltNativeLibs
+2026-11-14T08:44:15.8515227Z > Task :expo-modules-core:preBuild
+2026-11-14T08:44:15.8544080Z > Task :app:preBuild
+2026-11-14T08:44:15.8574195Z > Task :app:preReleaseBuild
+2026-11-14T08:44:15.8614193Z > Task :app:mergeReleaseJniLibFolders
+2026-11-14T08:44:15.8634029Z > Task :expo-modules-core:preReleaseBuild
+2026-11-14T08:44:16.0496183Z > Task :expo-modules-core:unpackExpoModulesV2Cpp
+2026-11-14T08:44:17.6525910Z 
+2026-11-14T08:44:17.6527237Z > Task :react-native-nitro-modules:configureCMakeRelWithDebInfo[arm64-v8a]
+2026-11-14T08:44:17.6528239Z Checking the license for package CMake 3.22.1 in /usr/local/lib/android/sdk/licenses
+2026-11-14T08:44:17.6528990Z License for package CMake 3.22.1 accepted.
+2026-11-14T08:44:17.6529583Z Preparing "Install CMake 3.22.1 v.3.22.1".
+2026-11-14T08:44:17.7506951Z 
+2026-11-14T08:44:17.7520304Z > Task :expo:parseReleaseLocalResources
+2026-11-14T08:44:17.7544913Z > Task :nitro-forge_ignition:parseReleaseLocalResources
+2026-11-14T08:44:17.8510829Z > Task :nitro-forge_ignition:javaPreCompileRelease
+2026-11-14T08:44:17.8573444Z > Task :nitro-forge_ignition:generateReleaseRFile
+2026-11-14T08:44:17.8606808Z > Task :expo-constants:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:44:17.8607686Z > Task :expo:generateReleaseRFile
+2026-11-14T08:44:17.8645672Z > Task :expo-dom-webview:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:44:17.8673710Z > Task :expo-constants:generateReleaseResources
+2026-11-14T08:44:17.8714474Z > Task :expo-dom-webview:generateReleaseResources
+2026-11-14T08:44:17.8864994Z > Task :expo-dom-webview:packageReleaseResources
+2026-11-14T08:44:17.8895599Z > Task :expo-constants:packageReleaseResources
+2026-11-14T08:44:17.8925989Z > Task :expo-constants:processReleaseNavigationResources
+2026-11-14T08:44:17.9534906Z > Task :expo-dom-webview:processReleaseNavigationResources
+2026-11-14T08:44:17.9564260Z > Task :expo-constants:parseReleaseLocalResources
+2026-11-14T08:44:17.9594173Z > Task :expo-dom-webview:parseReleaseLocalResources
+2026-11-14T08:44:17.9624158Z > Task :expo-constants:javaPreCompileRelease
+2026-11-14T08:44:17.9654292Z > Task :expo-dom-webview:generateReleaseRFile
+2026-11-14T08:44:17.9684195Z > Task :expo-dom-webview:javaPreCompileRelease
+2026-11-14T08:44:17.9747525Z > Task :expo-log-box:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:44:17.9774148Z > Task :expo-constants:generateReleaseRFile
+2026-11-14T08:44:17.9860442Z > Task :expo:javaPreCompileRelease
+2026-11-14T08:44:17.9916631Z > Task :expo-log-box:generateReleaseBuildConfig
+2026-11-14T08:44:17.9934219Z > Task :expo-log-box:generateReleaseResources
+2026-11-14T08:44:17.9972612Z > Task :expo-log-box:packageReleaseResources
+2026-11-14T08:44:18.0014245Z > Task :expo-log-box:processReleaseNavigationResources
+2026-11-14T08:44:18.0517150Z > Task :expo-log-box:parseReleaseLocalResources
+2026-11-14T08:44:18.0517818Z > Task :expo-log-box:generateReleaseRFile
+2026-11-14T08:44:18.0574398Z > Task :app:buildKotlinToolingMetadata
+2026-11-14T08:44:18.0593190Z > Task :expo-log-box:javaPreCompileRelease
+2026-11-14T08:44:18.0654196Z > Task :expo:prepareReleaseArtProfile
+2026-11-14T08:44:18.0684301Z > Task :expo-constants:prepareReleaseArtProfile
+2026-11-14T08:44:18.0692992Z > Task :expo-dom-webview:prepareReleaseArtProfile
+2026-11-14T08:44:18.0754431Z > Task :expo-log-box:prepareReleaseArtProfile
+2026-11-14T08:44:18.0823886Z > Task :nitro-forge_ignition:prepareReleaseArtProfile
+2026-11-14T08:44:19.2496635Z > Task :expo:writeReleaseAarMetadata
+2026-11-14T08:44:19.7524726Z 
+2026-11-14T08:44:19.7554895Z > Task :react-native-nitro-modules:configureCMakeRelWithDebInfo[arm64-v8a]
+2026-11-14T08:44:19.7564235Z "Install CMake 3.22.1 v.3.22.1" ready.
+2026-11-14T08:44:19.7564794Z Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
+2026-11-14T08:44:19.7565272Z "Install CMake 3.22.1 v.3.22.1" complete.
+2026-11-14T08:44:19.7565546Z "Install CMake 3.22.1 v.3.22.1" finished.
+2026-11-14T08:44:20.8504152Z 
+2026-11-14T08:44:20.8505530Z > Task :expo-constants:writeReleaseAarMetadata
+2026-11-14T08:44:20.8506787Z > Task :expo-dom-webview:writeReleaseAarMetadata
+2026-11-14T08:44:21.1504830Z > Task :expo-log-box:writeReleaseAarMetadata
+2026-11-14T08:44:21.1584480Z > Task :nitro-forge_ignition:writeReleaseAarMetadata
+2026-11-14T08:44:21.1614282Z > Task :expo:extractDeepLinksRelease
+2026-11-14T08:44:21.2504872Z > Task :expo:processReleaseManifest
+2026-11-14T08:44:21.2524456Z > Task :expo-constants:extractDeepLinksRelease
+2026-11-14T08:44:21.3542182Z > Task :expo-constants:processReleaseManifest
+2026-11-14T08:44:21.3544463Z > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:44:21.3594163Z > Task :app:generateReleaseBuildConfig
+2026-11-14T08:44:21.3604408Z > Task :app:checkReleaseDuplicateClasses
+2026-11-14T08:44:21.3624976Z > Task :expo-dom-webview:extractDeepLinksRelease
+2026-11-14T08:44:21.3664435Z > Task :expo-dom-webview:processReleaseManifest
+2026-11-14T08:44:21.4517162Z > Task :expo-log-box:extractDeepLinksRelease
+2026-11-14T08:44:21.4518118Z > Task :expo-log-box:processReleaseManifest
+2026-11-14T08:44:21.4574466Z > Task :nitro-forge_ignition:extractDeepLinksRelease
+2026-11-14T08:44:21.5517621Z > Task :nitro-forge_ignition:processReleaseManifest
+2026-11-14T08:44:21.5534363Z > Task :expo:mapReleaseSourceSetPaths
+2026-11-14T08:44:21.8504863Z > Task :expo:compileReleaseLibraryResources
+2026-11-14T08:44:21.8517256Z > Task :expo-constants:mapReleaseSourceSetPaths
+2026-11-14T08:44:21.8519558Z > Task :expo-constants:compileReleaseLibraryResources
+2026-11-14T08:44:21.8526881Z > Task :expo-dom-webview:mapReleaseSourceSetPaths
+2026-11-14T08:44:21.8528288Z > Task :expo-dom-webview:compileReleaseLibraryResources
+2026-11-14T08:44:21.8548183Z > Task :expo-log-box:mapReleaseSourceSetPaths
+2026-11-14T08:44:21.8550169Z > Task :expo-log-box:compileReleaseLibraryResources
+2026-11-14T08:44:21.8550812Z > Task :nitro-forge_ignition:mapReleaseSourceSetPaths
+2026-11-14T08:44:21.8551482Z > Task :nitro-forge_ignition:compileReleaseLibraryResources
+2026-11-14T08:44:21.8552228Z > Task :nitro-forge_ignition:processReleaseJavaRes NO-SOURCE
+2026-11-14T08:44:21.8578811Z > Task :expo:generateReleaseAssets UP-TO-DATE
+2026-11-14T08:44:21.8592558Z > Task :expo:mergeReleaseAssets
+2026-11-14T08:44:21.8593312Z > Task :expo-constants:generateReleaseAssets UP-TO-DATE
+2026-11-14T08:44:21.8619619Z > Task :expo-constants:mergeReleaseAssets
+2026-11-14T08:44:21.8631465Z > Task :expo-dom-webview:generateReleaseAssets UP-TO-DATE
+2026-11-14T08:44:21.8659310Z > Task :expo-dom-webview:mergeReleaseAssets
+2026-11-14T08:44:21.8679917Z > Task :expo-log-box:generateReleaseAssets UP-TO-DATE
+2026-11-14T08:44:21.9525324Z > Task :expo-log-box:mergeReleaseAssets
+2026-11-14T08:44:21.9544373Z > Task :nitro-forge_ignition:generateReleaseAssets UP-TO-DATE
+2026-11-14T08:44:21.9545196Z > Task :nitro-forge_ignition:mergeReleaseAssets
+2026-11-14T08:44:21.9574195Z > Task :expo:extractProguardFiles
+2026-11-14T08:44:21.9604209Z > Task :expo-constants:extractProguardFiles
+2026-11-14T08:44:21.9604906Z > Task :expo-constants:prepareLintJarForPublish
+2026-11-14T08:44:21.9628105Z > Task :expo-dom-webview:extractProguardFiles
+2026-11-14T08:44:21.9654284Z > Task :expo-dom-webview:prepareLintJarForPublish
+2026-11-14T08:44:21.9684252Z > Task :expo-log-box:extractProguardFiles
+2026-11-14T08:44:21.9714008Z > Task :expo-log-box:prepareLintJarForPublish
+2026-11-14T08:44:21.9714669Z > Task :expo:prepareLintJarForPublish
+2026-11-14T08:44:21.9774840Z > Task :nitro-forge_ignition:extractProguardFiles
+2026-11-14T08:44:21.9807631Z > Task :nitro-forge_ignition:prepareLintJarForPublish
+2026-11-14T08:44:21.9837183Z > Task :nitro-forge_ignition:extractDeepLinksForAarRelease
+2026-11-14T08:44:22.0495867Z > Task :nitro-forge_ignition:mergeReleaseJavaResource
+2026-11-14T08:44:22.0497880Z > Task :expo:stripReleaseDebugSymbols NO-SOURCE
+2026-11-14T08:44:22.0498410Z > Task :expo:copyReleaseJniLibsProjectAndLocalJars
+2026-11-14T08:44:22.0498847Z > Task :expo:extractDeepLinksForAarRelease
+2026-11-14T08:44:23.3553185Z 
+2026-11-14T08:44:23.3554044Z > Task :app:createBundleReleaseJsAndAssets
+2026-11-14T08:44:23.3554502Z Starting Metro Bundler
+2026-11-14T08:44:23.3554696Z 
+2026-11-14T08:44:29.9496002Z Android Bundled 7460ms index.js (650 modules)
+2026-11-14T08:44:29.9499178Z Writing bundle output to: /home/runner/work/_temp/consumer/android/app/build/generated/assets/react/release/index.android.bundle
+2026-11-14T08:44:29.9500974Z Writing sourcemap output to: /home/runner/work/_temp/consumer/android/app/build/intermediates/sourcemaps/react/release/index.android.bundle.packager.map
+2026-11-14T08:44:29.9502088Z Done writing bundle output
+2026-11-14T08:44:29.9502615Z Done writing sourcemap output
+2026-11-14T08:44:30.3504260Z 
+2026-11-14T08:44:30.3524567Z > Task :expo-log-box:checkReleaseAarMetadata
+2026-11-14T08:44:30.3554342Z > Task :expo-log-box:stripReleaseDebugSymbols NO-SOURCE
+2026-11-14T08:44:30.3584347Z > Task :expo-log-box:copyReleaseJniLibsProjectAndLocalJars
+2026-11-14T08:44:30.3604125Z > Task :expo-log-box:extractDeepLinksForAarRelease
+2026-11-14T08:44:30.3634404Z > Task :expo-dom-webview:checkReleaseAarMetadata
+2026-11-14T08:44:30.3644287Z > Task :expo-dom-webview:stripReleaseDebugSymbols NO-SOURCE
+2026-11-14T08:44:30.3664195Z > Task :expo-dom-webview:copyReleaseJniLibsProjectAndLocalJars
+2026-11-14T08:44:30.3694212Z > Task :expo-dom-webview:extractDeepLinksForAarRelease
+2026-11-14T08:44:30.3734165Z > Task :expo-constants:checkReleaseAarMetadata
+2026-11-14T08:44:30.3754172Z > Task :expo-constants:stripReleaseDebugSymbols NO-SOURCE
+2026-11-14T08:44:30.3754841Z > Task :expo-constants:copyReleaseJniLibsProjectAndLocalJars
+2026-11-14T08:44:30.3755458Z > Task :expo-constants:extractDeepLinksForAarRelease
+2026-11-14T08:44:30.3756334Z > Task :expo-constants:writeReleaseLintModelMetadata
+2026-11-14T08:44:30.3756895Z > Task :expo-dom-webview:writeReleaseLintModelMetadata
+2026-11-14T08:44:30.3757439Z > Task :expo-log-box:writeReleaseLintModelMetadata
+2026-11-14T08:44:30.3757940Z > Task :expo:writeReleaseLintModelMetadata
+2026-11-14T08:44:30.3758475Z > Task :nitro-forge_ignition:writeReleaseLintModelMetadata
+2026-11-14T08:44:30.3758981Z > Task :expo-constants:mergeReleaseResources
+2026-11-14T08:44:30.7516840Z > Task :expo-constants:verifyReleaseResources
+2026-11-14T08:44:30.7595040Z > Task :expo-dom-webview:mergeReleaseResources
+2026-11-14T08:44:30.8504956Z > Task :expo-dom-webview:verifyReleaseResources
+2026-11-14T08:44:32.2524791Z > Task :expo-log-box:mergeReleaseResources
+2026-11-14T08:44:32.4535206Z > Task :expo-modules-core:configureCMakeRelWithDebInfo[arm64-v8a]
+2026-11-14T08:44:40.2524816Z > Task :expo-log-box:verifyReleaseResources
+2026-11-14T08:44:51.5505080Z > Task :app:generateReleaseResValues
+2026-11-14T08:44:51.6524886Z > Task :app:generateReleaseResources
+2026-11-14T08:44:51.7534842Z > Task :app:packageReleaseResources
+2026-11-14T08:44:51.7584434Z > Task :app:mapReleaseSourceSetPaths
+2026-11-14T08:44:51.7640574Z > Task :app:javaPreCompileRelease
+2026-11-14T08:44:51.7734677Z > Task :app:createReleaseCompatibleScreenManifests
+2026-11-14T08:44:51.7824882Z > Task :app:extractDeepLinksRelease
+2026-11-14T08:44:51.8518941Z > Task :app:extractProguardFiles
+2026-11-14T08:44:51.8604704Z > Task :app:mergeReleaseStartupProfile
+2026-11-14T08:44:51.8664422Z > Task :app:generateReleaseAssets UP-TO-DATE
+2026-11-14T08:44:51.8724417Z > Task :app:extractReleaseVersionControlInfo
+2026-11-14T08:44:52.8544802Z > Task :app:collectReleaseDependencies
+2026-11-14T08:44:53.0517701Z > Task :app:sdkReleaseDependencyData
+2026-11-14T08:44:53.0544871Z > Task :app:validateSigningRelease
+2026-11-14T08:44:53.0594549Z > Task :app:writeReleaseAppMetadata
+2026-11-14T08:44:53.0644420Z > Task :app:writeReleaseSigningConfigVersions
+2026-11-14T08:45:02.4554937Z > Task :expo-modules-core:buildCMakeRelWithDebInfo[arm64-v8a]
+2026-11-14T08:45:02.4614530Z > Task :react-native-nitro-modules:buildCMakeRelWithDebInfo[arm64-v8a]
+2026-11-14T08:45:10.8499670Z > Task :react-native-nitro-modules:configureCMakeRelWithDebInfo[armeabi-v7a]
+2026-11-14T08:45:21.7525073Z > Task :expo-modules-core:configureCMakeRelWithDebInfo[armeabi-v7a]
+2026-11-14T08:45:36.0507010Z > Task :react-native-nitro-modules:buildCMakeRelWithDebInfo[armeabi-v7a]
+2026-11-14T08:45:37.5554927Z > Task :react-native-nitro-modules:configureCMakeRelWithDebInfo[x86]
+2026-11-14T08:45:51.7514897Z > Task :expo-modules-core:buildCMakeRelWithDebInfo[armeabi-v7a]
+2026-11-14T08:46:04.1499786Z > Task :react-native-nitro-modules:buildCMakeRelWithDebInfo[x86]
+2026-11-14T08:46:04.8537106Z > Task :react-native-nitro-modules:configureCMakeRelWithDebInfo[x86_64]
+2026-11-14T08:46:05.8525988Z > Task :expo-modules-core:configureCMakeRelWithDebInfo[x86]
+2026-11-14T08:46:34.8496047Z > Task :react-native-nitro-modules:buildCMakeRelWithDebInfo[x86_64]
+2026-11-14T08:46:35.8524856Z > Task :expo-modules-core:buildCMakeRelWithDebInfo[x86]
+2026-11-14T08:46:38.3515340Z > Task :react-native-nitro-modules:externalNativeBuildRelease
+2026-11-14T08:46:38.3584628Z > Task :react-native-nitro-modules:generateJsonModelRelease
+2026-11-14T08:46:38.3614961Z > Task :react-native-nitro-modules:prefabReleaseConfigurePackage
+2026-11-14T08:46:38.5513847Z > Task :react-native-nitro-modules:prefabReleasePackage
+2026-11-14T08:46:38.5539500Z > Task :react-native-nitro-modules:mergeReleaseJniLibFolders
+2026-11-14T08:46:39.0519290Z > Task :react-native-nitro-modules:mergeReleaseNativeLibs
+2026-11-14T08:46:39.4567304Z > Task :react-native-nitro-modules:copyReleaseJniLibsProjectOnly
+2026-11-14T08:46:39.5504994Z > Task :react-native-nitro-modules:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:46:39.5564571Z > Task :react-native-nitro-modules:generateReleaseBuildConfig
+2026-11-14T08:46:39.5584264Z > Task :react-native-nitro-modules:generateReleaseResources
+2026-11-14T08:46:39.5624378Z > Task :react-native-nitro-modules:packageReleaseResources
+2026-11-14T08:46:39.5684370Z > Task :react-native-nitro-modules:processReleaseNavigationResources
+2026-11-14T08:46:39.6517896Z > Task :react-native-nitro-modules:parseReleaseLocalResources
+2026-11-14T08:46:39.6524626Z > Task :react-native-nitro-modules:generateReleaseRFile
+2026-11-14T08:46:40.6555133Z > Task :nitro-forge_ignition:configureCMakeRelWithDebInfo[arm64-v8a]
+2026-11-14T08:46:50.1524861Z > Task :app:configureCMakeRelWithDebInfo[arm64-v8a]
+2026-11-14T08:47:06.9524943Z > Task :expo-modules-core:configureCMakeRelWithDebInfo[x86_64]
+2026-11-14T08:47:09.6505192Z > Task :react-native-nitro-modules:compileReleaseKotlin
+2026-11-14T08:47:10.6535240Z > Task :nitro-forge_ignition:buildCMakeRelWithDebInfo[arm64-v8a]
+2026-11-14T08:47:13.2566142Z > Task :nitro-forge_ignition:configureCMakeRelWithDebInfo[armeabi-v7a]
+2026-11-14T08:47:14.9545078Z > Task :app:buildCMakeRelWithDebInfo[arm64-v8a]
+2026-11-14T08:47:18.0514920Z > Task :app:configureCMakeRelWithDebInfo[armeabi-v7a]
+2026-11-14T08:47:36.9572758Z > Task :expo-modules-core:buildCMakeRelWithDebInfo[x86_64]
+2026-11-14T08:47:43.1514951Z > Task :nitro-forge_ignition:buildCMakeRelWithDebInfo[armeabi-v7a]
+2026-11-14T08:47:48.0534915Z > Task :app:buildCMakeRelWithDebInfo[armeabi-v7a]
+2026-11-14T08:47:52.5504840Z > Task :react-native-nitro-modules:javaPreCompileRelease
+2026-11-14T08:47:53.8495757Z > Task :app:configureCMakeRelWithDebInfo[x86]
+2026-11-14T08:48:01.5496411Z > Task :nitro-forge_ignition:configureCMakeRelWithDebInfo[x86]
+2026-11-14T08:48:17.2544859Z > Task :app:buildCMakeRelWithDebInfo[x86]
+2026-11-14T08:48:18.1524952Z > Task :react-native-nitro-modules:compileReleaseJavaWithJavac
+2026-11-14T08:48:18.6505316Z > Task :react-native-nitro-modules:bundleLibCompileToJarRelease
+2026-11-14T08:48:18.6585248Z > Task :react-native-nitro-modules:mergeReleaseGeneratedProguardFiles
+2026-11-14T08:48:18.7516993Z > Task :react-native-nitro-modules:exportReleaseConsumerProguardFiles
+2026-11-14T08:48:18.7543482Z > Task :react-native-nitro-modules:prepareReleaseArtProfile
+2026-11-14T08:48:18.7619730Z > Task :react-native-nitro-modules:writeReleaseAarMetadata
+2026-11-14T08:48:18.7643322Z > Task :react-native-nitro-modules:extractDeepLinksRelease
+2026-11-14T08:48:18.7704651Z > Task :react-native-nitro-modules:processReleaseManifest
+2026-11-14T08:48:18.8496352Z > Task :react-native-nitro-modules:mapReleaseSourceSetPaths
+2026-11-14T08:48:18.8554899Z > Task :react-native-nitro-modules:compileReleaseLibraryResources
+2026-11-14T08:48:18.8714986Z > Task :react-native-nitro-modules:bundleLibRuntimeToJarRelease
+2026-11-14T08:48:18.9505338Z > Task :react-native-nitro-modules:processReleaseJavaRes
+2026-11-14T08:48:18.9554651Z > Task :react-native-nitro-modules:generateReleaseAssets UP-TO-DATE
+2026-11-14T08:48:18.9614797Z > Task :react-native-nitro-modules:mergeReleaseAssets
+2026-11-14T08:48:18.9676801Z > Task :react-native-nitro-modules:createFullJarRelease
+2026-11-14T08:48:19.0504853Z > Task :react-native-nitro-modules:extractProguardFiles
+2026-11-14T08:48:19.6524899Z > Task :app:configureCMakeRelWithDebInfo[x86_64]
+2026-11-14T08:48:26.8507803Z > Task :expo-modules-core:mergeReleaseJniLibFolders
+2026-11-14T08:48:27.3545104Z > Task :expo-modules-core:mergeReleaseNativeLibs
+2026-11-14T08:48:27.6524615Z > Task :expo-modules-core:copyReleaseJniLibsProjectOnly
+2026-11-14T08:48:27.6534315Z > Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-11-14T08:48:27.6682558Z > Task :expo-modules-core:generateReleaseBuildConfig
+2026-11-14T08:48:27.7556407Z > Task :expo-modules-core:generateReleaseResources
+2026-11-14T08:48:27.7604620Z > Task :expo-modules-core:packageReleaseResources
+2026-11-14T08:48:27.7714664Z > Task :expo-modules-core:processReleaseNavigationResources
+2026-11-14T08:48:27.7817363Z > Task :expo-modules-core:parseReleaseLocalResources
+2026-11-14T08:48:27.8534787Z > Task :expo-modules-core:generateReleaseRFile
+2026-11-14T08:48:31.5505057Z > Task :nitro-forge_ignition:buildCMakeRelWithDebInfo[x86]
+2026-11-14T08:48:33.8504831Z > Task :react-native-nitro-modules:generateReleaseLintModel
+2026-11-14T08:48:33.8604860Z > Task :expo-modules-core:javaPreCompileRelease
+2026-11-14T08:48:33.8714799Z > Task :expo-modules-core:prepareReleaseArtProfile
+2026-11-14T08:48:33.8744373Z > Task :expo-modules-core:writeReleaseAarMetadata
+2026-11-14T08:48:33.8840393Z > Task :expo-modules-core:extractDeepLinksRelease
+2026-11-14T08:48:33.8994722Z 
+2026-11-14T08:48:33.9030266Z > Task :expo-modules-core:processReleaseManifest
+2026-11-14T08:48:33.9120537Z /home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/AndroidManifest.xml:8:9-11:45 Warning:
+2026-11-14T08:48:33.9175066Z 	meta-data#com.facebook.soloader.enabled@android:value was tagged at AndroidManifest.xml:8 to replace other declarations but no other declaration present
+2026-11-14T08:48:33.9279461Z 
+2026-11-14T08:48:33.9334668Z > Task :expo-modules-core:mapReleaseSourceSetPaths
+2026-11-14T08:48:33.9424634Z > Task :expo-modules-core:compileReleaseLibraryResources
+2026-11-14T08:48:33.9544783Z > Task :expo-modules-core:generateReleaseAssets UP-TO-DATE
+2026-11-14T08:48:33.9634639Z > Task :expo-modules-core:mergeReleaseAssets
+2026-11-14T08:48:33.9690358Z > Task :expo-modules-core:extractProguardFiles
+2026-11-14T08:48:33.9784482Z > Task :expo-modules-core:prepareLintJarForPublish
+2026-11-14T08:48:33.9888845Z > Task :react-native-nitro-modules:prepareLintJarForPublish
+2026-11-14T08:48:33.9937697Z > Task :react-native-nitro-modules:checkReleaseAarMetadata
+2026-11-14T08:48:34.0507059Z > Task :react-native-nitro-modules:stripReleaseDebugSymbols
+2026-11-14T08:48:34.0568433Z > Task :react-native-nitro-modules:copyReleaseJniLibsProjectAndLocalJars
+2026-11-14T08:48:34.0654754Z > Task :react-native-nitro-modules:extractDeepLinksForAarRelease
+2026-11-14T08:48:34.8495781Z > Task :nitro-forge_ignition:configureCMakeRelWithDebInfo[x86_64]
+2026-11-14T08:48:38.6554161Z > Task :app:buildCMakeRelWithDebInfo[x86_64]
+2026-11-14T08:48:39.6504808Z > Task :app:processReleaseNavigationResources
+2026-11-14T08:48:39.7554860Z > Task :app:parseReleaseLocalResources
+2026-11-14T08:48:39.8527353Z > Task :app:generateReleaseRFile
+2026-11-14T08:48:40.2527355Z > Task :app:mergeReleaseArtProfile
+2026-11-14T08:48:40.5544817Z > Task :app:checkReleaseAarMetadata
+2026-11-14T08:48:40.5584605Z > Task :app:compileReleaseNavigationResources
+2026-11-14T08:48:44.9524754Z > Task :app:mergeReleaseResources
+2026-11-14T08:48:46.2544173Z 
+2026-11-14T08:48:46.2604827Z > Task :app:processReleaseMainManifest
+2026-11-14T08:48:46.2634595Z /home/runner/work/_temp/consumer/android/app/src/main/AndroidManifest.xml Warning:
+2026-11-14T08:48:46.2695144Z 	provider#expo.modules.filesystem.FileSystemFileProvider@android:authorities was tagged at AndroidManifest.xml:0 to replace other declarations but no other declaration present
+2026-11-14T08:48:46.3534164Z 
+2026-11-14T08:48:46.3574877Z > Task :app:expoReleaseOverrideMaxSdkConflicts
+2026-11-14T08:48:46.3640416Z [33m---------- Expo Max Sdk Override Plugin ----------[0m
+2026-11-14T08:48:46.3661829Z [32m>>> No 'android:maxSdkVersion' conflicts found[0m
+2026-11-14T08:48:46.3745248Z [33m--------------------------------------------------[0m
+2026-11-14T08:48:46.4495180Z 
+2026-11-14T08:48:46.4594835Z > Task :app:processReleaseManifest
+2026-11-14T08:48:46.4624488Z > Task :app:processReleaseManifestForPackage
+2026-11-14T08:48:48.6514952Z > Task :react-native-nitro-modules:extractReleaseAnnotations
+2026-11-14T08:48:49.0535098Z > Task :app:mergeReleaseAssets
+2026-11-14T08:48:49.0660260Z > Task :app:compressReleaseAssets
+2026-11-14T08:48:49.1545056Z > Task :react-native-nitro-modules:mergeReleaseConsumerProguardFiles
+2026-11-14T08:48:49.1584877Z > Task :react-native-nitro-modules:mergeReleaseJavaResource
+2026-11-14T08:48:49.3497243Z > Task :react-native-nitro-modules:syncReleaseLibJars
+2026-11-14T08:48:49.5505402Z > Task :app:processReleaseResources
+2026-11-14T08:48:49.6509125Z > Task :expo:checkReleaseAarMetadata
+2026-11-14T08:48:49.7524965Z > Task :expo-modules-core:checkReleaseAarMetadata
+2026-11-14T08:48:50.0570996Z > Task :react-native-nitro-modules:bundleReleaseLocalLintAar
+2026-11-14T08:48:50.4516224Z > Task :expo-modules-core:stripReleaseDebugSymbols
+2026-11-14T08:48:50.5575826Z > Task :expo-modules-core:copyReleaseJniLibsProjectAndLocalJars
+2026-11-14T08:48:50.5647118Z > Task :expo-modules-core:extractDeepLinksForAarRelease
+2026-11-14T08:48:51.2495940Z > Task :react-native-nitro-modules:writeReleaseLintModelMetadata
+2026-11-14T08:48:51.2584291Z > Task :react-native-nitro-modules:lintVitalAnalyzeRelease SKIPPED
+2026-11-14T08:48:51.2671622Z > Task :expo-modules-core:writeReleaseLintModelMetadata
+2026-11-14T08:48:51.3516447Z > Task :react-native-nitro-modules:generateReleaseLintVitalModel
+2026-11-14T08:48:51.7535552Z > Task :app:optimizeReleaseResources
+2026-11-14T08:48:53.4545897Z > Task :expo:mergeReleaseResources
+2026-11-14T08:48:53.6503444Z > Task :expo-modules-core:mergeReleaseResources
+2026-11-14T08:48:55.9514689Z > Task :expo:verifyReleaseResources
+2026-11-14T08:48:56.5495787Z > Task :expo-modules-core:verifyReleaseResources
+2026-11-14T08:48:57.8514769Z > Task :expo-modules-core:compileReleaseKotlin
+2026-11-14T08:48:59.0495823Z > Task :react-native-nitro-modules:bundleReleaseAar
+2026-11-14T08:49:00.3495770Z > Task :react-native-nitro-modules:mergeReleaseResources
+2026-11-14T08:49:02.0505123Z > Task :react-native-nitro-modules:verifyReleaseResources
+2026-11-14T08:49:02.0526222Z > Task :react-native-nitro-modules:assembleRelease
+2026-11-14T08:49:02.8540041Z > Task :nitro-forge_ignition:buildCMakeRelWithDebInfo[x86_64]
+2026-11-14T08:49:03.2526844Z Note: /home/runner/work/_temp/consumer/node_modules/.pnpm/@nitro-forge+ignition@file+artifacts+nitro-forge-ignition-1.0.0-f6.43576021743.1.tgz_ni_286558a48356ecfbf706acc5712bf126/node_modules/@nitro-forge/ignition/android/src/main/java/com/nitroforge/ignitionv1/NitroForgePackage.java uses or overrides a deprecated API.
+2026-11-14T08:49:03.2528566Z 
+2026-11-14T08:49:03.2529245Z > Task :nitro-forge_ignition:compileReleaseJavaWithJavac
+2026-11-14T08:49:03.2614459Z Note: Recompile with -Xlint:deprecation for details.
+2026-11-14T08:49:03.2614821Z 
+2026-11-14T08:49:03.2624077Z > Task :nitro-forge_ignition:mergeReleaseGeneratedProguardFiles
+2026-11-14T08:49:03.2644367Z > Task :nitro-forge_ignition:exportReleaseConsumerProguardFiles
+2026-11-14T08:49:03.2671934Z > Task :nitro-forge_ignition:bundleLibCompileToJarRelease
+2026-11-14T08:49:03.2683424Z > Task :nitro-forge_ignition:bundleLibRuntimeToJarRelease
+2026-11-14T08:49:03.4525012Z > Task :nitro-forge_ignition:generateReleaseLintModel
+2026-11-14T08:49:03.4525936Z > Task :nitro-forge_ignition:createFullJarRelease
+2026-11-14T08:49:03.4554414Z > Task :nitro-forge_ignition:checkReleaseAarMetadata
+2026-11-14T08:49:03.4574241Z > Task :nitro-forge_ignition:extractReleaseAnnotations
+2026-11-14T08:49:03.4614283Z > Task :nitro-forge_ignition:mergeReleaseConsumerProguardFiles
+2026-11-14T08:49:03.4615116Z > Task :nitro-forge_ignition:syncReleaseLibJars
+2026-11-14T08:49:03.4639625Z > Task :nitro-forge_ignition:lintVitalAnalyzeRelease SKIPPED
+2026-11-14T08:49:03.5525169Z > Task :nitro-forge_ignition:generateReleaseLintVitalModel
+2026-11-14T08:49:03.9496130Z > Task :nitro-forge_ignition:mergeReleaseResources
+2026-11-14T08:49:05.9512874Z > Task :nitro-forge_ignition:mergeReleaseNativeLibs
+2026-11-14T08:49:06.0525010Z > Task :nitro-forge_ignition:verifyReleaseResources
+2026-11-14T08:49:07.0496674Z > Task :nitro-forge_ignition:stripReleaseDebugSymbols
+2026-11-14T08:49:08.0505047Z > Task :nitro-forge_ignition:copyReleaseJniLibsProjectAndLocalJars
+2026-11-14T08:49:08.6526541Z > Task :nitro-forge_ignition:copyReleaseJniLibsProjectOnly
+2026-11-14T08:49:09.1496014Z > Task :nitro-forge_ignition:bundleReleaseLocalLintAar
+2026-11-14T08:49:16.3495880Z > Task :nitro-forge_ignition:bundleReleaseAar
+2026-11-14T08:49:16.3497090Z > Task :nitro-forge_ignition:assembleRelease
+2026-11-14T08:49:16.4548521Z > Task :app:mergeReleaseNativeLibs
+2026-11-14T08:49:17.3495669Z > Task :app:stripReleaseDebugSymbols
+2026-11-14T08:49:18.2501903Z > Task :app:extractReleaseNativeSymbolTables
+2026-11-14T08:49:19.4499919Z 
+2026-11-14T08:49:19.4500896Z > Task :expo-modules-core:compileReleaseKotlin
+2026-11-14T08:49:19.4503263Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/CppType.kt:42:23 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4507050Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/JavaCallback.kt:38:10 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4514671Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/JavaCallback.kt:96:45 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4518149Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:49:15 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4520339Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:64:30 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4522570Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:66:14 'constructor(byteBuffer: ByteBuffer): NativeArrayBuffer' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4524962Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:74:39 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4527247Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:75:7 'constructor(byteBuffer: ByteBuffer): NativeArrayBuffer' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4529419Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:80:37 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4531532Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:86:47 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4534325Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:92:23 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4536575Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:92:43 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4538712Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:95:41 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4540926Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/jni/NativeArrayBuffer.kt:105:14 'constructor(byteBuffer: ByteBuffer): NativeArrayBuffer' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4543372Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/ColorCompat.kt:115:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-11-14T08:49:19.4545837Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-11-14T08:49:19.4546908Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-11-14T08:49:19.4547327Z 
+2026-11-14T08:49:19.4547679Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-11-14T08:49:19.4550060Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/JSTypeConverter.kt:7:8 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4553873Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/JSTypeConverter.kt:245:55 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4557522Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/JSTypeConverter.kt:247:19 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4561146Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/ReturnType.kt:6:8 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4566727Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/ReturnType.kt:45:5 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4570373Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/TypeConverterProvider.kt:19:8 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:19.4574187Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo-modules-core@58.1.0_react-native@0.88.1_@babel+core@7.29.13_supports-color@8.1.1___8b831a8800a18003cec4f1df2d7018dc/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/TypeConverterProvider.kt:254:7 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:21.0500211Z 
+2026-11-14T08:49:21.0524801Z Note: Some input files use or override a deprecated API.
+2026-11-14T08:49:21.0527113Z > Task :expo-modules-core:compileReleaseJavaWithJavac
+2026-11-14T08:49:21.0554128Z Note: Recompile with -Xlint:deprecation for details.
+2026-11-14T08:49:21.0554465Z 
+2026-11-14T08:49:21.0584203Z > Task :expo-modules-core:mergeReleaseGeneratedProguardFiles
+2026-11-14T08:49:21.0614360Z > Task :expo-modules-core:exportReleaseConsumerProguardFiles
+2026-11-14T08:49:21.1497534Z > Task :expo-modules-core:processReleaseJavaRes
+2026-11-14T08:49:21.1524476Z > Task :expo-modules-core:bundleLibCompileToJarRelease
+2026-11-14T08:49:21.1525287Z > Task :expo-modules-core:bundleLibRuntimeToJarRelease
+2026-11-14T08:49:21.3504811Z > Task :expo-modules-core:generateReleaseLintModel
+2026-11-14T08:49:22.6544740Z > Task :expo-constants:compileReleaseKotlin
+2026-11-14T08:49:22.6557629Z > Task :expo-constants:compileReleaseJavaWithJavac NO-SOURCE
+2026-11-14T08:49:22.7564958Z > Task :expo-constants:bundleLibCompileToJarRelease
+2026-11-14T08:49:22.7614846Z > Task :expo-constants:mergeReleaseGeneratedProguardFiles
+2026-11-14T08:49:22.7644748Z > Task :expo-constants:exportReleaseConsumerProguardFiles
+2026-11-14T08:49:22.7674339Z > Task :expo-constants:bundleLibRuntimeToJarRelease
+2026-11-14T08:49:22.7734537Z > Task :expo-constants:processReleaseJavaRes
+2026-11-14T08:49:22.7764232Z > Task :expo-constants:createFullJarRelease
+2026-11-14T08:49:22.8554796Z > Task :expo-modules-core:createFullJarRelease
+2026-11-14T08:49:23.0495976Z > Task :expo-constants:generateReleaseLintModel
+2026-11-14T08:49:24.3507430Z > Task :expo-modules-core:extractReleaseAnnotations
+2026-11-14T08:49:24.3508262Z > Task :expo-modules-core:mergeReleaseConsumerProguardFiles
+2026-11-14T08:49:24.4504895Z > Task :expo-modules-core:mergeReleaseJavaResource
+2026-11-14T08:49:24.4554453Z > Task :expo-log-box:compileReleaseKotlin
+2026-11-14T08:49:24.4583902Z 
+2026-11-14T08:49:24.4614263Z > Task :expo-dom-webview:compileReleaseKotlin
+2026-11-14T08:49:24.4645720Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/@expo+dom-webview@58.0.2_expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-n_201b67b9e7f5e25009563b7ca394b7b1/node_modules/@expo/dom-webview/android/src/main/java/expo/modules/webview/DomWebView.kt:200:16 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+2026-11-14T08:49:24.4656636Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/@expo+dom-webview@58.0.2_expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-n_201b67b9e7f5e25009563b7ca394b7b1/node_modules/@expo/dom-webview/android/src/main/java/expo/modules/webview/DomWebView.kt:254:18 'fun executeOnJavaScriptThread(runnable: Runnable): Unit' is deprecated. Use RuntimeContext.schedule instead.
+2026-11-14T08:49:24.5504232Z 
+2026-11-14T08:49:24.5564893Z > Task :expo-dom-webview:compileReleaseJavaWithJavac NO-SOURCE
+2026-11-14T08:49:24.5624383Z > Task :expo-dom-webview:bundleLibCompileToJarRelease
+2026-11-14T08:49:24.5634570Z > Task :expo-dom-webview:mergeReleaseGeneratedProguardFiles
+2026-11-14T08:49:24.5664501Z > Task :expo-dom-webview:exportReleaseConsumerProguardFiles
+2026-11-14T08:49:24.5693324Z > Task :expo-dom-webview:bundleLibRuntimeToJarRelease
+2026-11-14T08:49:24.5744308Z > Task :expo-dom-webview:processReleaseJavaRes
+2026-11-14T08:49:24.6514738Z > Task :expo-dom-webview:createFullJarRelease
+2026-11-14T08:49:24.6524430Z > Task :expo-dom-webview:generateReleaseLintModel
+2026-11-14T08:49:24.6545173Z > Task :expo-dom-webview:extractReleaseAnnotations
+2026-11-14T08:49:24.6584366Z > Task :expo-dom-webview:mergeReleaseConsumerProguardFiles
+2026-11-14T08:49:24.6593931Z > Task :expo-dom-webview:mergeReleaseJavaResource
+2026-11-14T08:49:24.6644184Z > Task :expo-dom-webview:syncReleaseLibJars
+2026-11-14T08:49:24.6645355Z > Task :expo-dom-webview:bundleReleaseLocalLintAar
+2026-11-14T08:49:24.7515089Z > Task :expo-constants:extractReleaseAnnotations
+2026-11-14T08:49:24.7534614Z > Task :expo-constants:mergeReleaseConsumerProguardFiles
+2026-11-14T08:49:24.7567188Z > Task :expo-constants:mergeReleaseJavaResource
+2026-11-14T08:49:24.7594076Z > Task :expo-constants:syncReleaseLibJars
+2026-11-14T08:49:24.7624042Z > Task :expo-constants:bundleReleaseLocalLintAar
+2026-11-14T08:49:24.7654173Z > Task :expo-constants:generateReleaseLintVitalModel
+2026-11-14T08:49:24.7684209Z > Task :expo-dom-webview:generateReleaseLintVitalModel
+2026-11-14T08:49:24.7714119Z > Task :expo-constants:bundleReleaseAar
+2026-11-14T08:49:24.7729289Z > Task :expo-constants:assembleRelease
+2026-11-14T08:49:24.8505206Z > Task :expo-dom-webview:bundleReleaseAar
+2026-11-14T08:49:24.8506069Z > Task :expo-dom-webview:assembleRelease
+2026-11-14T08:49:24.8534191Z > Task :expo-log-box:compileReleaseJavaWithJavac
+2026-11-14T08:49:24.8564269Z > Task :expo-log-box:mergeReleaseGeneratedProguardFiles
+2026-11-14T08:49:24.8564850Z > Task :expo-log-box:bundleLibCompileToJarRelease
+2026-11-14T08:49:24.8594129Z > Task :expo-log-box:exportReleaseConsumerProguardFiles
+2026-11-14T08:49:24.8594679Z > Task :expo-log-box:bundleLibRuntimeToJarRelease
+2026-11-14T08:49:24.8595169Z > Task :expo-log-box:processReleaseJavaRes
+2026-11-14T08:49:24.8595605Z > Task :expo-log-box:createFullJarRelease
+2026-11-14T08:49:24.8596070Z > Task :expo-modules-core:syncReleaseLibJars
+2026-11-14T08:49:24.9514900Z > Task :expo-modules-core:bundleReleaseLocalLintAar
+2026-11-14T08:49:24.9534054Z > Task :expo-log-box:generateReleaseLintModel
+2026-11-14T08:49:24.9534590Z > Task :expo-log-box:extractReleaseAnnotations
+2026-11-14T08:49:24.9535184Z > Task :expo-log-box:mergeReleaseConsumerProguardFiles
+2026-11-14T08:49:25.0524357Z > Task :expo-constants:lintVitalAnalyzeRelease SKIPPED
+2026-11-14T08:49:25.0544310Z > Task :expo-dom-webview:lintVitalAnalyzeRelease SKIPPED
+2026-11-14T08:49:25.0574271Z > Task :expo-log-box:lintVitalAnalyzeRelease SKIPPED
+2026-11-14T08:49:25.0595642Z > Task :expo-modules-core:lintVitalAnalyzeRelease SKIPPED
+2026-11-14T08:49:25.1504704Z > Task :expo-log-box:mergeReleaseJavaResource
+2026-11-14T08:49:25.1554231Z > Task :expo-log-box:generateReleaseLintVitalModel
+2026-11-14T08:49:25.1580082Z > Task :expo-log-box:syncReleaseLibJars
+2026-11-14T08:49:25.1604125Z > Task :expo-modules-core:generateReleaseLintVitalModel
+2026-11-14T08:49:25.1634124Z > Task :expo-log-box:bundleReleaseLocalLintAar
+2026-11-14T08:49:25.1664063Z > Task :expo-log-box:bundleReleaseAar
+2026-11-14T08:49:25.1694082Z > Task :expo-log-box:assembleRelease
+2026-11-14T08:49:25.6514967Z > Task :expo-modules-core:bundleReleaseAar
+2026-11-14T08:49:25.6544332Z > Task :expo-modules-core:assembleRelease
+2026-11-14T08:49:25.9504984Z > Task :app:mergeReleaseNativeDebugMetadata
+2026-11-14T08:49:27.1495654Z 
+2026-11-14T08:49:27.1496643Z > Task :expo:compileReleaseKotlin
+2026-11-14T08:49:27.1499490Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/ExpoModulesPackage.kt:34:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+2026-11-14T08:49:27.1503309Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:22:8 'class ReactInstanceManager : Any' is deprecated. Deprecated in Java.
+2026-11-14T08:49:27.1507533Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:103:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+2026-11-14T08:49:27.1511459Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:103:43 'class ReactInstanceManager : Any' is deprecated. Deprecated in Java.
+2026-11-14T08:49:27.1515905Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:104:21 'val reactInstanceManager: ReactInstanceManager' is deprecated. Deprecated in Java.
+2026-11-14T08:49:27.1519522Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/fetch/ExpoFetchModule.kt:15:8 'class NativeArrayBuffer : Destructible' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:27.1523205Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/fetch/ExpoFetchModule.kt:33:39 'constructor(reactContext: ReactContext): ForwardingCookieHandler' is deprecated. Use the default constructor.
+2026-11-14T08:49:27.1527160Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/fetch/ExpoFetchModule.kt:111:27 'constructor(byteBuffer: ByteBuffer): NativeArrayBuffer' is deprecated. Use ArrayBuffer instead.
+2026-11-14T08:49:27.1531128Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/fetch/NativeResponse.kt:44:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+2026-11-14T08:49:27.1535327Z w: file:///home/runner/work/_temp/consumer/node_modules/.pnpm/expo@58.0.24_@babel+core@7.29.13_supports-color@8.1.1__react-native@0.88.1_@babel+core@_bd47cebbb55daf889161cc2168c98879/node_modules/expo/android/src/main/java/expo/modules/fetch/NativeResponse.kt:46:11 'fun deallocate(): Unit' is deprecated. Use sharedObjectDidRelease() instead.
+2026-11-14T08:49:27.2514712Z 
+2026-11-14T08:49:27.2534839Z > Task :expo:compileReleaseJavaWithJavac NO-SOURCE
+2026-11-14T08:49:27.2544104Z > Task :expo:mergeReleaseGeneratedProguardFiles
+2026-11-14T08:49:27.2544681Z > Task :expo:exportReleaseConsumerProguardFiles
+2026-11-14T08:49:27.2545204Z > Task :expo:bundleLibCompileToJarRelease
+2026-11-14T08:49:27.2545666Z > Task :expo:bundleLibRuntimeToJarRelease
+2026-11-14T08:49:27.2546102Z > Task :expo:processReleaseJavaRes
+2026-11-14T08:49:27.2546520Z > Task :expo:createFullJarRelease
+2026-11-14T08:49:27.4514918Z > Task :expo:generateReleaseLintModel
+2026-11-14T08:49:27.6524702Z > Task :expo:extractReleaseAnnotations
+2026-11-14T08:49:27.6544256Z > Task :expo:mergeReleaseConsumerProguardFiles
+2026-11-14T08:49:27.6594741Z > Task :expo:lintVitalAnalyzeRelease SKIPPED
+2026-11-14T08:49:27.6614143Z > Task :expo:mergeReleaseJavaResource
+2026-11-14T08:49:27.6664065Z > Task :expo:generateReleaseLintVitalModel
+2026-11-14T08:49:27.7497444Z > Task :expo:syncReleaseLibJars
+2026-11-14T08:49:27.7504351Z > Task :expo:bundleReleaseLocalLintAar
+2026-11-14T08:49:27.7504859Z > Task :expo:bundleReleaseAar
+2026-11-14T08:49:27.7554780Z > Task :expo:assembleRelease
+2026-11-14T08:49:28.3513990Z 
+2026-11-14T08:49:28.3527889Z > Task :app:compileReleaseKotlin
+2026-11-14T08:49:28.3545537Z w: file:///home/runner/work/_temp/consumer/android/app/src/main/java/dev/nitroforge/f6/consumer/MainActivity.kt:36:20 'constructor(activity: ReactActivity, mainComponentName: String, fabricEnabled: Boolean): DefaultReactActivityDelegate' is deprecated. Creating DefaultReactActivityDelegate with flags is deprecated.
+2026-11-14T08:49:28.8495463Z 
+2026-11-14T08:49:28.8524893Z > Task :app:compileReleaseJavaWithJavac
+2026-11-14T08:49:28.9496291Z > Task :app:mergeReleaseGeneratedProguardFiles
+2026-11-14T08:49:28.9535660Z > Task :app:processReleaseJavaRes
+2026-11-14T08:49:29.3505018Z > Task :app:expandReleaseArtProfileWildcards
+2026-11-14T08:49:29.7495792Z > Task :app:mergeReleaseJavaResource
+2026-11-14T08:49:30.3495154Z > Task :app:generateReleaseLintVitalReportModel
+2026-11-14T08:49:44.8524956Z > Task :app:lintVitalAnalyzeRelease
+2026-11-14T08:49:44.9534963Z > Task :app:lintVitalReportRelease
+2026-11-14T08:49:44.9594676Z > Task :app:lintVitalRelease
+2026-11-14T08:50:00.3505216Z > Task :app:minifyReleaseWithR8
+2026-11-14T08:51:05.6504902Z > Task :app:compileReleaseArtProfile
+2026-11-14T08:51:06.4508728Z > Task :app:packageRelease
+2026-11-14T08:51:06.4511175Z > Task :app:createReleaseApkListingFileRedirect
+2026-11-14T08:51:06.4511799Z > Task :app:assembleRelease
+2026-11-14T08:51:06.5498102Z 
+2026-11-14T08:51:06.5513026Z [Incubating] Problems report is available at: file:///home/runner/work/_temp/consumer/android/build/reports/problems/problems-report.html
+2026-11-14T08:51:06.5514458Z 
+2026-11-14T08:51:06.5515176Z Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+2026-11-14T08:51:06.5515803Z 
+2026-11-14T08:51:06.5516680Z You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+2026-11-14T08:51:06.5517493Z 
+2026-11-14T08:51:06.5518467Z For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+2026-11-14T08:51:06.5519327Z 
+2026-11-14T08:51:06.5519626Z BUILD SUCCESSFUL in 9m 22s
+2026-11-14T08:51:06.5520170Z 404 actionable tasks: 404 executed
+2026-11-14T08:51:06.9207469Z ##[group]Run node -e 'const fs=require("node:fs"),p=require("node:path");const file=p.join(process.env.RUNNER_TEMP,"consumer/forge-consumer-receipt.json");const r=JSON.parse(fs.readFileSync(file,"utf8"));r.stages.push("compile:"+process.env.FORGE_PLATFORM);r.configuration="Release";r.nativeRuntime="NOT RUN";fs.writeFileSync(file,JSON.stringify(r,null,2)+"\n");'
+2026-11-14T08:51:06.9209254Z [36;1mnode -e 'const fs=require("node:fs"),p=require("node:path");const file=p.join(process.env.RUNNER_TEMP,"consumer/forge-consumer-receipt.json");const r=JSON.parse(fs.readFileSync(file,"utf8"));r.stages.push("compile:"+process.env.FORGE_PLATFORM);r.configuration="Release";r.nativeRuntime="NOT RUN";fs.writeFileSync(file,JSON.stringify(r,null,2)+"\n");'[0m
+2026-11-14T08:51:06.9731265Z shell: /usr/bin/bash -e {0}
+2026-11-14T08:51:06.9731521Z env:
+2026-11-14T08:51:06.9731695Z   CI: 1
+2026-11-14T08:51:06.9731867Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:51:06.9732222Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:51:06.9732619Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:51:06.9732927Z   FORGE_PLATFORM: android
+2026-11-14T08:51:06.9733133Z ##[endgroup]
+2026-11-14T08:51:07.0046278Z ##[group]Run set -euo pipefail
+2026-11-14T08:51:07.0046555Z [36;1mset -euo pipefail[0m
+2026-11-14T08:51:07.0046772Z [36;1mif [ 'android' = android ]; then[0m
+2026-11-14T08:51:07.0047179Z [36;1m  tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)[0m
+2026-11-14T08:51:07.0048233Z [36;1m  node tooling/release/runtime-artifact.mjs --platform android --app "$RUNNER_TEMP/consumer/android/app/build/outputs/apk/release/app-release.apk" --android-tools "$tools" --manifest "$RUNNER_TEMP/candidate/candidate.json" --consumer "$RUNNER_TEMP/consumer" --output "$RUNNER_TEMP/runtime-app"[0m
+2026-11-14T08:51:07.0049106Z [36;1melse[0m
+2026-11-14T08:51:07.0049498Z [36;1m  app=$(find "$RUNNER_TEMP/consumer-derived/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -print)[0m
+2026-11-14T08:51:07.0049936Z [36;1m  test -n "$app"[0m
+2026-11-14T08:51:07.0050541Z [36;1m  node tooling/release/runtime-artifact.mjs --platform ios --app "$app" --manifest "$RUNNER_TEMP/candidate/candidate.json" --consumer "$RUNNER_TEMP/consumer" --output "$RUNNER_TEMP/runtime-app"[0m
+2026-11-14T08:51:07.0051137Z [36;1mfi[0m
+2026-11-14T08:51:07.0095255Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T08:51:07.0095548Z env:
+2026-11-14T08:51:07.0095716Z   CI: 1
+2026-11-14T08:51:07.0095905Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:51:07.0096184Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:51:07.0096570Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:51:07.0096873Z ##[endgroup]
+2026-11-14T08:51:08.9678114Z {"stage":"bundled-runtime-artifact","platform":"android","archive":"forge-consumer-android.apk","nativeRuntime":"NOT RUN"}
+2026-11-14T08:51:09.0019159Z ##[group]Run node tooling/release/native-ui/install-maestro.mjs "$RUNNER_TEMP/forge-maestro"
+2026-11-14T08:51:09.0019706Z [36;1mnode tooling/release/native-ui/install-maestro.mjs "$RUNNER_TEMP/forge-maestro"[0m
+2026-11-14T08:51:09.0020170Z [36;1mecho "MAESTRO_BIN=$RUNNER_TEMP/forge-maestro/maestro/bin/maestro" >> "$GITHUB_ENV"[0m
+2026-11-14T08:51:09.0065883Z shell: /usr/bin/bash -e {0}
+2026-11-14T08:51:09.0066104Z env:
+2026-11-14T08:51:09.0066265Z   CI: 1
+2026-11-14T08:51:09.0066432Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:51:09.0066721Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:51:09.0067137Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:51:09.0067440Z ##[endgroup]
+2026-11-14T08:51:13.1416104Z /home/runner/work/_temp/forge-maestro/maestro/bin/maestro
+2026-11-14T08:51:13.2718231Z ##[group]Run set -euo pipefail
+2026-11-14T08:51:13.2718517Z [36;1mset -euo pipefail[0m
+2026-11-14T08:51:13.2718795Z [36;1mexport ANDROID_USER_HOME="$RUNNER_TEMP/forge-android-user"[0m
+2026-11-14T08:51:13.2719163Z [36;1mexport ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"[0m
+2026-11-14T08:51:13.2719447Z [36;1mmkdir -p "$ANDROID_AVD_HOME"[0m
+2026-11-14T08:51:13.2719914Z [36;1m"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "system-images;android-35;google_apis;x86_64" "emulator" "platform-tools"[0m
+2026-11-14T08:51:13.2720804Z [36;1mprintf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force -n ForgeF6Acceptance -k "system-images;android-35;google_apis;x86_64" --path "$ANDROID_AVD_HOME/ForgeF6Acceptance.avd"[0m
+2026-11-14T08:51:13.2721645Z [36;1mif [[ -e /dev/kvm ]]; then sudo chmod 666 /dev/kvm; fi[0m
+2026-11-14T08:51:13.2722318Z [36;1m"$ANDROID_HOME/emulator/emulator" -avd ForgeF6Acceptance -port 5554 -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -memory 3072 > "$RUNNER_TEMP/forge-emulator.log" 2>&1 &[0m
+2026-11-14T08:51:13.2722944Z [36;1mforge_emulator_pid=$![0m
+2026-11-14T08:51:13.2723226Z [36;1mtrap 'kill "$forge_emulator_pid" 2>/dev/null || true' EXIT[0m
+2026-11-14T08:51:13.2724058Z [36;1mnode tooling/release/native-ui/run.mjs --platform android --artifact-root "$RUNNER_TEMP/runtime-app" --source "$GITHUB_SHA" --output "$RUNNER_TEMP/runtime-ui"[0m
+2026-11-14T08:51:13.2769261Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T08:51:13.2769559Z env:
+2026-11-14T08:51:13.2769722Z   CI: 1
+2026-11-14T08:51:13.2769889Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T08:51:13.2770179Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:51:13.2770584Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T08:51:13.2770969Z   MAESTRO_BIN: /home/runner/work/_temp/forge-maestro/maestro/bin/maestro
+2026-11-14T08:51:13.2771259Z ##[endgroup]
+2026-11-14T08:51:16.2626539Z Warning: This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+2026-11-14T08:51:16.4967959Z Loading package information...                                                  
+2026-11-14T08:51:16.5695211Z Loading local repository...                                                     
+2026-11-14T08:51:16.5696004Z [                                       ] 3% Loading local repository...        
+2026-11-14T08:51:16.8635081Z [                                       ] 3% Fetch remote repository...         
+2026-11-14T08:51:17.2777530Z [=                                      ] 3% Fetch remote repository...         
+2026-11-14T08:51:17.3374508Z [=                                      ] 4% Fetch remote repository...         
+2026-11-14T08:51:17.3567534Z [=                                      ] 5% Fetch remote repository...         
+2026-11-14T08:51:17.3823485Z [==                                     ] 5% Fetch remote repository...         
+2026-11-14T08:51:17.4286767Z [==                                     ] 6% Fetch remote repository...         
+2026-11-14T08:51:18.0114988Z [==                                     ] 7% Fetch remote repository...         
+2026-11-14T08:51:18.0115728Z [==                                     ] 7% Computing updates...               
+2026-11-14T08:51:18.0225344Z [===                                    ] 8% Computing updates...               
+2026-11-14T08:51:18.0490776Z [===                                    ] 10% Computing updates...              
+2026-11-14T08:51:18.0764501Z [===                                    ] 10% Installing Android Emulator       
+2026-11-14T08:51:18.1130438Z [===                                    ] 10% Downloading emulator-linux_x64-167
+2026-11-14T08:51:18.2028473Z [====                                   ] 10% Downloading emulator-linux_x64-167
+2026-11-14T08:51:18.3772197Z [====                                   ] 11% Downloading emulator-linux_x64-167
+2026-11-14T08:51:18.5525502Z [====                                   ] 12% Downloading emulator-linux_x64-167
+2026-11-14T08:51:18.7460538Z [=====                                  ] 13% Downloading emulator-linux_x64-167
+2026-11-14T08:51:18.9543710Z [=====                                  ] 14% Downloading emulator-linux_x64-167
+2026-11-14T08:51:19.0508344Z [=====                                  ] 15% Downloading emulator-linux_x64-167
+2026-11-14T08:51:19.1527041Z [======                                 ] 15% Downloading emulator-linux_x64-167
+2026-11-14T08:51:19.3798110Z [======                                 ] 16% Downloading emulator-linux_x64-167
+2026-11-14T08:51:19.5642301Z [======                                 ] 17% Downloading emulator-linux_x64-167
+2026-11-14T08:51:19.7389774Z [=======                                ] 18% Downloading emulator-linux_x64-167
+2026-11-14T08:51:19.9154051Z [=======                                ] 19% Downloading emulator-linux_x64-167
+2026-11-14T08:51:19.9812006Z [=======                                ] 20% Downloading emulator-linux_x64-167
+2026-11-14T08:51:20.0632451Z [========                               ] 20% Downloading emulator-linux_x64-167
+2026-11-14T08:51:20.1644004Z [========                               ] 21% Downloading emulator-linux_x64-167
+2026-11-14T08:51:20.3811135Z [========                               ] 21% Unzipping...                      
+2026-11-14T08:51:20.3864447Z [========                               ] 21% Unzipping... emulator/            
+2026-11-14T08:51:20.3885010Z [========                               ] 21% Unzipping... emulator/resources/  
+2026-11-14T08:51:20.4320429Z [========                               ] 21% Unzipping... emulator/qsn         
+2026-11-14T08:51:20.5327784Z [========                               ] 21% Unzipping... emulator/emulator    
+2026-11-14T08:51:20.5533029Z [========                               ] 21% Unzipping... emulator/netsimd     
+2026-11-14T08:51:20.7208467Z [========                               ] 22% Unzipping... emulator/netsimd     
+2026-11-14T08:51:20.7209111Z [========                               ] 22% Unzipping... emulator/bin64/      
+2026-11-14T08:51:20.7209706Z [========                               ] 22% Unzipping... emulator/qemu/       
+2026-11-14T08:51:20.7221976Z [========                               ] 22% Unzipping... emulator/NOTICE.txt  
+2026-11-14T08:51:20.7368197Z [========                               ] 22% Unzipping... emulator/crashpad_han
+2026-11-14T08:51:20.7369816Z [========                               ] 22% Unzipping... emulator/source.prope
+2026-11-14T08:51:20.7887310Z [========                               ] 22% Unzipping... emulator/nimble_bridg
+2026-11-14T08:51:20.7889716Z [========                               ] 22% Unzipping... emulator/LICENSE     
+2026-11-14T08:51:20.7891874Z [========                               ] 22% Unzipping... emulator/lib/        
+2026-11-14T08:51:20.7972054Z [========                               ] 22% Unzipping... emulator/qemu-img    
+2026-11-14T08:51:20.7972879Z [========                               ] 22% Unzipping... emulator/include/    
+2026-11-14T08:51:20.7974182Z [========                               ] 22% Unzipping... emulator/NOTICE.csv  
+2026-11-14T08:51:20.7974808Z [========                               ] 22% Unzipping... emulator/lib64/      
+2026-11-14T08:51:20.8246432Z [========                               ] 22% Unzipping... emulator/emulator-che
+2026-11-14T08:51:20.8414713Z [========                               ] 22% Unzipping... emulator/crashreport 
+2026-11-14T08:51:20.8417424Z [========                               ] 22% Unzipping... emulator/mksdcard    
+2026-11-14T08:51:20.8596235Z [========                               ] 22% Unzipping... emulator/resources/To
+2026-11-14T08:51:20.8663884Z [========                               ] 22% Unzipping... emulator/resources/de
+2026-11-14T08:51:20.8665850Z [========                               ] 22% Unzipping... emulator/resources/To
+2026-11-14T08:51:20.8676383Z [========                               ] 22% Unzipping... emulator/resources/de
+2026-11-14T08:51:20.9450546Z [========                               ] 22% Unzipping... emulator/resources/To
+2026-11-14T08:51:20.9451089Z [========                               ] 22% Unzipping... emulator/resources/ma
+2026-11-14T08:51:20.9470600Z [========                               ] 22% Unzipping... emulator/resources/de
+2026-11-14T08:51:20.9471188Z [========                               ] 22% Unzipping... emulator/resources/sk
+2026-11-14T08:51:20.9497814Z [========                               ] 22% Unzipping... emulator/resources/de
+2026-11-14T08:51:20.9498686Z [========                               ] 22% Unzipping... emulator/resources/ma
+2026-11-14T08:51:20.9507729Z [========                               ] 22% Unzipping... emulator/resources/po
+2026-11-14T08:51:20.9560988Z [========                               ] 22% Unzipping... emulator/resources/ma
+2026-11-14T08:51:20.9565286Z [=========                              ] 23% Unzipping... emulator/resources/ma
+2026-11-14T08:51:20.9613852Z [=========                              ] 23% Unzipping... emulator/resources/sk
+2026-11-14T08:51:20.9627901Z [=========                              ] 23% Unzipping... emulator/resources/ma
+2026-11-14T08:51:20.9657117Z [=========                              ] 23% Unzipping... emulator/bin64/e2fsck
+2026-11-14T08:51:20.9684526Z [=========                              ] 23% Unzipping... emulator/bin64/fsck.e
+2026-11-14T08:51:20.9702179Z [=========                              ] 23% Unzipping... emulator/bin64/tune2f
+2026-11-14T08:51:20.9714624Z [=========                              ] 23% Unzipping... emulator/bin64/resize
+2026-11-14T08:51:20.9734042Z [=========                              ] 23% Unzipping... emulator/bin64/mkfs.e
+2026-11-14T08:51:21.5170492Z [=========                              ] 23% Unzipping... emulator/qemu/linux-x
+2026-11-14T08:51:22.1730733Z [=========                              ] 24% Unzipping... emulator/qemu/linux-x
+2026-11-14T08:51:22.4397774Z [=========                              ] 25% Unzipping... emulator/qemu/linux-x
+2026-11-14T08:51:22.8014184Z [==========                             ] 25% Unzipping... emulator/qemu/linux-x
+2026-11-14T08:51:22.8849373Z [==========                             ] 25% Unzipping... emulator/lib/emulator
+2026-11-14T08:51:22.8853779Z [==========                             ] 25% Unzipping... emulator/lib/rtc_serv
+2026-11-14T08:51:22.8856941Z [==========                             ] 25% Unzipping... emulator/lib/advanced
+2026-11-14T08:51:22.8857905Z [==========                             ] 25% Unzipping... emulator/lib/cmake/  
+2026-11-14T08:51:22.8859507Z [==========                             ] 25% Unzipping... emulator/lib/emulator
+2026-11-14T08:51:22.8861092Z [==========                             ] 25% Unzipping... emulator/lib/control_
+2026-11-14T08:51:22.8862701Z [==========                             ] 25% Unzipping... emulator/lib/emulated
+2026-11-14T08:51:22.8868466Z [==========                             ] 25% Unzipping... emulator/lib/rtc_serv
+2026-11-14T08:51:22.8871374Z [==========                             ] 25% Unzipping... emulator/lib/emu-orig
+2026-11-14T08:51:22.8872074Z [==========                             ] 25% Unzipping... emulator/lib/hardware
+2026-11-14T08:51:22.8872689Z [==========                             ] 25% Unzipping... emulator/lib/pkgconfi
+2026-11-14T08:51:22.8873340Z [==========                             ] 25% Unzipping... emulator/lib/pc-bios/
+2026-11-14T08:51:22.8884643Z [==========                             ] 25% Unzipping... emulator/lib/snapshot
+2026-11-14T08:51:22.8885400Z [==========                             ] 25% Unzipping... emulator/lib/adb_serv
+2026-11-14T08:51:22.8886414Z [==========                             ] 25% Unzipping... emulator/lib/hostapd.
+2026-11-14T08:51:22.8887353Z [==========                             ] 25% Unzipping... emulator/lib/grpc_end
+2026-11-14T08:51:22.8903305Z [==========                             ] 25% Unzipping... emulator/lib/ca-bundl
+2026-11-14T08:51:22.8909214Z [==========                             ] 25% Unzipping... emulator/lib/ui_contr
+2026-11-14T08:51:22.8934519Z [==========                             ] 25% Unzipping... emulator/lib/snapshot
+2026-11-14T08:51:22.8935467Z [==========                             ] 25% Unzipping... emulator/lib/ice_conf
+2026-11-14T08:51:22.9002387Z [==========                             ] 25% Unzipping... emulator/lib/libflatb
+2026-11-14T08:51:22.9180094Z [==========                             ] 26% Unzipping... emulator/lib/libflatb
+2026-11-14T08:51:22.9185886Z [==========                             ] 26% Unzipping... emulator/lib/emulator
+2026-11-14T08:51:22.9187650Z [==========                             ] 26% Unzipping... emulator/lib/waterfal
+2026-11-14T08:51:22.9189879Z [==========                             ] 26% Unzipping... emulator/lib/emulated
+2026-11-14T08:51:22.9200123Z [==========                             ] 26% Unzipping... emulator/lib/cmake/fl
+2026-11-14T08:51:22.9201642Z [==========                             ] 26% Unzipping... emulator/lib/pkgconfi
+2026-11-14T08:51:22.9750235Z [==========                             ] 26% Unzipping... emulator/lib/pc-bios/
+2026-11-14T08:51:22.9804886Z [==========                             ] 26% Unzipping... emulator/include/flat
+2026-11-14T08:51:22.9864040Z [==========                             ] 26% Unzipping... emulator/lib64/libgli
+2026-11-14T08:51:22.9968923Z [==========                             ] 26% Unzipping... emulator/lib64/libpro
+2026-11-14T08:51:22.9969498Z [==========                             ] 26% Unzipping... emulator/lib64/qt/   
+2026-11-14T08:51:23.0311361Z [==========                             ] 26% Unzipping... emulator/lib64/liband
+2026-11-14T08:51:23.0914944Z [==========                             ] 26% Unzipping... emulator/lib64/libgfx
+2026-11-14T08:51:23.0915515Z [==========                             ] 26% Unzipping... emulator/lib64/gles_l
+2026-11-14T08:51:23.0922870Z [==========                             ] 26% Unzipping... emulator/lib64/liband
+2026-11-14T08:51:23.0923793Z [==========                             ] 26% Unzipping... emulator/lib64/vulkan
+2026-11-14T08:51:23.0924490Z [==========                             ] 26% Unzipping... emulator/lib64/gles_s
+2026-11-14T08:51:23.0927173Z [==========                             ] 26% Unzipping... emulator/lib64/libemu
+2026-11-14T08:51:23.1031006Z [==========                             ] 26% Unzipping... emulator/lib64/libpro
+2026-11-14T08:51:23.3528752Z [==========                             ] 26% Unzipping... emulator/lib64/liband
+2026-11-14T08:51:23.3545435Z [==========                             ] 26% Unzipping... emulator/lib64/libtcm
+2026-11-14T08:51:23.3547125Z [==========                             ] 26% Unzipping... emulator/lib64/libima
+2026-11-14T08:51:23.3601891Z [==========                             ] 26% Unzipping... emulator/lib64/libc++
+2026-11-14T08:51:23.3835993Z [==========                             ] 26% Unzipping... emulator/lib64/liband
+2026-11-14T08:51:23.3874241Z [==========                             ] 26% Unzipping... emulator/lib64/libabs
+2026-11-14T08:51:23.3884280Z [==========                             ] 26% Unzipping... emulator/lib64/gles_a
+2026-11-14T08:51:23.3935991Z [==========                             ] 26% Unzipping... emulator/lib64/libsha
+2026-11-14T08:51:23.3990170Z [==========                             ] 26% Unzipping... emulator/lib64/libc++
+2026-11-14T08:51:23.3990831Z [==========                             ] 26% Unzipping... emulator/lib64/qt/res
+2026-11-14T08:51:23.3991459Z [==========                             ] 26% Unzipping... emulator/lib64/qt/lib
+2026-11-14T08:51:23.3992096Z [==========                             ] 26% Unzipping... emulator/lib64/qt/tra
+2026-11-14T08:51:23.3992698Z [==========                             ] 26% Unzipping... emulator/lib64/qt/plu
+2026-11-14T08:51:23.4020468Z [==========                             ] 26% Unzipping... emulator/lib64/qt/res
+2026-11-14T08:51:23.5190803Z [==========                             ] 27% Unzipping... emulator/lib64/qt/res
+2026-11-14T08:51:23.7088927Z [==========                             ] 27% Unzipping... emulator/lib64/qt/lib
+2026-11-14T08:51:24.0458154Z [===========                            ] 28% Unzipping... emulator/lib64/qt/lib
+2026-11-14T08:51:24.3928418Z [===========                            ] 29% Unzipping... emulator/lib64/qt/lib
+2026-11-14T08:51:25.2916749Z [===========                            ] 30% Unzipping... emulator/lib64/qt/lib
+2026-11-14T08:51:25.4128900Z [============                           ] 30% Unzipping... emulator/lib64/qt/lib
+2026-11-14T08:51:25.5459566Z [============                           ] 30% Unzipping... emulator/lib64/qt/tra
+2026-11-14T08:51:25.5555826Z [============                           ] 30% Unzipping... emulator/lib64/qt/plu
+2026-11-14T08:51:25.5738901Z [============                           ] 30% Unzipping... emulator/lib64/gles_l
+2026-11-14T08:51:25.6280823Z [============                           ] 31% Unzipping... emulator/lib64/gles_l
+2026-11-14T08:51:25.9978988Z [============                           ] 31% Unzipping... emulator/lib64/vulkan
+2026-11-14T08:51:26.7573734Z [============                           ] 32% Unzipping... emulator/lib64/vulkan
+2026-11-14T08:51:26.8156634Z [============                           ] 32% Unzipping... emulator/lib64/gles_s
+2026-11-14T08:51:26.8664559Z [============                           ] 32% Unzipping... emulator/lib64/gles_a
+2026-11-14T08:51:26.9332940Z [=============                          ] 33% Unzipping... emulator/lib64/gles_a
+2026-11-14T08:51:27.1318317Z [=====================                  ] 55% Unzipping... emulator/lib64/gles_a
+2026-11-14T08:51:27.1720790Z [=====================                  ] 55% Installing Google APIs Intel x86_6
+2026-11-14T08:51:27.3139505Z [=====================                  ] 55% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:27.7242747Z [======================                 ] 55% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:28.6202532Z [======================                 ] 56% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:29.4887758Z [======================                 ] 57% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:30.3499284Z [=======================                ] 58% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:31.2100261Z [=======================                ] 59% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:31.7253455Z [=======================                ] 60% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:32.2432994Z [========================               ] 60% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:33.3447833Z [========================               ] 61% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:34.1224392Z [========================               ] 62% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:34.9387158Z [=========================              ] 63% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:35.8537670Z [=========================              ] 64% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:36.3090968Z [=========================              ] 65% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:37.0504600Z [==========================             ] 65% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:37.8716922Z [==========================             ] 66% Downloading x86_64-35_r09.zip... e
+2026-11-14T08:51:37.8727450Z [==========================             ] 66% Unzipping... emulator/lib64/gles_a
+2026-11-14T08:51:38.2910926Z [==========================             ] 66% Unzipping... x86_64/NOTICE.txt    
+2026-11-14T08:51:38.2912437Z [==========================             ] 66% Unzipping... x86_64/VerifiedBootPa
+2026-11-14T08:51:38.4108606Z [==========================             ] 66% Unzipping... x86_64/advancedFeatur
+2026-11-14T08:51:38.4117185Z [==========================             ] 66% Unzipping... x86_64/build.prop    
+2026-11-14T08:51:38.5319062Z [==========================             ] 66% Unzipping... x86_64/encryptionkey.
+2026-11-14T08:51:38.6345627Z [==========================             ] 66% Unzipping... x86_64/kernel-ranchu 
+2026-11-14T08:51:38.6349326Z [==========================             ] 66% Unzipping... x86_64/kernel_cmdline
+2026-11-14T08:51:38.6485620Z [==========================             ] 66% Unzipping... x86_64/ramdisk.img   
+2026-11-14T08:51:38.6486717Z [==========================             ] 66% Unzipping... x86_64/source.propert
+2026-11-14T08:51:38.7794874Z [==========================             ] 66% Unzipping... x86_64/system.img    
+2026-11-14T08:51:40.0454428Z [==========================             ] 67% Unzipping... x86_64/system.img    
+2026-11-14T08:51:41.2805314Z [===========================            ] 68% Unzipping... x86_64/system.img    
+2026-11-14T08:51:42.3905839Z [===========================            ] 69% Unzipping... x86_64/system.img    
+2026-11-14T08:51:43.0272663Z [===========================            ] 70% Unzipping... x86_64/system.img    
+2026-11-14T08:51:43.5236390Z [============================           ] 70% Unzipping... x86_64/system.img    
+2026-11-14T08:51:44.8882821Z [============================           ] 71% Unzipping... x86_64/system.img    
+2026-11-14T08:51:45.9724950Z [============================           ] 72% Unzipping... x86_64/system.img    
+2026-11-14T08:51:47.0875699Z [=============================          ] 73% Unzipping... x86_64/system.img    
+2026-11-14T08:51:48.3743303Z [=============================          ] 74% Unzipping... x86_64/system.img    
+2026-11-14T08:51:49.0575031Z [=============================          ] 75% Unzipping... x86_64/system.img    
+2026-11-14T08:51:49.5503276Z [==============================         ] 75% Unzipping... x86_64/system.img    
+2026-11-14T08:51:50.8349449Z [==============================         ] 76% Unzipping... x86_64/system.img    
+2026-11-14T08:52:02.8855566Z [==============================         ] 77% Unzipping... x86_64/system.img    
+2026-11-14T08:52:03.7863777Z [==============================         ] 77% Unzipping... x86_64/vendor.img    
+2026-11-14T08:52:03.7866713Z [==============================         ] 77% Unzipping... x86_64/data/empty_dat
+2026-11-14T08:52:03.7867977Z [==============================         ] 77% Unzipping... x86_64/data/local.pro
+2026-11-14T08:52:03.7869444Z [==============================         ] 77% Unzipping... x86_64/data/misc/Gold
+2026-11-14T08:52:03.7871112Z [==============================         ] 77% Unzipping... x86_64/data/misc/apns
+2026-11-14T08:52:03.7873909Z [==============================         ] 77% Unzipping... x86_64/data/misc/emul
+2026-11-14T08:52:03.7880915Z [==============================         ] 77% Unzipping... x86_64/data/misc/mode
+2026-11-14T08:52:03.7890647Z [==============================         ] 77% Unzipping... x86_64/data/misc/pixe
+2026-11-14T08:52:04.0406602Z [==============================         ] 78% Unzipping... x86_64/data/misc/pixe
+2026-11-14T08:52:04.0407234Z [=======================================] 100% Unzipping... x86_64/data/misc/pix
+2026-11-14T08:52:04.0455479Z 
+2026-11-14T08:52:04.6785932Z Warning: This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+2026-11-14T08:52:04.8475700Z Loading local repository...                                                     
+2026-11-14T08:52:05.0849144Z [=========                              ] 25% Loading local repository...       
+2026-11-14T08:52:05.0849656Z Auto-selecting single ABI x86_64
+2026-11-14T09:16:08.5280766Z Do you wish to create a custom hardware profile? [no] 
+2026-11-14T09:16:08.5374662Z ##[group]Run actions/upload-artifact@v4
+2026-11-14T09:16:08.5374917Z with:
+2026-11-14T09:16:08.5375137Z   name: forge-consumer-android-compile-attempt-1
+2026-11-14T09:16:08.5377335Z   path: /home/runner/work/_temp/consumer/forge-consumer-receipt.json
+/home/runner/work/_temp/consumer/pnpm-lock.yaml
+/home/runner/work/_temp/consumer/ios/*.xcodeproj/project.pbxproj
+/home/runner/work/_temp/consumer/ios/*.xcodeproj/.spm-injected.json
+/home/runner/work/_temp/runtime-app/*
+/home/runner/work/_temp/consumer/android/app/build/outputs/apk/release/*.apk
+/home/runner/work/_temp/consumer/android/app/src/main/AndroidManifest.xml
+/home/runner/work/_temp/consumer/android/app/build/intermediates/merged_manifests/**/AndroidManifest.xml
+/home/runner/work/_temp/consumer/android/app/src/main/res/values/*.xml
+/home/runner/work/_temp/consumer/ios/**/Info.plist
+/home/runner/work/_temp/consumer/ios/**/Package.resolved
+/home/runner/work/_temp/consumer-derived/Logs/Build/*.xcactivitylog
+
+2026-11-14T09:16:08.5379671Z   include-hidden-files: true
+2026-11-14T09:16:08.5379886Z   retention-days: 14
+2026-11-14T09:16:08.5380085Z   if-no-files-found: warn
+2026-11-14T09:16:08.5380289Z   compression-level: 6
+2026-11-14T09:16:08.5380478Z   overwrite: false
+2026-11-14T09:16:08.5380656Z env:
+2026-11-14T09:16:08.5380816Z   CI: 1
+2026-11-14T09:16:08.5380981Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T09:16:08.5381257Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T09:16:08.5381652Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T09:16:08.5382044Z   MAESTRO_BIN: /home/runner/work/_temp/forge-maestro/maestro/bin/maestro
+2026-11-14T09:16:08.5382339Z ##[endgroup]
+2026-11-14T09:16:08.6833742Z (node:9812) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T09:16:08.6834796Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T09:16:08.6950480Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-14T09:16:08.6954603Z The least common ancestor is /home/runner/work/_temp. This will be the root directory of the artifact
+2026-11-14T09:16:08.6955515Z With the provided path, there will be 16 files uploaded
+2026-11-14T09:16:08.6957712Z Artifact name is valid!
+2026-11-14T09:16:08.6958371Z Root directory input is valid!
+2026-11-14T09:16:09.0518885Z Beginning upload of artifact content to blob storage
+2026-11-14T09:16:09.4586028Z (node:9812) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-14T09:16:10.3239583Z Uploaded bytes 8388608
+2026-11-14T09:16:10.8269339Z Uploaded bytes 16777216
+2026-11-14T09:16:11.0716100Z Uploaded bytes 25165824
+2026-11-14T09:16:11.1583006Z Uploaded bytes 33554432
+2026-11-14T09:16:11.6319502Z Uploaded bytes 41943040
+2026-11-14T09:16:12.1789229Z Uploaded bytes 50331648
+2026-11-14T09:16:12.7157313Z Uploaded bytes 58720256
+2026-11-14T09:16:13.0945405Z Uploaded bytes 67108864
+2026-11-14T09:16:13.5792383Z Uploaded bytes 75497472
+2026-11-14T09:16:13.9512015Z Uploaded bytes 83886080
+2026-11-14T09:16:14.4540366Z Uploaded bytes 92274688
+2026-11-14T09:16:15.1264300Z Uploaded bytes 100663296
+2026-11-14T09:16:15.5589900Z Uploaded bytes 109051904
+2026-11-14T09:16:16.0470705Z Uploaded bytes 117440512
+2026-11-14T09:16:16.1292449Z Uploaded bytes 117744856
+2026-11-14T09:16:16.2273047Z Finished uploading artifact content to blob storage!
+2026-11-14T09:16:16.2275800Z SHA256 digest of uploaded artifact zip is 90fef93150c5884f9d36087860c02603f5f17cd16776fcc3040e8a2983b2a037
+2026-11-14T09:16:16.2277444Z Finalizing artifact upload
+2026-11-14T09:16:16.7406084Z Artifact forge-consumer-android-compile-attempt-1.zip successfully finalized. Artifact ID 14107762073
+2026-11-14T09:16:16.7407377Z Artifact forge-consumer-android-compile-attempt-1 has been successfully uploaded! Final size is 117744856 bytes. Artifact ID is 14107762073
+2026-11-14T09:16:16.7412597Z Artifact download URL: https://github.com/mikevocalz/nitro-forge/actions/runs/43576021743/artifacts/14107762073
+2026-11-14T09:16:16.7639030Z ##[group]Run actions/upload-artifact@v4
+2026-11-14T09:16:16.7639416Z with:
+2026-11-14T09:16:16.7639736Z   name: forge-consumer-android-runtime-attempt-1
+2026-11-14T09:16:16.7640783Z   path: /home/runner/work/_temp/runtime-ui/**
+!/home/runner/work/_temp/runtime-ui/unpacked-app/**
+/home/runner/work/_temp/forge-maestro/provenance.json
+/home/runner/work/_temp/forge-emulator.log
+
+2026-11-14T09:16:16.7641803Z   include-hidden-files: true
+2026-11-14T09:16:16.7642126Z   retention-days: 14
+2026-11-14T09:16:16.7642412Z   if-no-files-found: warn
+2026-11-14T09:16:16.7642724Z   compression-level: 6
+2026-11-14T09:16:16.7643019Z   overwrite: false
+2026-11-14T09:16:16.7643298Z env:
+2026-11-14T09:16:16.7643973Z   CI: 1
+2026-11-14T09:16:16.7644230Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T09:16:16.7644657Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T09:16:16.7645299Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-14T09:16:16.7645990Z   MAESTRO_BIN: /home/runner/work/_temp/forge-maestro/maestro/bin/maestro
+2026-11-14T09:16:16.7646477Z ##[endgroup]
+2026-11-14T09:16:16.9012559Z (node:9832) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T09:16:16.9013256Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T09:16:16.9402958Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-14T09:16:16.9405754Z The least common ancestor is /home/runner/work/_temp. This will be the root directory of the artifact
+2026-11-14T09:16:16.9406744Z With the provided path, there will be 271 files uploaded
+2026-11-14T09:16:16.9410885Z Artifact name is valid!
+2026-11-14T09:16:16.9411770Z Root directory input is valid!
+2026-11-14T09:16:17.3062607Z Beginning upload of artifact content to blob storage
+2026-11-14T09:16:17.9092196Z (node:9832) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-14T09:16:18.7427584Z Uploaded bytes 6307047
+2026-11-14T09:16:18.8162873Z Finished uploading artifact content to blob storage!
+2026-11-14T09:16:18.8163902Z SHA256 digest of uploaded artifact zip is 3733092d607851d8666911c35073ce16022005dbf49cc8d078624ab23bf4a6fd
+2026-11-14T09:16:18.8165339Z Finalizing artifact upload
+2026-11-14T09:16:19.1830248Z Artifact forge-consumer-android-runtime-attempt-1.zip successfully finalized. Artifact ID 14107866389
+2026-11-14T09:16:19.1831063Z Artifact forge-consumer-android-runtime-attempt-1 has been successfully uploaded! Final size is 6307047 bytes. Artifact ID is 14107866389
+2026-11-14T09:16:19.1835769Z Artifact download URL: https://github.com/mikevocalz/nitro-forge/actions/runs/43576021743/artifacts/14107866389
+2026-11-14T09:16:19.2055811Z Post job cleanup.
+2026-11-14T09:16:19.3215145Z (node:9844) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T09:16:19.3215843Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T09:16:19.3361845Z Post job cleanup.
+2026-11-14T09:16:19.4410885Z (node:9852) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T09:16:19.4411628Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T09:16:19.4786434Z Post job cleanup.
+2026-11-14T09:16:19.5798984Z [command]/usr/bin/git version
+2026-11-14T09:16:19.5837680Z git version 2.56.1
+2026-11-14T09:16:19.5870518Z Temporarily overriding HOME='/home/runner/work/_temp/0ffc9fa5-d31e-4c8a-9ea9-c69667679936' before making global git config changes
+2026-11-14T09:16:19.5871345Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T09:16:19.5875187Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T09:16:19.5913212Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T09:16:19.5944201Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T09:16:19.6869211Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T09:16:19.6895081Z http.https://github.com/.extraheader
+2026-11-14T09:16:19.6903996Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-14T09:16:19.6937774Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T09:16:19.7181307Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T09:16:19.7211286Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T09:16:19.7587989Z Cleaning up orphan processes
+2026-11-14T09:16:19.8320156Z Terminate orphan process: pid (6426) (adb)
+2026-11-14T09:16:19.8482860Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/download-artifact@v4, actions/setup-java@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

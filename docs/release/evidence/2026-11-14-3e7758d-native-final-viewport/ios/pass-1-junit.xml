@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="Forge F6 baba7e1-30729 - iOS 27.2 - 681558D2-6FA2-4842-B575-90BC9DC02860" tests="1" failures="0" time="1067.715" timestamp="2026-11-14T11:07:43">
+    <testcase id="Forge seven-studio durable document workflows" name="Forge seven-studio durable document workflows" classname="Forge seven-studio durable document workflows" file="/Users/runner/work/_temp/runtime-ui/pass-1/flow.yaml" time="1066.105" timestamp="2026-11-14T11:07:45" status="SUCCESS"/>
+  </testsuite>
+</testsuites>

@@ -1,0 +1,22 @@
+{
+  "sourceCommit": "a0c7f23c36128f4a4589309bcb7c44cf3bef2dae",
+  "manifestSha256": "064c3639dad19ce2b9ca0aab542aa17804089fa519b88c707c09553aee64370a",
+  "workspaceSha256": "d5a48735708e067efc84a0c600c3525b0334ad3a7931a8584906e44afd902f6e",
+  "pnpmVersion": "12.18.0",
+  "installMode": "frozen-reuse",
+  "config": {
+    "overrides": {
+      "@nitro-forge/ignition": "file:./artifacts/nitro-forge-ignition-1.0.0-f6.43572482319.1.tgz",
+      "@nitro-forge/prism": "file:./artifacts/nitro-forge-prism-1.0.0-f6.43572482319.1.tgz",
+      "@nitro-forge/cadence": "file:./artifacts/nitro-forge-cadence-1.0.0-f6.43572482319.1.tgz",
+      "@nitro-forge/splice": "file:./artifacts/nitro-forge-splice-1.0.0-f6.43572482319.1.tgz",
+      "@nitro-forge/folio": "file:./artifacts/nitro-forge-folio-1.0.0-f6.43572482319.1.tgz",
+      "@nitro-forge/pitch": "file:./artifacts/nitro-forge-pitch-1.0.0-f6.43572482319.1.tgz",
+      "@nitro-forge/tally": "file:./artifacts/nitro-forge-tally-1.0.0-f6.43572482319.1.tgz",
+      "@nitro-forge/quill": "file:./artifacts/nitro-forge-quill-1.0.0-f6.43572482319.1.tgz"
+    },
+    "nodeLinker": "isolated",
+    "enableGlobalVirtualStore": false,
+    "minimumReleaseAge": 0
+  }
+}

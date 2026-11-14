@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="emulator-5554" tests="1" failures="0" time="9.098" timestamp="2026-11-14T05:35:25">
+    <testcase id="Forge native studio picker" name="Forge native studio picker" classname="Forge native studio picker" file="/home/runner/work/_temp/runtime-ui/picker/flow.yaml" time="9.081" timestamp="2026-11-14T05:35:25" status="SUCCESS"/>
+  </testsuite>
+</testsuites>
