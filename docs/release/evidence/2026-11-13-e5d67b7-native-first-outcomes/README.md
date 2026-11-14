@@ -1,0 +1,18 @@
+# First native clean-consumer outcomes at e5d67b7
+
+Run [43554300143](https://github.com/mikevocalz/nitro-forge/actions/runs/43554300143), PR head e5d67b7da89400a34c39b80f389415ec2a31c855, executed merge cd75fc235cfbf2345c63d30efb3368cfa40d2779. Original jobs and artifact identities are retained. Concatenate ios.log.part-* in numeric order to recover the original complete iOS job log; splitting preserves its bytes. Logs are original execution, not rerun claims.
+
+- Source job132323549807 passed48/48 tests, including the real pinned PNPM manager-only-lock regression.
+- Both payload producers and eight-archive provenance/license assembly passed.
+- Bundle job132326333783 passed fresh external install, exact packed verification, TypeScript, and actual Metro iOS/Android exports. Graph ZIP14097534202 (57117bytes) was SHA256-verified in memory.
+- Both native jobs passed frozen installed graph verification and ordinary prebuild.
+- Android job132326599073 built and signed/verified the actual Release APK, installed it on the owned emulator, launched with the real native host, and passed the picker flow plus all-seven-label/320px geometry assertions. First full flow stopped at Cadence Save step131. Actual AX reported JSON Parse error: Unexpected end of input. The retained executed screenshots show Prism's save, fresh-host reopen, fresh undo/redo, rejected restore and process relaunch; this is partial first-pass evidence, not a seven-studio pass.
+- iOS job132326599092 failed Release compilation in generated Generate Expo app.config phase: expo-constants/package.json was not resolvable directly from the isolated app root. No iOS installed app or runtime was produced.
+
+The exact published expo-file-system58.0.13 tarball was integrity-verified without disk extraction. Its NativeFileSystem.types.ts declares File.write returning Promise<void>; Android registers an asynchronous write on the IO dispatcher. The fixture had dispatched binary and JSON writes without awaiting them, allowing subsequent reads to race. The correction awaits both; a deferred real-file regression executes the actual Save callback and requires each write to finish before reads/success. This is a fixture correction, not evidence of a Cadence engine defect or a claim the next UI flow passed.
+
+The actual iOS generated project retains its original app-config phase. That phase resolves expo-constants from PROJECT_ROOT at build time; the original lock has58.0.16 transitively. The external app now directly admits that same58.0.16 and verifies its root-resolved metadata. No hoisting/source fallback, generated-project edit or Expo/React/RN/Nitro baseline change is used.
+
+Android runtime ZIP14098227287 (1241599bytes, SHA25685c822876e95fe93bbe2cfa94b460e7a2f9317aa45f96368eae999700bcc76f5) and iOS compile ZIP14098612146 (1146406bytes, SHA25683b5119849f6fd74542e6a0525ebc26e12dadb4f7f0fc1f45439d5da57599d75) were verified/read in memory. The runtime member inventory preserves the exact screenshot/log paths; actual images remain the original immutable CI artifact, not recreated pictures. The official driver identity and full app/source/graph hashes remain in that artifact.
+
+New deferred-write regression and corrected native execution are pending CI. Local writes/tests/builds remain held below the10GB floor; only read-only inspection and leased GitHub API authoring were performed. Renderer19.3.0/React19.3.1 had an actual Android launch and Prism workflow at this graph, not a universal compatibility claim. iOS launch and full seven-studio acceptance on both platforms remain pending; F6 gate unchanged, no visual sign, no ready/merge/publication.

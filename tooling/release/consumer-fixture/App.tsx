@@ -84,6 +84,7 @@ export default function App() {
           store.setState(state => ({ result, log: [...state.log, result].slice(-50) }));
         }
       } catch (error) {
+        console.error('F6 native action failed', scope, error);
         if (mountedRef.current) {
           const result = `${scope}: FAILED — ${error instanceof Error ? error.message : String(error)}`;
           store.setState(state => ({ result, log: [...state.log, result].slice(-50) }));
@@ -144,14 +145,14 @@ export default function App() {
     validateEnvelope(bytes);
     const file = snapshotFile(kind);
     file.create({ overwrite: true });
-    file.write(bytes);
+    await file.write(bytes);
     const disk = await file.bytes();
     if (disk.length !== bytes.length || !disk.every((value, index) => value === bytes[index])) {
       throw new Error('Saved NFD1 bytes did not read back unchanged');
     }
     const record = expectedFile(kind);
     record.create({ overwrite: true });
-    record.write(JSON.stringify({ version: 1, studio: kind, byteLength: bytes.length, canonical: current }));
+    await record.write(JSON.stringify({ version: 1, studio: kind, byteLength: bytes.length, canonical: current }));
     const persisted: unknown = JSON.parse(await record.text());
     if (!persisted || typeof persisted !== 'object' ||
         !('canonical' in persisted) || persisted.canonical !== current) {

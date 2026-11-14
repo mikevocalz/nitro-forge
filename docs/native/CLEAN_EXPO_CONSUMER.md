@@ -244,3 +244,7 @@ repeated successful installs remain frozen. The recorded effective config
 states first-resolution versus frozen-reuse mode. An actual PNPM regression
 covers the retained manager-only lock, initial app resolution and rejected
 manifest changes under frozen reuse; it calls no engine/native/UI API.
+
+The external app explicitly declares `expo-constants@58.0.16`, the same version observed in the original resolved Expo 58.0.24 graph. Expo's generated SwiftPM app-config phase resolves that package from the app root at build time. Isolated PNPM does not expose a transitive dependency at that root. Verification now checks its direct installed version and exact metadata path before native compilation; the linker remains isolated and generated native scripts are unchanged.
+
+The fixture awaits both asynchronous Expo File writes before reading the NFD1 bytes or expected-state JSON. SDK 58 `File.write` returns a Promise; creation alone does not make a dispatched write durable. The original Android first-pass failure is retained separately from the iOS app-config resolution failure. Neither is converted into native acceptance by these source corrections.

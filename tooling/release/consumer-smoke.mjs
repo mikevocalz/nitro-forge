@@ -66,7 +66,7 @@ if (values.stage === 'prepare') {
   mkdirSync(app, { recursive: true });
   const fixture = resolve(root, 'tooling/release/consumer-fixture');
   cpSync(fixture, app, { recursive: true });
-  const dependencies = { ...manifest.runtime, 'expo-file-system': '58.0.13', zustand: '5.1.0' };
+  const dependencies = { ...manifest.runtime, 'expo-file-system': '58.0.13', 'expo-constants': '58.0.16', zustand: '5.1.0' };
   const overrides = {};
   const artifacts = resolve(app, 'artifacts');
   mkdirSync(artifacts);
@@ -129,10 +129,14 @@ if (values.stage === 'prepare') {
         observed.push({ name, version: pkg.version, entry: realpathSync(entry), packageRoot: realpathSync(packageRoot), packageJsonSha256: hash(file) });
         return { packageRoot, pkg };
       }
-      for (const runtime of [...Object.keys(manifest.runtime), 'zustand', '@nyc-tron/ui', 'expo-file-system']) {
+      for (const runtime of [...Object.keys(manifest.runtime), 'zustand', '@nyc-tron/ui', 'expo-file-system', 'expo-constants']) {
         const { pkg } = metadata(runtime);
         if (manifest.runtime[runtime]) assert.equal(pkg.version, manifest.runtime[runtime], `Installed runtime differs: ${runtime}`);
+        if (runtime === 'expo-constants') assert.equal(pkg.version, '58.0.16', 'Exact direct app-config dependency required by generated SwiftPM build phase');
       }
+      const constantsManifest = appRequire.resolve('expo-constants/package.json');
+      assertInstalledInside(app, constantsManifest);
+      assert.equal(hash(constantsManifest), observed.find(pkg => pkg.name === 'expo-constants').packageJsonSha256, 'Native build phase must resolve the verified app-owned expo-constants');
       for (const archive of manifest.archives) {
         const { packageRoot, pkg } = metadata(archive.name);
         assert.equal(pkg.version, manifest.version);
