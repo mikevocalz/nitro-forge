@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="Forge F6 6d8b13f-46384 - iOS 27.2 - 6EA537CA-5902-4C99-8777-C2E247FAC370" tests="1" failures="0" time="41.75" timestamp="2026-11-14T13:42:58">
+    <testcase id="Forge native studio picker" name="Forge native studio picker" classname="Forge native studio picker" file="/Users/runner/work/_temp/runtime-ui/picker/flow.yaml" time="41.716" timestamp="2026-11-14T13:42:58" status="SUCCESS"/>
+  </testsuite>
+</testsuites>

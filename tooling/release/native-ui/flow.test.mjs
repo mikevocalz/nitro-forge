@@ -129,7 +129,10 @@ test('picker selection scrolls up to the real group and checks the matching clos
     if (!command.tapOn?.text) continue;
     assert.deepEqual(commands[index - 1].scrollUntilVisible.element, { id: 'f6-studio' });
     assert.equal(commands[index - 1].scrollUntilVisible.direction, 'UP');
-    assert.equal(commands[index - 1].scrollUntilVisible.centerElement, true, 'A 100%-visible picker may still overlap the iOS status area');
+    assert.equal(commands[index - 1].scrollUntilVisible.centerElement, undefined);
+    assert.deepEqual(commands[index - 3].scrollUntilVisible.element, { text: '^Forge clean consumer$' });
+    assert.equal(commands[index - 3].scrollUntilVisible.direction, 'UP');
+    assert.deepEqual(commands[index - 2].assertVisible, { text: '^Forge clean consumer$' });
     assert.equal(commands[index + 1].scrollUntilVisible.element.id, 'f6-selected');
     assert.equal(commands[index + 2].assertVisible.id, 'f6-selected');
     const studio = command.tapOn.text.slice(1, -1);
@@ -211,17 +214,26 @@ test('full pass restores the actual heading and closed final studio before host 
   assert.equal(commands.filter(command => command.stopApp === null).length, 7);
 });
 
-// Actual iOS failure: AX visibility does not establish an unobstructed OS tap.
-test('picker centering guards the recorded iOS status-area tap without weakening studio identity', () => {
-  const receipt = JSON.parse(readFileSync(new URL('../test-fixtures/ios-status-area-picker.json', import.meta.url), 'utf8'));
-  assert.match(receipt.trace, /Element bounds: Bounds\(x=20, y=10, width=362, height=88\)/);
-  assert.match(receipt.trace, /Visibility Percent: 1\.0/);
-  assert.match(receipt.trace, /Try tapping at \(122, 32\)/);
-  assert.match(receipt.trace, /Studio: cadence · Document: closed/);
+// Actual iOS failures: AX-visible picker rows can overlap the system status
+// area, while impossible centering at the scroll boundary spends the flow budget.
+test('picker restores the real heading without repeating unreachable center attempts', () => {
+  const oldTap = JSON.parse(readFileSync(new URL('../test-fixtures/ios-status-area-picker.json', import.meta.url), 'utf8'));
+  const oldCenter = JSON.parse(readFileSync(new URL('../test-fixtures/ios-picker-centering-timeout.json', import.meta.url), 'utf8'));
+  assert.match(oldTap.trace, /Element bounds: Bounds\(x=20, y=10, width=362, height=88\)/);
+  assert.match(oldTap.trace, /Try tapping at \(122, 32\)/);
+  const bounds = [...oldCenter.trace.matchAll(/Element bounds: Bounds\(x=20, y=(\d+), width=362, height=88\)/g)];
+  assert.equal(bounds.length, 6);
+  assert.ok(bounds.every(match => Number(match[1]) === 106));
+  assert.equal(oldCenter.pickerCenteringCount, 13);
+  assert.equal(oldCenter.pickerCenteringMs, 210572);
   for (const definition of [createPickerFlow(), createFlow()]) {
     for (const [index, command] of definition.commands.entries()) {
       if (!command.tapOn?.text) continue;
-      assert.equal(definition.commands[index - 1].scrollUntilVisible.centerElement, true);
+      assert.deepEqual(definition.commands[index - 3].scrollUntilVisible.element, { text: '^Forge clean consumer$' });
+      assert.equal(definition.commands[index - 3].scrollUntilVisible.direction, 'UP');
+      assert.deepEqual(definition.commands[index - 2].assertVisible, { text: '^Forge clean consumer$' });
+      assert.deepEqual(definition.commands[index - 1].scrollUntilVisible.element, { id: 'f6-studio' });
+      assert.equal(definition.commands[index - 1].scrollUntilVisible.centerElement, undefined);
       assert.equal(definition.commands[index + 2].assertVisible.text,
         '^Studio: ' + command.tapOn.text.slice(1, -1) + ' · Document: closed$');
     }

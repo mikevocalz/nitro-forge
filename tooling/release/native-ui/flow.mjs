@@ -44,9 +44,12 @@ function startup(commands) {
   commands.push({ extendedWaitUntil: { visible: { id: 'f6-selected' }, timeout: 90000 } });
 }
 function selectStudio(commands, kind) {
-  // A group may be AX-visible at y10 while its first row lies under the iOS
-  // status area. Center it before touching an option; visibility alone is insufficient.
-  commands.push({ scrollUntilVisible: { ...scroll({ id: 'f6-studio' }, 'UP').scrollUntilVisible, centerElement: true } });
+  // Restore the actual app top before touching a picker row. AX may report a
+  // group under the iOS status area as visible; centering at the top repeatedly
+  // hits the scroll boundary. The heading anchor avoids both failure modes.
+  commands.push(scroll({ text: '^Forge clean consumer$' }, 'UP'));
+  commands.push({ assertVisible: { text: '^Forge clean consumer$' } });
+  commands.push(scroll({ id: 'f6-studio' }, 'UP'));
   commands.push({ tapOn: { text: `^${kind}$`, enabled: true } });
   commands.push(scroll({ id: 'f6-selected' }, 'DOWN'));
   commands.push({ assertVisible: selected(kind, 'closed') });
