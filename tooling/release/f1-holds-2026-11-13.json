@@ -1,10 +1,7 @@
 {
   "asOf": "2026-11-13",
-  "scope": "Intentional compatibility/source holds; not an advisory waiver or F1 pass. All other latest mismatches require individual review in the dated inventory.",
+  "scope": "Intentional compatibility/source holds. Skia3.10.1/WebGPU0.21.4/SVG15.16.1 are staged in this native trial; latest-match is not native acceptance. No advisory waiver or F1 pass.",
   "holds": {
-    "react-native-skia": "Hold 3.9.1 with WebGPU 0.21.0/Dawn 157.1.0. Published 3.10.1 and WebGPU 0.21.4 both require Dawn 158.0.0; refresh local SPM patches and require paired apps/example iOS+Android builds and Tron T 1 before admission.",
-    "react-native-webgpu": "Hold 0.21.0 with Skia 3.9.1/Dawn 157.1.0. Published 0.21.4 requires Dawn 158.0.0 and checks Skia binary/Dawn identity; paired 3.10.1 native compatibility and local patch migration remain unverified.",
-    "react-native-svg": "Hold 15.16.0 until local new-file Package.swift patch is reconciled with published 15.16.1's own Package.swift and iOS SPM build proves native support. Do not apply old new-file patch over upstream file.",
     "react-native-video": "Vendored experimental-build-v 1.tgz retains recorded upstream provenance but was generated with nightly 120. Nightly 136 runtime override does not prove regenerated binding compatibility; upstream checkout/regeneration/native proof still required.",
     "react-native-nitro-modules": "Exact coherent nightly 136 trio is newest official published v 1 release on 2026-11-13; npm stable latest is a separate 0.x channel and is not an upgrade target.",
     "nitro-core": "Exact coherent nightly 136 v 1 trio; do not replace with unrelated stable/placeholder npm latest.",

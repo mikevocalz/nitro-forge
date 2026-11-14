@@ -1,0 +1,22 @@
+[
+  {
+    "package": "react-native-skia",
+    "version": "3.10.1",
+    "archiveSHA256": "af12e64a7af7b6359bd6f9e4a466488aa506d0a98e68f5b504de75888669e149",
+    "dryRunExit": 0,
+    "output": "patching file Package.swift\n",
+    "onlyDawnSymlinkCanonicalizationChanged": true,
+    "upstreamSwiftSHA256": "45b321720cf6b7f426da280c7c055255d1850cb6cafadc7fd6398122fa283876",
+    "patchedSwiftSHA256": "977f2c62b0d9bd6e3726c8b91541e545ecaf5e2b875b64940d64fb8b4e189655"
+  },
+  {
+    "package": "react-native-webgpu",
+    "version": "0.21.4",
+    "archiveSHA256": "7ee03a5057d1955de796dcbca0f8e5ff6a220cb1d85872c8588a9be99c8d19e5",
+    "dryRunExit": 0,
+    "output": "patching file Package.swift\n",
+    "onlyDawnSymlinkCanonicalizationChanged": true,
+    "upstreamSwiftSHA256": "acb8c6ed2097e66cac1c1d82026498b6b83878871da61df212a7f10e6e45aec1",
+    "patchedSwiftSHA256": "1b410c56ff8867d1cdfce6fc3e7b262a5cdbf8d461c9e6a2f3c3276b6476b062"
+  }
+]

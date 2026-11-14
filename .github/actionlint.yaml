@@ -1,0 +1,4 @@
+# Existing Swift6.4/Xcode27 runner used by cadence-native-consumer.yml.
+self-hosted-runner:
+  labels:
+    - xcode-27

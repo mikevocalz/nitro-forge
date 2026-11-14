@@ -1,0 +1,106 @@
+name: F1 suite native pair trial
+on:
+  pull_request:
+    paths:
+      - 'apps/example/**'
+      - 'patches/react-native-skia*'
+      - 'patches/react-native-webgpu*'
+      - 'patches/react-native-svg*'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/f1-native-pair.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  EXPO_NO_TELEMETRY: '1'
+  CI: '1'
+jobs:
+  android:
+    name: Suite app Skia WebGPU SVG Android compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26'
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - run: corepack enable
+      - name: Frozen actual suite graph
+        run: node tooling/release/record-f1-command.mjs suite-install required -- pnpm install --frozen-lockfile
+      - name: Actual package identities and platform autolinking
+        run: node tooling/release/record-f1-command.mjs suite-host required -- node apps/example/tooling/verify-native-host.cjs
+      - name: Build engine libraries with the actual RN NDK
+        run: |
+          ndk_version=$(cd apps/example && node -e 'const fs=require("node:fs"),p=require("node:path");const rn=p.dirname(require.resolve("react-native/package.json"));const t=fs.readFileSync(p.join(rn,"gradle/libs.versions.toml"),"utf8");const m=t.match(/^ndkVersion\s*=\s*"([^"]+)"/m);if(!m)throw new Error("Missing RN NDK version");console.log(m[1]);')
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$ndk_version"
+          if [[ ! -f "$ANDROID_NDK_HOME/source.properties" ]]; then
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$ndk_version"
+          fi
+          cargo install cargo-ndk --version 4.1.2 --locked
+          node tooling/release/record-f1-command.mjs suite-rust-android required -- bash packages/ignition/scripts/build-android.sh
+      - name: Prebuild actual suite app without config edits
+        run: node tooling/release/record-f1-command.mjs suite-prebuild-android required -- pnpm --dir apps/example exec expo prebuild --platform android --no-install --non-interactive
+      - name: Compile actual suite app
+        run: |
+          chmod +x apps/example/android/gradlew
+          node tooling/release/record-f1-command.mjs suite-android required -- bash -c 'cd apps/example/android && ./gradlew assembleDebug --no-daemon'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: forge-f1-suite-android-trial
+          path: |
+            reports/f1/
+            apps/example/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+  ios:
+    name: Suite app Skia WebGPU SVG iOS SwiftPM compile
+    runs-on: xcode-27
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+      - run: corepack enable
+      - name: Frozen actual suite graph
+        run: node tooling/release/record-f1-command.mjs suite-install required -- pnpm install --frozen-lockfile
+      - name: Actual package identities and platform autolinking
+        run: node tooling/release/record-f1-command.mjs suite-host required -- node apps/example/tooling/verify-native-host.cjs
+      - name: Build current engine XCFramework
+        run: node tooling/release/record-f1-command.mjs suite-rust-ios required -- bash packages/ignition/scripts/build-apple.sh
+      - name: Prebuild actual suite app without config edits
+        run: node tooling/release/record-f1-command.mjs suite-prebuild-ios required -- pnpm --dir apps/example exec expo prebuild --platform ios --no-install --non-interactive
+      - name: Resolve SwiftPM using admitted RN CLI
+        run: node tooling/release/record-f1-command.mjs suite-swiftpm required -- pnpm --dir apps/example exec react-native spm add --deintegrate --yes
+      - name: Compile actual suite app with existing macro workaround
+        run: |
+          xcodebuild -version
+          cd apps/example/ios
+          project=$(find . -maxdepth 1 -name '*.xcodeproj' -print -quit)
+          test -n "$project"
+          scheme=$(basename "$project" .xcodeproj)
+          cd "$GITHUB_WORKSPACE"
+          node tooling/release/record-f1-command.mjs suite-ios required -- xcodebuild \
+            -project "apps/example/ios/$project" -scheme "$scheme" -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath apps/example/ios/build-ci -IDEPackageEnablePrebuilts=NO \
+            CODE_SIGNING_ALLOWED=NO build
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: forge-f1-suite-ios-trial
+          path: |
+            reports/f1/
+            apps/example/ios/build-ci/Build/Products/Debug-iphonesimulator/*.app/
+          retention-days: 14
