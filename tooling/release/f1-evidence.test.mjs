@@ -32,3 +32,15 @@ test('recorder retains actual nonzero exit and both output streams without repor
   assert.equal(JSON.parse(readFileSync(join(dir, 'nonzero.json'), 'utf8')).exitCode, 1);
  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+test('generation comparison detects new ignored output, deletions and changed bytes', async () => {
+ const { differences, walkFiles } = await import('./verify-f1-generation.mjs');
+ const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs'); const { join } = await import('node:path');
+ const dir = mkdtempSync(join(process.cwd(), '.f1-generation-test-'));
+ try {
+  writeFileSync(join(dir, 'kept.swift'), 'old'); const before = walkFiles(dir);
+  writeFileSync(join(dir, '.gitignore'), '*.swift\n'); writeFileSync(join(dir, 'new.swift'), 'new');
+  writeFileSync(join(dir, 'kept.swift'), 'changed'); const after = walkFiles(dir);
+  const diff = differences(before, after); assert.ok(diff.added.includes(join(dir, 'new.swift'))); assert.ok(diff.changed.includes(join(dir, 'kept.swift')));
+  rmSync(join(dir, 'kept.swift')); assert.ok(differences(before, walkFiles(dir)).deleted.includes(join(dir, 'kept.swift')));
+ } finally { rmSync(dir, { recursive: true, force: true }); }
+});

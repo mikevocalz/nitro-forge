@@ -54,17 +54,14 @@ jobs:
         run: node tooling/release/record-f1-command.mjs rust-workspace required -- cargo test --locked --workspace
       - name: Regenerate Ignition
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tooling/release/record-f1-command.mjs ignition-generation required -- pnpm --filter @nitro-forge/ignition codegen
+        run: node tooling/release/record-f1-command.mjs ignition-generation required -- node tooling/release/verify-f1-generation.mjs ignition
       - name: Install Persona's own frozen generator graph
         id: persona-install
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tooling/release/record-f1-command.mjs persona-install required -- pnpm --dir native/persona/nitro install --frozen-lockfile --ignore-scripts
       - name: Regenerate Persona from its isolated exact-pinned project
         if: ${{ !cancelled() && steps.persona-install.outcome == 'success' }}
-        run: node tooling/release/record-f1-command.mjs persona-generation required -- pnpm --dir native/persona/nitro codegen
-      - name: Generated source must match committed output
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tooling/release/record-f1-command.mjs generated-diff required -- git diff --exit-code -- packages/ignition/nitrogen packages/ignition/Package.swift native/persona/nitro/nitrogen native/persona/nitro/Package.swift
+        run: node tooling/release/record-f1-command.mjs persona-generation required -- node tooling/release/verify-f1-generation.mjs persona
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

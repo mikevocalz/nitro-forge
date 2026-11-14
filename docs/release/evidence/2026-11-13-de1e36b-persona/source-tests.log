@@ -1,39 +1,40 @@
-✔ handles pinned exact and semver ranges without guessing exotic specs (1.477125ms)
-✔ separates a newer npm tag from compatible deployment approval (0.191709ms)
-✔ detects version order numerically (0.076417ms)
-✔ excludes workspace packages but includes external platform dependencies (0.125666ms)
-✔ does not mislabel Nitro v1 nightly alpha as newest stable npm production (0.0825ms)
-✔ inventory covers isolated/native peers, root package manager, optional and override declarations (0.993541ms)
-✔ workspace override parser stops at other sections and rejects nested syntax (0.5725ms)
-✔ freshness does not downgrade v1 to npm stable or pass unavailable/unreviewed versions (0.289625ms)
-✔ required failures and process launch failures fail; nonzero freshness remains review-required (0.087833ms)
+✔ handles pinned exact and semver ranges without guessing exotic specs (2.284125ms)
+✔ separates a newer npm tag from compatible deployment approval (0.219292ms)
+✔ detects version order numerically (0.281666ms)
+✔ excludes workspace packages but includes external platform dependencies (0.175417ms)
+✔ does not mislabel Nitro v1 nightly alpha as newest stable npm production (0.108291ms)
+✔ inventory covers isolated/native peers, root package manager, optional and override declarations (1.909ms)
+✔ workspace override parser stops at other sections and rejects nested syntax (0.830084ms)
+✔ freshness does not downgrade v1 to npm stable or pass unavailable/unreviewed versions (0.232708ms)
+✔ required failures and process launch failures fail; nonzero freshness remains review-required (0.080833ms)
 actual stdout
 actual stderr
-✔ recorder retains actual nonzero exit and both output streams without reporting pass (145.20475ms)
-✔ rejects mismatched Nitro v1 generator/core/native runtime versions (2.264375ms)
-✔ stable Nitro 0.x in isolated legacy package isn't confused with v1 (0.122417ms)
-✔ rejects moving version ranges and unpinned baselines (0.159583ms)
-✔ identifies latest published v1 alpha independent of stable 0.x releases (0.18175ms)
-✔ rejects range specifiers that would float to another v1 nightly (0.311042ms)
-✔ releaseChannel splits stable and prerelease like Tron (0.896625ms)
-✔ evidenceExists rejects missing, absolute, escaping and directory paths (0.43075ms)
-✔ evidenceExists rejects a symlink that leaves the repository (0.842459ms)
-✔ stable mode is ready only when every gate passed with evidence, commit and reviewer (1.415833ms)
-✔ stable mode blocks on any gate that has not passed (0.987125ms)
-✔ prerelease mode reports without failing (0.104333ms)
-✔ the signing reviewer matches the gate's role after trimming and case folding (0.593125ms)
-✔ a passed gate without existing evidence, full commit or reviewer is invalid in every mode (9.283375ms)
-✔ gate file structure: missing, duplicate, unknown ids and bad status are errors (0.320209ms)
-✔ an unfinished gate may cite partial evidence, but the path must exist (0.254375ms)
-✔ compatibility claims need an existing receipt at a full commit (0.465042ms)
-✔ formatTable prints one row per gate (0.574083ms)
-✔ the committed gate file and compatibility record are well formed (2.151334ms)
-✔ CLI: stable exits 1 with a table, prerelease exits 0 (408.392042ms)
-ℹ tests 29
+✔ recorder retains actual nonzero exit and both output streams without reporting pass (196.224916ms)
+✔ generation comparison detects new ignored output, deletions and changed bytes (2.272708ms)
+✔ rejects mismatched Nitro v1 generator/core/native runtime versions (3.497917ms)
+✔ stable Nitro 0.x in isolated legacy package isn't confused with v1 (0.217666ms)
+✔ rejects moving version ranges and unpinned baselines (0.602875ms)
+✔ identifies latest published v1 alpha independent of stable 0.x releases (0.722875ms)
+✔ rejects range specifiers that would float to another v1 nightly (0.569708ms)
+✔ releaseChannel splits stable and prerelease like Tron (1.17925ms)
+✔ evidenceExists rejects missing, absolute, escaping and directory paths (2.173666ms)
+✔ evidenceExists rejects a symlink that leaves the repository (1.996209ms)
+✔ stable mode is ready only when every gate passed with evidence, commit and reviewer (1.6155ms)
+✔ stable mode blocks on any gate that has not passed (3.589375ms)
+✔ prerelease mode reports without failing (0.143417ms)
+✔ the signing reviewer matches the gate's role after trimming and case folding (0.676666ms)
+✔ a passed gate without existing evidence, full commit or reviewer is invalid in every mode (15.873041ms)
+✔ gate file structure: missing, duplicate, unknown ids and bad status are errors (0.334666ms)
+✔ an unfinished gate may cite partial evidence, but the path must exist (0.306833ms)
+✔ compatibility claims need an existing receipt at a full commit (0.546208ms)
+✔ formatTable prints one row per gate (0.615708ms)
+✔ the committed gate file and compatibility record are well formed (2.350625ms)
+✔ CLI: stable exits 1 with a table, prerelease exits 0 (419.95825ms)
+ℹ tests 30
 ℹ suites 0
-ℹ pass 29
+ℹ pass 30
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 589.949917
+ℹ duration_ms 639.106417

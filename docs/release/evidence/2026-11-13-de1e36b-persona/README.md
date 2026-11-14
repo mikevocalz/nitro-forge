@@ -28,7 +28,18 @@ with Ruby/Psych; the importer directly locks nitro-core and nitrogen to the same
 All32 manifests and all three workspace files are now inventoried;283 declarations,
 zero unclassified items, including the new isolated lock's input hash.
 
-29 source tests and actionlint pass. Actual corrected-head frozen install and
+30 source tests and actionlint pass. Actual corrected-head frozen install and
 successful Persona regeneration remain CI prerequisites. Native trial remains
 stacked separately; F1 is not passed, and public/native runtime/window contracts,
 other gate objects, validators and the seven audit ignores remain unchanged.
+
+
+The generation gate now snapshots canonical tracked output names and original
+bytes from Git, rejects dirty pre-state, removes each owned generated directory,
+and invokes the actual package generator. It then inventories the complete
+filesystem tree plus optional Package.swift, including hidden, ignored and
+untracked additions; added/deleted/changed files fail the gate and appear with
+hashes in the CI JSON artifact. Handwritten Swift package content is preserved;
+a newly emitted Persona Package.swift must be reviewed and committed if required,
+not silently accepted as native implementation. The old tracked-diff-only gate
+was removed. Unit regression covers ignored additions, byte changes and deletion.
