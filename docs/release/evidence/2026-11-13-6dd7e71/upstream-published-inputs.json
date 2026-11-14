@@ -1,0 +1,86 @@
+{
+  "repository": "mikevocalz/NYC-Tron-UI",
+  "tag": "v1.0.0-rc.2",
+  "commit": "0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44",
+  "releaseUrl": "https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v1.0.0-rc.2",
+  "releaseId": 444880790,
+  "prerelease": true,
+  "draft": false,
+  "runId": 43522767083,
+  "runAttempt": 2,
+  "runConclusion": "success",
+  "checksumManifestSha256": "3a44d1bc5b50df8de783010badaf543cac6495fd746d8acd333b1e0be197d3e7",
+  "consumedArchives": [
+    {
+      "name": "@nyc-tron/ui",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-ui-1.0.0-rc.2.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "bytes": 1866877,
+      "sha256": "715c8be55b18ff4ec550e54935dd48ee9c7e1b31aa33217f9036e1b4742254c4",
+      "sha512": "sha512-MBmIVKLgRVM2sT3XhMAoJ5t2XnF+hnIn8RtM6+4ze35m8/Y/HwKOIK2CM5HxocwWAOSMOeMEHSzjQrbtRAS6mw==",
+      "releaseAssetId": 745731500
+    },
+    {
+      "name": "@nyc-tron/core",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-core-1.0.0-rc.2.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-core-1.0.0-rc.2.tgz",
+      "bytes": 61635,
+      "sha256": "0739fdc157461de8bb080471e61a46a4ffaf73b383ebca6a11a3cf67a08f7744",
+      "sha512": "sha512-trAKaAymxEsVUnSEKv3nS2aAbjtmT2eFmmYJS6ebEECmWKyJDiosZqru3vNViCxEOfrSeyahmMnWNhE3FE8e1Q==",
+      "releaseAssetId": 745731453
+    },
+    {
+      "name": "@nyc-tron/expo-controls",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-expo-controls-1.0.0-rc.2.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-expo-controls-1.0.0-rc.2.tgz",
+      "bytes": 58830,
+      "sha256": "b714c06a340894d39fee02f903224085c6162f5aab7c27f49d51bd79e22c4ae5",
+      "sha512": "sha512-ABK5NwFfGCRFuJ6omz5J3AvhHmY7PuTOoJGxUWabi3Zl2zuh0/NuSs+f3OQ9153zgy+iVvQMp452JCzO1qlRCQ==",
+      "releaseAssetId": 745731448
+    },
+    {
+      "name": "@nyc-tron/reserved-regions",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-reserved-regions-1.0.0-rc.2.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-reserved-regions-1.0.0-rc.2.tgz",
+      "bytes": 20296,
+      "sha256": "93a44356aef06e9c21ddb7d590f71afb5e21daaea88a6f88d7444922b368b278",
+      "sha512": "sha512-zzlSNuMGX48WhcnwOl3sRjZPoIOyvaLCBRgJchcS3Appw/g/BLPMcKC+5KAt2SJ12u1PClzPRAQDjJfwQKxLtA==",
+      "releaseAssetId": 745731494
+    },
+    {
+      "name": "@nyc-tron/platform-services",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-platform-services-1.0.0-rc.2.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-platform-services-1.0.0-rc.2.tgz",
+      "bytes": 91755,
+      "sha256": "4bd1328094a96f0f44f3d8aea9f110b21d7895c284f3d8fc45305ab5af47c292",
+      "sha512": "sha512-u2brfRl1adpzRMKSgn2d9AbQY9iCV6FqJ4WXKkmQBu+NRZBr9EpqahF6CgAt/z7kv8rYz0tbJDVBU/inRwFPaQ==",
+      "releaseAssetId": 745731495
+    },
+    {
+      "name": "@nyc-tron/native-controls",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-native-controls-1.0.0-rc.2.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-native-controls-1.0.0-rc.2.tgz",
+      "bytes": 35448,
+      "sha256": "14b498c067aa2efaa00bae6dcade369e583738af5651a8d75ae28580b45eeeee",
+      "sha512": "sha512-DUr076BgWOULU9MKKbto1c+0Jk4GmGcEYb1CgY8MSKsni57+4NhjBZlRHqWwiTo4jONj1Cw0G94rwILt7QlOcA==",
+      "releaseAssetId": 745731471
+    },
+    {
+      "name": "@nyc-tron/hardware-keys",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-hardware-keys-1.0.0-rc.2.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-hardware-keys-1.0.0-rc.2.tgz",
+      "bytes": 21388,
+      "sha256": "abe573023f5b81ddcb04ddf1bbd4c88b02c2a86f8f40e652cdc3785bb3faf9bb",
+      "sha512": "sha512-4ETcnR7zoKNoRIQCFs5g2yoidbfWJMrKsgCyHjOAspRtK6sTgTqL7zGhn7OBjgyyo7SNaGIwAI6UGGO6wx9IBQ==",
+      "releaseAssetId": 745731451
+    }
+  ],
+  "stableApprovalClaimed": false
+}

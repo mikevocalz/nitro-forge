@@ -15,7 +15,7 @@ Each consumed archive was checked against that manifest before its pin changed.
 The rc.2 repin is under review. It does not establish Forge native/browser
 acceptance, complete F2's later stable `1.0.0` repin or authorize Forge v1.
 The implementation and exact validation limits belong in the F2 evidence
-receipt. The older checkpoints below retain their original versions and scope.
+[receipt](release/evidence/2026-11-13-6dd7e71/f2-rc2-repin.md). The older checkpoints below retain their original versions and scope.
 
 ## One component source
 

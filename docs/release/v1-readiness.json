@@ -52,7 +52,7 @@
       ],
       "status": "in-progress",
       "statusReason": "The published Tron v1.0.0-rc.2 cohort at 0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44 is pinned in tooling/nyc-tron.json and all consumer manifests; both locks were regenerated with pnpm 12.18.0. The repin is under independent R2 review and needs candidate-bound installed consumer/type/runtime CI. The later stable Tron 1.0.0 repin is still pending; Forge v1 cannot ship pinned to this prerelease.",
-      "evidence": null,
+      "evidence": "docs/release/evidence/2026-11-13-6dd7e71/f2-rc2-repin.md",
       "commit": null,
       "reviewer": null,
       "reviewedAt": null

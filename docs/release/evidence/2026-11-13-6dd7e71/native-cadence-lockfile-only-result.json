@@ -1,0 +1,18 @@
+{
+  "command": [
+    "npx",
+    "pnpm@12.18.0",
+    "--dir",
+    "examples/native-cadence",
+    "install",
+    "--lockfile-only",
+    "--ignore-scripts",
+    "--no-frozen-lockfile"
+  ],
+  "exitCode": 0,
+  "beforeBytes": 10187079680,
+  "minimumObservedBytes": 10180194304,
+  "afterBytes": 10178445312,
+  "floorBytes": 10000000000,
+  "estimatedHeadroomBytes": 100000000
+}

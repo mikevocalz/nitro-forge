@@ -1,0 +1,16 @@
+{
+  "command": [
+    "npx",
+    "pnpm@12.18.0",
+    "install",
+    "--lockfile-only",
+    "--ignore-scripts",
+    "--no-frozen-lockfile"
+  ],
+  "exitCode": 0,
+  "beforeBytes": 10516353024,
+  "minimumObservedBytes": 10223898624,
+  "afterBytes": 10219991040,
+  "floorBytes": 10000000000,
+  "estimatedHeadroomBytes": 100000000
+}
