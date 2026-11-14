@@ -1,0 +1,221 @@
+--------- beginning of main
+11-14 09:04:33.022   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.022   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.022   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.023   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.023   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.024   363   363 I netd    : tetherGetStats() -> {[]} <0.29ms>
+11-14 09:04:33.024  6531  6531 I .mobile.maestro: Late-enabling -Xcheck:jni
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.025   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.026   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+--------- beginning of system
+11-14 09:04:33.026   569   569 D BatterySaverPolicy: accessibility changed to false, updating policy.
+11-14 09:04:33.033  1538  4484 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+11-14 09:04:33.033   569   615 I libprocessgroup: Removed cgroup /sys/fs/cgroup/uid_10210/pid_4211
+--------- beginning of kernel
+11-14 09:04:33.171     0     0 I init    : Untracked pid 4195 exited with status 0
+11-14 09:04:33.172     0     0 I init    : Untracked pid 4195 did not have an associated service entry and will not be reaped
+11-14 09:04:33.037  1538  4484 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+11-14 09:04:33.060  6531  6531 I .mobile.maestro: Using CollectorTypeCMC GC.
+11-14 09:04:33.061  6531  6531 W .mobile.maestro: Unexpected CPU variant for x86: x86_64.
+11-14 09:04:33.061  6531  6531 W .mobile.maestro: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, default
+11-14 09:04:33.062  1538  1796 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+11-14 09:04:33.062  1538  1796 I AiAiEcho: EchoTargets: 
+11-14 09:04:33.062  1538  1796 I AiAiEcho: Filtered by AiAi flag check: 
+11-14 09:04:33.062  1538  1796 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.062  1538  1796 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+11-14 09:04:33.063  1538  1796 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: EchoTargets: 
+11-14 09:04:33.063  1538  1796 I AiAiEcho: Filtered by AiAi flag check: 
+11-14 09:04:33.063  1538  1796 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+11-14 09:04:33.063  1538  1796 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: EchoTargets: 
+11-14 09:04:33.063  1538  1796 I AiAiEcho: Filtered by AiAi flag check: 
+11-14 09:04:33.063  1538  1796 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+11-14 09:04:33.063  1538  1796 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: EchoTargets: 
+11-14 09:04:33.063  1538  1796 I AiAiEcho: Filtered by AiAi flag check: 
+11-14 09:04:33.063  1538  1796 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.063  1538  1796 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+11-14 09:04:33.064  1538  1796 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+11-14 09:04:33.064  1538  1796 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+11-14 09:04:33.064  1538  1796 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+11-14 09:04:33.064  1538  1796 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+11-14 09:04:33.066   966   966 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+11-14 09:04:33.066   966   966 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+11-14 09:04:33.070  6531  6531 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+11-14 09:04:33.070  1507  1517 I adbd    : jdwp connection from 6531
+11-14 09:04:33.075  1275  1275 D SsBaseTemplateCard: No text view can be set up
+11-14 09:04:33.090  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.094  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.094  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.094  1275  1275 I SsBaseTemplateCard: Secondary card pane is null
+11-14 09:04:33.094  1275  1275 D SsBaseTemplateCard: No text view can be set up
+11-14 09:04:33.094  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.094  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.094  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.094  1275  1275 I SsBaseTemplateCard: Secondary card pane is null
+11-14 09:04:33.126  6531  6531 W .mobile.maestro: ClassLoaderContext shared library size mismatch. Expected=2, found=0 (PCL[]{PCL[/system/framework/android.test.base.jar*724373495]#PCL[/system/framework/android.test.mock.jar*1452759902]} | PCL[])
+11-14 09:04:33.128  6531  6531 W .mobile.maestro: ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[] | PCL[/system/framework/android.test.runner.jar*2496447986])
+11-14 09:04:33.129  6531  6531 W .mobile.maestro: ClassLoaderContext classpath size mismatch. expected=0, found=2 (PCL[] | PCL[/system/framework/android.test.runner.jar*2496447986:/system/framework/android.test.mock.jar*1452759902])
+11-14 09:04:33.129  6531  6531 W ziparchive: Unable to open '/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/base.dm': No such file or directory
+11-14 09:04:33.129  6531  6531 W ziparchive: Unable to open '/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/base.dm': No such file or directory
+11-14 09:04:33.141  6531  6531 W ziparchive: Unable to open '/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.dm': No such file or directory
+11-14 09:04:33.143  6531  6531 W ziparchive: Unable to open '/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.dm': No such file or directory
+11-14 09:04:33.298  6531  6531 D nativeloader: Configuring clns-7 for other apk /system/framework/android.test.runner.jar:/system/framework/android.test.mock.jar:/system/framework/android.test.base.jar:/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/base.apk:/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.apk. target_sdk_version=37, uses_libraries=, library_path=/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/lib/x86_64:/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/dev.mobile.maestro
+11-14 09:04:33.305  6531  6531 V GraphicsEnvironment: Currently set values for:
+11-14 09:04:33.306  6531  6531 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+11-14 09:04:33.306  6531  6531 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+11-14 09:04:33.306  6531  6531 V GraphicsEnvironment: Global.Settings values are invalid: number of packages: 0, number of values: 0
+11-14 09:04:33.306  6531  6531 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+11-14 09:04:33.308  6531  6531 D ApplicationLoaders: Returning zygote-cached class loader: /system/framework/android.test.base.jar
+11-14 09:04:33.310  6531  6531 D nativeloader: Configuring clns-8 for other apk /system/framework/android.test.mock.jar. target_sdk_version=37, uses_libraries=ALL, library_path=/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/lib/x86_64:/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/lib/x86_64, permitted_path=/data:/mnt/expand
+11-14 09:04:33.310  6531  6531 D ApplicationLoaders: Returning zygote-cached class loader: /system/framework/android.test.base.jar
+11-14 09:04:33.312  6531  6531 D nativeloader: Configuring clns-9 for other apk /system/framework/android.test.runner.jar. target_sdk_version=37, uses_libraries=ALL, library_path=/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/lib/x86_64:/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/lib/x86_64, permitted_path=/data:/mnt/expand
+11-14 09:04:33.313  6531  6531 W .mobile.maestro: ClassLoaderContext shared library size mismatch. Expected=2, found=3 (PCL[]{PCL[/system/framework/android.test.base.jar*724373495]#PCL[/system/framework/android.test.mock.jar*1452759902]} | PCL[]{PCL[/system/framework/android.test.base.jar*724373495]#PCL[/system/framework/android.test.mock.jar*1452759902]#PCL[/system/framework/android.test.runner.jar*2496447986]{PCL[/system/framework/android.test.base.jar*724373495]#PCL[/system/framework/android.test.mock.jar*1452759902]}};PCL[/system/framework/android.test.runner.jar*2496447986:/system/framework/android.test.mock.jar*1452759902:/system/framework/android.test.base.jar*724373495:/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/base.apk*2500516937:/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.apk*552774647])
+11-14 09:04:33.315  6531  6531 W .mobile.maestro: ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[] | PCL[/system/framework/android.test.runner.jar*2496447986]{PCL[/system/framework/android.test.base.jar*724373495]#PCL[/system/framework/android.test.mock.jar*1452759902]#PCL[/system/framework/android.test.runner.jar*2496447986]{PCL[/system/framework/android.test.base.jar*724373495]#PCL[/system/framework/android.test.mock.jar*1452759902]}};PCL[/system/framework/android.test.runner.jar*2496447986:/system/framework/android.test.mock.jar*1452759902:/system/framework/android.test.base.jar*724373495:/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/base.apk*2500516937:/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.apk*552774647])
+11-14 09:04:33.315  6531  6531 W .mobile.maestro: ClassLoaderContext classpath size mismatch. expected=0, found=2 (PCL[] | PCL[/system/framework/android.test.runner.jar*2496447986:/system/framework/android.test.mock.jar*1452759902]{PCL[/system/framework/android.test.base.jar*724373495]#PCL[/system/framework/android.test.mock.jar*1452759902]#PCL[/system/framework/android.test.runner.jar*2496447986]{PCL[/system/framework/android.test.base.jar*724373495]#PCL[/system/framework/android.test.mock.jar*1452759902]}};PCL[/system/framework/android.test.runner.jar*2496447986:/system/framework/android.test.mock.jar*1452759902:/system/framework/android.test.base.jar*724373495:/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/base.apk*2500516937:/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.apk*552774647])
+11-14 09:04:33.315  6531  6531 W ziparchive: Unable to open '/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/base.dm': No such file or directory
+11-14 09:04:33.316  6531  6531 W ziparchive: Unable to open '/data/app/~~3aSkTaRi3gEClyA4sYTdmw==/dev.mobile.maestro.test-ORZ8WERJid9iIwqTv9VMRQ==/base.dm': No such file or directory
+11-14 09:04:33.327  6531  6531 W ziparchive: Unable to open '/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.dm': No such file or directory
+11-14 09:04:33.327  6531  6531 W ziparchive: Unable to open '/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.dm': No such file or directory
+11-14 09:04:33.464  6531  6531 I AndroidJUnitRunner: newApplication android.app.Application
+11-14 09:04:33.465  6531  6531 I AndroidJUnitRunner: onCreate Bundle[mParcelledData.dataSize=204]
+11-14 09:04:33.466  6531  6531 D AndroidJUnitRunner: Use the raw file system for managing file I/O.
+11-14 09:04:33.483  6531  6531 V TestEventClient: No service name argument was given (testDiscoveryService, testRunEventService or orchestratorService)
+11-14 09:04:33.485  6531  6546 D AndroidJUnitRunner: onStart is called.
+11-14 09:04:33.490  6531  6546 I InstrConnection: Could not send broadcast or register receiver (isolatedProcess?)
+11-14 09:04:33.500  6531  6546 I TestRunner: run started: 1 tests
+11-14 09:04:33.501  6531  6546 I TestRunner: started: grpcServer(dev.mobile.maestro.MaestroDriverService)
+11-14 09:04:33.506  6531  6546 I UiDevice: Creating a new instance, old instance exists: false
+11-14 09:04:33.507  1507  1507 E adbd    : failed to connect to socket 'tcp:7001': Connection refused
+11-14 09:04:33.507  6531  6546 I UiAutomation: Initialized for user 0 on display 0
+11-14 09:04:33.509   569  1785 D AccessibilityManagerService: changeCurrentUserForTestAutomationIfNeededLocked(0): ignoring because device doesn't support visible background users
+11-14 09:04:33.509   569  1785 I UiAutomationManager: Registering UiTestAutomationService (id=com.android.server.accessibility/UiAutomation, flags=0x0) when called by user 0
+11-14 09:04:33.510  1538  4484 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+11-14 09:04:33.510   569  1785 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+11-14 09:04:33.511   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.511   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.512   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.512   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.512  1538  1796 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+11-14 09:04:33.512  1538  1796 I AiAiEcho: EchoTargets: 
+11-14 09:04:33.512  1538  1796 I AiAiEcho: Filtered by AiAi flag check: 
+11-14 09:04:33.512  1538  1796 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.512  1538  1796 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.512   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.512  1538  1796 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+11-14 09:04:33.512  1538  1796 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+11-14 09:04:33.512  1538  1796 I AiAiEcho: EchoTargets: 
+11-14 09:04:33.512  1538  1796 I AiAiEcho: Filtered by AiAi flag check: 
+11-14 09:04:33.512  1538  1796 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.512  1538  1796 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.512  1538  1796 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+11-14 09:04:33.512  1538  1796 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+11-14 09:04:33.512  6531  6548 V UiAutomation: Init UiAutomation@707b681[id=4, displayId=0, flags=0]
+11-14 09:04:33.512  1538  1796 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+11-14 09:04:33.512   966   966 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+11-14 09:04:33.513  1275  1275 D SsBaseTemplateCard: No text view can be set up
+11-14 09:04:33.513  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.513  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.513  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.513  1275  1275 I SsBaseTemplateCard: Secondary card pane is null
+11-14 09:04:33.513   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.513   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.513  6531  6546 D UiDevice: Setting accessibility service flags: 65618
+11-14 09:04:33.515   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.515   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.516   569  1785 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+11-14 09:04:33.517   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.517   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.517   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.517   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.517   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.517   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.517   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.517   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.524   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.526   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.527  1538  1551 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+11-14 09:04:33.527  1538  1796 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+11-14 09:04:33.527  1538  1796 I AiAiEcho: EchoTargets: 
+11-14 09:04:33.527  1538  1796 I AiAiEcho: Filtered by AiAi flag check: 
+11-14 09:04:33.527  1538  1796 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.528  1538  1796 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.528  1538  1796 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+11-14 09:04:33.528  1538  1796 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+11-14 09:04:33.528  1538  1796 I AiAiEcho: EchoTargets: 
+11-14 09:04:33.528  1538  1796 I AiAiEcho: Filtered by AiAi flag check: 
+11-14 09:04:33.528  1538  1796 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.528  1538  1796 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+11-14 09:04:33.528   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.528  1538  1796 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+11-14 09:04:33.528  1538  1796 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+11-14 09:04:33.528   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.528  1538  1796 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+11-14 09:04:33.528  6531  6546 I System.out: Server running on port [ 7001 ]
+11-14 09:04:33.528   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.528   966   966 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+11-14 09:04:33.530   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.530   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.530   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.530   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.530   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.530   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.530  1275  1275 D SsBaseTemplateCard: No text view can be set up
+11-14 09:04:33.530  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.530  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.530  1275  1275 D SsBaseTemplateCard: Passed-in item info is null
+11-14 09:04:33.530  1275  1275 I SsBaseTemplateCard: Secondary card pane is null
+11-14 09:04:33.531   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.534   569   569 W IPCThreadState: Sending oneway calls to frozen process.
+11-14 09:04:33.534   569   569 D BatterySaverPolicy: accessibility changed to true, updating policy.
+11-14 09:04:33.543  6531  6546 W System.err: SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+11-14 09:04:33.543  6531  6546 W System.err: SLF4J: Defaulting to no-operation (NOP) logger implementation
+11-14 09:04:33.543  6531  6546 W System.err: SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+11-14 09:04:33.569  6531  6546 W .mobile.maestro: Accessing hidden method Lsun/misc/VM;->maxDirectMemory()J (unsupported, reflection, allowed)
+11-14 09:04:33.570  6531  6546 I PlatformDependent: Your platform does not provide complete low-level API for accessing direct buffers reliably. Unless explicitly requested, heap buffer will always be preferred to avoid potential system instability.
+11-14 09:04:33.578  6531  6546 E .mobile.maestro: No implementation found for int io.grpc.netty.shaded.io.netty.channel.epoll.Native.offsetofEpollData() (tried Java_io_grpc_netty_shaded_io_netty_channel_epoll_Native_offsetofEpollData and Java_io_grpc_netty_shaded_io_netty_channel_epoll_Native_offsetofEpollData__) - is the library loaded, e.g. System.loadLibrary?
+11-14 09:04:33.579  6531  6546 D nativeloader: Load libio_grpc_netty_shaded_netty_transport_native_epoll_x86_64.so using ns clns-7 from class loader (caller=/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.apk!classes6.dex): dlopen failed: library "libio_grpc_netty_shaded_netty_transport_native_epoll_x86_64.so" not found
+11-14 09:04:33.580  6531  6546 D nativeloader: Load libio_grpc_netty_shaded_netty_transport_native_epoll_x86_64.so using ns clns-7 from class loader (caller=/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.apk!classes6.dex): dlopen failed: library "libio_grpc_netty_shaded_netty_transport_native_epoll_x86_64.so" not found
+11-14 09:04:33.580  6531  6546 D nativeloader: Load libio_grpc_netty_shaded_netty_transport_native_epoll.so using ns clns-7 from class loader (caller=/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.apk!classes6.dex): dlopen failed: library "libio_grpc_netty_shaded_netty_transport_native_epoll.so" not found
+11-14 09:04:33.580  6531  6546 D nativeloader: Load libio_grpc_netty_shaded_netty_transport_native_epoll.so using ns clns-7 from class loader (caller=/data/app/~~44RTeiXKWxk4RLWHtu5i-A==/dev.mobile.maestro-en2Vn_lmQbiidsXwl_GsXg==/base.apk!classes6.dex): dlopen failed: library "libio_grpc_netty_shaded_netty_transport_native_epoll.so" not found
+11-14 09:04:33.587  6531  6546 D Maestro : Started listening to accessibility events
+11-14 09:04:33.587  6531  6546 W .mobile.maestro: Accessing hidden method Landroid/app/UiAutomation;->injectInputEvent(Landroid/view/InputEvent;ZZ)Z (blocked,test-api, reflection, allowed)
+11-14 09:04:33.601  6531  6546 W .mobile.maestro: Accessing hidden field Lsun/nio/ch/SelectorImpl;->selectedKeys:Ljava/util/Set; (unsupported, reflection, allowed)
+11-14 09:04:33.601  6531  6546 W .mobile.maestro: Accessing hidden field Lsun/nio/ch/SelectorImpl;->publicSelectedKeys:Ljava/util/Set; (unsupported, reflection, allowed)
+11-14 09:04:33.609  1507  1507 E adbd    : failed to connect to socket 'tcp:7001': Connection refused
+11-14 09:04:33.612  6531  6550 D TrafficStats: tagSocket(105) with statsTag=0xffffffff, statsUid=-1
+11-14 09:04:33.612  6531  6531 W grpc-nio-boss-E: type=1400 audit(0.0:62): avc:  denied  { read } for  name="somaxconn" dev="proc" ino=29109 scontext=u:r:untrusted_app:s0:c210,c256,c512,c768 tcontext=u:object_r:proc_net:s0 tclass=file permissive=0 app=dev.mobile.maestro
+11-14 09:04:33.621  6531  6550 W MacAddressUtil: Failed to find a usable hardware address from the network interfaces; using random bytes: 50:02:7d:20:04:55:bf:70
+11-14 09:04:34.025  6531  6553 D Maestro : Requesting view hierarchy
+11-14 09:04:34.027  6531  6553 W QueryController: Could not detect idle state.
+11-14 09:04:34.028  6531  6553 W QueryController: Could not detect idle state.
+11-14 09:04:34.053  6531  6553 I Maestro : Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@90c3f; boundsInParent: Rect(0, 0 - 0, 0); boundsInScreen: Rect(245, 12 - 245, 12); boundsInWindow: Rect(245, 12 - 245, 12); packageName: com.android.systemui; className: android.widget.FrameLayout; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: false; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: false; visible: false; actions: [AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+11-14 09:04:34.060  6531  6553 I Maestro : Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@1199d; boundsInParent: Rect(0, 0 - 280, 35); boundsInScreen: Rect(20, 816 - 300, 800); boundsInWindow: Rect(20, 816 - 300, 800); packageName: dev.nitroforge.f6.consumer; className: android.widget.TextView; text: quill / Close: PASS — document closed and its host disposed; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: f6-result; uniqueId: null; checkable: false; checked: false; focusable: true; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_FOCUS - null, AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_NEXT_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_SET_SELECTION - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: true
+11-14 09:04:34.060  6531  6553 I Maestro : Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@11d5e; boundsInParent: Rect(0, 0 - 280, 35); boundsInScreen: Rect(20, 863 - 300, 800); boundsInWindow: Rect(20, 863 - 300, 800); packageName: dev.nitroforge.f6.consumer; className: android.widget.TextView; text: file:///data/user/0/dev.nitroforge.f6.consumer/files/forge-f6-quill.nfd; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: f6-file; uniqueId: null; checkable: false; checked: false; focusable: true; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_FOCUS - null, AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_NEXT_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_SET_SELECTION - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: true
+11-14 09:04:34.060  6531  6553 I Maestro : Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@1211f; boundsInParent: Rect(0, 0 - 280, 19); boundsInScreen: Rect(20, 910 - 300, 800); boundsInWindow: Rect(20, 910 - 300, 800); packageName: dev.nitroforge.f6.consumer; className: android.widget.TextView; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: f6-authoritative-state; uniqueId: null; checkable: false; checked: false; focusable: true; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_FOCUS - null, AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+11-14 09:04:34.060  6531  6553 I Maestro : Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@124e0; boundsInParent: Rect(0, 0 - 280, 83); boundsInScreen: Rect(20, 941 - 300, 800); boundsInWindow: Rect(20, 941 - 300, 800); packageName: dev.nitroforge.f6.consumer; className: android.view.ViewGroup; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: f6-log; uniqueId: null; checkable: false; checked: false; focusable: false; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+11-14 09:04:34.060  6531  6553 I Maestro : Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@128a1; boundsInParent: Rect(0, 0 - 280, 83); boundsInScreen: Rect(20, 941 - 300, 800); boundsInWindow: Rect(20, 941 - 300, 800); packageName: dev.nitroforge.f6.consumer; className: android.widget.TextView; text: quill / Reopen from disk: PASS — new host/document restored disk bytes and exactly matched persisted state
+11-14 09:04:34.060  6531  6553 I Maestro : quill / Close: PASS — document closed and its host disposed; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: true; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_FOCUS - null, AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_NEXT_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY - null, AccessibilityAction: ACTION_SET_SELECTION - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: true
+11-14 09:04:34.060  6531  6553 D Maestro : View hierarchy received in 35 ms
+11-14 09:04:34.576     0     0 I logd    : logdr: UID=0 GID=0 PID=6556 n tail=200 logMask=99 pid=0 start=0ns deadline=0ns

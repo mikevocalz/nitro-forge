@@ -1,0 +1,228 @@
+--------- beginning of main
+11-14 08:52:59.614  1662  1980 I Ma-fcf  : (REDACTED) FCF: Device model check status : %s
+11-14 08:52:59.614   569   881 I WifiClientModeImpl[46277:wlan0]: Update current security type to 0
+11-14 08:52:59.614  1662  1980 I Ma-fcf-OndeviceNlu: (REDACTED) #evaluate: isEnabled[ = %s failure reasons: %s
+11-14 08:52:59.614  1662  1980 I Ma-InitialDownload: Skipping group files check, no on-device NLU/FF and no ASR
+11-14 08:52:59.616  1573  2018 I Ma-Entry-Triggering-CreateConfig: (REDACTED) Needs to download files: %s
+11-14 08:52:59.617   569  1658 D ConnectivityService: requestNetwork for uid/pid:10144/1662 activeRequest: null callbackRequest: 67 [NetworkRequest [ REQUEST id=68, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10144 RequestorUid: 10144 RequestorPkg: com.google.android.googlequicksearchbox UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false
+11-14 08:52:59.618  1391  1682 W Backup  : [ComponentEnablerUtil] Unable to set component 'com.google.android.gms.backup.component.CloudRestoreFlowActivity' to enabled=true
+11-14 08:52:59.619   569  1776 W JobInfo : Job 'com.google.android.googlequicksearchbox/com.google.android.apps.gsa.tasks.BackgroundTasksJobService#-151' has a deadline with no functional constraints. The deadline won't improve job execution latency. Consider removing the deadline.
+11-14 08:52:59.620   569   588 W system_server: ApkAssets: Deleting an ApkAssets object '/product/overlay/SystemUIGoogle__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+11-14 08:52:59.620   569   588 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/LatinIMEGooglePrebuilt/LatinIMEGooglePrebuilt.apk' with 1 weak references
+--------- beginning of system
+11-14 08:52:59.623   569  1085 W JobScheduler: Job didn't exist in JobStore: 136b1f7 #u0a144/-151 com.google.android.googlequicksearchbox/com.google.android.apps.gsa.tasks.BackgroundTasksJobService
+11-14 08:52:59.626   569  1122 D PackageManager: Instant App installer not found with android.intent.action.INSTALL_INSTANT_APP_PACKAGE
+11-14 08:52:59.626   569  1122 D PackageManager: Clear ephemeral installer activity
+11-14 08:52:59.626  1446  1561 I DynamiteModule: Selected remote version of com.google.android.gms.googlecertificates, version >= 7
+11-14 08:52:59.630  1573  2018 I Ma-Entry-Triggering: No changes in config detected
+11-14 08:52:59.630   569   697 W JobInfo : Job 'com.google.android.providers.media.module/com.android.providers.media.MediaService#-300' has a deadline with no functional constraints. The deadline won't improve job execution latency. Consider removing the deadline.
+11-14 08:52:59.633   569   888 D ConnectivityService: NetReassign [no changes] [c 0] [a 0] [i 3]
+11-14 08:52:59.633   569   881 I WifiClientModeImpl[46277:wlan0]: Update current security type to 0
+11-14 08:52:59.635   569   697 W JobInfo : Job 'com.google.android.providers.media.module/com.android.providers.media.MediaService#-300' has a deadline with no functional constraints. The deadline won't improve job execution latency. Consider removing the deadline.
+11-14 08:52:59.635   569   588 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/GoogleTTS/GoogleTTS.apk' with 1 weak references
+11-14 08:52:59.635  1538  1538 I AiAiEcho: SearchContextManagerImpl::setSearchContext resultTypes=[141151] extras=[Bundle[{launcher.maxInlineIcons=3, dynamic_ranking_m3_enabled=true, qs_tiles_asi_enabled=true, allowlist_enabled=false, one_search_enabled=true, system_clock=true, version_code=12, gms_play_query_lower_bound=2, gms_play_query_upper_bound=20, recent_search_block_enabled=true, gms_play_feature_supported=true, launcher.gridSize=5, showhiddentargets_enabled=false, ose_info=1}]] sessionId=[com.google.android.apps.nexuslauncher:1010afc1-a758-490f-8e4b-245e9e7431d0,0]
+11-14 08:52:59.636   569   588 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/app/AccessibilityMenu/AccessibilityMenu.apk' with 1 weak references
+11-14 08:52:59.644   569   588 W system_server: ApkAssets: Deleting an ApkAssets object '/product/overlay/AccessibilityMenu__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+11-14 08:52:59.650  1662  2391 I MicroDetectionState: (REDACTED) Updating hotword opa ineligibility to %b
+11-14 08:52:59.655   569   588 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/InputDevices/InputDevices.apk' with 1 weak references
+11-14 08:52:59.656   569  1785 D PackageManager: Instant App installer not found with android.intent.action.INSTALL_INSTANT_APP_PACKAGE
+11-14 08:52:59.656   569  1785 D PackageManager: Clear ephemeral installer activity
+11-14 08:52:59.657   569   881 W BestClock: java.time.DateTimeException: Missing network time fix
+11-14 08:52:59.657   569   881 W BestClock: java.time.DateTimeException: Missing network time fix
+11-14 08:52:59.657  1573  1573 I GsaVoiceInteractionSrv: (REDACTED) O received %s
+11-14 08:52:59.659  1275  1310 D SearchTargetUtil: query= size=1
+11-14 08:52:59.659  1275  1310 D SearchTargetUtil: layoutType=icon_row resultType=4096 packageName= extras=Bundle{aiai_settings_enabled=true,icon_container_enabled=true,zero_state_query_ready=true,zero_state_all_apps_web_suggest_count=3,rank=1.0,toast_settings_toggle_values=16777476,key_ipc_start=52245,hide_subtitle=true,enable_launch_animations=true,zero_state_qsb_web_suggest_count=10,}ParentID: null targetID: SESSION_INFO:0::zero_state_flags
+11-14 08:52:59.662   569   613 D CompatChangeReporter: Compat change id reported: 151861875; UID 10140; state: ENABLED
+11-14 08:52:59.662   569   613 V GrammaticalInflectionUtils: AttributionSource: AttributionSource { uid = 10140, packageName = null, attributionTag = null, token = android.os.Binder@14aedd6, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+11-14 08:52:59.663   569   881 W BestClock: java.time.DateTimeException: Missing network time fix
+11-14 08:52:59.663   569   881 W BestClock: java.time.DateTimeException: Missing network time fix
+11-14 08:52:59.663   569   881 I WifiClientModeImpl[46277:wlan0]: Update current security type to 0 from network connection event.
+11-14 08:52:59.664   569  1776 D PackageManager: Instant App installer not found with android.intent.action.INSTALL_INSTANT_APP_PACKAGE
+11-14 08:52:59.664   569  1776 D PackageManager: Clear ephemeral installer activity
+11-14 08:52:59.664   569   588 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/PrebuiltGmsCore/PrebuiltGmsCore.apk' with 1 weak references
+11-14 08:52:59.666  1251  1258 W .gms.persistent: Long monitor contention with owner highpool[7] (2169) at java.io.InputStream android.content.res.AssetManager.openNonAsset(int, java.lang.String, int)(AssetManager.java:1108) waiters=1 in void android.content.res.AssetManager$AssetInputStream.close() for 110ms
+11-14 08:52:59.667  1391  1682 W Backup  : [ComponentEnablerUtil] Unable to set component 'com.google.android.gms.backup.component.D2dMigrateFlowActivity' to enabled=false
+11-14 08:52:59.668  1251  1258 W .gms.persistent: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/PartnerSetupPrebuilt/PartnerSetupPrebuilt.apk' with 1 weak references
+11-14 08:52:59.673   569   881 I ApplicationQosPolicyRequestHandler: Queueing all policies on iface=wlan0. numPolicies=0
+11-14 08:52:59.673   569   881 I ApplicationQosPolicyRequestHandler: 0 policies contain QosCharacteristics
+11-14 08:52:59.675  1391  1682 V Backup  : [ComponentEnabler] Scheduling tasks.
+11-14 08:52:59.676  1662  2391 I A       : getLocaleToModelSpecsMap
+11-14 08:52:59.676  1391  1682 V Backup  : [GmsBackupScheduler] Disabled, not scheduling.
+11-14 08:52:59.679  1662  2391 I A       : Proto config empty. Exit merge.
+11-14 08:52:59.681  1662  2391 W SearchServiceCore: Abort, client detached.
+11-14 08:52:59.689  1391  1391 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.findmydevice.spot.service.locationreport.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsApiService }
+11-14 08:52:59.691   569   569 I TransportConnection: BackupTransportService#2: Notifying [BMS.restoreAtInstall] transport = BackupTransportClient
+11-14 08:52:59.693  1391  1391 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.findmydevice.spot.service.locationreport.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsApiService }
+11-14 08:52:59.695   569   881 I ConnectivityService: Update score for net 100 : +IS_UNMETERED
+11-14 08:52:59.706  1662  2391 W SearchServiceCore: Abort, client detached.
+11-14 08:52:59.706  1130  1130 I Telephony: TelecomAccountRegistry$AccountEntry: registerPstnPhoneAccount: Registering account=[[ ] PhoneAccount: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0} Capabilities: CallProvider MultiUser PlaceEmerg SimSub  Audio Routes: BESW Schemes: tel voicemail  Extras: Bundle[{android.telecom.extra.SUPPORTS_VIDEO_CALLING_FALLBACK=true}] GroupId: *** SC Restrictions: [ ]] with Telecom. subId=1
+11-14 08:52:59.706  1662  2391 W SearchServiceCore: Abort, client detached.
+11-14 08:52:59.707  1662  2391 W SearchServiceCore: Abort, client detached.
+11-14 08:52:59.707  1662  2391 W SearchServiceCore: Abort, client detached.
+11-14 08:52:59.710  1662  2391 W SearchServiceCore: Abort, client detached.
+11-14 08:52:59.710  1662  2391 W SearchServiceCore: Abort, client detached.
+11-14 08:52:59.710  1662  2391 I MicroDetectionWorker: (REDACTED) Initializing MicroDataManager InitializeType-%d, isForced-%b, isActivePhoneEnrollment-%b isActiveGoogleHomeEnrollment-%b
+11-14 08:52:59.710  1391  1682 D CompatChangeReporter: Compat change id reported: 253665015; UID 10143; state: ENABLED
+11-14 08:52:59.676  1251  1258 W .gms.persistent: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/LatinIMEGooglePrebuilt/LatinIMEGooglePrebuilt.apk' with 1 weak references
+11-14 08:52:59.711  1251  2464 W chromium: [1114/085259.685120:WARNING:dns_config_service_android.cc(81)] Failed to read DnsConfig.
+11-14 08:52:59.712   569   881 D ConnectivityService: registerNetworkAgent NetworkAgentInfo{network{100}  handle{432902426637}  ni{WIFI CONNECTING extra: } created=2026-11-14T08:52:59.712Z Score(Policies : IS_UNMETERED ; KeepConnected : 0)   lp{{LinkAddresses: [ ] DnsAddresses: [ ] Domains: null MTU: 0 Routes: [ ]}}  nc{[ Transports: WIFI Capabilities: NOT_METERED&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&NOT_ROAMING&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=54000Kbps LinkDnBandwidth>=54000Kbps Specifier: <WifiNetworkAgentSpecifier [WifiConfiguration=, SSID="AndroidWifi", BSSID=02:15:b2:00:00:01, band=1, mMatchLocalOnlySpecifiers=false]> TransportInfo: <SSID: "AndroidWifi", BSSID: 02:15:b2:00:00:01, MAC: 02:15:b2:00:00:00, IP: null, Security type: 0, Supplicant state: ASSOCIATED, Wi-Fi standard: legacy, RSSI: -127, Link speed: -1Mbps, Tx Link speed: -1Mbps, Max Supported Tx Link speed: 54Mbps, Rx Link speed: -1Mbps, Max Supported Rx Link speed: 54Mbps, Frequency: 2437MHz, Net ID: 0, Metered hint: false, score: 0, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>> AllowedUids: <{10171}> OwnerUid: 10171 AdminUids: [10171] SSID: "AndroidWifi" UnderlyingNetworks: Null]}  factorySerialNumber=5}
+11-14 08:52:59.712  1391  1391 D Backup  : [BackupScheduler] Setting backup scheduler enabled=false due to desired state 4
+11-14 08:52:59.712  1391  1391 I Backup  : [GmsBackupAccountManager] Backup account not found in gmscore.
+11-14 08:52:59.713   364   364 D Zygote  : Forked child process 2471
+11-14 08:52:59.713   569  1085 I Telecom : TelecomServiceImpl$1: registerPhoneAccount: account=[[ ] PhoneAccount: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0} Capabilities: CallProvider MultiUser PlaceEmerg SimSub  Audio Routes: BESW Schemes: tel voicemail  Extras: Bundle[{android.telecom.extra.SUPPORTS_VIDEO_CALLING_FALLBACK=true}] GroupId: *** SC Restrictions: [ ]]: TSI.rPA(cap)@AEs🔒
+11-14 08:52:59.713   569   646 D CompatChangeReporter: Compat change id reported: 311208629; UID 10143; state: ENABLED
+11-14 08:52:59.713   569  1085 I Telecom : PhoneAccountRegistrar: Modify account: [ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0}]: TSI.rPA(cap)@AEs🔒
+11-14 08:52:59.713  1275  1722 D EGL_emulation: app_time_stats: avg=66.57ms min=1.82ms max=635.93ms count=24
+11-14 08:52:59.714   569  1085 I Telecom : CallsManager: handlePhoneAccountChanged: phoneAccount=[[X] PhoneAccount: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0} Capabilities: CallProvider MultiUser PlaceEmerg SimSub  Audio Routes: BESW Schemes: tel voicemail  Extras: Bundle[{android.telecom.extra.SUPPORTS_VIDEO_CALLING_FALLBACK=true}] GroupId: *** SC Restrictions: [ ]]: TSI.rPA(cap)@AEs🔒
+11-14 08:52:59.714  1391  1391 V Backup  : [GmsBackupTransport] currentDestinationString: null
+11-14 08:52:59.717   569   697 D CompatChangeReporter: Compat change id reported: 271850009; UID 10143; state: ENABLED
+11-14 08:52:59.717   569   697 D CompatChangeReporter: Compat change id reported: 253665015; UID 10143; state: ENABLED
+11-14 08:52:59.717   569  1658 D BackupTransportManager: [UserID:0] Transport com.google.android.gms/.backup.BackupTransportService updated its attributes
+11-14 08:52:59.717   569   697 D CompatChangeReporter: Compat change id reported: 311402873; UID 10143; state: ENABLED
+11-14 08:52:59.717   569   697 D CompatChangeReporter: Compat change id reported: 323349338; UID 10143; state: ENABLED
+11-14 08:52:59.718   569   697 D ConnectivityService: requestNetwork for uid/pid:1000/569 asUid: 10143 activeRequest: null callbackRequest: 69 [NetworkRequest [ REQUEST id=70, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10143 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false
+11-14 08:52:59.723   569   614 W ActivityManager: Slow operation: 51ms so far, now at startProcess: done updating battery stats
+11-14 08:52:59.723   569   614 W ActivityManager: Slow operation: 60ms so far, now at startProcess: building log message
+11-14 08:52:59.723   569   614 I ActivityManager: Start proc 2471:com.google.android.settings.intelligence/u0a140 for broadcast {com.google.android.settings.intelligence/com.google.android.settings.intelligence.modules.contextualcards.impl.JobBootBroadcastReceiver}
+11-14 08:52:59.723   569   614 W ActivityManager: Slow operation: 60ms so far, now at startProcess: starting to update pids map
+11-14 08:52:59.723   569   614 W ActivityManager: Slow operation: 60ms so far, now at startProcess: done updating pids map
+11-14 08:52:59.724   569   646 V BackupManagerService: [UserID:0] Finishing install immediately
+11-14 08:52:59.724   569   646 I AppsFilter: interaction: PackageSetting{b1494fd com.android.microdroid.empty_payload/10205} -> PackageSetting{e59fcb0 com.google.android.googlequicksearchbox/10144} BLOCKED
+11-14 08:52:59.724   569   646 I AppsFilter: interaction: PackageSetting{b1494fd com.android.microdroid.empty_payload/10205} -> PackageSetting{76e6729 com.google.android.as/10139} BLOCKED
+11-14 08:52:59.725   569   646 I AppsFilter: interaction: PackageSetting{b1494fd com.android.microdroid.empty_payload/10205} -> PackageSetting{269aae com.google.android.partnersetup/10131} BLOCKED
+11-14 08:52:59.725   569   646 I AppsFilter: interaction: PackageSetting{b1494fd com.android.microdroid.empty_payload/10205} -> PackageSetting{425104f com.google.android.cellbroadcastreceiver/10206} BLOCKED
+11-14 08:52:59.725   569   646 I AppsFilter: interaction: PackageSetting{b1494fd com.android.microdroid.empty_payload/10205} -> PackageSetting{ada33dc com.google.android.inputmethod.latin/10154} BLOCKED
+11-14 08:52:59.725   569  1085 I Telecom : PhoneAccountRegistrar: getSimCallManager: SimCallManager for subId 1 queried, returning: null: TSI.rPA(cap)@AEs🔒
+11-14 08:52:59.727  1391  1682 V Backup  : [MmsBackupScheduler] Scheduled task to run in 1440 minutes, while idle: true, require charging: true, require wifi: true
+11-14 08:52:59.729  1446  1561 W ziparchive: Unable to open '/data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.dm': No such file or directory
+11-14 08:52:59.729   569  1085 I Telecom : PhoneAccountRegistrar: Notifying telephony of voice service override change for 1 SIMs, hasService = false: TSI.rPA(cap)@AEs🔒
+11-14 08:52:59.730   569   888 D ConnectivityService: NetReassign [no changes] [c 0] [a 0] [i 0]
+11-14 08:52:59.731  1130  1130 I PhoneInterfaceManager: setVoiceServiceStateOverride: subId=1, phone=Handler (com.android.internal.telephony.GsmCdmaPhone) {5961851}, hasService=false, callingPackage=com.android.server.telecom
+11-14 08:52:59.732  1130  1130 I Telephony: TelecomAccountRegistry$AccountEntry: Registered phoneAccount: [[ ] PhoneAccount: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0} Capabilities: CallProvider MultiUser PlaceEmerg SimSub  Audio Routes: BESW Schemes: tel voicemail  Extras: Bundle[{android.telecom.extra.SUPPORTS_VIDEO_CALLING_FALLBACK=true}] GroupId: *** SC Restrictions: [ ]] with handle: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0}
+11-14 08:52:59.732   363   363 I netd    : getFwmarkForNetwork(100) -> {MarkMaskParcel{mark: 100, mask: 65535}} <0.00ms>
+11-14 08:52:59.732  1130  1130 I Telephony: PstnIncomingCallNotifier: Registering: [0]
+11-14 08:52:59.732  1391  1682 V Backup  : [CustomBackupNewScheduleLog] Task is scheduled to run
+11-14 08:52:59.732  1130  1130 D Telephony: Registering: Handler (com.android.internal.telephony.GsmCdmaPhone) {5961851}
+11-14 08:52:59.733  1391  1682 V Backup  : [ClearcutLoggerWithVerifier] Logging to Clearcut eventCode: 85, event: # eqmb@7c69e976
+11-14 08:52:59.734  1130  1130 W Telephony: registerMmTelCapabilityCallback: registration failed, no ImsService available. Exception: code: 1
+11-14 08:52:59.734  1130  1130 W Telephony: registerImsRegistrationCallback: registration failed, no ImsService available. Exception: code: 1
+11-14 08:52:59.734  1130  1130 D Telephony: Finished registering mSimultaneousCallingTrackerListener for phoneId = 0; subId = 1
+11-14 08:52:59.735  1130  1130 I Telephony: TelecomAccountRegistry: onSubscriptionsChanged - update accounts
+11-14 08:52:59.735  1130  1130 I Telephony: PstnIncomingCallNotifier: Unregistering: [0]
+11-14 08:52:59.735  1130  1130 D Telephony: Unregistering: Handler (com.android.internal.telephony.GsmCdmaPhone) {5961851}
+11-14 08:52:59.735  1130  1130 I PhoneInterfaceManager: unregisterMmTelCapabilityCallback: 1 is inactive, ignoring unregister.
+11-14 08:52:59.735  1130  1130 I PhoneInterfaceManager: unregisterImsRegistrationCallback: 1is inactive, ignoring unregister.
+11-14 08:52:59.737  1130  1130 I Telephony: TelecomAccountRegistry: setupAccounts: Found 1 phones.  Attempting to register.
+11-14 08:52:59.737  1130  1130 I Telephony: TelecomAccountRegistry: setupAccounts: Phone with subscription id 1
+11-14 08:52:59.737  1130  1130 V SimultaneousCallingTracker: Device is not simultaneous calling capable
+11-14 08:52:59.738  1130  1130 D Telephony: isEmergencyPreferredAccount: subId=1, activeData=-1
+11-14 08:52:59.738  1130  1130 D Telephony: isEmergencyPreferredAccount: Device does not require preference.
+11-14 08:52:59.738   569   881 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendStickyBroadcast:1655 com.android.server.wifi.ClientModeImpl.sendNetworkChangeBroadcast:3121 com.android.server.wifi.ClientModeImpl.lambda$sendNetworkChangeBroadcastWithCurrentState$14:3098 com.android.server.wifi.ClientModeImpl.$r8$lambda$mtuS9ulugUkTxNA_sDDnAioo66w:0 com.android.server.wifi.ClientModeImpl$$ExternalSyntheticLambda13.send:0 
+11-14 08:52:59.738  1130  1130 I Telephony: isRttCurrentlySupported -- regular acct, hasVoiceAvailability: false
+11-14 08:52:59.738  1130  1130 I Telephony:  isRttSupported: false
+11-14 08:52:59.738  1130  1130 I Telephony:  alwaysAllowWhileRoaming: false
+11-14 08:52:59.738  1130  1130 I Telephony:  isRoaming: false
+11-14 08:52:59.738  1130  1130 I Telephony:  isOnWfc: false
+11-14 08:52:59.739  1391  2141 I WakefulBroadcastRcvr: Processing wakeful broadcast: com.google.android.gms.checkin.CHECKIN_START_ACTION
+11-14 08:52:59.743  1251  1251 I NearbySharing: ReceiveSurfaceService created with vendorMetadata null [CONTEXT service_id=194 ]
+11-14 08:52:59.743  1251  1251 I NearbySharing: ReceiveSurfaceService started [CONTEXT service_id=194 ]
+11-14 08:52:59.745  1391  2141 I SyncIntentOperation: Handling the intent: Intent { act=com.google.android.chimera.IntentOperation.NEW_MODULE (has extras) }. [CONTEXT service_id=80 ]
+11-14 08:52:59.747  1391  1682 I CobaltLoggerImpl: CobaltModuleInitIntentOperation: 12 [CONTEXT service_id=364 ]
+11-14 08:52:59.749  1391  1682 I CobaltLoggerImpl: Scheduling Cobalt Observation Generation task to run every 24 hours [CONTEXT service_id=364 ]
+11-14 08:52:59.752   967  2474 E BackupHelper: Could not parse delayed permissions
+11-14 08:52:59.752   967  2474 E BackupHelper: java.io.FileNotFoundException: /data/user_de/0/com.google.android.permissioncontroller/files/delayed_restore_permissions.xml: open failed: ENOENT (No such file or directory)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at libcore.io.IoBridge.open(IoBridge.java:574)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at java.io.FileInputStream.<init>(FileInputStream.java:179)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at android.app.ContextImpl.openFileInput(ContextImpl.java:774)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at com.android.permissioncontroller.permission.service.BackupHelper.restoreDelayedState(BackupHelper.java:406)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at com.android.permissioncontroller.permission.service.PermissionControllerServiceImpl.onRestoreDelayedRuntimePermissionsBackup(PermissionControllerServiceImpl.java:430)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at com.android.permissioncontroller.permission.service.PermissionControllerServiceImpl.lambda$onApplyStagedRuntimePermissionBackup$4(PermissionControllerServiceImpl.java:424)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at com.android.permissioncontroller.permission.service.PermissionControllerServiceImpl.$r8$lambda$TbAZrpVHU85LYBnlVdzyQvclH0Q(PermissionControllerServiceImpl.java:0)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at com.android.permissioncontroller.permission.service.PermissionControllerServiceImpl$$ExternalSyntheticLambda4.run(R8$$SyntheticClass:0)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at android.os.AsyncTask$SerialExecutor$1.run(AsyncTask.java:305)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at java.lang.Thread.run(Thread.java:1012)
+11-14 08:52:59.752   967  2474 E BackupHelper: Caused by: android.system.ErrnoException: open failed: ENOENT (No such file or directory)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at libcore.io.Linux.open(Native Method)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at libcore.io.ForwardingOs.open(ForwardingOs.java:563)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at libcore.io.BlockGuardOs.open(BlockGuardOs.java:274)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at libcore.io.ForwardingOs.open(ForwardingOs.java:563)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at android.app.ActivityThread$AndroidOs.open(ActivityThread.java:8591)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	at libcore.io.IoBridge.open(IoBridge.java:560)
+11-14 08:52:59.752   967  2474 E BackupHelper: 	... 11 more
+11-14 08:52:59.753  1446  1561 W ziparchive: Unable to open '/data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.dm': No such file or directory
+11-14 08:52:59.755   569  1106 D FileUtils: Rounded bytes from 3121676288 to 4000000000
+11-14 08:52:59.757   569   646 I AppsFilter: interaction: PackageSetting{b1494fd com.android.microdroid.empty_payload/10205} -> PackageSetting{5a3ef72 dev.nitroforge.f6.consumer/10209} BLOCKED
+11-14 08:52:59.762  1045  1062 D nativeloader: Load /system/priv-app/NetworkStackGoogle/NetworkStackGoogle.apk!/lib/x86_64/libnetworkstackutilsjni.so using ns clns-shared-7 from class loader (caller=/system/priv-app/NetworkStackGoogle/NetworkStackGoogle.apk): ok
+11-14 08:52:59.763   569   888 D ConnectivityService: [100 WIFI] EVENT_NETWORK_INFO_CHANGED, going from CONNECTING to CONNECTING
+11-14 08:52:59.765  1045  2473 D NetworkMonitor/100: checkAndRenewResourceConfig: update captive portal https urls to [https://www.google.com/generate_204]
+11-14 08:52:59.765  1045  2473 D NetworkMonitor/100: checkAndRenewResourceConfig: update captive portal http urls to [http://connectivitycheck.gstatic.com/generate_204]
+11-14 08:52:59.765  1045  2473 D NetworkMonitor/100: checkAndRenewResourceConfig: update captive portal fallback urls to[http://www.google.com/gen_204, http://play.googleapis.com/generate_204]
+11-14 08:52:59.765  1045  2473 D NetworkMonitor: Starting on network 100 with capport HTTPS URL [https://www.google.com/generate_204] and HTTP URL [http://connectivitycheck.gstatic.com/generate_204]
+11-14 08:52:59.766  1251  2179 I HKStore : Last init time not found. Assume the device rebooted [CONTEXT service_id=218 ]
+11-14 08:52:59.776  1573  1573 I A       : (REDACTED) Created gRPC endpoint for service %s
+11-14 08:52:59.788   569  1658 D SystemServerTiming: getUserSwitchability-0
+11-14 08:52:59.788  1391  1789 I ebvk$a  : Unable to retrieve flag snapshot for com.google.android.gms.cobalt#com.google.android.gms, using defaults.
+11-14 08:52:59.789  1391  1789 I ebvk$a  : Unable to retrieve flag snapshot for com.google.android.gms.common.download, using defaults.
+11-14 08:52:59.789   569  1658 D SystemServerTiming: TM.isInCall
+11-14 08:52:59.789  2360  2428 E .apps.wallpaper: Invalid resource ID 0x00000000.
+11-14 08:52:59.789   569   646 D PackageInstallerSession: Marking session 1824358656 as applied
+11-14 08:52:59.789   569  1658 V SystemServerTiming: TM.isInCall took to complete: 0ms
+11-14 08:52:59.790   569  1658 D SystemServerTiming: hasUserRestriction-DISALLOW_USER_SWITCH
+11-14 08:52:59.791   966   966 D ZenModeController: Removed callback class com.android.systemui.qs.tiles.DndTile$3
+11-14 08:52:59.791   569  1658 V SystemServerTiming: hasUserRestriction-DISALLOW_USER_SWITCH took to complete: 0ms
+11-14 08:52:59.791   569  1658 D SystemServerTiming: getInt-ALLOW_USER_SWITCHING_WHEN_SYSTEM_USER_LOCKED
+11-14 08:52:59.792   569  1658 V SystemServerTiming: getInt-ALLOW_USER_SWITCHING_WHEN_SYSTEM_USER_LOCKED took to complete: 0ms
+11-14 08:52:59.792   569  1658 D SystemServerTiming: isUserUnlocked-USER_SYSTEM
+11-14 08:52:59.792   569  1658 V SystemServerTiming: isUserUnlocked-USER_SYSTEM took to complete: 0ms
+11-14 08:52:59.792   569  1658 V SystemServerTiming: getUserSwitchability-0 took to complete: 3ms
+11-14 08:52:59.792  1130  1130 I Telephony: TelecomAccountRegistry$AccountEntry: registerPstnPhoneAccount: Registering account=[[ ] PhoneAccount: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0} Capabilities: CallProvider MultiUser PlaceEmerg SimSub  Audio Routes: BESW Schemes: tel voicemail  Extras: Bundle[{android.telecom.extra.SUPPORTS_VIDEO_CALLING_FALLBACK=true}] GroupId: *** SC Restrictions: [ ]] with Telecom. subId=1
+11-14 08:52:59.793   569   930 D ShortcutService: Saving package item com.android.chrome to /data/system_ce/0/shortcut_service/packages/com.android.chrome.xml
+11-14 08:52:59.795   569  1658 I Telecom : TelecomServiceImpl$1: registerPhoneAccount: account=[[ ] PhoneAccount: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0} Capabilities: CallProvider MultiUser PlaceEmerg SimSub  Audio Routes: BESW Schemes: tel voicemail  Extras: Bundle[{android.telecom.extra.SUPPORTS_VIDEO_CALLING_FALLBACK=true}] GroupId: *** SC Restrictions: [ ]]: TSI.rPA(cap)@AE4🔒
+11-14 08:52:59.797   363   363 I netd    : setProcSysNet(6, 1, wlan0, accept_ra_min_lft, 180) <0.04ms>
+11-14 08:52:59.800   363   363 I netd    : getProcSysNet(6, 1, wlan0, accept_ra_min_lft) -> {180} <0.02ms>
+11-14 08:52:59.800   569  1658 I Telecom : PhoneAccountRegistrar: Modify account: [ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0}]: TSI.rPA(cap)@AE4🔒
+11-14 08:52:59.805   569  1658 I Telecom : CallsManager: handlePhoneAccountChanged: phoneAccount=[[X] PhoneAccount: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0} Capabilities: CallProvider MultiUser PlaceEmerg SimSub  Audio Routes: BESW Schemes: tel voicemail  Extras: Bundle[{android.telecom.extra.SUPPORTS_VIDEO_CALLING_FALLBACK=true}] GroupId: *** SC Restrictions: [ ]]: TSI.rPA(cap)@AE4🔒
+11-14 08:52:59.808   569   881 I WifiClientModeImpl[46277:wlan0]: Update current security type to 0
+11-14 08:52:59.809   569   881 D WifiService: updateInterfaceIpState: ifaceName=wlan0 mode=-1 previous LOHS mode= -1
+11-14 08:52:59.814   569   881 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=68, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10144 RequestorUid: 10144 RequestorPkg: com.google.android.googlequicksearchbox UnderlyingNetworks: Null] ]
+11-14 08:52:59.815   569   881 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=68, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10144 RequestorUid: 10144 RequestorPkg: com.google.android.googlequicksearchbox UnderlyingNetworks: Null] ]
+11-14 08:52:59.816   569   881 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=68, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10144 RequestorUid: 10144 RequestorPkg: com.google.android.googlequicksearchbox UnderlyingNetworks: Null] ]
+11-14 08:52:59.823   569   881 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=68, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10144 RequestorUid: 10144 RequestorPkg: com.google.android.googlequicksearchbox UnderlyingNetworks: Null] ]
+11-14 08:52:59.831  1662  2391 I MicroDetectionState: (REDACTED) #takeChangeMicroDetectorMode [mIsBargeInEnabled: %b, mCurrentDetectionMode: %s]
+11-14 08:52:59.832   569  1658 I Telecom : PhoneAccountRegistrar: getSimCallManager: SimCallManager for subId 1 queried, returning: null: TSI.rPA(cap)@AE4🔒
+11-14 08:52:59.832   569  1658 I Telecom : PhoneAccountRegistrar: Notifying telephony of voice service override change for 1 SIMs, hasService = false: TSI.rPA(cap)@AE4🔒
+11-14 08:52:59.846  1275  1311 D LoaderTask: step 2 complete
+11-14 08:52:59.850  1130  1130 I PhoneInterfaceManager: setVoiceServiceStateOverride: subId=1, phone=Handler (com.android.internal.telephony.GsmCdmaPhone) {5961851}, hasService=false, callingPackage=com.android.server.telecom
+11-14 08:52:59.851  1662  2391 I MicroDetectionState: (REDACTED) Should stop hotword detection immediately - %b
+11-14 08:52:59.851   569  1122 D ShortcutService: Getting shortcuts for launcher= com.google.android.apps.nexuslauncheruser=0 pkg=null
+11-14 08:52:59.854  1130  1130 I Telephony: TelecomAccountRegistry$AccountEntry: Registered phoneAccount: [[ ] PhoneAccount: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0} Capabilities: CallProvider MultiUser PlaceEmerg SimSub  Audio Routes: BESW Schemes: tel voicemail  Extras: Bundle[{android.telecom.extra.SUPPORTS_VIDEO_CALLING_FALLBACK=true}] GroupId: *** SC Restrictions: [ ]] with handle: ComponentInfo{com.android.phone/com.android.services.telephony.TelephonyConnectionService}, 1, UserHandle{0}
+11-14 08:52:59.857  1130  1130 I Telephony: PstnIncomingCallNotifier: Registering: [0]
+11-14 08:52:59.857  1130  1130 D Telephony: Registering: Handler (com.android.internal.telephony.GsmCdmaPhone) {5961851}
+11-14 08:52:59.857  1130  1130 W Telephony: registerMmTelCapabilityCallback: registration failed, no ImsService available. Exception: code: 1
+11-14 08:52:59.861  1130  1130 W Telephony: registerImsRegistrationCallback: registration failed, no ImsService available. Exception: code: 1
+11-14 08:52:59.863   569   881 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=70, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10143 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]
+11-14 08:52:59.865  1130  1130 D Telephony: Finished registering mSimultaneousCallingTrackerListener for phoneId = 0; subId = 1
+11-14 08:52:59.874  1391  1898 I Checkin : [CheckinIntentOperation] onHandleIntent, Intent { act=com.google.android.gms.checkin.CHECKIN_START_ACTION cat=[targeted_intent_op_prefix:.checkin.CheckinIntentOperation] cmp=com.google.android.gms/.chimera.GmsIntentOperationService (has extras) }
+11-14 08:52:59.874  1045  2478 D ApfFilter: (wlan0): begin monitoring
+11-14 08:52:59.879  1130  1130 D CallNotifier: updatePhoneStateListeners: update CF notifications.
+11-14 08:52:59.882  1130  1130 I NotificationMgr: updateCfi: subId= 1, visible=N
+11-14 08:52:59.891   569   881 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=70, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10143 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]
+11-14 08:52:59.892   569   881 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=70, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10143 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]
+11-14 08:52:59.894   569   881 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=70, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10143 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]
+11-14 08:52:59.896   569   601 D ColorDisplayService: Setting saturation level: 100
+11-14 08:52:59.896  1130  1130 I NotificationMgr: updateMwi(): subId 1 update to false
+11-14 08:52:59.900  2286  2404 I tflite  : Initialized TensorFlow Lite runtime.
+--------- beginning of kernel
+11-14 08:53:00.039     0     0 I init    : Sending signal 9 to service 'idmap2d' (pid 1268) process group...
+11-14 08:52:59.902  2286  2404 E tflite  : third_party/tensorflow/lite/core/subgraph.cc:1059 tensor.data.raw != nullptr was not true.
+11-14 08:52:59.906   569   888 I ConnectivityService: Update score for net 100 : +TRANSPORT_PRIMARY
+11-14 08:52:59.907   569   888 D ConnectivityService: NetReassign [no changes] [c 0] [a 0] [i 1]
+11-14 08:52:59.918   363   363 I netd    : setProcSysNet(6, 1, wlan0, accept_ra, 2) <0.05ms>
+11-14 08:52:59.919   569   697 W OverlayManager: service 'idmap' died
+11-14 08:52:59.921  1130  1130 D MultiSimSettingController: onSubscriptionsChanged
+11-14 08:52:59.927  1130  1130 D MultiSimSettingController: Carrier config subId 1 is not loaded.
+11-14 08:52:59.929   569   888 D ConnectivityService: NetReassign [no changes] [c 0] [a 0] [i 0]
+11-14 08:52:59.930   363   363 I netd    : setProcSysNet(6, 1, wlan0, accept_ra_defrtr, 1) <0.03ms>
+11-14 08:52:59.930  1130  1130 D MultiSimSettingController: isReadyToReevaluate: subInfoInitialized=true, carrierConfigsLoaded=false, satelliteEnabledOrBeingEnabled=false
