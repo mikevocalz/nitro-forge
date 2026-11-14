@@ -104,6 +104,11 @@ export function createFlow({ screenshotPrefix = 'f6' } = {}) {
     action(commands, kind, 'reopen', `${shots}-${kind}-process-relaunch-persistence`);
     action(commands, kind, 'close');
   }
+  // Leave the actual heading and closed final studio in view for the unchanged
+  // host-side semantic identity audit; result centering changes scroll offset.
+  commands.push(scroll({ text: '^Forge clean consumer$' }, 'UP'));
+  commands.push({ assertVisible: { text: '^Forge clean consumer$' } });
+  commands.push({ assertVisible: selected(STUDIOS.at(-1), 'closed') });
   return { config: { appId: APP_ID, name: 'Forge seven-studio durable document workflows' }, commands };
 }
 

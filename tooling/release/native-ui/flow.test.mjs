@@ -197,3 +197,15 @@ test('each action PNG recenters the exact FINAL result after its wait and before
   }
   assert.equal(captures, 42, 'Six result images for each of seven actual studios');
 });
+
+test('full pass restores the actual heading and closed final studio before host identity/file audits', () => {
+  const commands = createFlow().commands;
+  assert.deepEqual(commands.slice(-3), [
+    { scrollUntilVisible: { element: { text: '^Forge clean consumer$' }, direction: 'UP', timeout: 30000, speed: 40, visibilityPercentage: 100 } },
+    { assertVisible: { text: '^Forge clean consumer$' } },
+    { assertVisible: { id: 'f6-selected', text: '^Studio: quill · Document: closed$' } },
+  ]);
+  assert.ok(appSource.includes('Forge clean consumer'));
+  assert.deepEqual(tapIds(commands).slice(-2), ['f6-reopen', 'f6-close']);
+  assert.equal(commands.filter(command => command.stopApp === null).length, 7);
+});
