@@ -79,3 +79,28 @@ export function iosRuntimeIdentity(inventory, udid) {
   return { observedVia: 'xcrun simctl list devices available --json', runtimeIdentifier,
     udid: device.udid, deviceTypeIdentifier: device.deviceTypeIdentifier, name: device.name, isAvailable: true };
 }
+
+/** Explicit ordinary-phone acceptance profile; runtimes must already exist. */
+export const IOS_ACCEPTANCE_DEVICE_TYPE = 'com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro';
+export function iosSimulatorTemplate(inventory) {
+  assert.ok(inventory && typeof inventory.devices === 'object');
+  const candidates = Object.entries(inventory.devices)
+    .filter(([runtime]) => /^com\.apple\.CoreSimulator\.SimRuntime\.iOS-\d+-\d+(?:-\d+)?$/.test(runtime))
+    .sort(([left], [right]) => right.localeCompare(left, undefined, { numeric: true }))
+    .flatMap(([, devices]) => devices.filter(device => device.isAvailable && device.deviceTypeIdentifier === IOS_ACCEPTANCE_DEVICE_TYPE));
+  assert.ok(candidates.length > 0, 'An already-available generic iOS runtime and iPhone 18 Pro type are required');
+  return iosRuntimeIdentity(inventory, candidates[0].udid);
+}
+
+/** Never acquire/delete an existing simulator based on create output. */
+export function newIosSimulatorId(inventory, udid) {
+  assert.match(udid, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  assert.ok(!Object.values(inventory.devices).some(devices => devices.some(device => device.udid === udid)), 'Created simulator must not be an existing device');
+  return udid;
+}
+
+/** CoreSimulator can return exit 0 with a terminal failed migration log. */
+export function checkIosBootStatus(output) {
+  assert.ok(typeof output === 'string' && output.trim().length > 0, 'Actual bootstatus output required');
+  assert.ok(!/\b(?:failed|failure|fatal)\b/i.test(output), 'CoreSimulator reported a failed boot/migration; installation must not proceed');
+}

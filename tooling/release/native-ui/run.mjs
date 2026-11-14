@@ -7,7 +7,7 @@ import { files, hash, inside, json, requireDisk } from '../archive-files.mjs';
 import { unpackArchive } from '../unpack-archive.mjs';
 import { createFlow, createPickerFlow, serializeFlow } from './flow.mjs';
 import { MAESTRO, parseHierarchy, requirePassedFlow, requireSemanticLabels } from './ui-evidence.mjs';
-import { exactFlowScreenshot, iosRuntimeIdentity, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
+import { checkIosBootStatus, exactFlowScreenshot, iosRuntimeIdentity, iosSimulatorTemplate, newIosSimulatorId, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
 
 const { values } = parseArgs({ options: { platform: { type: 'string' }, 'artifact-root': { type: 'string' }, source: { type: 'string' }, output: { type: 'string' } } });
 assert.ok(['ios', 'android'].includes(values.platform));
@@ -121,15 +121,28 @@ try {
     app = unpackArchive(inside(artifacts, record.archive), resolve(output, 'unpacked-app'), { prefix: record.applicationDirectory, sha256: record.sha256 });
     assert.equal(hash(resolve(app, 'main.jsbundle')), record.embeddedBundleSha256);
     const simulatorInventory = JSON.parse(run('xcrun', ['simctl', 'list', 'devices', 'available', '--json'], { log: 'simulators.log' }));
-    const devices = Object.entries(simulatorInventory.devices)
-      .sort(([a], [b]) => b.localeCompare(a, undefined, { numeric: true })).flatMap(([, list]) => list);
-    const chosen = devices.find(item => item.isAvailable && item.name.startsWith('iPhone') && item.state === 'Booted') ?? devices.find(item => item.isAvailable && item.name.startsWith('iPhone'));
-    assert.ok(chosen, 'An actual available CI iPhone simulator runtime is required');
-    writeFileSync(resolve(output, 'chosen-simulator.json'), JSON.stringify(chosen, null, 2) + '\n');
-    device = chosen.udid;
-    writeFileSync(resolve(output, 'actual-simulator-runtime.json'), JSON.stringify({ ...iosRuntimeIdentity(simulatorInventory, device), inventorySha256: hash(resolve(output, 'simulators.log')) }, null, 2) + '\n');
-    if (chosen.state !== 'Booted') { run('xcrun', ['simctl', 'boot', device], { log: 'simulator-boot.log' }); ownedSimulator = device; }
-    run('xcrun', ['simctl', 'bootstatus', device, '-b'], { timeout: 420000, log: 'simulator-bootstatus.log' });
+    const template = iosSimulatorTemplate(simulatorInventory);
+    const templateDevice = Object.values(simulatorInventory.devices).flat().find(item => item.udid === template.udid);
+    assert.ok(typeof templateDevice.dataPath === 'string' && templateDevice.dataPath.startsWith('/'), 'Actual simulator data volume required');
+    requireDisk(resolve(templateDevice.dataPath, '../..'), 2 * 1024 * 1024 * 1024);
+    run('xcrun', ['simctl', 'help', 'create'], { log: 'simctl-create-help.log' });
+    const creationName = 'Forge F6 ' + values.source.slice(0, 7) + '-' + process.pid;
+    device = newIosSimulatorId(simulatorInventory,
+      run('xcrun', ['simctl', 'create', creationName, template.deviceTypeIdentifier, template.runtimeIdentifier], { log: 'simulator-create.log' }).trim());
+    // Ownership is acquired only for a new OS UUID, never the template device.
+    ownedSimulator = device;
+    const createdInventory = JSON.parse(run('xcrun', ['simctl', 'list', 'devices', 'available', '--json'], { log: 'simulators-created.log' }));
+    const identity = iosRuntimeIdentity(createdInventory, device);
+    assert.equal(identity.runtimeIdentifier, template.runtimeIdentifier);
+    assert.equal(identity.deviceTypeIdentifier, template.deviceTypeIdentifier);
+    assert.equal(identity.name, creationName);
+    const chosen = Object.values(createdInventory.devices).flat().find(item => item.udid === device);
+    writeFileSync(resolve(output, 'chosen-simulator.json'), JSON.stringify({ ...chosen, createdByThisRun: true }, null, 2) + '\n');
+    writeFileSync(resolve(output, 'actual-simulator-runtime.json'), JSON.stringify({ ...identity, createdByThisRun: true,
+      inventorySha256: hash(resolve(output, 'simulators-created.log')), templateInventorySha256: hash(resolve(output, 'simulators.log')) }, null, 2) + '\n');
+    if (chosen.state !== 'Booted') run('xcrun', ['simctl', 'boot', device], { log: 'simulator-boot.log' });
+    const bootStatus = run('xcrun', ['simctl', 'bootstatus', device, '-b'], { timeout: 420000, log: 'simulator-bootstatus.log' });
+    checkIosBootStatus(bootStatus);
     run('xcrun', ['simctl', 'install', device, app], { log: 'install.log' });
   } else {
     assert.ok(process.env.ANDROID_HOME);
@@ -193,5 +206,8 @@ try {
     run(adb, ['-s', device, 'shell', 'am', 'force-stop', appId], { optional: true });
   }
   if (device && platform === 'ios') run('xcrun', ['simctl', 'spawn', device, 'log', 'show', '--last', '10m', '--style', 'compact', '--predicate', `eventMessage CONTAINS "${appId}"`], { optional: true, log: 'ios-app-system.log' });
-  if (ownedSimulator) run('xcrun', ['simctl', 'shutdown', ownedSimulator], { optional: true, log: 'owned-simulator-shutdown.log' });
+  if (ownedSimulator) {
+    run('xcrun', ['simctl', 'shutdown', ownedSimulator], { optional: true, log: 'owned-simulator-shutdown.log' });
+    run('xcrun', ['simctl', 'delete', ownedSimulator], { optional: true, log: 'owned-simulator-delete.log' });
+  }
 }

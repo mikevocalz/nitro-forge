@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { exactFlowScreenshot, iosRuntimeIdentity, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
+import { checkIosBootStatus, exactFlowScreenshot, iosRuntimeIdentity, iosSimulatorTemplate, newIosSimulatorId, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(resolve(tmpdir(), 'forge-os-evidence-'));
@@ -98,4 +98,37 @@ test('chosen iOS runtime is bound to the actual available-device inventory witho
   device.isAvailable = true;
   inventory.devices[actual.runtimeIdentifier].push({ ...device });
   assert.throws(() => iosRuntimeIdentity(inventory, udid), /one exact runtime/);
+});
+
+test('fresh iOS profile uses an already-available ordinary phone and generic runtime', () => {
+  const inventory = JSON.parse(readFileSync(new URL('../test-fixtures/ios-simulator-inventory.json', import.meta.url), 'utf8'));
+  const before = JSON.stringify(inventory);
+  const template = iosSimulatorTemplate(inventory);
+  assert.equal(template.runtimeIdentifier, 'com.apple.CoreSimulator.SimRuntime.iOS-27-2');
+  assert.equal(template.deviceTypeIdentifier, 'com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro');
+  assert.equal(template.name, 'iPhone 18 Pro');
+  assert.equal(JSON.stringify(inventory), before, 'Selection must not modify existing devices');
+  for (const devices of Object.values(inventory.devices)) for (const device of devices) {
+    if (device.deviceTypeIdentifier === template.deviceTypeIdentifier) device.isAvailable = false;
+  }
+  assert.throws(() => iosSimulatorTemplate(inventory), /already-available/);
+});
+test('created simulator ownership rejects existing or invalid identities', () => {
+  const inventory = JSON.parse(readFileSync(new URL('../test-fixtures/ios-simulator-inventory.json', import.meta.url), 'utf8'));
+  const template = iosSimulatorTemplate(inventory), before = JSON.stringify(inventory);
+  assert.throws(() => newIosSimulatorId(inventory, template.udid), /must not be an existing/);
+  assert.throws(() => newIosSimulatorId(inventory, 'not-an-os-uuid'));
+  const fresh = '11111111-2222-3333-4444-555555555555';
+  assert.equal(newIosSimulatorId(inventory, fresh), fresh);
+  assert.equal(JSON.stringify(inventory), before);
+});
+test('exit-zero bootstatus with actual failed migration text is rejected before install', () => {
+  const failed = readFileSync(new URL('../test-fixtures/ios-duo-failed-bootstatus.log', import.meta.url), 'utf8');
+  assert.match(failed, /isTerminal=YES/);
+  assert.match(failed, /Data Migration Failed/);
+  assert.throws(() => checkIosBootStatus(failed), /failed boot\/migration/);
+  // Observed successful CLI text; neither string is native workflow evidence.
+  checkIosBootStatus('Monitoring boot status for iPhone.\nDevice already booted, nothing to do.\n');
+  checkIosBootStatus('Status=4294967295, isTerminal=YES.\nFinished\n');
+  assert.throws(() => checkIosBootStatus(''), /Actual bootstatus/);
 });
