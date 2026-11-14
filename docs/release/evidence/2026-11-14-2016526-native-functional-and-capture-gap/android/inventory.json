@@ -1,0 +1,1086 @@
+[
+  {
+    "path": "runtime-ui/actual-android-properties.log",
+    "bytes": 37146
+  },
+  {
+    "path": "runtime-ui/actual-viewport-density.log",
+    "bytes": 22
+  },
+  {
+    "path": "runtime-ui/actual-android-read-access.log",
+    "bytes": 261
+  },
+  {
+    "path": "runtime-ui/actual-viewport-size.log",
+    "bytes": 46
+  },
+  {
+    "path": "runtime-ui/adb-root.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/candidate.json",
+    "bytes": 168222
+  },
+  {
+    "path": "runtime-ui/commands.jsonl",
+    "bytes": 32350
+  },
+  {
+    "path": "runtime-ui/execution.json",
+    "bytes": 145
+  },
+  {
+    "path": "runtime-ui/forge-consumer-receipt.json",
+    "bytes": 338
+  },
+  {
+    "path": "runtime-ui/install.log",
+    "bytes": 36
+  },
+  {
+    "path": "runtime-ui/installed-packages.json",
+    "bytes": 13646
+  },
+  {
+    "path": "runtime-ui/logcat.log",
+    "bytes": 2039421
+  },
+  {
+    "path": "runtime-ui/maestro-version.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/commands.json",
+    "bytes": 628940
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/logs/device-logcat.txt",
+    "bytes": 26123405
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/logs/maestro.log",
+    "bytes": 735783
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/manifest.json",
+    "bytes": 667
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-bad-restore-rejected.png",
+    "bytes": 34528
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-disk-save.png",
+    "bytes": 42696
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-fresh-host-reopen.png",
+    "bytes": 41987
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-picker.png",
+    "bytes": 34295
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-process-relaunch-persistence.png",
+    "bytes": 40516
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-redo.png",
+    "bytes": 34528
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-undo-fresh-edit.png",
+    "bytes": 40651
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-bad-restore-rejected.png",
+    "bytes": 34547
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-disk-save.png",
+    "bytes": 42329
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-fresh-host-reopen.png",
+    "bytes": 34567
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-picker.png",
+    "bytes": 34450
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-redo.png",
+    "bytes": 34547
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-process-relaunch-persistence.png",
+    "bytes": 39000
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-undo-fresh-edit.png",
+    "bytes": 34567
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-bad-restore-rejected.png",
+    "bytes": 34517
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-disk-save.png",
+    "bytes": 42323
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-fresh-host-reopen.png",
+    "bytes": 41619
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-picker.png",
+    "bytes": 34467
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-process-relaunch-persistence.png",
+    "bytes": 39585
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-redo.png",
+    "bytes": 40180
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-undo-fresh-edit.png",
+    "bytes": 40883
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-bad-restore-rejected.png",
+    "bytes": 41619
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-disk-save.png",
+    "bytes": 43195
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-fresh-host-reopen.png",
+    "bytes": 42754
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-picker.png",
+    "bytes": 34438
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-process-relaunch-persistence.png",
+    "bytes": 39269
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-redo.png",
+    "bytes": 42172
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-undo-fresh-edit.png",
+    "bytes": 40752
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-bad-restore-rejected.png",
+    "bytes": 41631
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-disk-save.png",
+    "bytes": 40892
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-fresh-host-reopen.png",
+    "bytes": 42864
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-picker.png",
+    "bytes": 34512
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-process-relaunch-persistence.png",
+    "bytes": 39815
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-redo.png",
+    "bytes": 41894
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-undo-fresh-edit.png",
+    "bytes": 41304
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-bad-restore-rejected.png",
+    "bytes": 41294
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-disk-save.png",
+    "bytes": 42928
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-fresh-host-reopen.png",
+    "bytes": 42039
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-picker.png",
+    "bytes": 34395
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-process-relaunch-persistence.png",
+    "bytes": 40155
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-redo.png",
+    "bytes": 42090
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-undo-fresh-edit.png",
+    "bytes": 42204
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+    "bytes": 35003
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-disk-save.png",
+    "bytes": 40904
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-fresh-host-reopen.png",
+    "bytes": 34998
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-picker.png",
+    "bytes": 34421
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-redo.png",
+    "bytes": 34971
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-process-relaunch-persistence.png",
+    "bytes": 37826
+  },
+  {
+    "path": "runtime-ui/pass-1/artifacts/2026-11-14_094822/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-undo-fresh-edit.png",
+    "bytes": 35023
+  },
+  {
+    "path": "runtime-ui/pass-1/debug/.maestro/tests/2026-11-14_094822/maestro.log",
+    "bytes": 738040
+  },
+  {
+    "path": "runtime-ui/pass-1/flow.yaml",
+    "bytes": 84992
+  },
+  {
+    "path": "runtime-ui/pass-1/report.xml",
+    "bytes": 507
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-cadence.expected.json",
+    "bytes": 212
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-cadence.nfd",
+    "bytes": 141
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-folio.expected.json",
+    "bytes": 376
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-folio.nfd",
+    "bytes": 759
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-pitch.expected.json",
+    "bytes": 418
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-pitch.nfd",
+    "bytes": 319
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-prism.expected.json",
+    "bytes": 253
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-prism.nfd",
+    "bytes": 178
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-quill.expected.json",
+    "bytes": 210
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-splice.expected.json",
+    "bytes": 180
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-splice.nfd",
+    "bytes": 112
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-quill.nfd",
+    "bytes": 135
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-tally.expected.json",
+    "bytes": 438
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/forge-f6-tally.nfd",
+    "bytes": 337
+  },
+  {
+    "path": "runtime-ui/pass-1-documents/os-sandbox-receipt.json",
+    "bytes": 2518
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-cadence.expected.json-pull.log",
+    "bytes": 135
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-cadence.nfd-pull.log",
+    "bytes": 125
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-folio.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-folio.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-pitch.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-pitch.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-prism.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-prism.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-quill.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-quill.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-splice.expected.json-pull.log",
+    "bytes": 134
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-tally.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-splice.nfd-pull.log",
+    "bytes": 124
+  },
+  {
+    "path": "runtime-ui/pass-1-forge-f6-tally.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-1-hierarchy.json",
+    "bytes": 104631
+  },
+  {
+    "path": "runtime-ui/pass-1-hierarchy-command.log",
+    "bytes": 72051
+  },
+  {
+    "path": "runtime-ui/pass-1-maestro.log",
+    "bytes": 126
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/commands.json",
+    "bytes": 628942
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/logs/device-logcat.txt",
+    "bytes": 27457046
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/logs/maestro.log",
+    "bytes": 739579
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/manifest.json",
+    "bytes": 667
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-bad-restore-rejected.png",
+    "bytes": 41367
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-disk-save.png",
+    "bytes": 43336
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-fresh-host-reopen.png",
+    "bytes": 41212
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-picker.png",
+    "bytes": 34295
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-process-relaunch-persistence.png",
+    "bytes": 40522
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-redo.png",
+    "bytes": 41581
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-undo-fresh-edit.png",
+    "bytes": 40999
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-bad-restore-rejected.png",
+    "bytes": 39840
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-disk-save.png",
+    "bytes": 41977
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-fresh-host-reopen.png",
+    "bytes": 40569
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-picker.png",
+    "bytes": 34450
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-process-relaunch-persistence.png",
+    "bytes": 39053
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-redo.png",
+    "bytes": 40023
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-undo-fresh-edit.png",
+    "bytes": 39811
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-bad-restore-rejected.png",
+    "bytes": 34554
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-disk-save.png",
+    "bytes": 42298
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-fresh-host-reopen.png",
+    "bytes": 41768
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-picker.png",
+    "bytes": 34467
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-process-relaunch-persistence.png",
+    "bytes": 39645
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-redo.png",
+    "bytes": 34554
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-undo-fresh-edit.png",
+    "bytes": 41031
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-bad-restore-rejected.png",
+    "bytes": 42453
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-disk-save.png",
+    "bytes": 43201
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-fresh-host-reopen.png",
+    "bytes": 41402
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-picker.png",
+    "bytes": 34438
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-process-relaunch-persistence.png",
+    "bytes": 39388
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-redo.png",
+    "bytes": 42137
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-undo-fresh-edit.png",
+    "bytes": 41019
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-bad-restore-rejected.png",
+    "bytes": 42116
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-disk-save.png",
+    "bytes": 41083
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-fresh-host-reopen.png",
+    "bytes": 41933
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-process-relaunch-persistence.png",
+    "bytes": 39772
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-picker.png",
+    "bytes": 34512
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-redo.png",
+    "bytes": 42161
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-undo-fresh-edit.png",
+    "bytes": 41048
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-bad-restore-rejected.png",
+    "bytes": 41310
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-disk-save.png",
+    "bytes": 42916
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-fresh-host-reopen.png",
+    "bytes": 43122
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-picker.png",
+    "bytes": 34395
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-process-relaunch-persistence.png",
+    "bytes": 40117
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-redo.png",
+    "bytes": 41942
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-undo-fresh-edit.png",
+    "bytes": 41641
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+    "bytes": 34992
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-disk-save.png",
+    "bytes": 41059
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-fresh-host-reopen.png",
+    "bytes": 34987
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-picker.png",
+    "bytes": 34421
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-process-relaunch-persistence.png",
+    "bytes": 37875
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-redo.png",
+    "bytes": 34960
+  },
+  {
+    "path": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-undo-fresh-edit.png",
+    "bytes": 35012
+  },
+  {
+    "path": "runtime-ui/pass-2/debug/.maestro/tests/2026-11-14_095849/maestro.log",
+    "bytes": 741836
+  },
+  {
+    "path": "runtime-ui/pass-2/flow.yaml",
+    "bytes": 84992
+  },
+  {
+    "path": "runtime-ui/pass-2/report.xml",
+    "bytes": 507
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-cadence.expected.json",
+    "bytes": 212
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-cadence.nfd",
+    "bytes": 141
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-folio.expected.json",
+    "bytes": 376
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-folio.nfd",
+    "bytes": 759
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-pitch.expected.json",
+    "bytes": 418
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-pitch.nfd",
+    "bytes": 319
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-prism.expected.json",
+    "bytes": 253
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-prism.nfd",
+    "bytes": 178
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-quill.expected.json",
+    "bytes": 210
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-quill.nfd",
+    "bytes": 135
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-splice.expected.json",
+    "bytes": 180
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-splice.nfd",
+    "bytes": 112
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-tally.expected.json",
+    "bytes": 438
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/forge-f6-tally.nfd",
+    "bytes": 337
+  },
+  {
+    "path": "runtime-ui/pass-2-documents/os-sandbox-receipt.json",
+    "bytes": 2518
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-cadence.expected.json-pull.log",
+    "bytes": 135
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-cadence.nfd-pull.log",
+    "bytes": 125
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-folio.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-folio.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-pitch.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-pitch.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-prism.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-prism.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-quill.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-quill.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-splice.expected.json-pull.log",
+    "bytes": 134
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-splice.nfd-pull.log",
+    "bytes": 124
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-tally.expected.json-pull.log",
+    "bytes": 133
+  },
+  {
+    "path": "runtime-ui/pass-2-forge-f6-tally.nfd-pull.log",
+    "bytes": 123
+  },
+  {
+    "path": "runtime-ui/pass-2-hierarchy-command.log",
+    "bytes": 72053
+  },
+  {
+    "path": "runtime-ui/pass-2-hierarchy.json",
+    "bytes": 104633
+  },
+  {
+    "path": "runtime-ui/pass-2-maestro.log",
+    "bytes": 128
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_094734/Forge native studio picker/logs/device-logcat.txt",
+    "bytes": 510119
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_094734/Forge native studio picker/commands.json",
+    "bytes": 6972
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_094734/Forge native studio picker/logs/maestro.log",
+    "bytes": 5784
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_094734/Forge native studio picker/manifest.json",
+    "bytes": 660
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_094734/Forge native studio picker/takeScreenshot/picker-picker.png",
+    "bytes": 34438
+  },
+  {
+    "path": "runtime-ui/picker/debug/.maestro/tests/2026-11-14_094734/maestro.log",
+    "bytes": 8022
+  },
+  {
+    "path": "runtime-ui/picker/flow.yaml",
+    "bytes": 639
+  },
+  {
+    "path": "runtime-ui/picker/report.xml",
+    "bytes": 447
+  },
+  {
+    "path": "runtime-ui/picker-hierarchy-command.log",
+    "bytes": 72049
+  },
+  {
+    "path": "runtime-ui/picker-hierarchy.json",
+    "bytes": 104629
+  },
+  {
+    "path": "runtime-ui/picker-maestro.log",
+    "bytes": 101
+  },
+  {
+    "path": "runtime-ui/picker-native-screenshot.log",
+    "bytes": 95
+  },
+  {
+    "path": "runtime-ui/picker-native.png",
+    "bytes": 40185
+  },
+  {
+    "path": "runtime-ui/pnpm-effective-config.json",
+    "bytes": 1199
+  },
+  {
+    "path": "runtime-ui/pnpm-lock.yaml",
+    "bytes": 208912
+  },
+  {
+    "path": "runtime-ui/pnpm-workspace.yaml",
+    "bytes": 819
+  },
+  {
+    "path": "runtime-ui/runtime-artifact.json",
+    "bytes": 1482
+  },
+  {
+    "path": "runtime-ui/runtime-proof.json",
+    "bytes": 33801
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-after-device-processes.log",
+    "bytes": 29815
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-after-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-after-host-processes.log",
+    "bytes": 8162
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-after-logcat.log",
+    "bytes": 39003
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-after-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-before-device-processes.log",
+    "bytes": 27526
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-before-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-before-logcat.log",
+    "bytes": 31757
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-before-host-processes.log",
+    "bytes": 7599
+  },
+  {
+    "path": "runtime-ui/transport-1-flow-picker-before-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-after-device-processes.log",
+    "bytes": 29658
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-after-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-after-host-processes.log",
+    "bytes": 7561
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-after-logcat.log",
+    "bytes": 27515
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-after-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-before-device-processes.log",
+    "bytes": 29795
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-before-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-before-host-processes.log",
+    "bytes": 8142
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-before-logcat.log",
+    "bytes": 38803
+  },
+  {
+    "path": "runtime-ui/transport-2-hierarchy-picker-before-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-after-device-processes.log",
+    "bytes": 26099
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-after-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-after-host-processes.log",
+    "bytes": 7457
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-after-logcat.log",
+    "bytes": 155377
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-after-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-before-device-processes.log",
+    "bytes": 29641
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-before-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-before-host-processes.log",
+    "bytes": 7588
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-before-logcat.log",
+    "bytes": 25658
+  },
+  {
+    "path": "runtime-ui/transport-3-flow-pass-1-before-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-after-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-after-device-processes.log",
+    "bytes": 26099
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-after-host-processes.log",
+    "bytes": 7457
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-after-logcat.log",
+    "bytes": 35724
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-after-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-before-device-processes.log",
+    "bytes": 26099
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-before-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-before-host-processes.log",
+    "bytes": 7457
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-before-logcat.log",
+    "bytes": 154202
+  },
+  {
+    "path": "runtime-ui/transport-4-hierarchy-pass-1-before-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-after-device-processes.log",
+    "bytes": 26000
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-after-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-after-host-processes.log",
+    "bytes": 7515
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-after-logcat.log",
+    "bytes": 165147
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-after-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-before-device-processes.log",
+    "bytes": 26099
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-before-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-before-host-processes.log",
+    "bytes": 7457
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-before-logcat.log",
+    "bytes": 35747
+  },
+  {
+    "path": "runtime-ui/transport-5-flow-pass-2-before-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-after-device-processes.log",
+    "bytes": 26000
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-after-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-after-host-processes.log",
+    "bytes": 7534
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-after-logcat.log",
+    "bytes": 35076
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-after-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-before-device-processes.log",
+    "bytes": 26000
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-before-devices.log",
+    "bytes": 140
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-before-host-processes.log",
+    "bytes": 7515
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-before-logcat.log",
+    "bytes": 164174
+  },
+  {
+    "path": "runtime-ui/transport-6-hierarchy-pass-2-before-serial-state.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/viewport-density.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/viewport-size.log",
+    "bytes": 0
+  },
+  {
+    "path": "forge-maestro/provenance.json",
+    "bytes": 266
+  },
+  {
+    "path": "forge-emulator.log",
+    "bytes": 9161
+  }
+]

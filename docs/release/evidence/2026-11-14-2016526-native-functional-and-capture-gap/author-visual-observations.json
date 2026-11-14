@@ -1,0 +1,147 @@
+{
+  "sourceHead": "20165261dfdf2f9000b29d4789738ee730696e4a",
+  "executedMerge": "5f6142a7f9a4caa6be0d9c6f312234bea1239707",
+  "scope": "Original hash-bound PNGs emitted unchanged from memory; no edits/crops/generated replacements. All198 PNG hashes/dimensions checked, but only listed frames visually inspected. Source/functional success does not waive visual gap. Full independent R2/visual review pending.",
+  "images": [
+    {
+      "platform": "ios",
+      "scope": "author original picker visual inspection",
+      "path": "picker/artifacts/2026-11-14_094932/Forge native studio picker/takeScreenshot/picker-picker.png",
+      "sha256": "0d092fb55da21012bc2e943b892286fa15f71c313973b7dad7c59abb71adf50d",
+      "observation": "All seven choices visible at402x874 points/1206x2622pixels; fixture heading partially under translucent status bar; no product-design compliance claim."
+    },
+    {
+      "platform": "ios",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_100029/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-process-relaunch-persistence.png",
+      "sha256": "3cda6f6a133ed18ae190b6ada21b71a861b5105d755d667f274b2fd741131f11",
+      "observation": "Selected studio/action PASS text is readable; long simulator file URI/state extends below the frame. This is not a claim all metadata fits one viewport."
+    },
+    {
+      "platform": "ios",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_100029/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-undo-fresh-edit.png",
+      "sha256": "9a337deb83fb0655bc9660ff158729805d5e93d66baa735071ba50e7a7cc63da",
+      "observation": "Selected studio/action PASS text is readable; long simulator file URI/state extends below the frame. This is not a claim all metadata fits one viewport."
+    },
+    {
+      "platform": "ios",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_100029/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-process-relaunch-persistence.png",
+      "sha256": "cdea646b754308b8a02083843bb236233d28b9be6b881f451a7604d0a956459c",
+      "observation": "Selected studio/action PASS text is readable; long simulator file URI/state extends below the frame. This is not a claim all metadata fits one viewport."
+    },
+    {
+      "platform": "ios",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_100029/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-process-relaunch-persistence.png",
+      "sha256": "b762e2e7d8dd0510b331f1c9957347962815e61fe7ed1c18c4013c7d36f4ba7c",
+      "observation": "Selected studio/action PASS text is readable; long simulator file URI/state extends below the frame. This is not a claim all metadata fits one viewport."
+    },
+    {
+      "platform": "ios",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_100029/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-process-relaunch-persistence.png",
+      "sha256": "bbc7308d8a46cc32426d52c4033c2e0bec30d06070a9d065a7ba8a3bbb20146a",
+      "observation": "Selected studio/action PASS text is readable; long simulator file URI/state extends below the frame. This is not a claim all metadata fits one viewport."
+    },
+    {
+      "platform": "ios",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_100029/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-process-relaunch-persistence.png",
+      "sha256": "06489eb13271a0cdb47a3431b1a6004744b8c88ec3087c105c3d515319ce3546",
+      "observation": "Selected studio/action PASS text is readable; long simulator file URI/state extends below the frame. This is not a claim all metadata fits one viewport."
+    },
+    {
+      "platform": "ios",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_100029/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-process-relaunch-persistence.png",
+      "sha256": "b316a643ea61a8982d9ce8dbc6525c1ad2692fae293cc87ec82bce87f7593d69",
+      "observation": "Selected studio/action PASS text is readable; long simulator file URI/state extends below the frame. This is not a claim all metadata fits one viewport."
+    },
+    {
+      "platform": "ios",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_100029/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+      "sha256": "d713f27b32698980007d1ba69f1450be76ed79a09b89356f6b03625c47bf018e",
+      "observation": "Selected studio/action PASS text is readable; long simulator file URI/state extends below the frame. This is not a claim all metadata fits one viewport."
+    },
+    {
+      "platform": "ios",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_100029/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-process-relaunch-persistence.png",
+      "sha256": "9b7808518bc31efb904daa7c09e680d30ba67a681f03eb10407e2faa5d78ff4e",
+      "observation": "Selected studio/action PASS text is readable; long simulator file URI/state extends below the frame. This is not a claim all metadata fits one viewport."
+    },
+    {
+      "platform": "android",
+      "scope": "author original picker visual inspection",
+      "path": "picker/artifacts/2026-11-14_094734/Forge native studio picker/takeScreenshot/picker-picker.png",
+      "sha256": "908c65f2b55d088b148026ad9fffa78e360ced86a0c863b5954c080529ec7e35",
+      "observation": "All seven choices visible within320x800 pixels/mdpi."
+    },
+    {
+      "platform": "android",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-process-relaunch-persistence.png",
+      "sha256": "e83913fbed4d400a9bfb896668dd2d3420845aea729cfc60a72b820606c58690",
+      "observation": "Action PASS and canonical state are readable in inspected persistence/undo frames."
+    },
+    {
+      "platform": "android",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-cadence-undo-fresh-edit.png",
+      "sha256": "9805304f64ac6f692e17120e2546606c009404a30f105724c760d49d8e44be20",
+      "observation": "Action PASS and canonical state are readable in inspected persistence/undo frames."
+    },
+    {
+      "platform": "android",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-folio-process-relaunch-persistence.png",
+      "sha256": "178bd3978b70ab6e449c04f96736287594c451280afea8046a982eda71aff438",
+      "observation": "Action PASS and canonical state are readable in inspected persistence/undo frames."
+    },
+    {
+      "platform": "android",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-pitch-process-relaunch-persistence.png",
+      "sha256": "917bcd7bff4bacc00c94c0dbf6cb98e3c4d0a2f46a866797134b5f6de68d010c",
+      "observation": "Action PASS and canonical state are readable in inspected persistence/undo frames."
+    },
+    {
+      "platform": "android",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-prism-process-relaunch-persistence.png",
+      "sha256": "8a662f1b99930cb34b1cf6d8d48d20ecd881a7e32fc43756a01e3eb637675228",
+      "observation": "Action PASS and canonical state are readable in inspected persistence/undo frames."
+    },
+    {
+      "platform": "android",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-quill-process-relaunch-persistence.png",
+      "sha256": "142a410d7bdc70c3af983adf992b8abb477eae000f7bafffb9f90796fd0c3f64",
+      "observation": "Action PASS and canonical state are readable in inspected persistence/undo frames."
+    },
+    {
+      "platform": "android",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-splice-process-relaunch-persistence.png",
+      "sha256": "8ab58a10a01470baa14f0e9cd242d1c6d97b65f917d1ba112f68857a0d8bd975",
+      "observation": "Action PASS and canonical state are readable in inspected persistence/undo frames."
+    },
+    {
+      "platform": "android",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+      "sha256": "4e7126a18a3d07a2d2b8e5129195a54f2ed2cbbc4ae5afebe5433cb9d420bcda",
+      "observation": "FAIL visual evidence: final result below viewport; actual native trace clips result to y794,height6 at800px. Functional callback/JUnit succeeded but this PNG is insufficient visible negative-restore evidence."
+    },
+    {
+      "platform": "android",
+      "scope": "limited author original PNG inspection, not full independent review",
+      "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-process-relaunch-persistence.png",
+      "sha256": "51f54c7ce01c891f95980a4ba9f4d809772b5cd8f1cf089977293974a522e5d2",
+      "observation": "Action PASS and canonical state are readable in inspected persistence/undo frames."
+    }
+  ]
+}
