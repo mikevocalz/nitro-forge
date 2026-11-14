@@ -6,7 +6,7 @@ import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { files, hash, inside, json, requireDisk } from './archive-files.mjs';
-import { lockChecksums, nativeClosure, NITRO_LICENSE_SHA256 } from './license-materials.mjs';
+import { checkProducerSources, lockChecksums, nativeClosure, NITRO_LICENSE_SHA256 } from './license-materials.mjs';
 import { verifyRegistrySource } from './unpack-archive.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -19,11 +19,13 @@ const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, enc
 const inventory = json(resolve(root, 'tooling/release/package-inventory.json'));
 const rust = execFileSync('rustc', ['--version'], { encoding: 'utf8' }).trim();
 const lockSha = hash(resolve(root, 'Cargo.lock'));
+const producerRegistrySources = {};
 for (const platform of ['apple', 'android']) {
   const fragment = json(resolve(native, `${platform}.json`));
   assert.equal(fragment.sourceCommit, sourceCommit);
   assert.equal(fragment.toolchain.rust, rust, 'Collect notices from the actual producing Rust toolchain');
   assert.equal(fragment.toolchain.cargoLockSha256, lockSha);
+  producerRegistrySources[platform] = fragment.registrySources;
 }
 assert.ok(existsSync(resolve(root, 'LICENSE')), 'Authoritative original Forge license text is required');
 assert.equal(hash(resolve(root, 'packages/ignition/licenses/Nitro-MIT.txt')), NITRO_LICENSE_SHA256);
@@ -76,12 +78,15 @@ for (const pkg of selected) {
     const licenses = sourceFiles.filter(path => /(?:^|\/)(?:licen[cs]e|copying|copyright|notice|authors)(?:[.\/_-]|$)/i.test(path) || /(?:^|\/)LICENSES\//i.test(path));
     if (pkg.license_file) licenses.push(relative(directory, resolve(directory, pkg.license_file)).split(sep).join('/'));
     assert.ok(licenses.length > 0, `No actual license/notice text for ${pkg.id}; requires source review`);
-    for (const path of new Set(licenses)) materials.push(copy(inside(source, path), `components/${key}/${path}`));
+    const notices = [...new Set(licenses)].map(path => copy(inside(source, path), `components/${key}/${path}`));
+    materials.push(...notices);
     materials.push(copy(resolve(source, 'Cargo.toml'), `components/${key}/Cargo.toml`));
     const hashes = resolve(scratch, 'source-checksums.json');
-    writeFileSync(hashes, JSON.stringify({ archiveSha256: checksum, files: Object.fromEntries(sourceFiles.map(path => [path, hash(inside(source, path))])) }, null, 2) + '\n');
+    const sourceChecksums = { archiveSha256: checksum, files: Object.fromEntries(sourceFiles.map(path => [path, hash(inside(source, path))])) };
+    checkProducerSources(producerRegistrySources, selected.filter(p => p.source).map(p => p.id), pkg.id, sourceChecksums);
+    writeFileSync(hashes, JSON.stringify(sourceChecksums, null, 2) + '\n');
     materials.push(copy(hashes, `components/${key}/source-checksums.json`));
-    components.push({ id: pkg.id, name: pkg.name, version: pkg.version, source: pkg.source, repository: pkg.repository, checksum, licenseExpression: pkg.license, materials });
+    components.push({ id: pkg.id, name: pkg.name, version: pkg.version, source: pkg.source, repository: pkg.repository, checksum, licenseExpression: pkg.license, notices, materials });
   } finally { rmSync(scratch, { recursive: true, force: true }); }
 }
 const sysroot = execFileSync('rustc', ['--print', 'sysroot'], { encoding: 'utf8' }).trim();
@@ -106,7 +111,7 @@ writeFileSync(resolve(output, 'provenance.json'), JSON.stringify({
     packages: selected.map(({ id, name, version, source, license }) => ({ id, name, version, source, license })),
     resolve: { nodes: metadata.resolve.nodes.filter(n => selected.some(p => p.id === n.id)).map(n => ({ id: n.id, deps: n.deps.filter(d => d.dep_kinds.some(k => k.kind === null || k.kind === 'build')) })) },
   },
-  components, toolchain: { rust, verbose: execFileSync('rustc', ['--version', '--verbose'], { encoding: 'utf8' }).trim(), materials: toolchain },
+  components, producerRegistrySources, toolchain: { rust, verbose: execFileSync('rustc', ['--version', '--verbose'], { encoding: 'utf8' }).trim(), materials: toolchain },
   licenseClassification: 'Not performed; declarations and complete source archives preserved verbatim. No new permissive classification or alternative-license election.',
   releaseLegalAcceptance: 'PENDING',
   files: files(output).map(path => ({ path, sha256: hash(resolve(output, path)) })),

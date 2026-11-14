@@ -8,22 +8,73 @@ import { candidate } from './candidate-manifest.mjs';
 import { assertInstalledInside, checkExports, checkSourceClosure, files, hash, inside } from './archive-files.mjs';
 import { unpackArchive, verifyRegistrySource } from './unpack-archive.mjs';
 import { fileURLToPath } from 'node:url';
-import { checkLicenseMembers, nativeClosure } from './license-materials.mjs';
+import { checkLicenseMembers, checkProducerSources, nativeClosure } from './license-materials.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(resolve(tmpdir(), 'forge-archive-test-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return root;
 }
-test('locked crates bind cache bytes with present or absent Cargo bookkeeping', t => {
+test('packed native materials bind notices, Cargo.lock and both producing source inventories', t => {
+  // Synthetic structural packet only; no native license or compatibility proof.
+  const root = fixture(t), packetRoot = resolve(root, 'native/licenses');
+  const repository = fileURLToPath(new URL('../../', import.meta.url));
+  mkdirSync(resolve(root, 'licenses'), { recursive: true });
+  cpSync(resolve(repository, 'LICENSE'), resolve(root, 'LICENSE'));
+  cpSync(resolve(repository, 'packages/ignition/licenses/Nitro-MIT.txt'), resolve(root, 'licenses/Nitro-MIT.txt'));
+  writeFileSync(resolve(root, 'THIRD_PARTY_NOTICES.md'), 'Synthetic packet test only');
+  const material = (path, bytes) => {
+    mkdirSync(resolve(packetRoot, path, '..'), { recursive: true });
+    writeFileSync(resolve(packetRoot, path), bytes);
+    return { path, sha256: hash(resolve(packetRoot, path)) };
+  };
+  const nf = material('components/nf/Cargo.toml', 'synthetic original manifest');
+  const crate = material('sources/tiny-1.0.0.crate', 'synthetic source bytes; not a real native source archive');
+  const notice = material('components/tiny/LICENSE', 'synthetic upstream notice');
+  const source = 'registry+https://github.com/rust-lang/crates.io-index';
+  const lock = material('Cargo.lock', `version = 4\n\n[[package]]\nname = "tiny"\nversion = "1.0.0"\nsource = "${source}"\nchecksum = "${crate.sha256}"\n`);
+  const hashes = { archiveSha256: crate.sha256, files: { LICENSE: notice.sha256 } };
+  const inventory = material('components/tiny/source-checksums.json', JSON.stringify(hashes));
+  const toolchain = ['LICENSE-MIT', 'LICENSE-APACHE', 'COPYRIGHT', 'COPYRIGHT-library.html'].map(name => material(`rust-toolchain/${name}`, 'synthetic toolchain notice'));
+  const producer = { id: 'tiny', checksum: crate.sha256, files: hashes.files };
+  const packet = { schemaVersion: 1, sourceCommit: 'a'.repeat(40), originalLicenseSha256: hash(resolve(root, 'LICENSE')), cargoLockSha256: lock.sha256,
+    files: [nf, crate, notice, lock, inventory, ...toolchain], toolchain: { materials: toolchain },
+    producerRegistrySources: { apple: [structuredClone(producer)], android: [structuredClone(producer)] },
+    resolvedGraph: { packages: [{ id: 'nf', name: 'nf-sys', source: null, license: 'MIT' }, { id: 'tiny', name: 'tiny', version: '1.0.0', source, license: 'MIT OR Apache-2.0' }], resolve: { nodes: [{ id: 'nf', deps: [{ pkg: 'tiny', dep_kinds: [{ kind: null }] }] }, { id: 'tiny', deps: [] }] } },
+    components: [{ id: 'nf', licenseExpression: 'MIT', materials: [nf] }, { id: 'tiny', checksum: crate.sha256, licenseExpression: 'MIT OR Apache-2.0', notices: [notice], materials: [crate, notice, inventory] }],
+  };
+  const check = () => { writeFileSync(resolve(packetRoot, 'provenance.json'), JSON.stringify(packet)); checkLicenseMembers(root, { name: '@nitro-forge/ignition', license: 'MIT' }, packet.originalLicenseSha256, packet.sourceCommit); };
+  check();
+  packet.producerRegistrySources.android[0].files.LICENSE = 'b'.repeat(64);
+  assert.throws(check, /android compiled source differs/);
+  packet.producerRegistrySources.android[0] = structuredClone(producer);
+  packet.components[1].checksum = 'c'.repeat(64);
+  assert.throws(check, /differs from Cargo.lock/);
+  packet.components[1].checksum = crate.sha256;
+  packet.components[1].notices = [];
+  assert.throws(check, /Missing actual registry notice/);
+});
+test('both actual producer source inventories must match verified crate bytes and closure', () => {
+  const verified = { archiveSha256: 'a'.repeat(64), files: { 'src/lib.rs': 'b'.repeat(64), LICENSE: 'c'.repeat(64) } };
+  const record = { id: 'registry-tiny', checksum: verified.archiveSha256, files: { ...verified.files } };
+  const producers = { apple: [structuredClone(record)], android: [structuredClone(record)] };
+  checkProducerSources(producers, [record.id], record.id, verified);
+  assert.throws(() => checkProducerSources({ apple: [] }, [record.id], record.id, verified), /closure differs/);
+  producers.android[0].files['src/lib.rs'] = 'd'.repeat(64);
+  assert.throws(() => checkProducerSources(producers, [record.id], record.id, verified), /android compiled source differs/);
+  producers.android = [structuredClone(record)];
+  producers.apple[0].checksum = 'e'.repeat(64);
+  assert.throws(() => checkProducerSources(producers, [record.id], record.id, verified), /apple producer locked archive differs/);
+});
+test('locked crates with SemVer build metadata bind cache bytes with present or absent Cargo bookkeeping', t => {
   const root = fixture(t), source = resolve(root, 'source'), cache = resolve(root, 'cache');
-  mkdirSync(resolve(source, 'tiny-1.0.0'), { recursive: true });
-  writeFileSync(resolve(source, 'tiny-1.0.0/LICENSE'), 'Synthetic test notice');
-  writeFileSync(resolve(source, 'tiny-1.0.0/Cargo.toml'), '[package]\nname="tiny"\n');
-  cpSync(resolve(source, 'tiny-1.0.0'), cache, { recursive: true });
+  mkdirSync(resolve(source, 'wasip2-1.0.4+wasi-0.2.12'), { recursive: true });
+  writeFileSync(resolve(source, 'wasip2-1.0.4+wasi-0.2.12/LICENSE'), 'Synthetic test notice');
+  writeFileSync(resolve(source, 'wasip2-1.0.4+wasi-0.2.12/Cargo.toml'), '[package]\nname="tiny"\n');
+  cpSync(resolve(source, 'wasip2-1.0.4+wasi-0.2.12'), cache, { recursive: true });
   const archive = resolve(root, 'tiny.crate');
-  execFileSync('tar', ['-czf', archive, '-C', source, 'tiny-1.0.0']);
-  const identity = { prefix: 'tiny-1.0.0', sha256: hash(archive) };
+  execFileSync('tar', ['-czf', archive, '-C', source, 'wasip2-1.0.4+wasi-0.2.12']);
+  const identity = { prefix: 'wasip2-1.0.4+wasi-0.2.12', sha256: hash(archive) };
   verifyRegistrySource(archive, resolve(root, 'absent'), cache, identity);
   writeFileSync(resolve(cache, '.cargo-ok'), 'generated');
   writeFileSync(resolve(cache, '.cargo-checksum.json'), '{}');

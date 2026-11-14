@@ -8,7 +8,7 @@ import { files, hash } from './archive-files.mjs';
 export function unpackArchive(archive, output, source) {
   assert.ok(!existsSync(output), 'Extraction output must be fresh');
   const prefix = source?.prefix ?? 'package';
-  assert.match(prefix, /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/);
+  assert.match(prefix, /^[A-Za-z0-9_-][A-Za-z0-9_.+-]*$/);
   if (source) assert.equal(hash(archive), source.sha256, 'Locked source archive checksum mismatch');
   const names = execFileSync('tar', ['-tzf', archive], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).trimEnd().split('\n');
   assert.ok(names.length > 0);

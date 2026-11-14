@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { files, hash, json, requireDisk } from './archive-files.mjs';
+import { lockChecksums, registrySourceRecords } from './license-materials.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const { values } = parseArgs({ options: {
@@ -55,8 +56,12 @@ if (values.platform === 'apple') {
 mkdirSync(output, { recursive: true });
 for (const folder of folders) cpSync(resolve(native, folder), resolve(output, folder), { recursive: true });
 const payload = files(output).map(path => ({ path, sha256: hash(resolve(output, path)) }));
+// Bind post-build source bytes on this actual producing runner, not a later
+// assembly runner's independent Cargo extraction. No source mutation follows.
+const metadata = JSON.parse(execFileSync('cargo', ['metadata', '--locked', '--format-version', '1'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
+const registrySources = registrySourceRecords(metadata, lockChecksums(readFileSync(resolve(root, 'Cargo.lock'), 'utf8')));
 writeFileSync(resolve(output, `${values.platform}.json`), JSON.stringify({
   schemaVersion: 1, platform: values.platform, sourceCommit,
-  nitroVersion: inventory.runtime['react-native-nitro-modules'], toolchain, files: payload,
+  nitroVersion: inventory.runtime['react-native-nitro-modules'], toolchain, files: payload, registrySources,
 }, null, 2) + '\n');
 console.log(JSON.stringify({ stage: 'native-fragment', platform: values.platform, sourceCommit, files: payload.length }));

@@ -116,6 +116,17 @@ source-file hashes, original-code source identities and Rust toolchain
 notices. Keep generated Nitro attribution and its pinned upstream MIT text
 separate from Forge's original-code attribution.
 
+Each native producer records its actual post-build registry source inventory
+and file hashes before upload. Assembly verifies the Cargo.lock SHA256 of
+each unmodified `.crate`, rejects unsafe archive paths/types, extracts into
+fresh scratch and compares every source byte against both producer records
+and its local metadata source tree. Only Cargo-generated `.cargo-ok` and
+`.cargo-checksum.json` bookkeeping files are excluded. Missing producer
+records, changed/extra source files or absent actual notices block packing;
+a later runner's independently extracted cache is insufficient by itself.
+The installed package checks the same two producer inventories against its
+shipped verified source hash records.
+
 The packet preserves declared license expressions verbatim and makes no
 new alternative-license election or permissive classification. Unknown
 license declarations, missing source identities/materials or changed hashes
