@@ -1,0 +1,182 @@
+{
+  "date": "2026-11-13 America/New_York",
+  "sourceCommit": "91353e132681bee4ab275af9faa08e02766f3bb7",
+  "node": "v26.13.0",
+  "nodeTests": {
+    "passed": 28,
+    "failed": 0,
+    "scope": "Synthetic boundary/material/portability fixtures, not native behavior"
+  },
+  "checks": [
+    {
+      "name": "node-boundaries",
+      "command": [
+        "node",
+        "--test",
+        "tooling/release/archive-boundaries.test.mjs",
+        "packages/ignition/plugin/withForge.test.cjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "headless-boundaries",
+      "command": [
+        "node",
+        "tooling/release/check-package-boundaries.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "workflow-yaml",
+      "command": [
+        "ruby",
+        "-e",
+        "require \"yaml\"; YAML.load_file(\".github/workflows/forge-clean-consumer.yml\"); puts \"Workflow YAML parsed; not a native execution verdict\""
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "source-whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "05030f6439f6928d084cc47fae828d604da9ade5",
+        "HEAD",
+        "--",
+        ".",
+        ":(exclude)docs/release/evidence/2026-11-13-05030f6-first-ci/*.log",
+        ":(exclude)docs/release/evidence/2026-11-13-b000c8a/*.log"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-archive-boundaries.test",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/archive-boundaries.test.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-archive-files",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/archive-files.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-candidate-manifest",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/candidate-manifest.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-check-consumer-bundle",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/check-consumer-bundle.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-consumer-smoke",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/consumer-smoke.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-native-fragment",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/native-fragment.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-pack-candidate",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/pack-candidate.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-unpack-archive",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/unpack-archive.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-license-materials",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/license-materials.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-collect-native-licenses",
+      "command": [
+        "node",
+        "--check",
+        "tooling/release/collect-native-licenses.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "literal-import-closure",
+      "command": [
+        "node",
+        "--input-type=module",
+        "-"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "diskBytes": {
+    "before": 11123822592,
+    "after": 11118571520,
+    "ownerFloor": 10000000000
+  },
+  "originalLicenseSha256": "c55ed5571f88df411225bf1fb7108133bdaccdec3de8b58e4dc8932c54b33b7d",
+  "upstreamNitroLicenseSha256": "833ee7046f3908173364391ad4a2028560029503faf3a29e8acb77506dfe52ea",
+  "offlineFullCargoMetadata": {
+    "exitCode": 101,
+    "result": "NOT RESOLVED: uncached adler2 v2.0.1; offline prevented download. No install/build."
+  },
+  "rawLogWhitespace": "Original downloaded CI logs intentionally preserve trailing whitespace; source whitespace check excludes only original/F0 raw logs.",
+  "firstCi": {
+    "head": "05030f6439f6928d084cc47fae828d604da9ade5",
+    "merge": "65fe6dad5567c3ebd02e233ed4eda30ac162012e",
+    "run": 43537901544,
+    "outcome": "FAIL Apple lipo parser; Android payload PASS; later stages skipped. Retained separately; not reused as new-candidate proof."
+  },
+  "notRun": [
+    "real resolved native license/source packet collection",
+    "new native payload production",
+    "pnpm candidate packing",
+    "installed plugin/typecheck/Metro/prebuild",
+    "native app compile",
+    "visible seven-studio workflows on iOS/Android",
+    "320px installed picker reachability",
+    "F6 acceptance"
+  ],
+  "gateChangedByAuthor": false
+}

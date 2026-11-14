@@ -1,0 +1,2 @@
+Ignition and seven headless public engines have no UI/renderer/Moyo production dependencies.
+This check does not validate generated native code, release tarballs, licenses or npm latest.
