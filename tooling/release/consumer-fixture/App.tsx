@@ -33,7 +33,12 @@ const initial: Screen = {
 const snapshotFile = (kind: Studio) => new File(Paths.document, `forge-f6-${kind}.nfd`);
 const expectedFile = (kind: Studio) => new File(Paths.document, `forge-f6-${kind}.expected.json`);
 function requireEqual(actual: string, expected: string, action: string) {
-  if (actual !== expected) throw new Error(`${action}: authoritative document state differs`);
+  if (actual !== expected) {
+    let offset = 0;
+    while (offset < actual.length && offset < expected.length && actual[offset] === expected[offset]) offset++;
+    const start = Math.max(0, offset - 50);
+    throw new Error(`${action}: authoritative document state differs at character ${offset}; expected ${JSON.stringify(expected.slice(start, offset + 80))}; actual ${JSON.stringify(actual.slice(start, offset + 80))}`);
+  }
 }
 function validateEnvelope(bytes: Uint8Array) {
   if (bytes.length < 4 || String.fromCharCode(...bytes.subarray(0, 4)) !== 'NFD1') {

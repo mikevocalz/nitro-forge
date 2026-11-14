@@ -29,18 +29,20 @@ export function pickerGeometry(tree, screenshot, requiredWidth) {
   assert.equal(image.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   const width = image.readUInt32BE(16), height = image.readUInt32BE(20);
   if (requiredWidth) assert.equal(width, requiredWidth, 'Actual OS screenshot must have the requested 320px viewport');
-  let viewportWidth = width, viewportHeight = height;
+  let viewportWidth = width, viewportHeight = height, nodeRoot = tree;
   if (!requiredWidth) {
-    // Pinned Maestro's iOS hierarchy has a wrapper and one application child.
-    // Use its observed point bounds, not the larger Retina PNG pixel count.
-    assert.equal(tree.children.length, 1, 'Unambiguous iOS application viewport required');
-    const bounds = /^\[0,0\]\[(\d+),(\d+)\]$/.exec(tree.children[0].attributes.bounds ?? '');
+    // Duo has an additional system/status-bar tree for its two displays.
+    // Bind to the uniquely named actual fixture application, never system nodes.
+    const applications = tree.children.filter(node => node.attributes.accessibilityText === 'Forge Consumer Smoke');
+    assert.equal(applications.length, 1, 'Unambiguous named iOS fixture application required');
+    nodeRoot = applications[0];
+    const bounds = /^\[0,0\]\[(\d+),(\d+)\]$/.exec(nodeRoot.attributes.bounds ?? '');
     assert.ok(bounds, 'Actual iOS application bounds required');
     [viewportWidth, viewportHeight] = bounds.slice(1).map(Number);
     assert.ok(viewportWidth > 0 && viewportHeight > 0);
     assert.ok(Math.abs(width / viewportWidth - height / viewportHeight) < 0.01, 'Screenshot and iOS application viewport disagree');
   }
-  const nodes = hierarchyNodes(tree);
+  const nodes = hierarchyNodes(nodeRoot);
   const options = STUDIOS.map(studio => {
     const candidates = nodes.filter(node => Object.values(node.attributes).includes(studio));
     const bounds = candidates.map(node => /^\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]$/.exec(node.attributes.bounds ?? ''))
@@ -52,4 +54,14 @@ export function pickerGeometry(tree, screenshot, requiredWidth) {
     return { studio, bounds: visible };
   });
   return { screenshotWidth: width, screenshotHeight: height, viewportWidth, viewportHeight, units: requiredWidth ? '320 physical pixels at mdpi; 320 logical dp' : 'OS accessibility points, with separately recorded screenshot pixels', options };
+}
+
+/** One planned PNG from the actual executed native driver, never a debug image. */
+export function exactFlowScreenshot(stage, name) {
+  assert.match(name, /^[a-z0-9-]+\.png$/);
+  assert.ok(Array.isArray(stage.screenshots));
+  const matches = stage.screenshots.filter(file => file.path.endsWith('/takeScreenshot/' + name));
+  assert.equal(matches.length, 1, 'One exact executed native screenshot required: ' + name);
+  assert.match(matches[0].sha256, /^[a-f0-9]{64}$/);
+  return matches[0];
 }

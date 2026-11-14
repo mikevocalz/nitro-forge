@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "platform": "ios",
+  "configuration": "Release",
+  "sourceCommit": "fcdc6dfb200f0c3cca123fb46c948e08bb329dd3",
+  "manifestSha256": "12d43a2f326856368ea0c2b8e6a7e1eec5e8cc8b3820df33fd300af92a83b35d",
+  "lockSha256": "ff4685e65f3e702ee36ee19798872da220b4a10a8eaf019438699873fb15adf0",
+  "installedPackagesSha256": "50c17fc2da40361a467d9b2b31fac22a590f9d50f3ca60d2296ee847a3464225",
+  "workspaceSha256": "0095a22b4eec60786ead4c842b5b8affc2a1d9b87539babe1d33c5cdc92ef18e",
+  "pnpmConfigSha256": "e3fbedca6f27cb337c35249d34c07e7c7a5c4ca96ff73f59d32ce063f45bf7e6",
+  "archive": "forge-consumer-ios-simulator.tar.gz",
+  "sha256": "34fb410182cc49908077c11b81ff405aaf5ece569fa741610ce81aabd458a5ce",
+  "bytes": 29051957,
+  "embeddedBundleSha256": "d9dcc59fe2246346f30f6aee39dd5de8970cc333ad34127f96c57ab879ff5179",
+  "applicationId": "dev.nitroforge.f6.consumer",
+  "architectures": [
+    "x86_64",
+    "arm64"
+  ],
+  "applicationDirectory": "ForgeConsumerSmoke.app",
+  "signing": "Unsigned iOS Simulator application",
+  "nativeRuntime": "NOT RUN"
+}

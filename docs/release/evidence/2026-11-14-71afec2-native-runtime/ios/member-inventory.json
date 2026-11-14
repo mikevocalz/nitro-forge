@@ -1,0 +1,146 @@
+[
+  {
+    "path": "runtime-ui/actual-simulator-runtimes.json",
+    "bytes": 60604
+  },
+  {
+    "path": "runtime-ui/candidate.json",
+    "bytes": 168222
+  },
+  {
+    "path": "runtime-ui/chosen-simulator.json",
+    "bytes": 436
+  },
+  {
+    "path": "runtime-ui/commands.jsonl",
+    "bytes": 2372
+  },
+  {
+    "path": "runtime-ui/failure-hierarchy-command.log",
+    "bytes": 54500
+  },
+  {
+    "path": "runtime-ui/failure-hierarchy.json",
+    "bytes": 80113
+  },
+  {
+    "path": "runtime-ui/failure-screenshot.log",
+    "bytes": 290
+  },
+  {
+    "path": "runtime-ui/failure.json",
+    "bytes": 1590
+  },
+  {
+    "path": "runtime-ui/forge-consumer-receipt.json",
+    "bytes": 322
+  },
+  {
+    "path": "runtime-ui/install.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/installed-packages.json",
+    "bytes": 13686
+  },
+  {
+    "path": "runtime-ui/ios-app-system.log",
+    "bytes": 136122
+  },
+  {
+    "path": "runtime-ui/maestro-version.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/owned-simulator-shutdown.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_045959/Forge native studio picker/commands.json",
+    "bytes": 7021
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_045959/Forge native studio picker/logs/device-simulator.log",
+    "bytes": 6996754
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_045959/Forge native studio picker/logs/device-xctest.log",
+    "bytes": 21677
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_045959/Forge native studio picker/logs/maestro.log",
+    "bytes": 6083
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_045959/Forge native studio picker/manifest.json",
+    "bytes": 844
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_045959/Forge native studio picker/takeScreenshot/picker-picker.png",
+    "bytes": 223888
+  },
+  {
+    "path": "runtime-ui/picker/artifacts/2026-11-14_045959/xctest_runner_2026-11-14_050042.log",
+    "bytes": 22160
+  },
+  {
+    "path": "runtime-ui/picker/flow.yaml",
+    "bytes": 639
+  },
+  {
+    "path": "runtime-ui/picker/report.xml",
+    "bytes": 496
+  },
+  {
+    "path": "runtime-ui/picker/debug/.maestro/tests/2026-11-14_045959/maestro.log",
+    "bytes": 31060
+  },
+  {
+    "path": "runtime-ui/picker-hierarchy-command.log",
+    "bytes": 54500
+  },
+  {
+    "path": "runtime-ui/picker-hierarchy.json",
+    "bytes": 80113
+  },
+  {
+    "path": "runtime-ui/picker-maestro.log",
+    "bytes": 101
+  },
+  {
+    "path": "runtime-ui/picker-native-screenshot.log",
+    "bytes": 290
+  },
+  {
+    "path": "runtime-ui/pnpm-effective-config.json",
+    "bytes": 1199
+  },
+  {
+    "path": "runtime-ui/pnpm-lock.yaml",
+    "bytes": 208912
+  },
+  {
+    "path": "runtime-ui/pnpm-workspace.yaml",
+    "bytes": 819
+  },
+  {
+    "path": "runtime-ui/runtime-artifact.json",
+    "bytes": 1067
+  },
+  {
+    "path": "runtime-ui/simulator-boot.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/simulator-bootstatus.log",
+    "bytes": 117
+  },
+  {
+    "path": "runtime-ui/simulators.log",
+    "bytes": 22084
+  },
+  {
+    "path": "forge-maestro/provenance.json",
+    "bytes": 266
+  }
+]

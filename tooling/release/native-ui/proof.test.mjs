@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
+import { exactFlowScreenshot, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(resolve(tmpdir(), 'forge-os-evidence-'));
@@ -54,9 +54,33 @@ test('320px picker proof requires all native option bounds inside the actual vie
 });
 test('iOS Retina pixels cannot conceal an option outside actual application point bounds', t => {
   const root = fixture(t), png = image(root, 1206, 2622);
-  const application = { attributes: { bounds: '[0,0][402,874]' }, children: STUDIOS.map(studio => option(studio, '[10,100][200,140]')) };
+  const application = { attributes: { accessibilityText: 'Forge Consumer Smoke', bounds: '[0,0][402,874]' }, children: STUDIOS.map(studio => option(studio, '[10,100][200,140]')) };
   const tree = { attributes: { bounds: '[0,0][0,0]' }, children: [application] };
   assert.equal(pickerGeometry(tree, png).viewportWidth, 402);
   application.children[0].attributes.bounds = '[10,850][200,900]';
   assert.throws(() => pickerGeometry(tree, png), /prism/);
+});
+
+test('actual Duo AX binds only the named app and rejects wrong-display pixel geometry', t => {
+  const root = fixture(t);
+  // Structural PNG header only, not visual evidence. Dimensions came from the
+  // hash-verified actual executed Duo picker PNG; AX is its captured OS tree.
+  const tree = JSON.parse(readFileSync(new URL('../test-fixtures/ios-duo-picker-hierarchy.json', import.meta.url), 'utf8'));
+  const evidence = pickerGeometry(tree, image(root, 1398, 2034));
+  assert.equal(evidence.viewportWidth, 466);
+  assert.equal(evidence.viewportHeight, 678);
+  assert.deepEqual(evidence.options.map(option => option.studio), STUDIOS);
+  assert.throws(() => pickerGeometry(tree, image(root, 2007, 2853)), /viewport disagree/);
+  tree.children.push(tree.children[0]);
+  assert.throws(() => pickerGeometry(tree, image(root, 1398, 2034)), /Unambiguous named/);
+  tree.children = tree.children.filter(node => node.attributes.accessibilityText !== 'Forge Consumer Smoke');
+  assert.throws(() => pickerGeometry(tree, image(root, 1398, 2034)), /Unambiguous named/);
+});
+test('picker capture requires one exact executed PNG and a valid original hash', () => {
+  const file = { path: 'picker/artifacts/run/name/takeScreenshot/picker-picker.png', sha256: 'a'.repeat(64) };
+  assert.equal(exactFlowScreenshot({ screenshots: [file] }, 'picker-picker.png'), file);
+  assert.throws(() => exactFlowScreenshot({ screenshots: [] }, 'picker-picker.png'));
+  assert.throws(() => exactFlowScreenshot({ screenshots: [file, file] }, 'picker-picker.png'));
+  assert.throws(() => exactFlowScreenshot({ screenshots: [{ ...file, path: 'picker/debug/picker-picker.png' }] }, 'picker-picker.png'));
+  assert.throws(() => exactFlowScreenshot({ screenshots: [{ ...file, sha256: 'invalid' }] }, 'picker-picker.png'));
 });

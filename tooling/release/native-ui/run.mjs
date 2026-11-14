@@ -7,7 +7,7 @@ import { files, hash, inside, json, requireDisk } from '../archive-files.mjs';
 import { unpackArchive } from '../unpack-archive.mjs';
 import { createFlow, createPickerFlow, serializeFlow } from './flow.mjs';
 import { MAESTRO, parseHierarchy, requirePassedFlow, requireSemanticLabels } from './ui-evidence.mjs';
-import { pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
+import { exactFlowScreenshot, pickerGeometry, savedDocuments, STUDIOS } from './proof.mjs';
 
 const { values } = parseArgs({ options: { platform: { type: 'string' }, 'artifact-root': { type: 'string' }, source: { type: 'string' }, output: { type: 'string' } } });
 assert.ok(['ios', 'android'].includes(values.platform));
@@ -69,6 +69,7 @@ function flow(name, definition) {
   for (const image of images) assert.equal(readFileSync(inside(directory, image)).subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   const result = { name, ...passed, flowSha256: hash(path), reportSha256: hash(report), screenshots: images.map(file => ({ path: `${name}/${file}`, sha256: hash(inside(directory, file)) })) };
   stages.push(result);
+  return result;
 }
 function collectDocuments(name) {
   const directory = inside(output, `${name}-documents`);
@@ -147,10 +148,22 @@ try {
     run(adb, ['-s', device, 'shell', 'getprop'], { log: 'actual-android-properties.log' });
     run(adb, ['-s', device, 'install', '-r', app], { timeout: 120000, log: 'install.log' });
   }
-  flow('picker', createPickerFlow({ screenshotPrefix: 'picker' }));
+  const picker = flow('picker', createPickerFlow({ screenshotPrefix: 'picker' }));
   const tree = hierarchy('picker');
   requireSemanticLabels(tree, STUDIOS);
-  const geometry = pickerGeometry(tree, screenshot('picker-native'), platform === 'android' ? 320 : undefined);
+  let pickerImage;
+  if (platform === 'ios') {
+    // The executed XCTest step already captured the actual app display. Duo
+    // exposes two simctl displays; never guess which display its AX describes.
+    const captured = exactFlowScreenshot(picker, 'picker-picker.png');
+    const source = inside(output, captured.path);
+    assert.equal(hash(source), captured.sha256);
+    pickerImage = inside(output, 'picker-native.png');
+    copyFileSync(source, pickerImage);
+    assert.equal(hash(pickerImage), captured.sha256, 'Actual native PNG must remain unmodified');
+    writeFileSync(inside(output, 'picker-capture.json'), JSON.stringify({ tool: 'Pinned official Maestro XCTest screenshot from executed picker flow', originalPath: captured.path, sha256: captured.sha256 }, null, 2) + '\n');
+  } else pickerImage = screenshot('picker-native');
+  const geometry = pickerGeometry(tree, pickerImage, platform === 'android' ? 320 : undefined);
   for (const pass of [1, 2]) {
     flow(`pass-${pass}`, createFlow({ screenshotPrefix: 'f6' }));
     const tree = hierarchy(`pass-${pass}`);

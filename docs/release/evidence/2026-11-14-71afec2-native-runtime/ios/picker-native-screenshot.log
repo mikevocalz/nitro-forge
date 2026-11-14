@@ -1,0 +1,6 @@
+Detected file type from extension: PNG
+An error was encountered processing the command (domain=NSPOSIXErrorDomain, code=22):
+Cannot choose between 2 displays. Specify one with --display:
+    --display=3  LCD-1 (primary-1) 2007x2853
+    --display=1  LCD (primary) 1398x2034
+Invalid argument
