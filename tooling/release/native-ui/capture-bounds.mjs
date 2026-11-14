@@ -66,11 +66,13 @@ export function resultCaptureGeometry(log, plans, viewport) {
     if (!plan) { assert.ok(name.endsWith('-picker'), 'Unplanned native action screenshot'); continue; }
     assert.ok(!captures.some(capture => capture.name === name), 'Duplicate executed native action screenshot');
     const centered = events[index - 2], assertion = events[index - 1];
-    assert.ok(centered?.label.startsWith('Scrolling DOWN until ') &&
-      centered.label.includes('id: f6-result') && centered.label.includes('with centering enabled') &&
-      centered.label.includes(plan.selector.text), 'Action PNG lacks its exact final centered native result');
-    assert.ok(assertion?.label.startsWith('Assert that ') && assertion.label.includes('id: f6-result') &&
-      assertion.label.includes(plan.selector.text), 'Intervening command or missing exact native result assertion');
+    assert.equal(plan.selector.id, 'f6-result', 'Unexpected result selector ID');
+    const description = '"' + plan.selector.text + '", id: f6-result';
+    assert.equal(centered?.label,
+      'Scrolling DOWN until ' + description + ' is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering enabled',
+      'Action PNG lacks its exact final centered native result');
+    assert.equal(assertion?.label, 'Assert that ' + description + ' is visible',
+      'Intervening command or missing exact native result assertion');
     captures.push({ name, viewport, bounds: resultBounds(centered, viewport),
       nativeLogCommandIndex: index, centeredAt: centered.finishedAt, assertedAt: assertion.finishedAt,
       capturedAt: event.finishedAt,

@@ -48,6 +48,8 @@ test('native capture binding requires a completed exact centered result, immedia
   assert.throws(() => resultCaptureGeometry(syntheticTrace({ between: command('Scrolling UP until id: f6-selected is visible') }), plan, viewport), /centered|Intervening/);
   assert.throws(() => resultCaptureGeometry(syntheticTrace() + syntheticTrace(), plan, viewport), /Duplicate/);
   assert.throws(() => resultCaptureGeometry('', plan, viewport), /Missing/);
+  assert.throws(() => resultCaptureGeometry(syntheticTrace().replaceAll('id: f6-result', 'id: f6-result-extra'), plan, viewport), /exact final/);
+  assert.throws(() => resultCaptureGeometry(syntheticTrace().replaceAll(selector.text, selector.text + ' suffix'), plan, viewport), /exact final/);
 });
 
 test('final refreshed native geometry must match the actual viewport and avoid all clipped edges', () => {
