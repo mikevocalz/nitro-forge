@@ -2805,12 +2805,12 @@ mod tests {
         assert_eq!(ns[0]["name"], json!("foo"));
         assert_eq!(ns[1]["name"], json!("Bar"));
         assert_eq!(ns[1]["sheet"], json!("Ghost"));
-        // The document must still snapshot and restore cleanly (the crafted
-        // sheet id bumps `next_sheet` on restore, so compare name state, not
-        // envelope bytes).
+        // The restored cursor is canonical for the crafted sheet identity,
+        // so the complete document must round-trip without normalization.
         let saved = e.snapshot().unwrap();
         let mut reopened = TallyEngine::new();
         reopened.restore(&saved).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), saved);
         assert_eq!(
             data(&mut reopened, "listNames", json!({})),
             data(&mut e, "listNames", json!({}))
