@@ -23,6 +23,8 @@
   },
   "files": [
     "src",
-    "THIRD_PARTY_NOTICES.md"
-  ]
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE"
+  ],
+  "license": "MIT"
 }

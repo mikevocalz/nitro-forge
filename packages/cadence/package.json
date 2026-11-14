@@ -29,6 +29,8 @@
     "react-native": "0.88.1"
   },
   "files": [
-    "src"
-  ]
+    "src",
+    "LICENSE"
+  ],
+  "license": "MIT"
 }

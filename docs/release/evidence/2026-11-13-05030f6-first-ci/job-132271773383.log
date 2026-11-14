@@ -1,0 +1,1492 @@
+2026-11-14T01:02:34.5968950Z Current runner version: '2.338.2'
+2026-11-14T01:02:34.5985745Z ##[group]Runner Image Provisioner
+2026-11-14T01:02:34.5986263Z Hosted Compute Agent
+2026-11-14T01:02:34.5986673Z Version: 20261103.629
+2026-11-14T01:02:34.5987070Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-14T01:02:34.5987535Z Build Date: 2026-11-03T17:26:59Z
+2026-11-14T01:02:34.5987929Z Worker ID: {1db0103e-2784-4c2a-b76d-076241e5dd82}
+2026-11-14T01:02:34.5988331Z Region: westus3
+2026-11-14T01:02:34.5988674Z Cloud: Azure
+2026-11-14T01:02:34.5989015Z ##[endgroup]
+2026-11-14T01:02:34.5989886Z ##[group]Operating System
+2026-11-14T01:02:34.5990430Z Ubuntu
+2026-11-14T01:02:34.5990800Z 26.04.1
+2026-11-14T01:02:34.5991118Z LTS
+2026-11-14T01:02:34.5991457Z ##[endgroup]
+2026-11-14T01:02:34.5991773Z ##[group]Runner Image
+2026-11-14T01:02:34.5992169Z Image: ubuntu-26.04
+2026-11-14T01:02:34.5992494Z Version: 20261111.196.1
+2026-11-14T01:02:34.5993272Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-14T01:02:34.5994097Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-14T01:02:34.5994824Z ##[endgroup]
+2026-11-14T01:02:34.5995449Z ##[group]GITHUB_TOKEN Permissions
+2026-11-14T01:02:34.5996897Z Contents: read
+2026-11-14T01:02:34.5997227Z Metadata: read
+2026-11-14T01:02:34.5997585Z ##[endgroup]
+2026-11-14T01:02:34.5998854Z Secret source: Actions
+2026-11-14T01:02:34.5999425Z Cache mode: write
+2026-11-14T01:02:34.6000070Z Prepare workflow directory
+2026-11-14T01:02:34.6222213Z Prepare all required actions
+2026-11-14T01:02:34.6251389Z Getting action download info
+2026-11-14T01:02:34.9038182Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-14T01:02:34.9882078Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-14T01:02:35.0713734Z Download action repository 'dtolnay/rust-toolchain@stable' (SHA:b725eda525362e7cf34af9a7243cac1e3f01a7ec)
+2026-11-14T01:02:35.2957809Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-14T01:02:35.4886730Z Complete job name: android-payload
+2026-11-14T01:02:35.5393488Z ##[group]Run actions/checkout@v4
+2026-11-14T01:02:35.5393895Z with:
+2026-11-14T01:02:35.5394140Z   repository: mikevocalz/nitro-forge
+2026-11-14T01:02:35.5396265Z   token: ***
+2026-11-14T01:02:35.5396499Z   ssh-strict: true
+2026-11-14T01:02:35.5396742Z   ssh-user: git
+2026-11-14T01:02:35.5396990Z   persist-credentials: true
+2026-11-14T01:02:35.5397255Z   clean: true
+2026-11-14T01:02:35.5397506Z   sparse-checkout-cone-mode: true
+2026-11-14T01:02:35.5397787Z   fetch-depth: 1
+2026-11-14T01:02:35.5398023Z   fetch-tags: false
+2026-11-14T01:02:35.5398266Z   show-progress: true
+2026-11-14T01:02:35.5398513Z   lfs: false
+2026-11-14T01:02:35.5398739Z   submodules: false
+2026-11-14T01:02:35.5398992Z   set-safe-directory: true
+2026-11-14T01:02:35.5399271Z   allow-unsafe-pr-checkout: false
+2026-11-14T01:02:35.5399634Z env:
+2026-11-14T01:02:35.5399852Z   CI: 1
+2026-11-14T01:02:35.5400073Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:35.5400325Z ##[endgroup]
+2026-11-14T01:02:35.7627665Z Syncing repository: mikevocalz/nitro-forge
+2026-11-14T01:02:35.7628840Z ##[group]Getting Git version info
+2026-11-14T01:02:35.7629245Z Working directory is '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T01:02:35.7629816Z [command]/usr/bin/git version
+2026-11-14T01:02:35.7647070Z git version 2.56.1
+2026-11-14T01:02:35.7659443Z ##[endgroup]
+2026-11-14T01:02:35.7669620Z Temporarily overriding HOME='/home/runner/work/_temp/80dc4611-b6e4-4e88-80fc-8d79c37c786d' before making global git config changes
+2026-11-14T01:02:35.7671193Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T01:02:35.7672539Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T01:02:35.7794987Z Deleting the contents of '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T01:02:35.7796769Z ##[group]Initializing the repository
+2026-11-14T01:02:35.7797424Z [command]/usr/bin/git init /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T01:02:35.7833142Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-14T01:02:35.7834364Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-14T01:02:35.7835908Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-14T01:02:35.7836819Z hint: call:
+2026-11-14T01:02:35.7837462Z hint:
+2026-11-14T01:02:35.7837971Z hint: 	git config --global init.defaultBranch <name>
+2026-11-14T01:02:35.7838493Z hint:
+2026-11-14T01:02:35.7838980Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-14T01:02:35.7839735Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-14T01:02:35.7840328Z hint:
+2026-11-14T01:02:35.7840661Z hint: 	git branch -m <name>
+2026-11-14T01:02:35.7841059Z hint:
+2026-11-14T01:02:35.7841563Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-14T01:02:35.7846265Z Initialized empty Git repository in /home/runner/work/nitro-forge/nitro-forge/.git/
+2026-11-14T01:02:35.7857044Z [command]/usr/bin/git remote add origin https://github.com/mikevocalz/nitro-forge
+2026-11-14T01:02:35.7909246Z ##[endgroup]
+2026-11-14T01:02:35.7910020Z ##[group]Disabling automatic garbage collection
+2026-11-14T01:02:35.7912647Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-14T01:02:35.7942904Z ##[endgroup]
+2026-11-14T01:02:35.7943588Z ##[group]Setting up auth
+2026-11-14T01:02:35.7949387Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T01:02:35.7978993Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T01:02:35.8365351Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T01:02:35.8393766Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T01:02:35.8621293Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T01:02:35.8650342Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T01:02:35.8863057Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-14T01:02:35.8896917Z ##[endgroup]
+2026-11-14T01:02:35.8897450Z ##[group]Fetching the repository
+2026-11-14T01:02:35.8903088Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +65fe6dad5567c3ebd02e233ed4eda30ac162012e:refs/remotes/pull/88/merge
+2026-11-14T01:02:37.0787558Z From https://github.com/mikevocalz/nitro-forge
+2026-11-14T01:02:37.0789730Z  * [new ref]         65fe6dad5567c3ebd02e233ed4eda30ac162012e -> pull/88/merge
+2026-11-14T01:02:37.0792362Z ##[endgroup]
+2026-11-14T01:02:37.0793293Z ##[group]Determining the checkout info
+2026-11-14T01:02:37.0794434Z ##[endgroup]
+2026-11-14T01:02:37.0797766Z [command]/usr/bin/git sparse-checkout disable
+2026-11-14T01:02:37.0851184Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-14T01:02:37.0876405Z ##[group]Checking out the ref
+2026-11-14T01:02:37.0879395Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/88/merge
+2026-11-14T01:02:37.2003681Z Note: switching to 'refs/remotes/pull/88/merge'.
+2026-11-14T01:02:37.2004369Z 
+2026-11-14T01:02:37.2005128Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-14T01:02:37.2006625Z changes and commit them, and you can discard any commits you make in this
+2026-11-14T01:02:37.2008297Z state without impacting any branches by switching back to a branch.
+2026-11-14T01:02:37.2008979Z 
+2026-11-14T01:02:37.2009441Z If you want to create a new branch to retain commits you create, you may
+2026-11-14T01:02:37.2010554Z do so (now or later) by using -c with the switch command. Example:
+2026-11-14T01:02:37.2011155Z 
+2026-11-14T01:02:37.2011505Z   git switch -c <new-branch-name>
+2026-11-14T01:02:37.2012105Z 
+2026-11-14T01:02:37.2012554Z Or undo this operation with:
+2026-11-14T01:02:37.2013182Z 
+2026-11-14T01:02:37.2013602Z   git switch -
+2026-11-14T01:02:37.2014132Z 
+2026-11-14T01:02:37.2015040Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-14T01:02:37.2016096Z 
+2026-11-14T01:02:37.2017360Z HEAD is now at 65fe6da Merge 05030f6439f6928d084cc47fae828d604da9ade5 into b000c8ab9f8201bcba3c67163f6c8f700acf6453
+2026-11-14T01:02:37.2021630Z ##[endgroup]
+2026-11-14T01:02:37.2058639Z [command]/usr/bin/git log -1 --format=%H
+2026-11-14T01:02:37.2080095Z 65fe6dad5567c3ebd02e233ed4eda30ac162012e
+2026-11-14T01:02:37.2343746Z ##[group]Run actions/setup-node@v4
+2026-11-14T01:02:37.2344413Z with:
+2026-11-14T01:02:37.2344999Z   node-version: 24.19.0
+2026-11-14T01:02:37.2345574Z   always-auth: false
+2026-11-14T01:02:37.2346137Z   check-latest: false
+2026-11-14T01:02:37.2351576Z   token: ***
+2026-11-14T01:02:37.2352078Z env:
+2026-11-14T01:02:37.2352567Z   CI: 1
+2026-11-14T01:02:37.2353073Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:37.2353638Z ##[endgroup]
+2026-11-14T01:02:37.3234850Z Attempting to download 24.19.0...
+2026-11-14T01:02:37.3340599Z (node:2183) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T01:02:37.3342890Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T01:02:38.4448699Z Acquiring 24.19.0 - x64 from https://github.com/actions/node-versions/releases/download/24.19.0-30872449280/node-24.19.0-linux-x64.tar.gz
+2026-11-14T01:02:38.8879345Z Extracting ...
+2026-11-14T01:02:38.8976199Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/d90396f1-ca67-418a-968a-f4902c9a23a7 -f /home/runner/work/_temp/62bf201f-696d-4487-b5e5-d67be9edd8df
+2026-11-14T01:02:39.4439002Z Adding to the cache ...
+2026-11-14T01:02:41.3387702Z ##[group]Environment details
+2026-11-14T01:02:41.5091187Z node: v24.19.0
+2026-11-14T01:02:41.5091492Z npm: 11.17.0
+2026-11-14T01:02:41.5091613Z yarn: 1.22.22
+2026-11-14T01:02:41.5092019Z ##[endgroup]
+2026-11-14T01:02:41.5356414Z ##[group]Run dtolnay/rust-toolchain@stable
+2026-11-14T01:02:41.5356609Z with:
+2026-11-14T01:02:41.5356859Z   targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+2026-11-14T01:02:41.5357137Z   toolchain: stable
+2026-11-14T01:02:41.5357262Z env:
+2026-11-14T01:02:41.5357394Z   CI: 1
+2026-11-14T01:02:41.5357523Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:41.5357650Z ##[endgroup]
+2026-11-14T01:02:41.5401522Z ##[start-action display=Parse toolchain version;id=__dtolnay_rust-toolchain.parse]
+2026-11-14T01:02:41.5443909Z ##[group]Run if [[ -z $toolchain ]]; then
+2026-11-14T01:02:41.5444187Z [36;1mif [[ -z $toolchain ]]; then[0m
+2026-11-14T01:02:41.5444490Z [36;1m  # GitHub does not enforce `required: true` inputs itself. https://github.com/actions/runner/issues/1070[0m
+2026-11-14T01:02:41.5445014Z [36;1m  echo "'toolchain' is a required input" >&2[0m
+2026-11-14T01:02:41.5445193Z [36;1m  exit 1[0m
+2026-11-14T01:02:41.5445425Z [36;1melif [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then[0m
+2026-11-14T01:02:41.5445667Z [36;1m  if [[ Linux == macOS ]]; then[0m
+2026-11-14T01:02:41.5445974Z [36;1m    echo "toolchain=1.$((($(date -v-$(sed 's/stable \([0-9]*\) \(.\).*/\1\2/' <<< $toolchain) +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-11-14T01:02:41.5446264Z [36;1m  else[0m
+2026-11-14T01:02:41.5446498Z [36;1m    echo "toolchain=1.$((($(date --date "${toolchain#stable }" +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-11-14T01:02:41.5446920Z [36;1m  fi[0m
+2026-11-14T01:02:41.5447113Z [36;1melif [[ $toolchain =~ ^stable' 'minus' '[0-9]+' 'releases?$ ]]; then[0m
+2026-11-14T01:02:41.5447442Z [36;1m  echo "toolchain=1.$((($(date +%s)/60/60/24-16569)/7/6-${toolchain//[^0-9]/}))" >> $GITHUB_OUTPUT[0m
+2026-11-14T01:02:41.5447708Z [36;1melif [[ $toolchain =~ ^1\.[0-9]+$ ]]; then[0m
+2026-11-14T01:02:41.5448007Z [36;1m  echo "toolchain=1.$((i=${toolchain#1.}, c=($(date +%s)/60/60/24-16569)/7/6, i+9*i*(10*i<=c)+90*i*(100*i<=c)))" >> $GITHUB_OUTPUT[0m
+2026-11-14T01:02:41.5448291Z [36;1melse[0m
+2026-11-14T01:02:41.5448409Z [36;1m  delimiter=EOF[0m
+2026-11-14T01:02:41.5448591Z [36;1m  while [[ $toolchain == *$delimiter* ]]; do delimiter+=_; done[0m
+2026-11-14T01:02:41.5448875Z [36;1m  printf 'toolchain<<%s\n%s\n%s\n' "$delimiter" "$toolchain" "$delimiter" >> $GITHUB_OUTPUT[0m
+2026-11-14T01:02:41.5449104Z [36;1mfi[0m
+2026-11-14T01:02:41.5495296Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:41.5495516Z env:
+2026-11-14T01:02:41.5495632Z   CI: 1
+2026-11-14T01:02:41.5495745Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:41.5495883Z   toolchain: stable
+2026-11-14T01:02:41.5496009Z ##[endgroup]
+2026-11-14T01:02:41.5594904Z ##[end-action id=__dtolnay_rust-toolchain.parse;outcome=success;conclusion=success;duration_ms=19]
+2026-11-14T01:02:41.5597878Z ##[start-action display=Set $CARGO_HOME;id=__dtolnay_rust-toolchain.__run]
+2026-11-14T01:02:41.5616453Z ##[group]Run echo CARGO_HOME=${CARGO_HOME:-"$HOME/.cargo"} >> $GITHUB_ENV
+2026-11-14T01:02:41.5616736Z [36;1mecho CARGO_HOME=${CARGO_HOME:-"$HOME/.cargo"} >> $GITHUB_ENV[0m
+2026-11-14T01:02:41.5655622Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:41.5655814Z env:
+2026-11-14T01:02:41.5655927Z   CI: 1
+2026-11-14T01:02:41.5656044Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:41.5656176Z ##[endgroup]
+2026-11-14T01:02:41.5717691Z ##[end-action id=__dtolnay_rust-toolchain.__run;outcome=success;conclusion=success;duration_ms=11]
+2026-11-14T01:02:41.5719149Z ##[start-action display=Install rustup if needed;id=__dtolnay_rust-toolchain.__run_2]
+2026-11-14T01:02:41.5763014Z ##[group]Run if ! command -v rustup &>/dev/null; then
+2026-11-14T01:02:41.5763229Z [36;1mif ! command -v rustup &>/dev/null; then[0m
+2026-11-14T01:02:41.5763648Z [36;1m  curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail https://sh.rustup.rs | sh -s -- --default-toolchain none -y[0m
+2026-11-14T01:02:41.5764187Z [36;1m  echo "$CARGO_HOME/bin" >> $GITHUB_PATH[0m
+2026-11-14T01:02:41.5782580Z [36;1mfi[0m
+2026-11-14T01:02:41.5817876Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:41.5818062Z env:
+2026-11-14T01:02:41.5818177Z   CI: 1
+2026-11-14T01:02:41.5818289Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:41.5818426Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:41.5818570Z ##[endgroup]
+2026-11-14T01:02:41.5875701Z ##[end-action id=__dtolnay_rust-toolchain.__run_2;outcome=success;conclusion=success;duration_ms=15]
+2026-11-14T01:02:41.5877076Z ##[start-action display=Install rustup if needed on windows;id=__dtolnay_rust-toolchain.__run_3]
+2026-11-14T01:02:41.5880909Z ##[end-action id=__dtolnay_rust-toolchain.__run_3;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-11-14T01:02:41.5890954Z ##[start-action display=rustup toolchain install stable;id=__dtolnay_rust-toolchain.__run_4]
+2026-11-14T01:02:41.5907992Z ##[group]Run set -f  # split targets and components on commas and whitespace, without glob expansion
+2026-11-14T01:02:41.5908358Z [36;1mset -f  # split targets and components on commas and whitespace, without glob expansion[0m
+2026-11-14T01:02:41.5908597Z [36;1mflags=()[0m
+2026-11-14T01:02:41.5908759Z [36;1mfor t in ${targets//,/ }; do flags+=(--target "$t"); done[0m
+2026-11-14T01:02:41.5908986Z [36;1mfor c in ${components//,/ }; do flags+=(--component "$c"); done[0m
+2026-11-14T01:02:41.5909259Z [36;1mif [[ $toolchain == nightly && -n $components ]]; then flags+=(--allow-downgrade); fi[0m
+2026-11-14T01:02:41.5909595Z [36;1mlog=$(mktemp)[0m
+2026-11-14T01:02:41.5909732Z [36;1mtrap 'rm -f "$log"' EXIT[0m
+2026-11-14T01:02:41.5909881Z [36;1mfor attempt in 1 2 3 4 5; do[0m
+2026-11-14T01:02:41.5910194Z [36;1m  if rustup toolchain install "$toolchain" "${flags[@]}" --profile minimal --no-self-update --force-non-host 2>&1 | tee "$log"; then[0m
+2026-11-14T01:02:41.5910502Z [36;1m    break[0m
+2026-11-14T01:02:41.5910620Z [36;1m  else[0m
+2026-11-14T01:02:41.5910737Z [36;1m    status=$?[0m
+2026-11-14T01:02:41.5910859Z [36;1m  fi[0m
+2026-11-14T01:02:41.5911028Z [36;1m  if [[ $attempt == 5 ]] || ! grep -Fq 'checksum failed for ' "$log" \[0m
+2026-11-14T01:02:41.5911330Z [36;1m      || ! grep -Fq 'this is likely due to an ongoing update of the official release server' "$log"; then[0m
+2026-11-14T01:02:41.5911587Z [36;1m    exit "$status"[0m
+2026-11-14T01:02:41.5911718Z [36;1m  fi[0m
+2026-11-14T01:02:41.5911919Z [36;1m  echo "Retrying rustup toolchain install in 30 seconds (retry $attempt of 4)" >&2[0m
+2026-11-14T01:02:41.5912153Z [36;1m  sleep 30[0m
+2026-11-14T01:02:41.5912270Z [36;1mdone[0m
+2026-11-14T01:02:41.5947920Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:41.5948102Z env:
+2026-11-14T01:02:41.5948214Z   CI: 1
+2026-11-14T01:02:41.5948323Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:41.5948466Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:41.5948607Z   toolchain: stable
+2026-11-14T01:02:41.5948855Z   targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+2026-11-14T01:02:41.5949124Z   components: 
+2026-11-14T01:02:41.5949250Z   RUSTUP_PERMIT_COPY_RENAME: 1
+2026-11-14T01:02:41.5949391Z ##[endgroup]
+2026-11-14T01:02:41.8032218Z info: syncing channel updates for stable-x86_64-unknown-linux-gnu
+2026-11-14T01:02:41.9952694Z info: latest update on 2026-11-12 for version 1.100.0 (0ef1bc386 2026-11-09)
+2026-11-14T01:02:42.0039950Z info: removing previous version of component rustfmt
+2026-11-14T01:02:42.0056361Z info: removing previous version of component clippy
+2026-11-14T01:02:42.0066089Z info: removing previous version of component cargo
+2026-11-14T01:02:42.0105366Z info: removing previous version of component rust-std
+2026-11-14T01:02:42.0183313Z info: removing previous version of component rustc
+2026-11-14T01:02:42.0226499Z info: downloading 9 components
+2026-11-14T01:02:54.5680126Z 
+2026-11-14T01:02:54.5737546Z   stable-x86_64-unknown-linux-gnu updated - rustc 1.100.0 (0ef1bc386 2026-11-09) (from rustc 1.99.1 (58cf8f9c3 2026-10-13))
+2026-11-14T01:02:54.5737984Z 
+2026-11-14T01:02:54.6014689Z ##[end-action id=__dtolnay_rust-toolchain.__run_4;outcome=success;conclusion=success;duration_ms=13012]
+2026-11-14T01:02:54.6020839Z ##[start-action display=rustup default stable;id=__dtolnay_rust-toolchain.__run_5]
+2026-11-14T01:02:54.6077880Z ##[group]Run rustup default "$toolchain" --force-non-host
+2026-11-14T01:02:54.6078123Z [36;1mrustup default "$toolchain" --force-non-host[0m
+2026-11-14T01:02:54.6120135Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:54.6120318Z env:
+2026-11-14T01:02:54.6120432Z   CI: 1
+2026-11-14T01:02:54.6120537Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:54.6120668Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:54.6120805Z   toolchain: stable
+2026-11-14T01:02:54.6120924Z ##[endgroup]
+2026-11-14T01:02:54.6210351Z info: using existing install for stable-x86_64-unknown-linux-gnu
+2026-11-14T01:02:54.6217275Z info: default toolchain set to stable-x86_64-unknown-linux-gnu
+2026-11-14T01:02:54.6217544Z 
+2026-11-14T01:02:54.6268819Z   stable-x86_64-unknown-linux-gnu unchanged - rustc 1.100.0 (0ef1bc386 2026-11-09)
+2026-11-14T01:02:54.6269126Z 
+2026-11-14T01:02:54.6282965Z ##[end-action id=__dtolnay_rust-toolchain.__run_5;outcome=success;conclusion=success;duration_ms=26]
+2026-11-14T01:02:54.6285858Z ##[start-action display=Create cachekey;id=__dtolnay_rust-toolchain.rustc-version]
+2026-11-14T01:02:54.6298618Z ##[group]Run DATE=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')
+2026-11-14T01:02:54.6299229Z [36;1mDATE=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')[0m
+2026-11-14T01:02:54.6299598Z [36;1mHASH=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-hash: //p')[0m
+2026-11-14T01:02:54.6299885Z [36;1mecho "cachekey=$(echo $DATE$HASH | head -c12)" >> $GITHUB_OUTPUT[0m
+2026-11-14T01:02:54.6338201Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:54.6338389Z env:
+2026-11-14T01:02:54.6338500Z   CI: 1
+2026-11-14T01:02:54.6338611Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:54.6338746Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:54.6338892Z   toolchain: stable
+2026-11-14T01:02:54.6339013Z ##[endgroup]
+2026-11-14T01:02:54.6603273Z ##[end-action id=__dtolnay_rust-toolchain.rustc-version;outcome=success;conclusion=success;duration_ms=31]
+2026-11-14T01:02:54.6605444Z ##[start-action display=Disable incremental compilation;id=__dtolnay_rust-toolchain.__run_6]
+2026-11-14T01:02:54.6619229Z ##[group]Run if [ -z "${CARGO_INCREMENTAL+set}" ]; then
+2026-11-14T01:02:54.6619450Z [36;1mif [ -z "${CARGO_INCREMENTAL+set}" ]; then[0m
+2026-11-14T01:02:54.6619639Z [36;1m  echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV[0m
+2026-11-14T01:02:54.6619803Z [36;1mfi[0m
+2026-11-14T01:02:54.6661298Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:54.6661483Z env:
+2026-11-14T01:02:54.6661613Z   CI: 1
+2026-11-14T01:02:54.6661720Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:54.6661851Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:54.6661991Z ##[endgroup]
+2026-11-14T01:02:54.6718261Z ##[end-action id=__dtolnay_rust-toolchain.__run_6;outcome=success;conclusion=success;duration_ms=11]
+2026-11-14T01:02:54.6719541Z ##[start-action display=Enable colors in Cargo output;id=__dtolnay_rust-toolchain.__run_7]
+2026-11-14T01:02:54.6731450Z ##[group]Run if [ -z "${CARGO_TERM_COLOR+set}" ]; then
+2026-11-14T01:02:54.6731661Z [36;1mif [ -z "${CARGO_TERM_COLOR+set}" ]; then[0m
+2026-11-14T01:02:54.6731850Z [36;1m  echo CARGO_TERM_COLOR=always >> $GITHUB_ENV[0m
+2026-11-14T01:02:54.6732016Z [36;1mfi[0m
+2026-11-14T01:02:54.6768106Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:54.6768284Z env:
+2026-11-14T01:02:54.6768390Z   CI: 1
+2026-11-14T01:02:54.6768498Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:54.6768629Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:54.6768896Z   CARGO_INCREMENTAL: 0
+2026-11-14T01:02:54.6769019Z ##[endgroup]
+2026-11-14T01:02:54.6829448Z ##[end-action id=__dtolnay_rust-toolchain.__run_7;outcome=success;conclusion=success;duration_ms=10]
+2026-11-14T01:02:54.6831467Z ##[start-action display=Enable Cargo sparse registry;id=__dtolnay_rust-toolchain.__run_8]
+2026-11-14T01:02:54.6843426Z ##[group]Run # implemented in 1.66, stabilized in 1.68, made default in 1.70
+2026-11-14T01:02:54.6843705Z [36;1m# implemented in 1.66, stabilized in 1.68, made default in 1.70[0m
+2026-11-14T01:02:54.6844084Z [36;1mif [ -z "${CARGO_REGISTRIES_CRATES_IO_PROTOCOL+set}" -o -f "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol ]; then[0m
+2026-11-14T01:02:54.6844471Z [36;1m  if rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.6[89]\.'; then[0m
+2026-11-14T01:02:54.6844972Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-11-14T01:02:54.6845262Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV[0m
+2026-11-14T01:02:54.6845537Z [36;1m  elif rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.6[67]\.'; then[0m
+2026-11-14T01:02:54.6845842Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-11-14T01:02:54.6846113Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git >> $GITHUB_ENV[0m
+2026-11-14T01:02:54.6846301Z [36;1m  fi[0m
+2026-11-14T01:02:54.6846411Z [36;1mfi[0m
+2026-11-14T01:02:54.6881718Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:54.6881895Z env:
+2026-11-14T01:02:54.6882008Z   CI: 1
+2026-11-14T01:02:54.6882112Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:54.6882244Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:54.6882385Z   CARGO_INCREMENTAL: 0
+2026-11-14T01:02:54.6882509Z   CARGO_TERM_COLOR: always
+2026-11-14T01:02:54.6882638Z   toolchain: stable
+2026-11-14T01:02:54.6882761Z ##[endgroup]
+2026-11-14T01:02:54.7108665Z ##[end-action id=__dtolnay_rust-toolchain.__run_8;outcome=success;conclusion=success;duration_ms=27]
+2026-11-14T01:02:54.7111654Z ##[start-action display=Work around spurious network errors in curl 8.0;id=__dtolnay_rust-toolchain.__run_9]
+2026-11-14T01:02:54.7125136Z ##[group]Run # https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation
+2026-11-14T01:02:54.7125540Z [36;1m# https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation[0m
+2026-11-14T01:02:54.7125881Z [36;1mif rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.7[01]\.'; then[0m
+2026-11-14T01:02:54.7126136Z [36;1m  echo CARGO_HTTP_MULTIPLEXING=false >> $GITHUB_ENV[0m
+2026-11-14T01:02:54.7126309Z [36;1mfi[0m
+2026-11-14T01:02:54.7168309Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:54.7168487Z env:
+2026-11-14T01:02:54.7168699Z   CI: 1
+2026-11-14T01:02:54.7168871Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:54.7169042Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:54.7169374Z   CARGO_INCREMENTAL: 0
+2026-11-14T01:02:54.7169596Z   CARGO_TERM_COLOR: always
+2026-11-14T01:02:54.7169821Z   toolchain: stable
+2026-11-14T01:02:54.7169999Z ##[endgroup]
+2026-11-14T01:02:54.7327634Z ##[end-action id=__dtolnay_rust-toolchain.__run_9;outcome=success;conclusion=success;duration_ms=21]
+2026-11-14T01:02:54.7330988Z ##[start-action display=rustc +stable --version --verbose;id=__dtolnay_rust-toolchain.__run_10]
+2026-11-14T01:02:54.7343150Z ##[group]Run rustc +"$toolchain" --version --verbose
+2026-11-14T01:02:54.7343361Z [36;1mrustc +"$toolchain" --version --verbose[0m
+2026-11-14T01:02:54.7380558Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:54.7380743Z env:
+2026-11-14T01:02:54.7380855Z   CI: 1
+2026-11-14T01:02:54.7380960Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:54.7381090Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:54.7381228Z   CARGO_INCREMENTAL: 0
+2026-11-14T01:02:54.7381350Z   CARGO_TERM_COLOR: always
+2026-11-14T01:02:54.7381593Z   toolchain: stable
+2026-11-14T01:02:54.7381713Z ##[endgroup]
+2026-11-14T01:02:54.7510763Z rustc 1.100.0 (0ef1bc386 2026-11-09)
+2026-11-14T01:02:54.7511091Z binary: rustc
+2026-11-14T01:02:54.7511382Z commit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a
+2026-11-14T01:02:54.7511664Z commit-date: 2026-11-09
+2026-11-14T01:02:54.7511828Z host: x86_64-unknown-linux-gnu
+2026-11-14T01:02:54.7511966Z release: 1.100.0
+2026-11-14T01:02:54.7512108Z LLVM version: 23.1.5
+2026-11-14T01:02:54.7523160Z ##[end-action id=__dtolnay_rust-toolchain.__run_10;outcome=success;conclusion=success;duration_ms=19]
+2026-11-14T01:02:54.7565276Z ##[group]Run set -euo pipefail
+2026-11-14T01:02:54.7565475Z [36;1mset -euo pipefail[0m
+2026-11-14T01:02:54.7565813Z [36;1mcurl --fail --location --silent --show-error 'https://unpkg.com/react-native@0.88.1/gradle/libs.versions.toml' -o "$RUNNER_TEMP/rn-versions.toml"[0m
+2026-11-14T01:02:54.7566493Z [36;1mndk_version=$(node -e 'const fs=require("node:fs");const text=fs.readFileSync(process.argv[1],"utf8");const m=text.match(/^ndkVersion\s*=\s*"([^"]+)"/m);if(!m)throw Error("Missing pinned RN NDK version");console.log(m[1]);' "$RUNNER_TEMP/rn-versions.toml")[0m
+2026-11-14T01:02:54.7567008Z [36;1mexport ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$ndk_version"[0m
+2026-11-14T01:02:54.7567259Z [36;1m"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$ndk_version"[0m
+2026-11-14T01:02:54.7567496Z [36;1mcargo install cargo-ndk --version 4.1.2 --locked[0m
+2026-11-14T01:02:54.7567698Z [36;1mbash packages/ignition/scripts/build-android.sh[0m
+2026-11-14T01:02:54.7568267Z [36;1mnode tooling/release/native-fragment.mjs --platform android --readobj "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readobj" --output "$RUNNER_TEMP/native-android"[0m
+2026-11-14T01:02:54.7609603Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T01:02:54.7609783Z env:
+2026-11-14T01:02:54.7609890Z   CI: 1
+2026-11-14T01:02:54.7609995Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:02:54.7610126Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:02:54.7610262Z   CARGO_INCREMENTAL: 0
+2026-11-14T01:02:54.7610384Z   CARGO_TERM_COLOR: always
+2026-11-14T01:02:54.7610511Z ##[endgroup]
+2026-11-14T01:02:58.9839651Z Loading package information...                                                  
+2026-11-14T01:02:59.0359612Z Loading local repository...                                                     
+2026-11-14T01:02:59.0360279Z [                                       ] 3% Loading local repository...        
+2026-11-14T01:03:00.0143541Z [                                       ] 3% Fetch remote repository...         
+2026-11-14T01:03:00.4177134Z [=                                      ] 3% Fetch remote repository...         
+2026-11-14T01:03:00.4597843Z [=                                      ] 4% Fetch remote repository...         
+2026-11-14T01:03:00.4768084Z [=                                      ] 5% Fetch remote repository...         
+2026-11-14T01:03:00.5034693Z [==                                     ] 5% Fetch remote repository...         
+2026-11-14T01:03:00.5414857Z [==                                     ] 6% Fetch remote repository...         
+2026-11-14T01:03:00.6105983Z [==                                     ] 7% Fetch remote repository...         
+2026-11-14T01:03:00.6132649Z [==                                     ] 7% Computing updates...               
+2026-11-14T01:03:00.6165214Z [===                                    ] 8% Computing updates...               
+2026-11-14T01:03:00.6337875Z [===                                    ] 10% Computing updates...              
+2026-11-14T01:03:00.7496758Z [===                                    ] 10% Installing NDK (Side by side) 27.1
+2026-11-14T01:03:00.7863969Z [===                                    ] 10% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:00.8220322Z [====                                   ] 10% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:00.8746609Z [====                                   ] 11% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:00.9375518Z [====                                   ] 12% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:00.9865026Z [=====                                  ] 13% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.0374817Z [=====                                  ] 14% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.0763123Z [=====                                  ] 15% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.1000841Z [======                                 ] 15% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.1507209Z [======                                 ] 16% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.2101844Z [======                                 ] 17% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.2588338Z [=======                                ] 18% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.3513455Z [=======                                ] 19% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.3774210Z [=======                                ] 20% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.4010970Z [========                               ] 20% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.4610866Z [========                               ] 21% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.5107303Z [========                               ] 22% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.5605241Z [=========                              ] 23% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.6374035Z [=========                              ] 24% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.6626175Z [=========                              ] 25% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.6861751Z [==========                             ] 25% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.7517205Z [==========                             ] 26% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.8236779Z [==========                             ] 27% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.8855295Z [===========                            ] 28% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.9389828Z [===========                            ] 29% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.9631566Z [===========                            ] 30% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:01.9990264Z [============                           ] 30% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:02.0465771Z [============                           ] 31% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:02.1007852Z [============                           ] 32% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:02.1018671Z [============                           ] 33% Downloading android-ndk-r27b-linux
+2026-11-14T01:03:02.5736087Z [============                           ] 33% Unzipping...                      
+2026-11-14T01:03:02.5745590Z [============                           ] 33% Unzipping... android-ndk-r27b/    
+2026-11-14T01:03:02.5746051Z [============                           ] 33% Unzipping... android-ndk-r27b/READ
+2026-11-14T01:03:02.6288475Z [=============                          ] 33% Unzipping... android-ndk-r27b/READ
+2026-11-14T01:03:02.7492629Z [=============                          ] 33% Unzipping... android-ndk-r27b/meta
+2026-11-14T01:03:03.5041790Z [=============                          ] 33% Unzipping... android-ndk-r27b/shad
+2026-11-14T01:03:03.5043816Z [=============                          ] 33% Unzipping... android-ndk-r27b/ndk-
+2026-11-14T01:03:03.5049454Z [=============                          ] 33% Unzipping... android-ndk-r27b/wrap
+2026-11-14T01:03:03.5050568Z [=============                          ] 33% Unzipping... android-ndk-r27b/ndk-
+2026-11-14T01:03:03.7549702Z [=============                          ] 33% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:04.5381293Z [=============                          ] 34% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:04.7129399Z [=============                          ] 35% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:04.8109745Z [==============                         ] 35% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:06.1105207Z [==============                         ] 36% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:06.6827991Z [==============                         ] 37% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:07.2789808Z [===============                        ] 38% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:07.8953876Z [===============                        ] 39% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:08.1441801Z [===============                        ] 40% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:08.5186518Z [================                       ] 40% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:09.1883665Z [================                       ] 41% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:09.7858747Z [================                       ] 42% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:10.7329569Z [=================                      ] 43% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:11.4795403Z [=================                      ] 44% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:12.0497559Z [=================                      ] 45% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:12.1884390Z [==================                     ] 45% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:12.6826573Z [==================                     ] 46% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:13.4037745Z [==================                     ] 47% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:13.9334964Z [===================                    ] 48% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:14.4295381Z [===================                    ] 49% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:14.5719259Z [===================                    ] 50% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:14.7220445Z [====================                   ] 50% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:15.7726834Z [====================                   ] 51% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:16.1802890Z [====================                   ] 52% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:16.9404118Z [=====================                  ] 53% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:17.3746912Z [=====================                  ] 54% Unzipping... android-ndk-r27b/tool
+2026-11-14T01:03:17.4068333Z [=====================                  ] 54% Unzipping... android-ndk-r27b/buil
+2026-11-14T01:03:17.6243177Z [=====================                  ] 54% Unzipping... android-ndk-r27b/sour
+2026-11-14T01:03:17.6258371Z [=====================                  ] 54% Unzipping... android-ndk-r27b/NOTI
+2026-11-14T01:03:17.6258994Z [=====================                  ] 54% Unzipping... android-ndk-r27b/ndk-
+2026-11-14T01:03:17.6267987Z [=====================                  ] 54% Unzipping... android-ndk-r27b/NOTI
+2026-11-14T01:03:17.6286626Z [=====================                  ] 54% Unzipping... android-ndk-r27b/pyth
+2026-11-14T01:03:17.6650613Z [=====================                  ] 54% Unzipping... android-ndk-r27b/preb
+2026-11-14T01:03:17.6651705Z [=====================                  ] 54% Unzipping... android-ndk-r27b/ndk-
+2026-11-14T01:03:17.6652389Z [=====================                  ] 54% Unzipping... android-ndk-r27b/sour
+2026-11-14T01:03:17.7365428Z [=====================                  ] 54% Unzipping... android-ndk-r27b/simp
+2026-11-14T01:03:17.8404734Z [=====================                  ] 55% Unzipping... android-ndk-r27b/simp
+2026-11-14T01:03:17.9498046Z [=====================                  ] 55% Unzipping... android-ndk-r27b/CHAN
+2026-11-14T01:03:17.9498358Z [=======================================] 100% Unzipping... android-ndk-r27b/CHA
+2026-11-14T01:03:18.3296197Z 
+2026-11-14T01:03:18.3594010Z [1m[92m    Updating[0m crates.io index
+2026-11-14T01:03:18.4344320Z [1m[92m Downloading[0m crates ...
+2026-11-14T01:03:18.4951939Z [1m[92m  Downloaded[0m cargo-ndk v4.1.2
+2026-11-14T01:03:18.5847374Z [1m[92m  Installing[0m cargo-ndk v4.1.2
+2026-11-14T01:03:18.5857177Z [1m[92m    Updating[0m crates.io index
+2026-11-14T01:03:19.0068036Z [1m[92m    Updating[0m crates.io index
+2026-11-14T01:03:19.1587796Z [1m[92m Downloading[0m crates ...
+2026-11-14T01:03:19.1971471Z [1m[92m  Downloaded[0m potential_utf v0.1.2
+2026-11-14T01:03:19.2003690Z [1m[92m  Downloaded[0m anstyle v1.0.11
+2026-11-14T01:03:19.2051179Z [1m[92m  Downloaded[0m anstyle-query v1.1.4
+2026-11-14T01:03:19.2059403Z [1m[92m  Downloaded[0m utf8parse v0.2.2
+2026-11-14T01:03:19.2069243Z [1m[92m  Downloaded[0m anstyle-parse v0.2.7
+2026-11-14T01:03:19.2080394Z [1m[92m  Downloaded[0m autocfg v1.5.0
+2026-11-14T01:03:19.2092759Z [1m[92m  Downloaded[0m ryu v1.0.20
+2026-11-14T01:03:19.2113694Z [1m[92m  Downloaded[0m anstream v0.6.20
+2026-11-14T01:03:19.2126366Z [1m[92m  Downloaded[0m anyhow v1.0.98
+2026-11-14T01:03:19.2153766Z [1m[92m  Downloaded[0m writeable v0.6.1
+2026-11-14T01:03:19.2166986Z [1m[92m  Downloaded[0m quote v1.0.40
+2026-11-14T01:03:19.2183885Z [1m[92m  Downloaded[0m icu_normalizer v2.0.0
+2026-11-14T01:03:19.2207691Z [1m[92m  Downloaded[0m icu_properties_data v2.0.1
+2026-11-14T01:03:19.2278501Z [1m[92m  Downloaded[0m hashbrown v0.15.4
+2026-11-14T01:03:19.2315946Z [1m[92m  Downloaded[0m libc v0.2.174
+2026-11-14T01:03:19.2509040Z [1m[92m  Downloaded[0m memchr v2.7.5
+2026-11-14T01:03:19.2548989Z [1m[92m  Downloaded[0m serde-untagged v0.1.7
+2026-11-14T01:03:19.2561354Z [1m[92m  Downloaded[0m toml_datetime v0.6.11
+2026-11-14T01:03:19.2569241Z [1m[92m  Downloaded[0m icu_normalizer_data v2.0.0
+2026-11-14T01:03:19.2583878Z [1m[92m  Downloaded[0m num-traits v0.2.19
+2026-11-14T01:03:19.2601407Z [1m[92m  Downloaded[0m indexmap v2.10.0
+2026-11-14T01:03:19.2629584Z [1m[92m  Downloaded[0m url v2.5.4
+2026-11-14T01:03:19.2647461Z [1m[92m  Downloaded[0m form_urlencoded v1.2.1
+2026-11-14T01:03:19.2653049Z [1m[92m  Downloaded[0m os_str_bytes v2.4.0
+2026-11-14T01:03:19.2664786Z [1m[92m  Downloaded[0m displaydoc v0.2.5
+2026-11-14T01:03:19.2686089Z [1m[92m  Downloaded[0m filetime v0.2.25
+2026-11-14T01:03:19.2697529Z [1m[92m  Downloaded[0m serde v1.0.219
+2026-11-14T01:03:19.2719898Z [1m[92m  Downloaded[0m idna_adapter v1.2.1
+2026-11-14T01:03:19.2726469Z [1m[92m  Downloaded[0m cfg-if v1.0.1
+2026-11-14T01:03:19.2735367Z [1m[92m  Downloaded[0m is_terminal_polyfill v1.70.1
+2026-11-14T01:03:19.2741275Z [1m[92m  Downloaded[0m toml_datetime v0.7.0
+2026-11-14T01:03:19.2749501Z [1m[92m  Downloaded[0m winnow v0.7.12
+2026-11-14T01:03:19.2813242Z [1m[92m  Downloaded[0m heck v0.5.0
+2026-11-14T01:03:19.2822241Z [1m[92m  Downloaded[0m percent-encoding v2.3.1
+2026-11-14T01:03:19.2827289Z [1m[92m  Downloaded[0m yoke-derive v0.8.0
+2026-11-14T01:03:19.2832947Z [1m[92m  Downloaded[0m thiserror-impl v1.0.69
+2026-11-14T01:03:19.2841891Z [1m[92m  Downloaded[0m cargo-platform v0.2.0
+2026-11-14T01:03:19.2849769Z [1m[92m  Downloaded[0m iref v1.4.3
+2026-11-14T01:03:19.2869781Z [1m[92m  Downloaded[0m syn v2.0.104
+2026-11-14T01:03:19.2947643Z [1m[92m  Downloaded[0m itoa v1.0.15
+2026-11-14T01:03:19.2958630Z [1m[92m  Downloaded[0m cargo_metadata v0.21.0
+2026-11-14T01:03:19.2971906Z [1m[92m  Downloaded[0m ordered-float v2.10.1
+2026-11-14T01:03:19.2980673Z [1m[92m  Downloaded[0m dunce v1.0.5
+2026-11-14T01:03:19.2986375Z [1m[92m  Downloaded[0m toml_writer v1.0.2
+2026-11-14T01:03:19.2995910Z [1m[92m  Downloaded[0m colorchoice v1.0.4
+2026-11-14T01:03:19.3001909Z [1m[92m  Downloaded[0m zerovec-derive v0.11.1
+2026-11-14T01:03:19.3011486Z [1m[92m  Downloaded[0m is-terminal v0.4.16
+2026-11-14T01:03:19.3017441Z [1m[92m  Downloaded[0m typeid v1.0.3
+2026-11-14T01:03:19.3025707Z [1m[92m  Downloaded[0m equivalent v1.0.2
+2026-11-14T01:03:19.3032367Z [1m[92m  Downloaded[0m toml v0.9.5
+2026-11-14T01:03:19.3059431Z [1m[92m  Downloaded[0m serde_spanned v1.0.0
+2026-11-14T01:03:19.3066700Z [1m[92m  Downloaded[0m utf8_iter v1.0.4
+2026-11-14T01:03:19.3073089Z [1m[92m  Downloaded[0m erased-serde v0.4.6
+2026-11-14T01:03:19.3087966Z [1m[92m  Downloaded[0m icu_properties v2.0.1
+2026-11-14T01:03:19.3101576Z [1m[92m  Downloaded[0m litemap v0.8.0
+2026-11-14T01:03:19.3115876Z [1m[92m  Downloaded[0m pathos v0.3.0
+2026-11-14T01:03:19.3132802Z [1m[92m  Downloaded[0m idna v1.0.3
+2026-11-14T01:03:19.3155749Z [1m[92m  Downloaded[0m once_cell v1.21.3
+2026-11-14T01:03:19.3171841Z [1m[92m  Downloaded[0m proc-macro2 v1.0.95
+2026-11-14T01:03:19.3188592Z [1m[92m  Downloaded[0m camino v1.1.10
+2026-11-14T01:03:19.3201090Z [1m[92m  Downloaded[0m zerovec v0.11.4
+2026-11-14T01:03:19.3236684Z [1m[92m  Downloaded[0m eieio v1.0.0
+2026-11-14T01:03:19.3241141Z [1m[92m  Downloaded[0m serde_spanned v0.6.9
+2026-11-14T01:03:19.3248096Z [1m[92m  Downloaded[0m toml_parser v1.0.2
+2026-11-14T01:03:19.3262626Z [1m[92m  Downloaded[0m log v0.4.27
+2026-11-14T01:03:19.3277476Z [1m[92m  Downloaded[0m clap_lex v0.7.5
+2026-11-14T01:03:19.3284254Z [1m[92m  Downloaded[0m utf8-decode v1.0.1
+2026-11-14T01:03:19.3291326Z [1m[92m  Downloaded[0m icu_locale_core v2.0.0
+2026-11-14T01:03:19.3337932Z [1m[92m  Downloaded[0m pct-str v1.2.0
+2026-11-14T01:03:19.3347169Z [1m[92m  Downloaded[0m thiserror-impl v2.0.12
+2026-11-14T01:03:19.3356424Z [1m[92m  Downloaded[0m toml v0.8.23
+2026-11-14T01:03:19.3371861Z [1m[92m  Downloaded[0m yoke v0.8.0
+2026-11-14T01:03:19.3382363Z [1m[92m  Downloaded[0m clap_builder v4.5.42
+2026-11-14T01:03:19.3423651Z [1m[92m  Downloaded[0m unicode-xid v0.2.6
+2026-11-14T01:03:19.3431982Z [1m[92m  Downloaded[0m semver v1.0.26
+2026-11-14T01:03:19.3447456Z [1m[92m  Downloaded[0m serde-value v0.7.0
+2026-11-14T01:03:19.3453519Z [1m[92m  Downloaded[0m smallvec v1.15.1
+2026-11-14T01:03:19.3467464Z [1m[92m  Downloaded[0m zerofrom v0.1.6
+2026-11-14T01:03:19.3472796Z [1m[92m  Downloaded[0m unicode-ident v1.0.18
+2026-11-14T01:03:19.3490697Z [1m[92m  Downloaded[0m thiserror v1.0.69
+2026-11-14T01:03:19.3527168Z [1m[92m  Downloaded[0m icu_collections v2.0.0
+2026-11-14T01:03:19.3567605Z [1m[92m  Downloaded[0m tinystr v0.8.1
+2026-11-14T01:03:19.3580298Z [1m[92m  Downloaded[0m thiserror v2.0.12
+2026-11-14T01:03:19.3621645Z [1m[92m  Downloaded[0m serde_derive v1.0.219
+2026-11-14T01:03:19.3637696Z [1m[92m  Downloaded[0m toml_write v0.1.2
+2026-11-14T01:03:19.3645957Z [1m[92m  Downloaded[0m zerofrom-derive v0.1.6
+2026-11-14T01:03:19.3651936Z [1m[92m  Downloaded[0m zerotrie v0.2.2
+2026-11-14T01:03:19.3674985Z [1m[92m  Downloaded[0m strsim v0.11.1
+2026-11-14T01:03:19.3683299Z [1m[92m  Downloaded[0m termcolor v1.4.1
+2026-11-14T01:03:19.3691398Z [1m[92m  Downloaded[0m clap v4.5.42
+2026-11-14T01:03:19.3749420Z [1m[92m  Downloaded[0m clap_derive v4.5.41
+2026-11-14T01:03:19.3763547Z [1m[92m  Downloaded[0m cargo-util-schemas v0.8.2
+2026-11-14T01:03:19.3775752Z [1m[92m  Downloaded[0m serde_json v1.0.142
+2026-11-14T01:03:19.3823059Z [1m[92m  Downloaded[0m version_check v0.9.5
+2026-11-14T01:03:19.3831197Z [1m[92m  Downloaded[0m toml_edit v0.22.27
+2026-11-14T01:03:19.3859710Z [1m[92m  Downloaded[0m synstructure v0.13.2
+2026-11-14T01:03:19.3866227Z [1m[92m  Downloaded[0m icu_provider v2.0.0
+2026-11-14T01:03:19.3882621Z [1m[92m  Downloaded[0m stable_deref_trait v1.2.0
+2026-11-14T01:03:19.4315785Z [1m[92m   Compiling[0m proc-macro2 v1.0.95
+2026-11-14T01:03:19.4316414Z [1m[92m   Compiling[0m unicode-ident v1.0.18
+2026-11-14T01:03:19.4316877Z [1m[92m   Compiling[0m serde v1.0.219
+2026-11-14T01:03:19.4317313Z [1m[92m   Compiling[0m stable_deref_trait v1.2.0
+2026-11-14T01:03:19.4569166Z [1m[92m   Compiling[0m writeable v0.6.1
+2026-11-14T01:03:19.4693515Z [1m[92m   Compiling[0m litemap v0.8.0
+2026-11-14T01:03:19.5469812Z [1m[92m   Compiling[0m icu_properties_data v2.0.1
+2026-11-14T01:03:19.6236300Z [1m[92m   Compiling[0m icu_normalizer_data v2.0.0
+2026-11-14T01:03:19.6281167Z [1m[92m   Compiling[0m smallvec v1.15.1
+2026-11-14T01:03:19.7266094Z [1m[92m   Compiling[0m autocfg v1.5.0
+2026-11-14T01:03:19.8186318Z [1m[92m   Compiling[0m winnow v0.7.12
+2026-11-14T01:03:19.8283909Z [1m[92m   Compiling[0m typeid v1.0.3
+2026-11-14T01:03:19.9038809Z [1m[92m   Compiling[0m quote v1.0.40
+2026-11-14T01:03:19.9186249Z [1m[92m   Compiling[0m num-traits v0.2.19
+2026-11-14T01:03:19.9717996Z [1m[92m   Compiling[0m percent-encoding v2.3.1
+2026-11-14T01:03:20.0142864Z [1m[92m   Compiling[0m syn v2.0.104
+2026-11-14T01:03:20.0230946Z [1m[92m   Compiling[0m libc v0.2.174
+2026-11-14T01:03:20.0967003Z [1m[92m   Compiling[0m equivalent v1.0.2
+2026-11-14T01:03:20.1252092Z [1m[92m   Compiling[0m hashbrown v0.15.4
+2026-11-14T01:03:20.5408367Z [1m[92m   Compiling[0m indexmap v2.10.0
+2026-11-14T01:03:20.7306204Z [1m[92m   Compiling[0m semver v1.0.26
+2026-11-14T01:03:20.8106213Z [1m[92m   Compiling[0m utf8parse v0.2.2
+2026-11-14T01:03:20.8438640Z [1m[92m   Compiling[0m thiserror v2.0.12
+2026-11-14T01:03:20.9390450Z [1m[92m   Compiling[0m utf8_iter v1.0.4
+2026-11-14T01:03:21.0023070Z [1m[92m   Compiling[0m toml_write v0.1.2
+2026-11-14T01:03:21.0944836Z [1m[92m   Compiling[0m anstyle-parse v0.2.7
+2026-11-14T01:03:21.1323420Z [1m[92m   Compiling[0m ordered-float v2.10.1
+2026-11-14T01:03:21.1966286Z [1m[92m   Compiling[0m form_urlencoded v1.2.1
+2026-11-14T01:03:21.2676718Z [1m[92m   Compiling[0m is_terminal_polyfill v1.70.1
+2026-11-14T01:03:21.2958326Z [1m[92m   Compiling[0m anstyle v1.0.11
+2026-11-14T01:03:21.3220325Z [1m[92m   Compiling[0m serde_json v1.0.142
+2026-11-14T01:03:21.3840416Z [1m[92m   Compiling[0m thiserror v1.0.69
+2026-11-14T01:03:21.4436271Z [1m[92m   Compiling[0m anstyle-query v1.1.4
+2026-11-14T01:03:21.4716200Z [1m[92m   Compiling[0m camino v1.1.10
+2026-11-14T01:03:21.4806145Z [1m[92m   Compiling[0m utf8-decode v1.0.1
+2026-11-14T01:03:21.5139723Z [1m[92m   Compiling[0m colorchoice v1.0.4
+2026-11-14T01:03:21.5491425Z [1m[92m   Compiling[0m anstream v0.6.20
+2026-11-14T01:03:21.5772185Z [1m[92m   Compiling[0m pct-str v1.2.0
+2026-11-14T01:03:21.6350466Z [1m[92m   Compiling[0m strsim v0.11.1
+2026-11-14T01:03:21.7346130Z [1m[92m   Compiling[0m heck v0.5.0
+2026-11-14T01:03:21.8126067Z [1m[92m   Compiling[0m anyhow v1.0.98
+2026-11-14T01:03:21.8206055Z [1m[92m   Compiling[0m itoa v1.0.15
+2026-11-14T01:03:21.8826383Z [1m[92m   Compiling[0m memchr v2.7.5
+2026-11-14T01:03:21.9096223Z [1m[92m   Compiling[0m unicode-xid v0.2.6
+2026-11-14T01:03:21.9541827Z [1m[92m   Compiling[0m clap_lex v0.7.5
+2026-11-14T01:03:22.1495888Z [1m[92m   Compiling[0m synstructure v0.13.2
+2026-11-14T01:03:22.2116035Z [1m[92m   Compiling[0m ryu v1.0.20
+2026-11-14T01:03:22.3868831Z [1m[92m   Compiling[0m clap_builder v4.5.42
+2026-11-14T01:03:22.4866318Z [1m[92m   Compiling[0m iref v1.4.3
+2026-11-14T01:03:22.6445973Z [1m[92m   Compiling[0m toml_parser v1.0.2
+2026-11-14T01:03:22.8630523Z [1m[92m   Compiling[0m once_cell v1.21.3
+2026-11-14T01:03:23.0026048Z [1m[92m   Compiling[0m eieio v1.0.0
+2026-11-14T01:03:23.0736228Z [1m[92m   Compiling[0m cfg-if v1.0.1
+2026-11-14T01:03:23.1056309Z [1m[92m   Compiling[0m toml_writer v1.0.2
+2026-11-14T01:03:23.1516266Z [1m[92m   Compiling[0m serde_derive v1.0.219
+2026-11-14T01:03:23.2206595Z [1m[92m   Compiling[0m zerofrom-derive v0.1.6
+2026-11-14T01:03:23.6702846Z [1m[92m   Compiling[0m yoke-derive v0.8.0
+2026-11-14T01:03:23.8906036Z [1m[92m   Compiling[0m zerofrom v0.1.6
+2026-11-14T01:03:23.9496073Z [1m[92m   Compiling[0m zerovec-derive v0.11.1
+2026-11-14T01:03:24.1862233Z [1m[92m   Compiling[0m yoke v0.8.0
+2026-11-14T01:03:24.2845136Z [1m[92m   Compiling[0m displaydoc v0.2.5
+2026-11-14T01:03:24.5326446Z [1m[92m   Compiling[0m zerovec v0.11.4
+2026-11-14T01:03:24.5826241Z [1m[92m   Compiling[0m zerotrie v0.2.2
+2026-11-14T01:03:24.9018121Z [1m[92m   Compiling[0m thiserror-impl v2.0.12
+2026-11-14T01:03:25.2616148Z [1m[92m   Compiling[0m tinystr v0.8.1
+2026-11-14T01:03:25.3629129Z [1m[92m   Compiling[0m icu_locale_core v2.0.0
+2026-11-14T01:03:25.6016451Z [1m[92m   Compiling[0m potential_utf v0.1.2
+2026-11-14T01:03:25.6688561Z [1m[92m   Compiling[0m icu_collections v2.0.0
+2026-11-14T01:03:26.1223278Z [1m[92m   Compiling[0m icu_provider v2.0.0
+2026-11-14T01:03:26.3370159Z [1m[92m   Compiling[0m icu_normalizer v2.0.0
+2026-11-14T01:03:26.8086255Z [1m[92m   Compiling[0m icu_properties v2.0.1
+2026-11-14T01:03:27.1456320Z [1m[92m   Compiling[0m serde_spanned v0.6.9
+2026-11-14T01:03:27.1483077Z [1m[92m   Compiling[0m toml_datetime v0.6.11
+2026-11-14T01:03:27.1928756Z [1m[92m   Compiling[0m erased-serde v0.4.6
+2026-11-14T01:03:27.3426292Z [1m[92m   Compiling[0m toml_edit v0.22.27
+2026-11-14T01:03:27.5526145Z [1m[92m   Compiling[0m idna_adapter v1.2.1
+2026-11-14T01:03:27.6121422Z [1m[92m   Compiling[0m idna v1.0.3
+2026-11-14T01:03:27.8666167Z [1m[92m   Compiling[0m url v2.5.4
+2026-11-14T01:03:29.1406265Z [1m[92m   Compiling[0m toml v0.8.23
+2026-11-14T01:03:29.4930329Z [1m[92m   Compiling[0m serde-untagged v0.1.7
+2026-11-14T01:03:29.7016091Z [1m[92m   Compiling[0m serde-value v0.7.0
+2026-11-14T01:03:30.4365123Z [1m[92m   Compiling[0m thiserror-impl v1.0.69
+2026-11-14T01:03:30.5610169Z [1m[92m   Compiling[0m cargo-util-schemas v0.8.2
+2026-11-14T01:03:31.0188087Z [1m[92m   Compiling[0m toml_datetime v0.7.0
+2026-11-14T01:03:31.1014082Z [1m[92m   Compiling[0m cargo-platform v0.2.0
+2026-11-14T01:03:31.4254723Z [1m[92m   Compiling[0m serde_spanned v1.0.0
+2026-11-14T01:03:31.5546413Z [1m[92m   Compiling[0m clap_derive v4.5.41
+2026-11-14T01:03:32.4056360Z [1m[92m   Compiling[0m os_str_bytes v2.4.0
+2026-11-14T01:03:32.4545762Z [1m[92m   Compiling[0m cargo-ndk v4.1.2
+2026-11-14T01:03:32.5139064Z [1m[92m   Compiling[0m log v0.4.27
+2026-11-14T01:03:32.5236275Z [1m[92m   Compiling[0m clap v4.5.42
+2026-11-14T01:03:32.5586233Z [1m[92m   Compiling[0m cargo_metadata v0.21.0
+2026-11-14T01:03:32.6613272Z [1m[92m   Compiling[0m pathos v0.3.0
+2026-11-14T01:03:33.0829255Z [1m[92m   Compiling[0m toml v0.9.5
+2026-11-14T01:03:33.3266187Z [1m[92m   Compiling[0m filetime v0.2.25
+2026-11-14T01:03:33.7816289Z [1m[92m   Compiling[0m is-terminal v0.4.16
+2026-11-14T01:03:33.8146143Z [1m[92m   Compiling[0m version_check v0.9.5
+2026-11-14T01:03:34.0715471Z [1m[92m   Compiling[0m dunce v1.0.5
+2026-11-14T01:03:34.1016058Z [1m[92m   Compiling[0m termcolor v1.4.1
+2026-11-14T01:03:37.4794041Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 19.13s
+2026-11-14T01:03:37.4860254Z [1m[92m  Installing[0m /home/runner/.cargo/bin/cargo-ndk
+2026-11-14T01:03:37.4860739Z [1m[92m  Installing[0m /home/runner/.cargo/bin/cargo-ndk-env
+2026-11-14T01:03:37.4861174Z [1m[92m  Installing[0m /home/runner/.cargo/bin/cargo-ndk-runner
+2026-11-14T01:03:37.4861630Z [1m[92m  Installing[0m /home/runner/.cargo/bin/cargo-ndk-test
+2026-11-14T01:03:37.4863919Z [1m[92m   Installed[0m package `cargo-ndk v4.1.2` (executables `cargo-ndk`, `cargo-ndk-env`, `cargo-ndk-runner`, `cargo-ndk-test`)
+2026-11-14T01:03:37.5670560Z warning: Environment variable `ANDROID_NDK_HOME = "/usr/local/lib/android/sdk/ndk/27.1.12297006"` doesn't match `ANDROID_NDK_ROOT = "/usr/local/lib/android/sdk/ndk/27.3.13750724"`
+2026-11-14T01:03:37.5671067Z     Building armeabi-v7a (armv7-linux-androideabi)
+2026-11-14T01:03:37.5948626Z [1m[92m    Updating[0m crates.io index
+2026-11-14T01:03:37.9037695Z [1m[92m Downloading[0m crates ...
+2026-11-14T01:03:37.9458935Z [1m[92m  Downloaded[0m block-buffer v0.10.4
+2026-11-14T01:03:37.9503683Z [1m[92m  Downloaded[0m android_system_properties v0.1.6
+2026-11-14T01:03:37.9515204Z [1m[92m  Downloaded[0m zerofrom v0.1.8
+2026-11-14T01:03:37.9521709Z [1m[92m  Downloaded[0m adler2 v2.0.1
+2026-11-14T01:03:37.9556179Z [1m[92m  Downloaded[0m inout v0.1.4
+2026-11-14T01:03:37.9563823Z [1m[92m  Downloaded[0m weezl v0.1.12
+2026-11-14T01:03:37.9583394Z [1m[92m  Downloaded[0m yoke-derive v0.8.4
+2026-11-14T01:03:37.9592668Z [1m[92m  Downloaded[0m ppv-lite86 v0.2.21
+2026-11-14T01:03:37.9601883Z [1m[92m  Downloaded[0m simdutf8 v0.1.5
+2026-11-14T01:03:37.9618304Z [1m[92m  Downloaded[0m arrayref v0.3.9
+2026-11-14T01:03:37.9627685Z [1m[92m  Downloaded[0m block-padding v0.3.3
+2026-11-14T01:03:37.9633684Z [1m[92m  Downloaded[0m tinyvec v1.13.3
+2026-11-14T01:03:37.9656513Z [1m[92m  Downloaded[0m aes v0.8.4
+2026-11-14T01:03:37.9679437Z [1m[92m  Downloaded[0m arrayvec v0.7.8
+2026-11-14T01:03:37.9693317Z [1m[92m  Downloaded[0m zerofrom-derive v0.1.8
+2026-11-14T01:03:37.9699630Z [1m[92m  Downloaded[0m zopfli v0.8.4
+2026-11-14T01:03:37.9714865Z [1m[92m  Downloaded[0m miniz_oxide v0.9.1
+2026-11-14T01:03:37.9731617Z [1m[92m  Downloaded[0m zmij v1.0.23
+2026-11-14T01:03:37.9743200Z [1m[92m  Downloaded[0m bytemuck v1.25.2
+2026-11-14T01:03:37.9765950Z [1m[92m  Downloaded[0m yoke v0.8.4
+2026-11-14T01:03:37.9778559Z [1m[92m  Downloaded[0m core_detect v1.0.0
+2026-11-14T01:03:37.9789959Z [1m[92m  Downloaded[0m crc32fast v1.5.5
+2026-11-14T01:03:37.9805969Z [1m[92m  Downloaded[0m hashbrown v0.17.1
+2026-11-14T01:03:37.9843538Z [1m[92m  Downloaded[0m time v0.3.55
+2026-11-14T01:03:37.9945564Z [1m[92m  Downloaded[0m tiny-skia v0.12.0
+2026-11-14T01:03:38.0050235Z [1m[92m  Downloaded[0m zerocopy v0.8.63
+2026-11-14T01:03:38.0259269Z [1m[92m  Downloaded[0m zip v2.6.1
+2026-11-14T01:03:38.0292213Z [1m[92m  Downloaded[0m zlib-rs v0.6.8
+2026-11-14T01:03:38.0336611Z [1m[92m  Downloaded[0m cipher v0.4.4
+2026-11-14T01:03:38.0347543Z [1m[92m  Downloaded[0m crossbeam-utils v0.8.23
+2026-11-14T01:03:38.0368692Z [1m[92m  Downloaded[0m encoding_rs v0.8.44
+2026-11-14T01:03:38.0442995Z [1m[92m  Downloaded[0m fdeflate v0.3.7
+2026-11-14T01:03:38.0455911Z [1m[92m  Downloaded[0m autocfg v1.5.1
+2026-11-14T01:03:38.0468540Z [1m[92m  Downloaded[0m bitflags v2.13.2
+2026-11-14T01:03:38.0498530Z [1m[92m  Downloaded[0m cfg-if v1.0.5
+2026-11-14T01:03:38.0507361Z [1m[92m  Downloaded[0m equivalent v1.0.3
+2026-11-14T01:03:38.0513796Z [1m[92m  Downloaded[0m deranged v0.5.9
+2026-11-14T01:03:38.0526135Z [1m[92m  Downloaded[0m crossbeam-epoch v0.9.21
+2026-11-14T01:03:38.0542531Z [1m[92m  Downloaded[0m crossbeam-deque v0.8.8
+2026-11-14T01:03:38.0552818Z [1m[92m  Downloaded[0m cpufeatures v0.2.17
+2026-11-14T01:03:38.0561620Z [1m[92m  Downloaded[0m ecb v0.1.2
+2026-11-14T01:03:38.0571726Z [1m[92m  Downloaded[0m cbc v0.1.2
+2026-11-14T01:03:38.0581589Z [1m[92m  Downloaded[0m digest v0.10.7
+2026-11-14T01:03:38.0593792Z [1m[92m  Downloaded[0m bumpalo v3.20.3
+2026-11-14T01:03:38.0630315Z [1m[92m  Downloaded[0m bytecount v0.6.9
+2026-11-14T01:03:38.0644987Z [1m[92m  Downloaded[0m rand v0.9.5
+2026-11-14T01:03:38.0674753Z [1m[92m  Downloaded[0m multiversion_no_op v1.0.0
+2026-11-14T01:03:38.0684951Z [1m[92m  Downloaded[0m rand_core v0.9.5
+2026-11-14T01:03:38.0690113Z [1m[92m  Downloaded[0m powerfmt v0.2.1
+2026-11-14T01:03:38.0698336Z [1m[92m  Downloaded[0m crypto-common v0.1.7
+2026-11-14T01:03:38.0707581Z [1m[92m  Downloaded[0m font-types v0.12.7
+2026-11-14T01:03:38.0719822Z [1m[92m  Downloaded[0m synstructure v0.14.0
+2026-11-14T01:03:38.0726917Z [1m[92m  Downloaded[0m time-macros v0.2.32
+2026-11-14T01:03:38.0743472Z [1m[92m  Downloaded[0m either v1.19.0
+2026-11-14T01:03:38.0753379Z [1m[92m  Downloaded[0m quote v1.0.47
+2026-11-14T01:03:38.0771265Z [1m[92m  Downloaded[0m serde_json v1.0.154
+2026-11-14T01:03:38.0820968Z [1m[92m  Downloaded[0m bytemuck_derive v1.12.1
+2026-11-14T01:03:38.0829892Z [1m[92m  Downloaded[0m proc-macro2 v1.0.107
+2026-11-14T01:03:38.0849250Z [1m[92m  Downloaded[0m serde_derive v1.0.229
+2026-11-14T01:03:38.0869391Z [1m[92m  Downloaded[0m unicode-bidi v0.3.18
+2026-11-14T01:03:38.0885909Z [1m[92m  Downloaded[0m chrono v0.4.45
+2026-11-14T01:03:38.0930829Z [1m[92m  Downloaded[0m foldhash v0.2.0
+2026-11-14T01:03:38.0938975Z [1m[92m  Downloaded[0m md-5 v0.10.6
+2026-11-14T01:03:38.0948946Z [1m[92m  Downloaded[0m simd-adler32 v0.3.10
+2026-11-14T01:03:38.0961013Z [1m[92m  Downloaded[0m thiserror v2.0.21
+2026-11-14T01:03:38.1003561Z [1m[92m  Downloaded[0m strict-num v0.1.1
+2026-11-14T01:03:38.1010127Z [1m[92m  Downloaded[0m iana-time-zone v0.1.65
+2026-11-14T01:03:38.1028481Z [1m[92m  Downloaded[0m sha2 v0.10.9
+2026-11-14T01:03:38.1045075Z [1m[92m  Downloaded[0m unicode-normalization v0.1.25
+2026-11-14T01:03:38.1071303Z [1m[92m  Downloaded[0m stringprep v0.1.5
+2026-11-14T01:03:38.1081098Z [1m[92m  Downloaded[0m rangemap v1.8.0
+2026-11-14T01:03:38.1095611Z [1m[92m  Downloaded[0m log v0.4.35
+2026-11-14T01:03:38.1112560Z [1m[92m  Downloaded[0m serde_core v1.0.229
+2026-11-14T01:03:38.1130588Z [1m[92m  Downloaded[0m typenum v1.20.1
+2026-11-14T01:03:38.1154341Z [1m[92m  Downloaded[0m thiserror-impl v2.0.21
+2026-11-14T01:03:38.1163615Z [1m[92m  Downloaded[0m skrifa v0.49.0
+2026-11-14T01:03:38.1232696Z [1m[92m  Downloaded[0m syn v3.0.10
+2026-11-14T01:03:38.1304381Z [1m[92m  Downloaded[0m tiny-skia-path v0.12.0
+2026-11-14T01:03:38.1317054Z [1m[92m  Downloaded[0m nom_locate v5.0.0
+2026-11-14T01:03:38.1327670Z [1m[92m  Downloaded[0m indexmap v2.14.2
+2026-11-14T01:03:38.1356045Z [1m[92m  Downloaded[0m generic-array v0.14.7
+2026-11-14T01:03:38.1365059Z [1m[92m  Downloaded[0m rayon v1.12.0
+2026-11-14T01:03:38.1427883Z [1m[92m  Downloaded[0m time-core v0.1.9
+2026-11-14T01:03:38.1435222Z [1m[92m  Downloaded[0m jiff v0.2.43
+2026-11-14T01:03:38.1538946Z [1m[92m  Downloaded[0m jiff-core v0.1.5
+2026-11-14T01:03:38.1562855Z [1m[92m  Downloaded[0m once_cell v1.21.4
+2026-11-14T01:03:38.1579347Z [1m[92m  Downloaded[0m rand_chacha v0.9.0
+2026-11-14T01:03:38.1589687Z [1m[92m  Downloaded[0m serde v1.0.229
+2026-11-14T01:03:38.1612625Z [1m[92m  Downloaded[0m nom v8.0.0
+2026-11-14T01:03:38.1647853Z [1m[92m  Downloaded[0m rayon-core v1.13.0
+2026-11-14T01:03:38.1672425Z [1m[92m  Downloaded[0m syn v2.0.119
+2026-11-14T01:03:38.1756858Z [1m[92m  Downloaded[0m itoa v1.0.19
+2026-11-14T01:03:38.1766489Z [1m[92m  Downloaded[0m scopeguard v1.2.0
+2026-11-14T01:03:38.1774334Z [1m[92m  Downloaded[0m libc v0.2.191
+2026-11-14T01:03:38.2099869Z [1m[92m  Downloaded[0m png v0.18.1
+2026-11-14T01:03:38.2127463Z [1m[92m  Downloaded[0m memchr v2.8.3
+2026-11-14T01:03:38.2164826Z [1m[92m  Downloaded[0m flate2 v1.1.11
+2026-11-14T01:03:38.2199949Z [1m[92m  Downloaded[0m stable_deref_trait v1.2.1
+2026-11-14T01:03:38.2206028Z [1m[92m  Downloaded[0m getrandom v0.3.4
+2026-11-14T01:03:38.2228559Z [1m[92m  Downloaded[0m rustversion v1.0.23
+2026-11-14T01:03:38.2249510Z [1m[92m  Downloaded[0m miniz_oxide v0.8.9
+2026-11-14T01:03:38.2265892Z [1m[92m  Downloaded[0m jiff-static v0.2.43
+2026-11-14T01:03:38.2271690Z [1m[92m  Downloaded[0m quick-xml v0.37.5
+2026-11-14T01:03:38.2306872Z [1m[92m  Downloaded[0m num-conv v0.2.2
+2026-11-14T01:03:38.2312380Z [1m[92m  Downloaded[0m unicode-properties v0.1.5
+2026-11-14T01:03:38.2324299Z [1m[92m  Downloaded[0m harfrust v0.15.0
+2026-11-14T01:03:38.2387446Z [1m[92m  Downloaded[0m unicode-ident v1.0.27
+2026-11-14T01:03:38.2406076Z [1m[92m  Downloaded[0m smallvec v1.16.5
+2026-11-14T01:03:38.2414895Z [1m[92m  Downloaded[0m read-fonts v0.46.0
+2026-11-14T01:03:38.2604337Z [1m[92m  Downloaded[0m lopdf v0.36.0
+2026-11-14T01:03:38.3498669Z [1m[92m   Compiling[0m proc-macro2 v1.0.107
+2026-11-14T01:03:38.3499092Z [1m[92m   Compiling[0m quote v1.0.47
+2026-11-14T01:03:38.3499392Z [1m[92m   Compiling[0m unicode-ident v1.0.27
+2026-11-14T01:03:38.3499597Z [1m[92m   Compiling[0m cfg-if v1.0.5
+2026-11-14T01:03:38.3830914Z [1m[92m   Compiling[0m memchr v2.8.3
+2026-11-14T01:03:38.3936125Z [1m[92m   Compiling[0m serde_core v1.0.229
+2026-11-14T01:03:38.4506315Z [1m[92m   Compiling[0m version_check v0.9.5
+2026-11-14T01:03:38.5107122Z [1m[92m   Compiling[0m zmij v1.0.23
+2026-11-14T01:03:38.5756303Z [1m[92m   Compiling[0m generic-array v0.14.7
+2026-11-14T01:03:38.5908148Z [1m[92m   Compiling[0m thiserror v2.0.21
+2026-11-14T01:03:38.7706841Z [1m[92m   Compiling[0m itoa v1.0.19
+2026-11-14T01:03:38.8546260Z [1m[92m   Compiling[0m syn v3.0.10
+2026-11-14T01:03:38.8656245Z [1m[92m   Compiling[0m serde v1.0.229
+2026-11-14T01:03:38.8946212Z [1m[92m   Compiling[0m serde_json v1.0.154
+2026-11-14T01:03:38.9578076Z [1m[92m   Compiling[0m simd-adler32 v0.3.10
+2026-11-14T01:03:38.9578676Z [1m[92m   Compiling[0m typenum v1.20.1
+2026-11-14T01:03:39.2305844Z [1m[92m   Compiling[0m crc32fast v1.5.5
+2026-11-14T01:03:39.3369798Z [1m[92m   Compiling[0m adler2 v2.0.1
+2026-11-14T01:03:39.5232543Z [1m[92m   Compiling[0m miniz_oxide v0.9.1
+2026-11-14T01:03:39.7626705Z [1m[92m   Compiling[0m libc v0.2.191
+2026-11-14T01:03:39.9506580Z [1m[92m   Compiling[0m crossbeam-utils v0.8.23
+2026-11-14T01:03:40.0775981Z [1m[92m   Compiling[0m flate2 v1.1.11
+2026-11-14T01:03:40.4076150Z [1m[92m   Compiling[0m crypto-common v0.1.7
+2026-11-14T01:03:40.7266079Z [1m[92m   Compiling[0m thiserror-impl v2.0.21
+2026-11-14T01:03:40.8315985Z [1m[92m   Compiling[0m serde_derive v1.0.229
+2026-11-14T01:03:40.9786157Z [1m[92m   Compiling[0m bitflags v2.13.2
+2026-11-14T01:03:41.1755128Z [1m[92m   Compiling[0m bytemuck_derive v1.12.1
+2026-11-14T01:03:41.4166615Z [1m[92m   Compiling[0m synstructure v0.14.0
+2026-11-14T01:03:41.6936274Z [1m[92m   Compiling[0m block-padding v0.3.3
+2026-11-14T01:03:41.7523490Z [1m[92m   Compiling[0m getrandom v0.3.4
+2026-11-14T01:03:41.7786683Z [1m[92m   Compiling[0m bytemuck v1.25.2
+2026-11-14T01:03:41.8604299Z [1m[92m   Compiling[0m log v0.4.35
+2026-11-14T01:03:41.9303318Z [1m[92m   Compiling[0m zerocopy v0.8.63
+2026-11-14T01:03:41.9612366Z [1m[92m   Compiling[0m rustversion v1.0.23
+2026-11-14T01:03:42.0336847Z [1m[92m   Compiling[0m crossbeam-epoch v0.9.21
+2026-11-14T01:03:42.1015586Z [1m[92m   Compiling[0m inout v0.1.4
+2026-11-14T01:03:42.1057270Z [1m[92m   Compiling[0m zerofrom-derive v0.1.8
+2026-11-14T01:03:42.1286276Z [1m[92m   Compiling[0m block-buffer v0.10.4
+2026-11-14T01:03:42.1616353Z [1m[92m   Compiling[0m autocfg v1.5.1
+2026-11-14T01:03:42.1861383Z [1m[92m   Compiling[0m equivalent v1.0.3
+2026-11-14T01:03:42.2188227Z [1m[92m   Compiling[0m crossbeam-deque v0.8.8
+2026-11-14T01:03:42.3093110Z [1m[92m   Compiling[0m hashbrown v0.17.1
+2026-11-14T01:03:42.3506425Z [1m[92m   Compiling[0m num-traits v0.2.19
+2026-11-14T01:03:42.4306257Z [1m[92m   Compiling[0m digest v0.10.7
+2026-11-14T01:03:42.4670339Z [1m[92m   Compiling[0m zerofrom v0.1.8
+2026-11-14T01:03:42.5244444Z [1m[92m   Compiling[0m cipher v0.4.4
+2026-11-14T01:03:42.7521492Z [1m[92m   Compiling[0m indexmap v2.14.2
+2026-11-14T01:03:42.9293655Z [1m[92m   Compiling[0m ignition-core v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/ignition-core)
+2026-11-14T01:03:42.9946243Z [1m[92m   Compiling[0m yoke-derive v0.8.4
+2026-11-14T01:03:43.3226361Z [1m[92m   Compiling[0m miniz_oxide v0.8.9
+2026-11-14T01:03:43.3526231Z [1m[92m   Compiling[0m fdeflate v0.3.7
+2026-11-14T01:03:43.9280502Z [1m[92m   Compiling[0m stable_deref_trait v1.2.1
+2026-11-14T01:03:43.9656201Z [1m[92m   Compiling[0m rayon-core v1.13.0
+2026-11-14T01:03:44.0266223Z [1m[92m   Compiling[0m tinyvec v1.13.3
+2026-11-14T01:03:44.3106332Z [1m[92m   Compiling[0m unicode-normalization v0.1.25
+2026-11-14T01:03:44.3330627Z [1m[92m   Compiling[0m yoke v0.8.4
+2026-11-14T01:03:44.4350650Z [1m[92m   Compiling[0m png v0.18.1
+2026-11-14T01:03:44.4496530Z [1m[92m   Compiling[0m encoding_rs v0.8.44
+2026-11-14T01:03:44.5096075Z [1m[92m   Compiling[0m rand_core v0.9.5
+2026-11-14T01:03:44.6996312Z [1m[92m   Compiling[0m font-types v0.12.7
+2026-11-14T01:03:44.7286495Z [1m[92m   Compiling[0m android_system_properties v0.1.6
+2026-11-14T01:03:44.7991400Z [1m[92m   Compiling[0m once_cell v1.21.4
+2026-11-14T01:03:44.8746084Z [1m[92m   Compiling[0m zip v2.6.1
+2026-11-14T01:03:44.9426268Z [1m[92m   Compiling[0m bumpalo v3.20.3
+2026-11-14T01:03:45.0946187Z [1m[92m   Compiling[0m smallvec v1.16.5
+2026-11-14T01:03:45.2156465Z [1m[92m   Compiling[0m foldhash v0.2.0
+2026-11-14T01:03:45.2322798Z [1m[92m   Compiling[0m prism-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/prism/rust)
+2026-11-14T01:03:45.3123760Z [1m[92m   Compiling[0m read-fonts v0.46.0
+2026-11-14T01:03:45.5276101Z [1m[92m   Compiling[0m ppv-lite86 v0.2.21
+2026-11-14T01:03:45.6506071Z [1m[92m   Compiling[0m rand_chacha v0.9.0
+2026-11-14T01:03:46.2396047Z [1m[92m   Compiling[0m zopfli v0.8.4
+2026-11-14T01:03:46.4236594Z [1m[92m   Compiling[0m iana-time-zone v0.1.65
+2026-11-14T01:03:47.5566180Z [1m[92m   Compiling[0m sha2 v0.10.9
+2026-11-14T01:03:47.8246371Z [1m[92m   Compiling[0m nom v8.0.0
+2026-11-14T01:03:48.1216467Z [1m[92m   Compiling[0m strict-num v0.1.1
+2026-11-14T01:03:48.1800987Z [1m[92m   Compiling[0m either v1.19.0
+2026-11-14T01:03:48.2836178Z [1m[92m   Compiling[0m powerfmt v0.2.1
+2026-11-14T01:03:48.3716554Z [1m[92m   Compiling[0m deranged v0.5.9
+2026-11-14T01:03:49.2296844Z [1m[92m   Compiling[0m scopeguard v1.2.0
+2026-11-14T01:03:49.2756756Z [1m[92m   Compiling[0m time-core v0.1.9
+2026-11-14T01:03:49.3881233Z [1m[92m   Compiling[0m multiversion_no_op v1.0.0
+2026-11-14T01:03:49.4613340Z [1m[92m   Compiling[0m unicode-properties v0.1.5
+2026-11-14T01:03:49.5855863Z [1m[92m   Compiling[0m bytecount v0.6.9
+2026-11-14T01:03:49.6646237Z [1m[92m   Compiling[0m arrayref v0.3.9
+2026-11-14T01:03:49.6925593Z [1m[92m   Compiling[0m unicode-bidi v0.3.18
+2026-11-14T01:03:49.8496259Z [1m[92m   Compiling[0m jiff-core v0.1.5
+2026-11-14T01:03:50.4886181Z [1m[92m   Compiling[0m num-conv v0.2.2
+2026-11-14T01:03:50.5576162Z [1m[92m   Compiling[0m time v0.3.55
+2026-11-14T01:03:51.2236235Z [1m[92m   Compiling[0m jiff v0.2.43
+2026-11-14T01:03:52.8176286Z [1m[92m   Compiling[0m stringprep v0.1.5
+2026-11-14T01:03:54.2086144Z [1m[92m   Compiling[0m tiny-skia-path v0.12.0
+2026-11-14T01:03:55.1832635Z [1m[92m   Compiling[0m nom_locate v5.0.0
+2026-11-14T01:03:58.7449590Z [1m[92m   Compiling[0m rayon v1.12.0
+2026-11-14T01:03:58.9228765Z [1m[92m   Compiling[0m chrono v0.4.45
+2026-11-14T01:04:00.4746310Z [1m[92m   Compiling[0m rand v0.9.5
+2026-11-14T01:04:00.5245313Z [1m[92m   Compiling[0m ecb v0.1.2
+2026-11-14T01:04:00.5726230Z [1m[92m   Compiling[0m aes v0.8.4
+2026-11-14T01:04:00.9246448Z [1m[92m   Compiling[0m cbc v0.1.2
+2026-11-14T01:04:00.9866369Z [1m[92m   Compiling[0m md-5 v0.10.6
+2026-11-14T01:04:00.9966175Z [1m[92m   Compiling[0m quick-xml v0.37.5
+2026-11-14T01:04:01.0452346Z [1m[92m   Compiling[0m rangemap v1.8.0
+2026-11-14T01:04:01.2392863Z [1m[92m   Compiling[0m weezl v0.1.12
+2026-11-14T01:04:01.6016509Z [1m[92m   Compiling[0m arrayvec v0.7.8
+2026-11-14T01:04:01.7348223Z [1m[92m   Compiling[0m tiny-skia v0.12.0
+2026-11-14T01:04:01.9406156Z [1m[92m   Compiling[0m lopdf v0.36.0
+2026-11-14T01:04:02.2341570Z [1m[92m   Compiling[0m harfrust v0.15.0
+2026-11-14T01:04:06.0177735Z [1m[92m   Compiling[0m skrifa v0.49.0
+2026-11-14T01:04:12.6526515Z [1m[92m   Compiling[0m quill-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/quill/rust)
+2026-11-14T01:04:14.0776483Z [1m[92m   Compiling[0m folio-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/folio/rust)
+2026-11-14T01:04:16.8198250Z [1m[92m   Compiling[0m tally-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/tally/rust)
+2026-11-14T01:04:16.8936440Z [1m[92m   Compiling[0m motion-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/motion/rust)
+2026-11-14T01:04:26.8156487Z [1m[92m   Compiling[0m draft-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/draft/rust)
+2026-11-14T01:04:31.4956601Z [1m[92m   Compiling[0m design-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/design/rust)
+2026-11-14T01:04:34.4526442Z [1m[92m   Compiling[0m pitch-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/pitch/rust)
+2026-11-14T01:04:38.3986986Z [1m[92m   Compiling[0m scene-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/scene/rust)
+2026-11-14T01:04:43.4387095Z [1m[92m   Compiling[0m photo-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/photo/rust)
+2026-11-14T01:04:43.4916562Z [1m[92m   Compiling[0m splice-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/splice/rust)
+2026-11-14T01:04:45.5657300Z [1m[92m   Compiling[0m cadence-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/cadence/rust)
+2026-11-14T01:04:45.6686141Z [1m[33mwarning[0m[1m: unused doc comment[0m
+2026-11-14T01:04:45.6715702Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:727:13
+2026-11-14T01:04:45.6725991Z     [1m[94m|[0m
+2026-11-14T01:04:45.6755962Z [1m[94m727[0m [1m[94m|[0m [1m[33m/[0m             /// Split a clip at an absolute timeline tick strictly inside it.
+2026-11-14T01:04:45.6795773Z [1m[94m728[0m [1m[94m|[0m [1m[33m|[0m             /// The left half keeps the id; the right half gets a new id and
+2026-11-14T01:04:45.6815766Z [1m[94m729[0m [1m[94m|[0m [1m[33m|[0m             /// copies gain/mute. Notes are clip-relative: a note entirely on
+2026-11-14T01:04:45.6845696Z [1m[94m730[0m [1m[94m|[0m [1m[33m|[0m             /// one side moves or stays; a note spanning the split point is
+2026-11-14T01:04:45.6875914Z [1m[94m731[0m [1m[94m|[0m [1m[33m|[0m             /// cut into two notes at the boundary (same pitch/velocity/
+2026-11-14T01:04:45.6905760Z [1m[94m732[0m [1m[94m|[0m [1m[33m|[0m             /// channel, no overlap, no zero-length piece).
+2026-11-14T01:04:45.6935443Z     [1m[94m|[0m [1m[33m|___________________________________________________________^[0m
+2026-11-14T01:04:45.6936062Z [1m[94m733[0m [1m[94m|[0m [1m[94m/[0m             "splitClip" => {
+2026-11-14T01:04:45.6936639Z [1m[94m734[0m [1m[94m|[0m [1m[94m|[0m                 let id = req_u64(p, "id")?;
+2026-11-14T01:04:45.6937267Z [1m[94m735[0m [1m[94m|[0m [1m[94m|[0m                 let at = req_ticks(p, "at_ticks")?;
+2026-11-14T01:04:45.6937865Z [1m[94m736[0m [1m[94m|[0m [1m[94m|[0m                 let (ti, ci) = self
+2026-11-14T01:04:45.6938286Z [1m[94m...[0m   [1m[94m|[0m
+2026-11-14T01:04:45.6947194Z [1m[94m787[0m [1m[94m|[0m [1m[94m|[0m                 Ok(Self::changed(json!({ "left_id": id, "right_id": right_id })))
+2026-11-14T01:04:45.6947854Z [1m[94m788[0m [1m[94m|[0m [1m[94m|[0m             }
+2026-11-14T01:04:45.6948492Z     [1m[94m|[0m [1m[94m|_____________-[0m [1m[94mrustdoc does not generate documentation for match arms[0m
+2026-11-14T01:04:45.6948947Z     [1m[94m|[0m
+2026-11-14T01:04:45.6949284Z     [1m[94m= [0m[1mhelp[0m: use `//` for a plain comment
+2026-11-14T01:04:45.6949919Z     [1m[94m= [0m[1mnote[0m: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:04:46.1339671Z 
+2026-11-14T01:04:46.1340717Z [1m[33mwarning[0m[1m: constant `B64_ALPHABET` is never used[0m
+2026-11-14T01:04:46.1385376Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:267:7
+2026-11-14T01:04:46.1415123Z     [1m[94m|[0m
+2026-11-14T01:04:46.1445193Z [1m[94m267[0m [1m[94m|[0m const B64_ALPHABET: &[u8; 64] =
+2026-11-14T01:04:46.1475475Z     [1m[94m|[0m       [1m[33m^^^^^^^^^^^^[0m
+2026-11-14T01:04:46.1505188Z     [1m[94m|[0m
+2026-11-14T01:04:46.1535422Z     [1m[94m= [0m[1mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:04:46.1564820Z 
+2026-11-14T01:04:46.1595773Z [1m[33mwarning[0m[1m: function `base64_encode` is never used[0m
+2026-11-14T01:04:46.1625653Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:270:4
+2026-11-14T01:04:46.1655498Z     [1m[94m|[0m
+2026-11-14T01:04:46.1685710Z [1m[94m270[0m [1m[94m|[0m fn base64_encode(bytes: &[u8]) -> String {
+2026-11-14T01:04:46.1715061Z     [1m[94m|[0m    [1m[33m^^^^^^^^^^^^^[0m
+2026-11-14T01:04:46.1744849Z 
+2026-11-14T01:04:48.7629749Z [1m[33mwarning[0m: `cadence-engine` (lib) generated 3 warnings
+2026-11-14T01:04:48.7630244Z [1m[92m   Compiling[0m nf-sys v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/nf-sys)
+2026-11-14T01:04:48.7936444Z [1m[33mwarning[0m[1m: unused imports: `OP_REDO`, `OP_SNAPSHOT`, and `OP_UNDO`[0m
+2026-11-14T01:04:48.7936982Z  [1m[94m--> [0mrust/nf-sys/src/ffi_v1.rs:6:63
+2026-11-14T01:04:48.7937278Z   [1m[94m|[0m
+2026-11-14T01:04:48.7938335Z [1m[94m6[0m [1m[94m|[0m use ignition_core::{Command, Engine, EngineError, EngineKind, OP_REDO, OP_SNAPSHOT, OP_UNDO};
+2026-11-14T01:04:48.7939044Z   [1m[94m|[0m                                                               [1m[33m^^^^^^^[0m  [1m[33m^^^^^^^^^^^[0m  [1m[33m^^^^^^^[0m
+2026-11-14T01:04:48.7939443Z   [1m[94m|[0m
+2026-11-14T01:04:48.7939854Z   [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:04:48.7940153Z 
+2026-11-14T01:04:49.8344773Z [1m[33mwarning[0m: `nf-sys` (lib) generated 1 warning (run `cargo fix --lib -p nf-sys` to apply 1 suggestion)
+2026-11-14T01:04:49.8347457Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 1m 12s
+2026-11-14T01:04:49.9208257Z warning: Environment variable `ANDROID_NDK_HOME = "/usr/local/lib/android/sdk/ndk/27.1.12297006"` doesn't match `ANDROID_NDK_ROOT = "/usr/local/lib/android/sdk/ndk/27.3.13750724"`
+2026-11-14T01:04:49.9208724Z     Building arm64-v8a (aarch64-linux-android)
+2026-11-14T01:04:49.9806357Z [1m[92m   Compiling[0m cfg-if v1.0.5
+2026-11-14T01:04:49.9806795Z [1m[92m   Compiling[0m memchr v2.8.3
+2026-11-14T01:04:49.9836004Z [1m[92m   Compiling[0m serde_core v1.0.229
+2026-11-14T01:04:49.9837573Z [1m[92m   Compiling[0m thiserror v2.0.21
+2026-11-14T01:04:50.0006230Z [1m[92m   Compiling[0m zmij v1.0.23
+2026-11-14T01:04:50.0125687Z [1m[92m   Compiling[0m generic-array v0.14.7
+2026-11-14T01:04:50.0146042Z [1m[92m   Compiling[0m itoa v1.0.19
+2026-11-14T01:04:50.0248811Z [1m[92m   Compiling[0m simd-adler32 v0.3.10
+2026-11-14T01:04:50.1322685Z [1m[92m   Compiling[0m typenum v1.20.1
+2026-11-14T01:04:50.1456136Z [1m[92m   Compiling[0m serde v1.0.229
+2026-11-14T01:04:50.1598246Z [1m[92m   Compiling[0m serde_json v1.0.154
+2026-11-14T01:04:50.1663440Z [1m[92m   Compiling[0m libc v0.2.191
+2026-11-14T01:04:50.4045110Z [1m[92m   Compiling[0m crc32fast v1.5.5
+2026-11-14T01:04:50.4755546Z [1m[92m   Compiling[0m adler2 v2.0.1
+2026-11-14T01:04:50.7865944Z [1m[92m   Compiling[0m miniz_oxide v0.9.1
+2026-11-14T01:04:50.9516676Z [1m[92m   Compiling[0m crypto-common v0.1.7
+2026-11-14T01:04:50.9916692Z [1m[92m   Compiling[0m bitflags v2.13.2
+2026-11-14T01:04:51.1351675Z [1m[92m   Compiling[0m flate2 v1.1.11
+2026-11-14T01:04:51.1773691Z [1m[92m   Compiling[0m crossbeam-utils v0.8.23
+2026-11-14T01:04:51.1845825Z [1m[92m   Compiling[0m bytemuck v1.25.2
+2026-11-14T01:04:51.3470206Z [1m[92m   Compiling[0m block-padding v0.3.3
+2026-11-14T01:04:51.3971102Z [1m[92m   Compiling[0m log v0.4.35
+2026-11-14T01:04:51.5106650Z [1m[92m   Compiling[0m crossbeam-epoch v0.9.21
+2026-11-14T01:04:51.5146308Z [1m[92m   Compiling[0m zerocopy v0.8.63
+2026-11-14T01:04:51.5262548Z [1m[92m   Compiling[0m getrandom v0.3.4
+2026-11-14T01:04:51.5305629Z [1m[92m   Compiling[0m inout v0.1.4
+2026-11-14T01:04:51.8736519Z [1m[92m   Compiling[0m block-buffer v0.10.4
+2026-11-14T01:04:51.8919169Z [1m[92m   Compiling[0m equivalent v1.0.3
+2026-11-14T01:04:51.9218674Z [1m[92m   Compiling[0m hashbrown v0.17.1
+2026-11-14T01:04:51.9353554Z [1m[92m   Compiling[0m digest v0.10.7
+2026-11-14T01:04:52.0299905Z [1m[92m   Compiling[0m crossbeam-deque v0.8.8
+2026-11-14T01:04:52.0359209Z [1m[92m   Compiling[0m zerofrom v0.1.8
+2026-11-14T01:04:52.0836424Z [1m[92m   Compiling[0m ignition-core v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/ignition-core)
+2026-11-14T01:04:52.3146128Z [1m[92m   Compiling[0m cipher v0.4.4
+2026-11-14T01:04:52.3855824Z [1m[92m   Compiling[0m indexmap v2.14.2
+2026-11-14T01:04:52.9194249Z [1m[92m   Compiling[0m cpufeatures v0.2.17
+2026-11-14T01:04:52.9526202Z [1m[92m   Compiling[0m miniz_oxide v0.8.9
+2026-11-14T01:04:53.3136148Z [1m[92m   Compiling[0m fdeflate v0.3.7
+2026-11-14T01:04:53.6496291Z [1m[92m   Compiling[0m tinyvec v1.13.3
+2026-11-14T01:04:53.9496753Z [1m[92m   Compiling[0m stable_deref_trait v1.2.1
+2026-11-14T01:04:53.9577610Z [1m[92m   Compiling[0m rayon-core v1.13.0
+2026-11-14T01:04:53.9657888Z [1m[92m   Compiling[0m yoke v0.8.4
+2026-11-14T01:04:53.9780693Z [1m[92m   Compiling[0m unicode-normalization v0.1.25
+2026-11-14T01:04:54.0366183Z [1m[92m   Compiling[0m png v0.18.1
+2026-11-14T01:04:54.0704475Z [1m[92m   Compiling[0m rand_core v0.9.5
+2026-11-14T01:04:54.2830559Z [1m[92m   Compiling[0m num-traits v0.2.19
+2026-11-14T01:04:54.3086535Z [1m[92m   Compiling[0m font-types v0.12.7
+2026-11-14T01:04:54.3326212Z [1m[92m   Compiling[0m android_system_properties v0.1.6
+2026-11-14T01:04:54.3905324Z [1m[92m   Compiling[0m smallvec v1.16.5
+2026-11-14T01:04:54.5169450Z [1m[92m   Compiling[0m foldhash v0.2.0
+2026-11-14T01:04:54.6050837Z [1m[92m   Compiling[0m bumpalo v3.20.3
+2026-11-14T01:04:54.6286465Z [1m[92m   Compiling[0m once_cell v1.21.4
+2026-11-14T01:04:54.6896448Z [1m[92m   Compiling[0m read-fonts v0.46.0
+2026-11-14T01:04:54.7515083Z [1m[92m   Compiling[0m zopfli v0.8.4
+2026-11-14T01:04:55.3646249Z [1m[92m   Compiling[0m ppv-lite86 v0.2.21
+2026-11-14T01:04:55.5026384Z [1m[92m   Compiling[0m rand_chacha v0.9.0
+2026-11-14T01:04:55.9870506Z [1m[92m   Compiling[0m prism-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/prism/rust)
+2026-11-14T01:04:56.0316959Z [1m[92m   Compiling[0m zip v2.6.1
+2026-11-14T01:04:56.0355541Z [1m[92m   Compiling[0m iana-time-zone v0.1.65
+2026-11-14T01:04:56.5812633Z [1m[92m   Compiling[0m encoding_rs v0.8.44
+2026-11-14T01:04:56.5865972Z [1m[92m   Compiling[0m sha2 v0.10.9
+2026-11-14T01:04:57.3766185Z [1m[92m   Compiling[0m nom v8.0.0
+2026-11-14T01:04:57.6125161Z [1m[92m   Compiling[0m num-conv v0.2.2
+2026-11-14T01:04:57.6856006Z [1m[92m   Compiling[0m simdutf8 v0.1.5
+2026-11-14T01:04:57.8466315Z [1m[92m   Compiling[0m strict-num v0.1.1
+2026-11-14T01:04:57.9016943Z [1m[92m   Compiling[0m powerfmt v0.2.1
+2026-11-14T01:04:57.9956127Z [1m[92m   Compiling[0m deranged v0.5.9
+2026-11-14T01:04:58.8166271Z [1m[92m   Compiling[0m time-core v0.1.9
+2026-11-14T01:04:58.9146148Z [1m[92m   Compiling[0m bytecount v0.6.9
+2026-11-14T01:04:59.0206257Z [1m[92m   Compiling[0m unicode-bidi v0.3.18
+2026-11-14T01:04:59.4737178Z [1m[92m   Compiling[0m unicode-properties v0.1.5
+2026-11-14T01:04:59.6061965Z [1m[92m   Compiling[0m scopeguard v1.2.0
+2026-11-14T01:04:59.6446293Z [1m[92m   Compiling[0m jiff-core v0.1.5
+2026-11-14T01:04:59.8816842Z [1m[92m   Compiling[0m either v1.19.0
+2026-11-14T01:04:59.9833098Z [1m[92m   Compiling[0m arrayref v0.3.9
+2026-11-14T01:05:00.0145064Z [1m[92m   Compiling[0m tiny-skia-path v0.12.0
+2026-11-14T01:05:01.1113348Z [1m[92m   Compiling[0m jiff v0.2.43
+2026-11-14T01:05:01.1204197Z [1m[92m   Compiling[0m rayon v1.12.0
+2026-11-14T01:05:06.5319440Z [1m[92m   Compiling[0m stringprep v0.1.5
+2026-11-14T01:05:08.0146748Z [1m[92m   Compiling[0m nom_locate v5.0.0
+2026-11-14T01:05:08.0666158Z [1m[92m   Compiling[0m time v0.3.55
+2026-11-14T01:05:08.7526298Z [1m[92m   Compiling[0m chrono v0.4.45
+2026-11-14T01:05:10.6696147Z [1m[92m   Compiling[0m rand v0.9.5
+2026-11-14T01:05:11.1540997Z [1m[92m   Compiling[0m aes v0.8.4
+2026-11-14T01:05:11.4776126Z [1m[92m   Compiling[0m cbc v0.1.2
+2026-11-14T01:05:11.5302286Z [1m[92m   Compiling[0m ecb v0.1.2
+2026-11-14T01:05:11.5735966Z [1m[92m   Compiling[0m md-5 v0.10.6
+2026-11-14T01:05:11.5956433Z [1m[92m   Compiling[0m quick-xml v0.37.5
+2026-11-14T01:05:11.6296198Z [1m[92m   Compiling[0m arrayvec v0.7.8
+2026-11-14T01:05:11.7586168Z [1m[92m   Compiling[0m rangemap v1.8.0
+2026-11-14T01:05:11.8526184Z [1m[92m   Compiling[0m weezl v0.1.12
+2026-11-14T01:05:11.9666339Z [1m[92m   Compiling[0m tiny-skia v0.12.0
+2026-11-14T01:05:12.5996379Z [1m[92m   Compiling[0m lopdf v0.36.0
+2026-11-14T01:05:12.8871827Z [1m[92m   Compiling[0m harfrust v0.15.0
+2026-11-14T01:05:16.1666030Z [1m[92m   Compiling[0m skrifa v0.49.0
+2026-11-14T01:05:22.8909044Z [1m[92m   Compiling[0m quill-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/quill/rust)
+2026-11-14T01:05:25.5906176Z [1m[92m   Compiling[0m folio-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/folio/rust)
+2026-11-14T01:05:27.6906389Z [1m[92m   Compiling[0m tally-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/tally/rust)
+2026-11-14T01:05:28.3438202Z [1m[92m   Compiling[0m design-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/design/rust)
+2026-11-14T01:05:38.8606726Z [1m[92m   Compiling[0m motion-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/motion/rust)
+2026-11-14T01:05:44.7523969Z [1m[92m   Compiling[0m draft-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/draft/rust)
+2026-11-14T01:05:45.8956535Z [1m[92m   Compiling[0m photo-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/photo/rust)
+2026-11-14T01:05:49.3416660Z [1m[92m   Compiling[0m pitch-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/pitch/rust)
+2026-11-14T01:05:50.6236492Z [1m[92m   Compiling[0m splice-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/splice/rust)
+2026-11-14T01:05:53.8879619Z [1m[92m   Compiling[0m scene-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/scene/rust)
+2026-11-14T01:05:55.9986624Z [1m[92m   Compiling[0m cadence-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/cadence/rust)
+2026-11-14T01:05:56.0766101Z [1m[33mwarning[0m[1m: unused doc comment[0m
+2026-11-14T01:05:56.0794956Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:727:13
+2026-11-14T01:05:56.0805566Z     [1m[94m|[0m
+2026-11-14T01:05:56.0806499Z [1m[94m727[0m [1m[94m|[0m [1m[33m/[0m             /// Split a clip at an absolute timeline tick strictly inside it.
+2026-11-14T01:05:56.0807564Z [1m[94m728[0m [1m[94m|[0m [1m[33m|[0m             /// The left half keeps the id; the right half gets a new id and
+2026-11-14T01:05:56.0808513Z [1m[94m729[0m [1m[94m|[0m [1m[33m|[0m             /// copies gain/mute. Notes are clip-relative: a note entirely on
+2026-11-14T01:05:56.0809518Z [1m[94m730[0m [1m[94m|[0m [1m[33m|[0m             /// one side moves or stays; a note spanning the split point is
+2026-11-14T01:05:56.0810428Z [1m[94m731[0m [1m[94m|[0m [1m[33m|[0m             /// cut into two notes at the boundary (same pitch/velocity/
+2026-11-14T01:05:56.0811302Z [1m[94m732[0m [1m[94m|[0m [1m[33m|[0m             /// channel, no overlap, no zero-length piece).
+2026-11-14T01:05:56.0812008Z     [1m[94m|[0m [1m[33m|___________________________________________________________^[0m
+2026-11-14T01:05:56.0812688Z [1m[94m733[0m [1m[94m|[0m [1m[94m/[0m             "splitClip" => {
+2026-11-14T01:05:56.0813368Z [1m[94m734[0m [1m[94m|[0m [1m[94m|[0m                 let id = req_u64(p, "id")?;
+2026-11-14T01:05:56.0814109Z [1m[94m735[0m [1m[94m|[0m [1m[94m|[0m                 let at = req_ticks(p, "at_ticks")?;
+2026-11-14T01:05:56.0814963Z [1m[94m736[0m [1m[94m|[0m [1m[94m|[0m                 let (ti, ci) = self
+2026-11-14T01:05:56.0815493Z [1m[94m...[0m   [1m[94m|[0m
+2026-11-14T01:05:56.0816472Z [1m[94m787[0m [1m[94m|[0m [1m[94m|[0m                 Ok(Self::changed(json!({ "left_id": id, "right_id": right_id })))
+2026-11-14T01:05:56.0817184Z [1m[94m788[0m [1m[94m|[0m [1m[94m|[0m             }
+2026-11-14T01:05:56.0817900Z     [1m[94m|[0m [1m[94m|_____________-[0m [1m[94mrustdoc does not generate documentation for match arms[0m
+2026-11-14T01:05:56.0818483Z     [1m[94m|[0m
+2026-11-14T01:05:56.0818938Z     [1m[94m= [0m[1mhelp[0m: use `//` for a plain comment
+2026-11-14T01:05:56.0819612Z     [1m[94m= [0m[1mnote[0m: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:05:56.0820062Z 
+2026-11-14T01:05:56.5716329Z [1m[33mwarning[0m[1m: constant `B64_ALPHABET` is never used[0m
+2026-11-14T01:05:56.5717288Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:267:7
+2026-11-14T01:05:56.5745575Z     [1m[94m|[0m
+2026-11-14T01:05:56.5775592Z [1m[94m267[0m [1m[94m|[0m const B64_ALPHABET: &[u8; 64] =
+2026-11-14T01:05:56.5776889Z     [1m[94m|[0m       [1m[33m^^^^^^^^^^^^[0m
+2026-11-14T01:05:56.5805635Z     [1m[94m|[0m
+2026-11-14T01:05:56.5835667Z     [1m[94m= [0m[1mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:05:56.5864899Z 
+2026-11-14T01:05:56.5865750Z [1m[33mwarning[0m[1m: function `base64_encode` is never used[0m
+2026-11-14T01:05:56.5895835Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:270:4
+2026-11-14T01:05:56.5915233Z     [1m[94m|[0m
+2026-11-14T01:05:56.5945546Z [1m[94m270[0m [1m[94m|[0m fn base64_encode(bytes: &[u8]) -> String {
+2026-11-14T01:05:56.5955198Z     [1m[94m|[0m    [1m[33m^^^^^^^^^^^^^[0m
+2026-11-14T01:05:56.5975029Z 
+2026-11-14T01:06:01.5912646Z [1m[33mwarning[0m: `cadence-engine` (lib) generated 3 warnings
+2026-11-14T01:06:01.5913324Z [1m[92m   Compiling[0m nf-sys v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/nf-sys)
+2026-11-14T01:06:01.6201144Z [1m[33mwarning[0m[1m: unused imports: `OP_REDO`, `OP_SNAPSHOT`, and `OP_UNDO`[0m
+2026-11-14T01:06:01.6201514Z  [1m[94m--> [0mrust/nf-sys/src/ffi_v1.rs:6:63
+2026-11-14T01:06:01.6201706Z   [1m[94m|[0m
+2026-11-14T01:06:01.6202321Z [1m[94m6[0m [1m[94m|[0m use ignition_core::{Command, Engine, EngineError, EngineKind, OP_REDO, OP_SNAPSHOT, OP_UNDO};
+2026-11-14T01:06:01.6202774Z   [1m[94m|[0m                                                               [1m[33m^^^^^^^[0m  [1m[33m^^^^^^^^^^^[0m  [1m[33m^^^^^^^[0m
+2026-11-14T01:06:01.6203010Z   [1m[94m|[0m
+2026-11-14T01:06:01.6203269Z   [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:06:01.6203446Z 
+2026-11-14T01:06:02.7211133Z [1m[33mwarning[0m: `nf-sys` (lib) generated 1 warning (run `cargo fix --lib -p nf-sys` to apply 1 suggestion)
+2026-11-14T01:06:02.7212478Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 1m 12s
+2026-11-14T01:06:02.7862726Z warning: Environment variable `ANDROID_NDK_HOME = "/usr/local/lib/android/sdk/ndk/27.1.12297006"` doesn't match `ANDROID_NDK_ROOT = "/usr/local/lib/android/sdk/ndk/27.3.13750724"`
+2026-11-14T01:06:02.7863221Z     Building x86 (i686-linux-android)
+2026-11-14T01:06:02.8459316Z [1m[92m   Compiling[0m cfg-if v1.0.5
+2026-11-14T01:06:02.8460098Z [1m[92m   Compiling[0m memchr v2.8.3
+2026-11-14T01:06:02.8489968Z [1m[92m   Compiling[0m serde_core v1.0.229
+2026-11-14T01:06:02.8497565Z [1m[92m   Compiling[0m zmij v1.0.23
+2026-11-14T01:06:02.8616199Z [1m[92m   Compiling[0m thiserror v2.0.21
+2026-11-14T01:06:02.8718110Z [1m[92m   Compiling[0m generic-array v0.14.7
+2026-11-14T01:06:02.8836084Z [1m[92m   Compiling[0m typenum v1.20.1
+2026-11-14T01:06:02.8872439Z [1m[92m   Compiling[0m simd-adler32 v0.3.10
+2026-11-14T01:06:03.0386157Z [1m[92m   Compiling[0m itoa v1.0.19
+2026-11-14T01:06:03.1646276Z [1m[92m   Compiling[0m serde_json v1.0.154
+2026-11-14T01:06:03.1705683Z [1m[92m   Compiling[0m serde v1.0.229
+2026-11-14T01:06:03.2205963Z [1m[92m   Compiling[0m crc32fast v1.5.5
+2026-11-14T01:06:03.2312141Z [1m[92m   Compiling[0m adler2 v2.0.1
+2026-11-14T01:06:03.4066179Z [1m[92m   Compiling[0m miniz_oxide v0.9.1
+2026-11-14T01:06:03.4786278Z [1m[92m   Compiling[0m libc v0.2.191
+2026-11-14T01:06:03.7436293Z [1m[92m   Compiling[0m crypto-common v0.1.7
+2026-11-14T01:06:03.7867168Z [1m[92m   Compiling[0m flate2 v1.1.11
+2026-11-14T01:06:03.8856620Z [1m[92m   Compiling[0m bitflags v2.13.2
+2026-11-14T01:06:04.0756043Z [1m[92m   Compiling[0m crossbeam-utils v0.8.23
+2026-11-14T01:06:04.0815840Z [1m[92m   Compiling[0m bytemuck v1.25.2
+2026-11-14T01:06:04.1204087Z [1m[92m   Compiling[0m block-padding v0.3.3
+2026-11-14T01:06:04.1796258Z [1m[92m   Compiling[0m log v0.4.35
+2026-11-14T01:06:04.2386216Z [1m[92m   Compiling[0m zerocopy v0.8.63
+2026-11-14T01:06:04.2516134Z [1m[92m   Compiling[0m getrandom v0.3.4
+2026-11-14T01:06:04.2555706Z [1m[92m   Compiling[0m crossbeam-epoch v0.9.21
+2026-11-14T01:06:04.2635145Z [1m[92m   Compiling[0m inout v0.1.4
+2026-11-14T01:06:04.4296170Z [1m[92m   Compiling[0m block-buffer v0.10.4
+2026-11-14T01:06:04.4856195Z [1m[92m   Compiling[0m hashbrown v0.17.1
+2026-11-14T01:06:04.7143025Z [1m[92m   Compiling[0m equivalent v1.0.3
+2026-11-14T01:06:04.7406172Z [1m[92m   Compiling[0m crossbeam-deque v0.8.8
+2026-11-14T01:06:04.8186032Z [1m[92m   Compiling[0m digest v0.10.7
+2026-11-14T01:06:04.9183155Z [1m[92m   Compiling[0m indexmap v2.14.2
+2026-11-14T01:06:04.9382164Z [1m[92m   Compiling[0m zerofrom v0.1.8
+2026-11-14T01:06:04.9859515Z [1m[92m   Compiling[0m ignition-core v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/ignition-core)
+2026-11-14T01:06:05.0145482Z [1m[92m   Compiling[0m cipher v0.4.4
+2026-11-14T01:06:05.4816333Z [1m[92m   Compiling[0m miniz_oxide v0.8.9
+2026-11-14T01:06:06.1676290Z [1m[92m   Compiling[0m fdeflate v0.3.7
+2026-11-14T01:06:06.4986215Z [1m[92m   Compiling[0m stable_deref_trait v1.2.1
+2026-11-14T01:06:06.5108781Z [1m[92m   Compiling[0m cpufeatures v0.2.17
+2026-11-14T01:06:06.5236981Z [1m[92m   Compiling[0m tinyvec v1.13.3
+2026-11-14T01:06:06.5329100Z [1m[92m   Compiling[0m rayon-core v1.13.0
+2026-11-14T01:06:06.5375063Z [1m[92m   Compiling[0m yoke v0.8.4
+2026-11-14T01:06:06.6428844Z [1m[92m   Compiling[0m png v0.18.1
+2026-11-14T01:06:06.8006560Z [1m[92m   Compiling[0m unicode-normalization v0.1.25
+2026-11-14T01:06:06.8030150Z [1m[92m   Compiling[0m rand_core v0.9.5
+2026-11-14T01:06:07.0228762Z [1m[92m   Compiling[0m num-traits v0.2.19
+2026-11-14T01:06:07.0672792Z [1m[92m   Compiling[0m font-types v0.12.7
+2026-11-14T01:06:07.1356229Z [1m[92m   Compiling[0m android_system_properties v0.1.6
+2026-11-14T01:06:07.2008427Z [1m[92m   Compiling[0m once_cell v1.21.4
+2026-11-14T01:06:07.2668397Z [1m[92m   Compiling[0m smallvec v1.16.5
+2026-11-14T01:06:07.3990755Z [1m[92m   Compiling[0m foldhash v0.2.0
+2026-11-14T01:06:07.4026197Z [1m[92m   Compiling[0m bumpalo v3.20.3
+2026-11-14T01:06:07.5136539Z [1m[92m   Compiling[0m read-fonts v0.46.0
+2026-11-14T01:06:07.5646432Z [1m[92m   Compiling[0m zopfli v0.8.4
+2026-11-14T01:06:07.9354861Z [1m[92m   Compiling[0m ppv-lite86 v0.2.21
+2026-11-14T01:06:08.0635733Z [1m[92m   Compiling[0m rand_chacha v0.9.0
+2026-11-14T01:06:08.5577241Z [1m[92m   Compiling[0m zip v2.6.1
+2026-11-14T01:06:08.5646080Z [1m[92m   Compiling[0m prism-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/prism/rust)
+2026-11-14T01:06:08.7703153Z [1m[92m   Compiling[0m iana-time-zone v0.1.65
+2026-11-14T01:06:09.3296265Z [1m[92m   Compiling[0m encoding_rs v0.8.44
+2026-11-14T01:06:09.3365922Z [1m[92m   Compiling[0m sha2 v0.10.9
+2026-11-14T01:06:10.0856152Z [1m[92m   Compiling[0m nom v8.0.0
+2026-11-14T01:06:10.5676178Z [1m[92m   Compiling[0m bytecount v0.6.9
+2026-11-14T01:06:10.6484429Z [1m[92m   Compiling[0m time-core v0.1.9
+2026-11-14T01:06:10.7496396Z [1m[92m   Compiling[0m unicode-bidi v0.3.18
+2026-11-14T01:06:11.6030814Z [1m[92m   Compiling[0m unicode-properties v0.1.5
+2026-11-14T01:06:11.7246307Z [1m[92m   Compiling[0m jiff-core v0.1.5
+2026-11-14T01:06:12.2576369Z [1m[92m   Compiling[0m core_detect v1.0.0
+2026-11-14T01:06:12.3386227Z [1m[92m   Compiling[0m either v1.19.0
+2026-11-14T01:06:12.4376135Z [1m[92m   Compiling[0m arrayref v0.3.9
+2026-11-14T01:06:12.4587421Z [1m[92m   Compiling[0m simdutf8 v0.1.5
+2026-11-14T01:06:12.5747287Z [1m[92m   Compiling[0m scopeguard v1.2.0
+2026-11-14T01:06:12.6146208Z [1m[92m   Compiling[0m num-conv v0.2.2
+2026-11-14T01:06:12.6956270Z [1m[92m   Compiling[0m strict-num v0.1.1
+2026-11-14T01:06:12.7574927Z [1m[92m   Compiling[0m powerfmt v0.2.1
+2026-11-14T01:06:12.8576020Z [1m[92m   Compiling[0m deranged v0.5.9
+2026-11-14T01:06:13.7092870Z [1m[92m   Compiling[0m time v0.3.55
+2026-11-14T01:06:16.0676351Z [1m[92m   Compiling[0m tiny-skia-path v0.12.0
+2026-11-14T01:06:16.7566301Z [1m[92m   Compiling[0m rayon v1.12.0
+2026-11-14T01:06:17.1495772Z [1m[92m   Compiling[0m jiff v0.2.43
+2026-11-14T01:06:18.5146633Z [1m[92m   Compiling[0m nom_locate v5.0.0
+2026-11-14T01:06:18.5635622Z [1m[92m   Compiling[0m stringprep v0.1.5
+2026-11-14T01:06:19.9906206Z [1m[92m   Compiling[0m chrono v0.4.45
+2026-11-14T01:06:22.8006244Z [1m[92m   Compiling[0m rand v0.9.5
+2026-11-14T01:06:23.2546171Z [1m[92m   Compiling[0m aes v0.8.4
+2026-11-14T01:06:24.0361872Z [1m[92m   Compiling[0m cbc v0.1.2
+2026-11-14T01:06:24.0916238Z [1m[92m   Compiling[0m ecb v0.1.2
+2026-11-14T01:06:24.1368312Z [1m[92m   Compiling[0m md-5 v0.10.6
+2026-11-14T01:06:24.1437212Z [1m[92m   Compiling[0m quick-xml v0.37.5
+2026-11-14T01:06:24.1952431Z [1m[92m   Compiling[0m weezl v0.1.12
+2026-11-14T01:06:25.0036184Z [1m[92m   Compiling[0m arrayvec v0.7.8
+2026-11-14T01:06:25.0696234Z [1m[92m   Compiling[0m rangemap v1.8.0
+2026-11-14T01:06:25.1297121Z [1m[92m   Compiling[0m tiny-skia v0.12.0
+2026-11-14T01:06:25.2686034Z [1m[92m   Compiling[0m lopdf v0.36.0
+2026-11-14T01:06:25.4166518Z [1m[92m   Compiling[0m harfrust v0.15.0
+2026-11-14T01:06:29.3609368Z [1m[92m   Compiling[0m skrifa v0.49.0
+2026-11-14T01:06:35.5746329Z [1m[92m   Compiling[0m quill-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/quill/rust)
+2026-11-14T01:06:38.0756378Z [1m[92m   Compiling[0m folio-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/folio/rust)
+2026-11-14T01:06:40.2795692Z [1m[92m   Compiling[0m tally-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/tally/rust)
+2026-11-14T01:06:41.0199301Z [1m[92m   Compiling[0m motion-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/motion/rust)
+2026-11-14T01:06:50.7596337Z [1m[92m   Compiling[0m draft-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/draft/rust)
+2026-11-14T01:06:55.8206771Z [1m[92m   Compiling[0m design-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/design/rust)
+2026-11-14T01:06:57.9201856Z [1m[92m   Compiling[0m scene-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/scene/rust)
+2026-11-14T01:07:02.4578540Z [1m[92m   Compiling[0m photo-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/photo/rust)
+2026-11-14T01:07:03.1906556Z [1m[92m   Compiling[0m pitch-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/pitch/rust)
+2026-11-14T01:07:05.7386578Z [1m[92m   Compiling[0m cadence-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/cadence/rust)
+2026-11-14T01:07:05.8156015Z [1m[33mwarning[0m[1m: unused doc comment[0m
+2026-11-14T01:07:05.8156581Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:727:13
+2026-11-14T01:07:05.8156960Z     [1m[94m|[0m
+2026-11-14T01:07:05.8157580Z [1m[94m727[0m [1m[94m|[0m [1m[33m/[0m             /// Split a clip at an absolute timeline tick strictly inside it.
+2026-11-14T01:07:05.8158418Z [1m[94m728[0m [1m[94m|[0m [1m[33m|[0m             /// The left half keeps the id; the right half gets a new id and
+2026-11-14T01:07:05.8159270Z [1m[94m729[0m [1m[94m|[0m [1m[33m|[0m             /// copies gain/mute. Notes are clip-relative: a note entirely on
+2026-11-14T01:07:05.8160085Z [1m[94m730[0m [1m[94m|[0m [1m[33m|[0m             /// one side moves or stays; a note spanning the split point is
+2026-11-14T01:07:05.8160860Z [1m[94m731[0m [1m[94m|[0m [1m[33m|[0m             /// cut into two notes at the boundary (same pitch/velocity/
+2026-11-14T01:07:05.8161590Z [1m[94m732[0m [1m[94m|[0m [1m[33m|[0m             /// channel, no overlap, no zero-length piece).
+2026-11-14T01:07:05.8162181Z     [1m[94m|[0m [1m[33m|___________________________________________________________^[0m
+2026-11-14T01:07:05.8162733Z [1m[94m733[0m [1m[94m|[0m [1m[94m/[0m             "splitClip" => {
+2026-11-14T01:07:05.8163297Z [1m[94m734[0m [1m[94m|[0m [1m[94m|[0m                 let id = req_u64(p, "id")?;
+2026-11-14T01:07:05.8163921Z [1m[94m735[0m [1m[94m|[0m [1m[94m|[0m                 let at = req_ticks(p, "at_ticks")?;
+2026-11-14T01:07:05.8165069Z [1m[94m736[0m [1m[94m|[0m [1m[94m|[0m                 let (ti, ci) = self
+2026-11-14T01:07:05.8165509Z [1m[94m...[0m   [1m[94m|[0m
+2026-11-14T01:07:05.8166381Z [1m[94m787[0m [1m[94m|[0m [1m[94m|[0m                 Ok(Self::changed(json!({ "left_id": id, "right_id": right_id })))
+2026-11-14T01:07:05.8166966Z [1m[94m788[0m [1m[94m|[0m [1m[94m|[0m             }
+2026-11-14T01:07:05.8167562Z     [1m[94m|[0m [1m[94m|_____________-[0m [1m[94mrustdoc does not generate documentation for match arms[0m
+2026-11-14T01:07:05.8168013Z     [1m[94m|[0m
+2026-11-14T01:07:05.8168345Z     [1m[94m= [0m[1mhelp[0m: use `//` for a plain comment
+2026-11-14T01:07:05.8168942Z     [1m[94m= [0m[1mnote[0m: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:07:05.8169264Z 
+2026-11-14T01:07:06.3016262Z [1m[33mwarning[0m[1m: constant `B64_ALPHABET` is never used[0m
+2026-11-14T01:07:06.3045351Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:267:7
+2026-11-14T01:07:06.3045734Z     [1m[94m|[0m
+2026-11-14T01:07:06.3046127Z [1m[94m267[0m [1m[94m|[0m const B64_ALPHABET: &[u8; 64] =
+2026-11-14T01:07:06.3046543Z     [1m[94m|[0m       [1m[33m^^^^^^^^^^^^[0m
+2026-11-14T01:07:06.3046841Z     [1m[94m|[0m
+2026-11-14T01:07:06.3047280Z     [1m[94m= [0m[1mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:07:06.3047579Z 
+2026-11-14T01:07:06.3047861Z [1m[33mwarning[0m[1m: function `base64_encode` is never used[0m
+2026-11-14T01:07:06.3048313Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:270:4
+2026-11-14T01:07:06.3048632Z     [1m[94m|[0m
+2026-11-14T01:07:06.3049045Z [1m[94m270[0m [1m[94m|[0m fn base64_encode(bytes: &[u8]) -> String {
+2026-11-14T01:07:06.3049456Z     [1m[94m|[0m    [1m[33m^^^^^^^^^^^^^[0m
+2026-11-14T01:07:06.3049635Z 
+2026-11-14T01:07:08.3316522Z [1m[92m   Compiling[0m splice-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/splice/rust)
+2026-11-14T01:07:12.9216284Z [1m[33mwarning[0m: `cadence-engine` (lib) generated 3 warnings
+2026-11-14T01:07:13.3503474Z [1m[92m   Compiling[0m nf-sys v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/nf-sys)
+2026-11-14T01:07:13.3804963Z [1m[33mwarning[0m[1m: unused imports: `OP_REDO`, `OP_SNAPSHOT`, and `OP_UNDO`[0m
+2026-11-14T01:07:13.3805546Z  [1m[94m--> [0mrust/nf-sys/src/ffi_v1.rs:6:63
+2026-11-14T01:07:13.3805842Z   [1m[94m|[0m
+2026-11-14T01:07:13.3806618Z [1m[94m6[0m [1m[94m|[0m use ignition_core::{Command, Engine, EngineError, EngineKind, OP_REDO, OP_SNAPSHOT, OP_UNDO};
+2026-11-14T01:07:13.3807340Z   [1m[94m|[0m                                                               [1m[33m^^^^^^^[0m  [1m[33m^^^^^^^^^^^[0m  [1m[33m^^^^^^^[0m
+2026-11-14T01:07:13.3807730Z   [1m[94m|[0m
+2026-11-14T01:07:13.3808180Z   [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:07:13.3808507Z 
+2026-11-14T01:07:14.4447930Z [1m[33mwarning[0m: `nf-sys` (lib) generated 1 warning (run `cargo fix --lib -p nf-sys` to apply 1 suggestion)
+2026-11-14T01:07:14.4449390Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 1m 11s
+2026-11-14T01:07:14.5084488Z warning: Environment variable `ANDROID_NDK_HOME = "/usr/local/lib/android/sdk/ndk/27.1.12297006"` doesn't match `ANDROID_NDK_ROOT = "/usr/local/lib/android/sdk/ndk/27.3.13750724"`
+2026-11-14T01:07:14.5085301Z     Building x86_64 (x86_64-linux-android)
+2026-11-14T01:07:14.5713442Z [1m[92m   Compiling[0m cfg-if v1.0.5
+2026-11-14T01:07:14.5713858Z [1m[92m   Compiling[0m memchr v2.8.3
+2026-11-14T01:07:14.5714194Z [1m[92m   Compiling[0m serde_core v1.0.229
+2026-11-14T01:07:14.5754254Z [1m[92m   Compiling[0m zmij v1.0.23
+2026-11-14T01:07:14.5878776Z [1m[92m   Compiling[0m thiserror v2.0.21
+2026-11-14T01:07:14.5922729Z [1m[92m   Compiling[0m generic-array v0.14.7
+2026-11-14T01:07:14.6026228Z [1m[92m   Compiling[0m typenum v1.20.1
+2026-11-14T01:07:14.6160973Z [1m[92m   Compiling[0m simd-adler32 v0.3.10
+2026-11-14T01:07:14.7813193Z [1m[92m   Compiling[0m itoa v1.0.19
+2026-11-14T01:07:14.9006493Z [1m[92m   Compiling[0m serde_json v1.0.154
+2026-11-14T01:07:14.9347245Z [1m[92m   Compiling[0m serde v1.0.229
+2026-11-14T01:07:15.1556183Z [1m[92m   Compiling[0m crc32fast v1.5.5
+2026-11-14T01:07:15.1645853Z [1m[92m   Compiling[0m adler2 v2.0.1
+2026-11-14T01:07:15.3637347Z [1m[92m   Compiling[0m miniz_oxide v0.9.1
+2026-11-14T01:07:15.4136493Z [1m[92m   Compiling[0m libc v0.2.191
+2026-11-14T01:07:15.4852776Z [1m[92m   Compiling[0m crypto-common v0.1.7
+2026-11-14T01:07:15.5293709Z [1m[92m   Compiling[0m bitflags v2.13.2
+2026-11-14T01:07:15.7366222Z [1m[92m   Compiling[0m flate2 v1.1.11
+2026-11-14T01:07:15.8454889Z [1m[92m   Compiling[0m crossbeam-utils v0.8.23
+2026-11-14T01:07:15.8494465Z [1m[92m   Compiling[0m bytemuck v1.25.2
+2026-11-14T01:07:16.0182084Z [1m[92m   Compiling[0m block-padding v0.3.3
+2026-11-14T01:07:16.0716423Z [1m[92m   Compiling[0m log v0.4.35
+2026-11-14T01:07:16.1826131Z [1m[92m   Compiling[0m getrandom v0.3.4
+2026-11-14T01:07:16.1856032Z [1m[92m   Compiling[0m crossbeam-epoch v0.9.21
+2026-11-14T01:07:16.1884697Z [1m[92m   Compiling[0m zerocopy v0.8.63
+2026-11-14T01:07:16.1993318Z [1m[92m   Compiling[0m inout v0.1.4
+2026-11-14T01:07:16.4676264Z [1m[92m   Compiling[0m block-buffer v0.10.4
+2026-11-14T01:07:16.5284008Z [1m[92m   Compiling[0m equivalent v1.0.3
+2026-11-14T01:07:16.5555665Z [1m[92m   Compiling[0m hashbrown v0.17.1
+2026-11-14T01:07:16.5981734Z [1m[92m   Compiling[0m crossbeam-deque v0.8.8
+2026-11-14T01:07:16.6946136Z [1m[92m   Compiling[0m digest v0.10.7
+2026-11-14T01:07:16.8037155Z [1m[92m   Compiling[0m ignition-core v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/ignition-core)
+2026-11-14T01:07:16.8641740Z [1m[92m   Compiling[0m zerofrom v0.1.8
+2026-11-14T01:07:16.9217284Z [1m[92m   Compiling[0m cipher v0.4.4
+2026-11-14T01:07:17.0136322Z [1m[92m   Compiling[0m indexmap v2.14.2
+2026-11-14T01:07:17.6956048Z [1m[92m   Compiling[0m miniz_oxide v0.8.9
+2026-11-14T01:07:17.9986382Z [1m[92m   Compiling[0m fdeflate v0.3.7
+2026-11-14T01:07:18.4033595Z [1m[92m   Compiling[0m stable_deref_trait v1.2.1
+2026-11-14T01:07:18.4326268Z [1m[92m   Compiling[0m cpufeatures v0.2.17
+2026-11-14T01:07:18.4606335Z [1m[92m   Compiling[0m tinyvec v1.13.3
+2026-11-14T01:07:18.6386520Z [1m[92m   Compiling[0m rayon-core v1.13.0
+2026-11-14T01:07:18.6445815Z [1m[92m   Compiling[0m yoke v0.8.4
+2026-11-14T01:07:18.7506245Z [1m[92m   Compiling[0m png v0.18.1
+2026-11-14T01:07:18.7692361Z [1m[92m   Compiling[0m unicode-normalization v0.1.25
+2026-11-14T01:07:18.7787339Z [1m[92m   Compiling[0m rand_core v0.9.5
+2026-11-14T01:07:19.0116531Z [1m[92m   Compiling[0m num-traits v0.2.19
+2026-11-14T01:07:19.0585695Z [1m[92m   Compiling[0m font-types v0.12.7
+2026-11-14T01:07:19.1076403Z [1m[92m   Compiling[0m android_system_properties v0.1.6
+2026-11-14T01:07:19.1726549Z [1m[92m   Compiling[0m once_cell v1.21.4
+2026-11-14T01:07:19.2387013Z [1m[92m   Compiling[0m bumpalo v3.20.3
+2026-11-14T01:07:19.3606207Z [1m[92m   Compiling[0m smallvec v1.16.5
+2026-11-14T01:07:19.3902377Z [1m[92m   Compiling[0m foldhash v0.2.0
+2026-11-14T01:07:19.4936741Z [1m[92m   Compiling[0m read-fonts v0.46.0
+2026-11-14T01:07:19.5016496Z [1m[92m   Compiling[0m prism-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/prism/rust)
+2026-11-14T01:07:19.8645789Z [1m[92m   Compiling[0m ppv-lite86 v0.2.21
+2026-11-14T01:07:20.0780349Z [1m[92m   Compiling[0m rand_chacha v0.9.0
+2026-11-14T01:07:20.3336608Z [1m[92m   Compiling[0m zopfli v0.8.4
+2026-11-14T01:07:20.7066073Z [1m[92m   Compiling[0m zip v2.6.1
+2026-11-14T01:07:20.7125786Z [1m[92m   Compiling[0m iana-time-zone v0.1.65
+2026-11-14T01:07:21.5921633Z [1m[92m   Compiling[0m encoding_rs v0.8.44
+2026-11-14T01:07:21.5965776Z [1m[92m   Compiling[0m sha2 v0.10.9
+2026-11-14T01:07:22.3716574Z [1m[92m   Compiling[0m nom v8.0.0
+2026-11-14T01:07:22.6952795Z [1m[92m   Compiling[0m deranged v0.5.9
+2026-11-14T01:07:23.5416087Z [1m[92m   Compiling[0m time-core v0.1.9
+2026-11-14T01:07:23.6446193Z [1m[92m   Compiling[0m bytecount v0.6.9
+2026-11-14T01:07:23.7358245Z [1m[92m   Compiling[0m unicode-bidi v0.3.18
+2026-11-14T01:07:24.4687268Z [1m[92m   Compiling[0m unicode-properties v0.1.5
+2026-11-14T01:07:24.5846778Z [1m[92m   Compiling[0m jiff-core v0.1.5
+2026-11-14T01:07:24.5868341Z [1m[92m   Compiling[0m core_detect v1.0.0
+2026-11-14T01:07:24.6736283Z [1m[92m   Compiling[0m either v1.19.0
+2026-11-14T01:07:24.7826214Z [1m[92m   Compiling[0m arrayref v0.3.9
+2026-11-14T01:07:24.8156325Z [1m[92m   Compiling[0m simdutf8 v0.1.5
+2026-11-14T01:07:25.1261959Z [1m[92m   Compiling[0m scopeguard v1.2.0
+2026-11-14T01:07:25.1636034Z [1m[92m   Compiling[0m num-conv v0.2.2
+2026-11-14T01:07:25.2266095Z [1m[92m   Compiling[0m strict-num v0.1.1
+2026-11-14T01:07:25.2836112Z [1m[92m   Compiling[0m powerfmt v0.2.1
+2026-11-14T01:07:25.3739275Z [1m[92m   Compiling[0m time v0.3.55
+2026-11-14T01:07:27.8244674Z [1m[92m   Compiling[0m tiny-skia-path v0.12.0
+2026-11-14T01:07:28.9466241Z [1m[92m   Compiling[0m jiff v0.2.43
+2026-11-14T01:07:29.6046259Z [1m[92m   Compiling[0m rayon v1.12.0
+2026-11-14T01:07:31.4177368Z [1m[92m   Compiling[0m stringprep v0.1.5
+2026-11-14T01:07:32.7808690Z [1m[92m   Compiling[0m nom_locate v5.0.0
+2026-11-14T01:07:32.8297561Z [1m[92m   Compiling[0m chrono v0.4.45
+2026-11-14T01:07:35.1135500Z [1m[92m   Compiling[0m rand v0.9.5
+2026-11-14T01:07:35.4026199Z [1m[92m   Compiling[0m aes v0.8.4
+2026-11-14T01:07:35.5925825Z [1m[92m   Compiling[0m ecb v0.1.2
+2026-11-14T01:07:35.6356352Z [1m[92m   Compiling[0m cbc v0.1.2
+2026-11-14T01:07:35.7168119Z [1m[92m   Compiling[0m md-5 v0.10.6
+2026-11-14T01:07:35.7746614Z [1m[92m   Compiling[0m quick-xml v0.37.5
+2026-11-14T01:07:36.1286545Z [1m[92m   Compiling[0m weezl v0.1.12
+2026-11-14T01:07:36.5016284Z [1m[92m   Compiling[0m arrayvec v0.7.8
+2026-11-14T01:07:36.6249307Z [1m[92m   Compiling[0m rangemap v1.8.0
+2026-11-14T01:07:36.8146342Z [1m[92m   Compiling[0m lopdf v0.36.0
+2026-11-14T01:07:36.8975972Z [1m[92m   Compiling[0m tiny-skia v0.12.0
+2026-11-14T01:07:36.9345233Z [1m[92m   Compiling[0m harfrust v0.15.0
+2026-11-14T01:07:40.9576460Z [1m[92m   Compiling[0m skrifa v0.49.0
+2026-11-14T01:07:47.1732740Z [1m[92m   Compiling[0m quill-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/quill/rust)
+2026-11-14T01:07:48.9592845Z [1m[92m   Compiling[0m folio-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/folio/rust)
+2026-11-14T01:07:51.4798157Z [1m[92m   Compiling[0m tally-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/tally/rust)
+2026-11-14T01:07:51.8196589Z [1m[92m   Compiling[0m motion-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/motion/rust)
+2026-11-14T01:08:01.7566353Z [1m[92m   Compiling[0m draft-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/draft/rust)
+2026-11-14T01:08:06.3846363Z [1m[92m   Compiling[0m design-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/design/rust)
+2026-11-14T01:08:08.8197478Z [1m[92m   Compiling[0m cadence-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/cadence/rust)
+2026-11-14T01:08:08.9016117Z [1m[33mwarning[0m[1m: unused doc comment[0m
+2026-11-14T01:08:08.9036204Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:727:13
+2026-11-14T01:08:08.9065463Z     [1m[94m|[0m
+2026-11-14T01:08:08.9095748Z [1m[94m727[0m [1m[94m|[0m [1m[33m/[0m             /// Split a clip at an absolute timeline tick strictly inside it.
+2026-11-14T01:08:08.9125649Z [1m[94m728[0m [1m[94m|[0m [1m[33m|[0m             /// The left half keeps the id; the right half gets a new id and
+2026-11-14T01:08:08.9155656Z [1m[94m729[0m [1m[94m|[0m [1m[33m|[0m             /// copies gain/mute. Notes are clip-relative: a note entirely on
+2026-11-14T01:08:08.9186162Z [1m[94m730[0m [1m[94m|[0m [1m[33m|[0m             /// one side moves or stays; a note spanning the split point is
+2026-11-14T01:08:08.9215487Z [1m[94m731[0m [1m[94m|[0m [1m[33m|[0m             /// cut into two notes at the boundary (same pitch/velocity/
+2026-11-14T01:08:08.9245349Z [1m[94m732[0m [1m[94m|[0m [1m[33m|[0m             /// channel, no overlap, no zero-length piece).
+2026-11-14T01:08:08.9275377Z     [1m[94m|[0m [1m[33m|___________________________________________________________^[0m
+2026-11-14T01:08:08.9305331Z [1m[94m733[0m [1m[94m|[0m [1m[94m/[0m             "splitClip" => {
+2026-11-14T01:08:08.9315340Z [1m[94m734[0m [1m[94m|[0m [1m[94m|[0m                 let id = req_u64(p, "id")?;
+2026-11-14T01:08:08.9345508Z [1m[94m735[0m [1m[94m|[0m [1m[94m|[0m                 let at = req_ticks(p, "at_ticks")?;
+2026-11-14T01:08:08.9353145Z [1m[94m736[0m [1m[94m|[0m [1m[94m|[0m                 let (ti, ci) = self
+2026-11-14T01:08:08.9354288Z [1m[94m...[0m   [1m[94m|[0m
+2026-11-14T01:08:08.9355517Z [1m[94m787[0m [1m[94m|[0m [1m[94m|[0m                 Ok(Self::changed(json!({ "left_id": id, "right_id": right_id })))
+2026-11-14T01:08:08.9356237Z [1m[94m788[0m [1m[94m|[0m [1m[94m|[0m             }
+2026-11-14T01:08:08.9357037Z     [1m[94m|[0m [1m[94m|_____________-[0m [1m[94mrustdoc does not generate documentation for match arms[0m
+2026-11-14T01:08:08.9357631Z     [1m[94m|[0m
+2026-11-14T01:08:08.9358091Z     [1m[94m= [0m[1mhelp[0m: use `//` for a plain comment
+2026-11-14T01:08:08.9358789Z     [1m[94m= [0m[1mnote[0m: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:08:08.9359251Z 
+2026-11-14T01:08:09.3706212Z [1m[33mwarning[0m[1m: constant `B64_ALPHABET` is never used[0m
+2026-11-14T01:08:09.3735571Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:267:7
+2026-11-14T01:08:09.3735994Z     [1m[94m|[0m
+2026-11-14T01:08:09.3736385Z [1m[94m267[0m [1m[94m|[0m const B64_ALPHABET: &[u8; 64] =
+2026-11-14T01:08:09.3736805Z     [1m[94m|[0m       [1m[33m^^^^^^^^^^^^[0m
+2026-11-14T01:08:09.3737099Z     [1m[94m|[0m
+2026-11-14T01:08:09.3737537Z     [1m[94m= [0m[1mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:08:09.3737821Z 
+2026-11-14T01:08:09.3738097Z [1m[33mwarning[0m[1m: function `base64_encode` is never used[0m
+2026-11-14T01:08:09.3738551Z    [1m[94m--> [0mpackages/cadence/rust/src/lib.rs:270:4
+2026-11-14T01:08:09.3738865Z     [1m[94m|[0m
+2026-11-14T01:08:09.3739275Z [1m[94m270[0m [1m[94m|[0m fn base64_encode(bytes: &[u8]) -> String {
+2026-11-14T01:08:09.3739684Z     [1m[94m|[0m    [1m[33m^^^^^^^^^^^^^[0m
+2026-11-14T01:08:09.3739863Z 
+2026-11-14T01:08:13.2016478Z [1m[92m   Compiling[0m splice-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/splice/rust)
+2026-11-14T01:08:15.9706388Z [1m[33mwarning[0m: `cadence-engine` (lib) generated 3 warnings
+2026-11-14T01:08:15.9736455Z [1m[92m   Compiling[0m photo-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/photo/rust)
+2026-11-14T01:08:18.3576640Z [1m[92m   Compiling[0m pitch-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/pitch/rust)
+2026-11-14T01:08:18.8376602Z [1m[92m   Compiling[0m scene-engine v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/packages/scene/rust)
+2026-11-14T01:08:23.7586257Z [1m[92m   Compiling[0m nf-sys v0.1.0 (/home/runner/work/nitro-forge/nitro-forge/rust/nf-sys)
+2026-11-14T01:08:23.7884477Z [1m[33mwarning[0m[1m: unused imports: `OP_REDO`, `OP_SNAPSHOT`, and `OP_UNDO`[0m
+2026-11-14T01:08:23.7885104Z  [1m[94m--> [0mrust/nf-sys/src/ffi_v1.rs:6:63
+2026-11-14T01:08:23.7885290Z   [1m[94m|[0m
+2026-11-14T01:08:23.7885913Z [1m[94m6[0m [1m[94m|[0m use ignition_core::{Command, Engine, EngineError, EngineKind, OP_REDO, OP_SNAPSHOT, OP_UNDO};
+2026-11-14T01:08:23.7886641Z   [1m[94m|[0m                                                               [1m[33m^^^^^^^[0m  [1m[33m^^^^^^^^^^^[0m  [1m[33m^^^^^^^[0m
+2026-11-14T01:08:23.7886906Z   [1m[94m|[0m
+2026-11-14T01:08:23.7887211Z   [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+2026-11-14T01:08:23.7887412Z 
+2026-11-14T01:08:24.9332117Z [1m[33mwarning[0m: `nf-sys` (lib) generated 1 warning (run `cargo fix --lib -p nf-sys` to apply 1 suggestion)
+2026-11-14T01:08:24.9334152Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 1m 10s
+2026-11-14T01:08:25.5464740Z {"stage":"native-fragment","platform":"android","sourceCommit":"65fe6dad5567c3ebd02e233ed4eda30ac162012e","files":4}
+2026-11-14T01:08:25.5600785Z ##[group]Run actions/upload-artifact@v4
+2026-11-14T01:08:25.5600945Z with:
+2026-11-14T01:08:25.5601069Z   name: forge-native-android
+2026-11-14T01:08:25.5601228Z   path: /home/runner/work/_temp/native-android
+2026-11-14T01:08:25.5601506Z   retention-days: 7
+2026-11-14T01:08:25.5601628Z   if-no-files-found: warn
+2026-11-14T01:08:25.5601756Z   compression-level: 6
+2026-11-14T01:08:25.5601875Z   overwrite: false
+2026-11-14T01:08:25.5602002Z   include-hidden-files: false
+2026-11-14T01:08:25.5602131Z env:
+2026-11-14T01:08:25.5602231Z   CI: 1
+2026-11-14T01:08:25.5602335Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T01:08:25.5602460Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T01:08:25.5602599Z   CARGO_INCREMENTAL: 0
+2026-11-14T01:08:25.5602721Z   CARGO_TERM_COLOR: always
+2026-11-14T01:08:25.5602847Z ##[endgroup]
+2026-11-14T01:08:25.6690352Z (node:11774) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T01:08:25.6690870Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T01:08:25.6745241Z With the provided path, there will be 5 files uploaded
+2026-11-14T01:08:25.6746106Z Artifact name is valid!
+2026-11-14T01:08:25.6746349Z Root directory input is valid!
+2026-11-14T01:08:26.0266101Z Beginning upload of artifact content to blob storage
+2026-11-14T01:08:26.5087178Z (node:11774) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-14T01:08:27.2814895Z Uploaded bytes 8388608
+2026-11-14T01:08:27.6528262Z Uploaded bytes 16777216
+2026-11-14T01:08:27.8018861Z Uploaded bytes 25165824
+2026-11-14T01:08:28.0820409Z Uploaded bytes 33554432
+2026-11-14T01:08:28.5424232Z Uploaded bytes 41943040
+2026-11-14T01:08:28.9537672Z Uploaded bytes 50331648
+2026-11-14T01:08:29.4288645Z Uploaded bytes 58720256
+2026-11-14T01:08:30.0055345Z Uploaded bytes 67108864
+2026-11-14T01:08:30.3308772Z Uploaded bytes 74706088
+2026-11-14T01:08:30.3955462Z Finished uploading artifact content to blob storage!
+2026-11-14T01:08:30.3957231Z SHA256 digest of uploaded artifact zip is b3aadbcb35c0c3c02618f163ba007b06740180a8746a73b35997220fa25f14ab
+2026-11-14T01:08:30.3958353Z Finalizing artifact upload
+2026-11-14T01:08:31.3203591Z Artifact forge-native-android.zip successfully finalized. Artifact ID 14090627556
+2026-11-14T01:08:31.3204138Z Artifact forge-native-android has been successfully uploaded! Final size is 74706088 bytes. Artifact ID is 14090627556
+2026-11-14T01:08:31.3209342Z Artifact download URL: https://github.com/mikevocalz/nitro-forge/actions/runs/43537901544/artifacts/14090627556
+2026-11-14T01:08:31.3415379Z Post job cleanup.
+2026-11-14T01:08:31.4176152Z (node:11788) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T01:08:31.4176694Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T01:08:31.4304910Z Post job cleanup.
+2026-11-14T01:08:31.4896453Z [command]/usr/bin/git version
+2026-11-14T01:08:31.4928971Z git version 2.56.1
+2026-11-14T01:08:31.4951398Z Temporarily overriding HOME='/home/runner/work/_temp/2afa2539-7382-4c49-bc81-16d4166b9992' before making global git config changes
+2026-11-14T01:08:31.4952200Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T01:08:31.4955243Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T01:08:31.4989184Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T01:08:31.5019783Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T01:08:31.5258318Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T01:08:31.5290521Z http.https://github.com/.extraheader
+2026-11-14T01:08:31.5298451Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-14T01:08:31.5334481Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T01:08:31.5631435Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T01:08:31.5667263Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T01:08:31.6026558Z Cleaning up orphan processes
+2026-11-14T01:08:31.6263878Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

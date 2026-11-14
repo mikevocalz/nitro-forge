@@ -35,7 +35,9 @@ if (values.platform === 'apple') {
     const slice = plist.AvailableLibraries.find(s => s.SupportedPlatform === 'ios' && (s.SupportedPlatformVariant ?? 'device') === variant);
     assert.ok(slice, `Missing iOS ${variant}`);
     assert.deepEqual([...slice.SupportedArchitectures].sort(), [...archs].sort());
-    execFileSync('lipo', [resolve(framework, slice.LibraryIdentifier, slice.LibraryPath), '-verify_arch', ...archs]);
+    // The current Apple lipo parser treats a second verify_arch argument as
+    // another input file. Verify each required architecture independently.
+    for (const arch of archs) execFileSync('lipo', [resolve(framework, slice.LibraryIdentifier, slice.LibraryPath), '-verify_arch', arch]);
     assert.equal(hash(resolve(framework, slice.LibraryIdentifier, slice.HeadersPath, 'nf_v1.h')), hash(resolve(root, 'rust/nf-sys/include/nf_v1.h')));
   }
 } else {

@@ -21,6 +21,7 @@
     },
     "plugins": [
       "@nitro-forge/ignition"
-    ]
+    ],
+    "userInterfaceStyle": "light"
   }
 }

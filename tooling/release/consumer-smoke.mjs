@@ -9,6 +9,7 @@ import { parseArgs } from 'node:util';
 import { assertInstalledInside, checkExports, checkSourceClosure, files, hash, inside, json, requireDisk } from './archive-files.mjs';
 import { candidate } from './candidate-manifest.mjs';
 import { unpackArchive } from './unpack-archive.mjs';
+import { checkLicenseMembers } from './license-materials.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const { values } = parseArgs({ options: {
@@ -39,6 +40,7 @@ if (values.stage === 'prepare') {
       assert.equal(pkg.version, manifest.version);
       checkExports(extracted, pkg);
       checkSourceClosure(extracted, pkg);
+      checkLicenseMembers(extracted, pkg, manifest.originalLicenseSha256, manifest.sourceCommit);
       assert.deepEqual(files(extracted).sort(), archive.contents.map(f => f.path).sort(), 'Archive content inventory omitted/added files');
       for (const file of archive.contents) assert.equal(hash(inside(extracted, file.path)), file.sha256, `Archive content inventory mismatch: ${file.path}`);
     }
@@ -48,10 +50,18 @@ if (values.stage === 'prepare') {
   cpSync(fixture, app, { recursive: true });
   const dependencies = { ...manifest.runtime, 'expo-file-system': '58.0.13', zustand: '5.1.0' };
   const overrides = {};
+  const artifacts = resolve(app, 'artifacts');
+  mkdirSync(artifacts);
   for (const archive of manifest.archives) {
     const file = inside(dirname(manifestFile), archive.archive);
-    dependencies[archive.name] = `file:${file}`;
-    overrides[archive.name] = `file:${file}`;
+    const staged = inside(artifacts, archive.archive);
+    cpSync(file, staged);
+    assert.equal(hash(staged), archive.sha256, `Staged archive checksum mismatch: ${archive.archive}`);
+    // Keep the lockfile independent of Linux/macOS runner absolute paths.
+    // These are copies of the same verified archives, never checkout sources.
+    const specifier = `file:./artifacts/${archive.archive}`;
+    dependencies[archive.name] = specifier;
+    overrides[archive.name] = specifier;
   }
   const tron = json(resolve(root, 'tooling/nyc-tron.json'));
   // Pinned release UI control used by the visible acceptance fixture.
@@ -88,6 +98,7 @@ if (values.stage === 'prepare') {
         assert.equal(pkg.name, archive.name);
         assert.equal(pkg.version, manifest.version);
         checkExports(packageRoot, pkg);
+        checkLicenseMembers(packageRoot, pkg, manifest.originalLicenseSha256, manifest.sourceCommit);
         for (const file of archive.contents) assert.equal(hash(inside(packageRoot, file.path)), file.sha256, `Installed bytes changed: ${archive.name}/${file.path}`);
       }
       const expoRequire = createRequire(appRequire.resolve('expo/package.json'));

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { checkExports, checkSourceClosure, files, hash, inside, json, requireDisk } from './archive-files.mjs';
 import { unpackArchive } from './unpack-archive.mjs';
+import { checkLicenseMembers } from './license-materials.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const { values } = parseArgs({ options: { native: { type: 'string' }, output: { type: 'string' }, version: { type: 'string' } } });
@@ -16,6 +17,7 @@ const native = resolve(values.native), output = resolve(values.output);
 assert.ok(!existsSync(output), 'Candidate output already exists; never replace immutable bytes');
 const inventory = json(resolve(root, 'tooling/release/package-inventory.json'));
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+const originalLicenseSha256 = hash(resolve(root, 'LICENSE'));
 const payload = [];
 for (const platform of ['apple', 'android']) {
   const fragment = json(resolve(native, `${platform}.json`));
@@ -40,6 +42,14 @@ const required = [
 ];
 assert.equal(new Set(payload.map(p => p.path)).size, payload.length, 'Duplicate native fragment file');
 for (const path of required) assert.ok(payload.some(p => p.path === path), `Incomplete native payload: ${path}`);
+const licensing = json(resolve(native, 'licenses/provenance.json'));
+assert.equal(licensing.sourceCommit, sourceCommit, 'Native license/source packet identity mismatch');
+assert.equal(licensing.originalLicenseSha256, originalLicenseSha256);
+assert.equal(licensing.cargoLockSha256, hash(resolve(root, 'Cargo.lock')));
+assert.ok(licensing.components.some(p => p.name === 'nf-sys'), 'Missing resolved nf-sys provenance');
+assert.deepEqual(files(resolve(native, 'licenses')).sort(), ['provenance.json', ...licensing.files.map(f => f.path)].sort(), 'Incomplete native license/source packet');
+for (const entry of licensing.files) assert.equal(hash(inside(resolve(native, 'licenses'), entry.path)), entry.sha256, `Changed license/source material: ${entry.path}`);
+for (const path of files(resolve(native, 'licenses'))) payload.push({ path: `native/licenses/${path}`, sha256: hash(resolve(native, 'licenses', path)) });
 const reserve = payload.reduce((size, p) => size + statSync(inside(native, p.path.slice(7))).size, 0) * 4;
 requireDisk(root, reserve);
 const stage = mkdtempSync(resolve(tmpdir(), 'forge-candidate-'));
@@ -52,9 +62,10 @@ try {
     const pkg = json(resolve(source, 'package.json'));
     assert.equal(pkg.name, `@nitro-forge/${name}`);
     assert.ok(!pkg.private, `Private package cannot enter producer inventory: ${name}`);
+    cpSync(resolve(root, 'LICENSE'), resolve(target, 'LICENSE'));
     for (const item of pkg.files) {
       // Native payload is supplied only by identity-checked platform producers.
-      if (item === 'native') continue;
+      if (item === 'native' || item === 'LICENSE') continue;
       assert.ok(existsSync(inside(source, item)), `Allowlisted path missing: ${name}/${item}`);
       cpSync(inside(source, item), inside(target, item), { recursive: true });
     }
@@ -92,12 +103,13 @@ try {
     assert.equal(packedPkg.version, values.version);
     checkExports(packed, packedPkg);
     checkSourceClosure(packed, packedPkg);
+    checkLicenseMembers(packed, packedPkg, originalLicenseSha256, sourceCommit);
     const stagedFiles = files(packed);
     archives.push({ name: pkg.name, version: pkg.version, archive, sha256: hash(resolve(output, archive)),
       contents: stagedFiles.map(path => ({ path, sha256: hash(resolve(packed, path)) })) });
   }
   writeFileSync(resolve(output, 'candidate.json'), JSON.stringify({
-    schemaVersion: 1, sourceCommit, version: values.version, runtime: inventory.runtime,
+    schemaVersion: 1, sourceCommit, version: values.version, runtime: inventory.runtime, originalLicenseSha256,
     archives, deferred: inventory.deferred, deferralReason: inventory.deferralReason,
     nativeFragments: ['apple', 'android'].map(p => ({ platform: p, manifestSha256: hash(resolve(native, `${p}.json`)) })),
     publicationAuthorized: false, nativeRuntimeAcceptance: 'NOT RUN',

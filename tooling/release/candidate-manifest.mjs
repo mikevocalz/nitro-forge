@@ -11,6 +11,7 @@ export function candidate(file, expectedSource) {
   assert.match(manifest.sourceCommit ?? '', /^[0-9a-f]{40}$/);
   assert.equal(manifest.sourceCommit, expectedSource, 'Candidate source differs from requested exact source');
   assert.match(manifest.version ?? '', /^\d+\.\d+\.\d+-[a-zA-Z0-9.-]+$/);
+  assert.match(manifest.originalLicenseSha256 ?? '', /^[0-9a-f]{64}$/, 'Missing original-code license identity');
   const names = ['ignition', 'prism', 'cadence', 'splice', 'folio', 'pitch', 'tally', 'quill'].map(n => `@nitro-forge/${n}`);
   assert.deepEqual(manifest.archives.map(a => a.name).sort(), names.sort(), 'Candidate must contain exactly eight declared packages');
   assert.deepEqual([...manifest.deferred].sort(), ['photo', 'motion', 'design', 'draft', 'scene'].sort());
@@ -23,6 +24,7 @@ export function candidate(file, expectedSource) {
     assert.match(archive.sha256, /^[0-9a-f]{64}$/);
     assert.equal(hash(inside(dirname(resolve(file)), archive.archive)), archive.sha256, `Archive checksum mismatch: ${archive.archive}`);
     assert.ok(Array.isArray(archive.contents) && archive.contents.length > 0, 'Missing archive content inventory');
+    assert.ok(archive.contents.some(f => f.path === 'LICENSE' && f.sha256 === manifest.originalLicenseSha256), 'Archive inventory omits original-code license');
     const paths = new Set();
     for (const entry of archive.contents) {
       inside('/package', entry.path);

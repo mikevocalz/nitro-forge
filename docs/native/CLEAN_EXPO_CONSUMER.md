@@ -97,10 +97,32 @@ SHA256SUMS covers all eight archives. Source staging versions/dependency
 rewrites do not modify the working package versions. A failed producer
 leaves INCOMPLETE.txt and cannot be consumed as a complete candidate.
 
-This internal pipeline does not complete the release license audit.
-Existing package notices are retained. A complete third-party binary
-notice/license packet and public release authorization still belong to the
-release process; no license or publication approval is inferred here.
+The owner authorized the original-code MIT grant on 2026-11-13, using
+“Copyright (c) 2026 Nitro Forge contributors”. Root LICENSE contains the
+[canonical MIT terms](https://opensource.org/license/mit); every adapter
+and Ignition archive receives that exact file and MIT metadata explicitly.
+The staging location never relies on a packer finding a parent license.
+This grant preserves separate third-party and per-directory terms, including
+the private AGPL component, which remains outside this package inventory.
+
+Licensing materials are required even for internal candidates. Before
+packing, `collect-native-licenses.mjs` obtains locked resolved Cargo metadata
+and traverses only the nf-sys normal/build closure. The all-target graph is
+a conservative superset, not a claim that every listed component is linked
+on every platform. It excludes unrelated workspace renderer roots and
+dev-only dependencies. Preserve existing package notices, actual registry
+license/copyright/notice files, exact source .crate archives and checksums,
+source-file hashes, original-code source identities and Rust toolchain
+notices. Keep generated Nitro attribution and its pinned upstream MIT text
+separate from Forge's original-code attribution.
+
+The packet preserves declared license expressions verbatim and makes no
+new alternative-license election or permissive classification. Unknown
+license declarations, missing source identities/materials or changed hashes
+block packaging. Actual packed members and installed bytes are checked
+again, including the resolved graph and material closure. Full release
+legal acceptance and publication authorization remain separate; they cannot
+excuse missing materials in an internal candidate.
 
 ## Clean consumer stages
 
@@ -110,8 +132,10 @@ build/source/workspace fallback exists. It verifies archive hashes and
 content inventories, rejects archive links/traversal, creates a new Expo
 app from the acceptance fixture, and installs the candidate archives.
 
+Preparation copies the verified archives into each consumer's artifacts/
+directory, rechecks their hashes, and uses identical relative file: specifiers.
 The first install records its dependency graph; both native jobs reuse that
-lock with frozen installation. Installed Forge realpaths must stay inside
+lock with frozen installation across Linux/macOS roots. Installed Forge realpaths must stay inside
 the consumer and every packed file must retain its bytes. The installed
 Expo resolver checks bare and exact-filename plugin discovery. Metro source
 maps require one copy of each runtime and each of the eight archive
@@ -124,7 +148,11 @@ not change the pinned package manifest or lock. The iOS compile retains the
 existing documented Expo macros workaround; no new workaround is guessed.
 Logs and receipts are retained when a stage fails for diagnosis.
 
-The fixture uses existing Tron controls and real typed adapters, stores
+The fixture deliberately uses Tron's unstyled native controls with explicit
+light appearance, native inline styles and square outlined action buttons.
+It imports no stylesheet and has no Metro CSS input to diverge from it.
+This isolates native engine behavior; it makes no studio-design claim.
+The fixture uses real typed adapters, stores
 serializable UI state in Zustand and retains native resources in refs.
 For each studio the visible controls cover:
 

@@ -22,6 +22,10 @@ type Screen = {
 };
 type Resources = { host: EngineHost; probe: Probe };
 
+// The acceptance fixture intentionally uses Tron's unstyled native API.
+// No stylesheet, CSS source scan or Metro CSS input participates in rendering.
+const actionStyle = { padding: 12, borderWidth: 1, borderColor: '#333', backgroundColor: '#fff' };
+
 const initial: Screen = {
   studio: 'prism', busy: false, open: false, result: 'No native action has run.',
   current: '', beforeEdit: null, afterEdit: null, history: 'none', savedUri: '', log: [],
@@ -231,14 +235,14 @@ export default function App() {
     />
     <Text testID="f6-selected" style={{ color: '#111' }}>Studio: {screen.studio} · Document: {screen.open ? 'open' : 'closed'}</Text>
     <Text style={{ color: '#111' }}>Open/create → Edit → Save → Close → Reopen → Edit → Undo → Redo. After Save, relaunch the app, select the same studio and Reopen to test durable persistence. Pre-save undo history is not promised.</Text>
-    <Button unstyled title="Open/create" testID="f6-create" disabled={screen.busy || screen.open} onPress={create} />
-    <Button unstyled title="Edit" testID="f6-edit" disabled={screen.busy || !screen.open} onPress={edit} />
-    <Button unstyled title="Save to disk" testID="f6-save" disabled={screen.busy || !screen.open} onPress={save} />
-    <Button unstyled title="Close" testID="f6-close" disabled={screen.busy || !screen.open} onPress={close} />
-    <Button unstyled title="Reopen from disk" testID="f6-reopen" disabled={screen.busy || screen.open} onPress={reopen} />
-    <Button unstyled title="Undo fresh edit" testID="f6-undo" disabled={screen.busy || !screen.open || screen.history !== 'edited'} onPress={undo} />
-    <Button unstyled title="Redo" testID="f6-redo" disabled={screen.busy || !screen.open || screen.history !== 'undone'} onPress={redo} />
-    <Button unstyled title="Reject bad restore" testID="f6-bad-restore" disabled={screen.busy || !screen.open} onPress={rejectInvalid} />
+    <Button unstyled style={actionStyle} title="Open/create" testID="f6-create" disabled={screen.busy || screen.open} onPress={create} />
+    <Button unstyled style={actionStyle} title="Edit" testID="f6-edit" disabled={screen.busy || !screen.open} onPress={edit} />
+    <Button unstyled style={actionStyle} title="Save to disk" testID="f6-save" disabled={screen.busy || !screen.open} onPress={save} />
+    <Button unstyled style={actionStyle} title="Close" testID="f6-close" disabled={screen.busy || !screen.open} onPress={close} />
+    <Button unstyled style={actionStyle} title="Reopen from disk" testID="f6-reopen" disabled={screen.busy || screen.open} onPress={reopen} />
+    <Button unstyled style={actionStyle} title="Undo fresh edit" testID="f6-undo" disabled={screen.busy || !screen.open || screen.history !== 'edited'} onPress={undo} />
+    <Button unstyled style={actionStyle} title="Redo" testID="f6-redo" disabled={screen.busy || !screen.open || screen.history !== 'undone'} onPress={redo} />
+    <Button unstyled style={actionStyle} title="Reject bad restore" testID="f6-bad-restore" disabled={screen.busy || !screen.open} onPress={rejectInvalid} />
     <Text testID="f6-result" accessibilityLiveRegion="polite" selectable style={{ color: '#111' }}>{screen.result}</Text>
     <Text testID="f6-file" selectable style={{ color: '#111' }}>{screen.savedUri}</Text>
     <Text testID="f6-authoritative-state" selectable style={{ color: '#111' }}>{screen.current}</Text>
