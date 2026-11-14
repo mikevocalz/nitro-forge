@@ -1,0 +1,39 @@
+✔ handles pinned exact and semver ranges without guessing exotic specs (1.509625ms)
+✔ separates a newer npm tag from compatible deployment approval (0.158792ms)
+✔ detects version order numerically (0.07625ms)
+✔ excludes workspace packages but includes external platform dependencies (0.124583ms)
+✔ does not mislabel Nitro v1 nightly alpha as newest stable npm production (0.08225ms)
+✔ inventory covers isolated/native peers, root package manager, optional and override declarations (0.935708ms)
+✔ workspace override parser stops at other sections and rejects nested syntax (0.513625ms)
+✔ freshness does not downgrade v1 to npm stable or pass unavailable/unreviewed versions (0.191917ms)
+✔ required failures and process launch failures fail; nonzero freshness remains review-required (0.071416ms)
+actual stdout
+actual stderr
+✔ recorder retains actual nonzero exit and both output streams without reporting pass (167.42525ms)
+✔ rejects mismatched Nitro v1 generator/core/native runtime versions (2.225416ms)
+✔ stable Nitro 0.x in isolated legacy package isn't confused with v1 (0.12675ms)
+✔ rejects moving version ranges and unpinned baselines (0.160292ms)
+✔ identifies latest published v1 alpha independent of stable 0.x releases (0.18925ms)
+✔ rejects range specifiers that would float to another v1 nightly (0.313666ms)
+✔ releaseChannel splits stable and prerelease like Tron (1.022375ms)
+✔ evidenceExists rejects missing, absolute, escaping and directory paths (0.438625ms)
+✔ evidenceExists rejects a symlink that leaves the repository (1.024084ms)
+✔ stable mode is ready only when every gate passed with evidence, commit and reviewer (1.533208ms)
+✔ stable mode blocks on any gate that has not passed (1.1785ms)
+✔ prerelease mode reports without failing (0.117458ms)
+✔ the signing reviewer matches the gate's role after trimming and case folding (0.6195ms)
+✔ a passed gate without existing evidence, full commit or reviewer is invalid in every mode (9.66075ms)
+✔ gate file structure: missing, duplicate, unknown ids and bad status are errors (0.330125ms)
+✔ an unfinished gate may cite partial evidence, but the path must exist (0.278208ms)
+✔ compatibility claims need an existing receipt at a full commit (0.473166ms)
+✔ formatTable prints one row per gate (0.591583ms)
+✔ the committed gate file and compatibility record are well formed (2.3935ms)
+✔ CLI: stable exits 1 with a table, prerelease exits 0 (430.887583ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 620.622292

@@ -1,0 +1,18 @@
+{
+  "floorBytes": 10000000000,
+  "guardHeadroomBytes": 200000000,
+  "minimumAcrossAllActualLockCommandsBytes": 10243014656,
+  "initialExpoOnlyRoot": {
+    "beforeBytes": 10434109440,
+    "minimumObservedBytes": 10249670656,
+    "afterBytes": 10245107712,
+    "exitCode": 0
+  },
+  "initialExpoOnlyNative": {
+    "beforeBytes": 10244829184,
+    "minimumObservedBytes": 10243014656,
+    "afterBytes": 10243215360,
+    "exitCode": 0
+  },
+  "note": "Initial intermediate command measurements preserved from actual execution; final complete-graph commands/logs are separate. No npx bootstrap or package installation."
+}

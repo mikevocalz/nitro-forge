@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "vitest": "^5.1.0",
-    "@types/react": "^19.2.0",
+    "@types/react": "^19.3.0",
     "react-native-video": "file:../../tooling/react-native-video-v1/experimental-build-v1.tgz"
   },
   "peerDependenciesMeta": {

@@ -1,0 +1,12 @@
+2026-11-14T02:01:06.4980016Z 
+2026-11-14T02:01:06.4982540Z HEAD is now at 5440eaf Merge de1e36bd5ed425aa1c42203dfeaaf26fbd9733d0 into dab27e177f05a747f2a234e3892f62e2f7b8c28b
+2026-11-14T02:01:06.4990206Z ##[endgroup]
+2026-11-14T02:05:54.6617994Z [36;1m# shellcheck disable=SC2016[0m
+2026-11-14T02:05:54.6618653Z [36;1mnode tooling/release/record-f1-command.mjs persona-generation required -- bash -c 'cd native/persona/nitro && node "$1"' f1 "$NITROGEN_ENTRY"[0m
+2026-11-14T02:05:54.6667482Z shell: /usr/bin/bash -e {0}
+2026-11-14T02:05:55.7879033Z 
+2026-11-14T02:05:55.7880001Z Error: [96msrc/PersonaCapture.nitro.ts[0m:[93m1[0m:[93m51[0m - [91merror[0m[90m TS2307: [0mCannot find module 'nitro-core' or its corresponding type declarations.
+2026-11-14T02:05:55.7880594Z 
+2026-11-14T02:05:55.7881487Z [7m [0m [91m                                                  ~~~~~~~~~~~~[0m
+2026-11-14T02:05:55.7882485Z [96msrc/PersonaPerformance.nitro.ts[0m:[93m1[0m:[93m51[0m - [91merror[0m[90m TS2307: [0mCannot find module 'nitro-core' or its corresponding type declarations.
+2026-11-14T02:05:55.7883068Z 

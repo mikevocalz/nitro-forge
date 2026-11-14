@@ -1,0 +1,130 @@
+name: F1 dependency graph evidence
+on:
+  pull_request:
+    paths:
+      - '**/package.json'
+      - '**/pnpm-lock.yaml'
+      - '**/pnpm-workspace.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'Cargo.lock'
+      - 'tooling/release/**'
+      - '.github/workflows/f1-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  graph-suites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NF_CLI: ${{ github.workspace }}/target/debug/nf-cli
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26'
+      - name: Record checkout and toolchain
+        run: |
+          mkdir -p reports/f1
+          git rev-parse HEAD > reports/f1/source-commit.txt
+          node --version > reports/f1/node-version.txt
+          cargo --version > reports/f1/cargo-version.txt
+      - name: Frozen workspace install
+        id: install
+        run: |
+          corepack enable
+          node tooling/release/record-f1-command.mjs install required -- pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build real test host
+        id: host
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tooling/release/record-f1-command.mjs nf-cli required -- cargo build --locked -p nf-cli
+      - name: Typecheck all workspace tasks
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tooling/release/record-f1-command.mjs typecheck required -- pnpm typecheck --force
+      - name: Build all workspace tasks
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tooling/release/record-f1-command.mjs build required -- pnpm build --force
+      - name: Run all package test tasks with bounded concurrency
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.host.outcome == 'success' }}
+        run: node tooling/release/record-f1-command.mjs package-tests required -- pnpm test --concurrency=4 --force
+      - name: Locked full Rust workspace
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tooling/release/record-f1-command.mjs rust-workspace required -- cargo test --locked --workspace
+      - name: Regenerate Ignition
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tooling/release/record-f1-command.mjs ignition-generation required -- node tooling/release/verify-f1-generation.mjs ignition
+      - name: Install Persona's own frozen generator graph
+        id: persona-install
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tooling/release/record-f1-command.mjs persona-install required -- pnpm --dir native/persona/nitro install --frozen-lockfile --ignore-scripts
+      - name: Regenerate Persona from its isolated exact-pinned project
+        if: ${{ !cancelled() && steps.persona-install.outcome == 'success' }}
+        run: node tooling/release/record-f1-command.mjs persona-generation required -- node tooling/release/verify-f1-generation.mjs persona
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: forge-f1-graph-suites
+          path: reports/f1/
+          if-no-files-found: error
+          retention-days: 14
+  freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26'
+      - run: corepack enable
+      - run: node --test tooling/release/f1-evidence.test.mjs
+      - name: Dated all-manifest/peer/override/source-pin inventory
+        run: node tooling/release/record-f1-command.mjs declarations freshness -- node tooling/release/f1-freshness.mjs --registry reports/f1/declarations.json
+      - name: Actual recursive outdated output (nonzero is retained, never called passed)
+        if: ${{ !cancelled() }}
+        run: node tooling/release/record-f1-command.mjs outdated-root freshness -- pnpm outdated -r --format json
+      - name: Actual isolated native example outdated output
+        if: ${{ !cancelled() }}
+        run: node tooling/release/record-f1-command.mjs outdated-native freshness -- pnpm --dir examples/native-cadence outdated -r --format json
+      - name: Official Nitro v1 latest release check
+        if: ${{ !cancelled() }}
+        run: node tooling/release/record-f1-command.mjs nitro-latest required -- node tooling/release/nitro-v1-latest.mjs --online
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: forge-f1-freshness
+          path: reports/f1/
+          if-no-files-found: error
+          retention-days: 14
+  rust-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: rustsec/advisory-db
+          path: .f1-advisory-db
+          persist-credentials: false
+      - name: Record exact fresh advisory database revision
+        run: |
+          mkdir -p reports/f1
+          git -C .f1-advisory-db rev-parse HEAD > reports/f1/advisory-db-commit.txt
+          git -C .f1-advisory-db log -1 --format=%cI > reports/f1/advisory-db-date.txt
+          date -u +%FT%TZ > reports/f1/audit-captured-at.txt
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+        with:
+          tool: cargo-audit@0.23.0
+      - name: Fresh audit, existing seven scoped ignores only
+        run: node tooling/release/record-f1-command.mjs cargo-audit required -- cargo audit --db .f1-advisory-db --no-fetch --deny warnings
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: forge-f1-cargo-audit
+          path: reports/f1/
+          if-no-files-found: error
+          retention-days: 14

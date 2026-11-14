@@ -5,7 +5,7 @@ allowBuilds:
   esbuild: false
 
 overrides:
-  enhanced-resolve: 5.26.1
+  enhanced-resolve: 5.27.0
 
   # One Nitro v1 runtime for the whole graph. The vendored react-native-video
   # experimental tarball peers the nightly it was generated with; this keeps

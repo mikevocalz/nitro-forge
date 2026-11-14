@@ -1,6 +1,7 @@
 name: Forge 2046 independent precision contracts
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'packages/studio-workspace/src/instrument-system.ts'

@@ -18,6 +18,8 @@
     "nitro-core": "1.0.0-alpha.nightly.136.gdb81de61bd32"
   },
   "devDependencies": {
-    "nitrogen": "1.0.0-alpha.nightly.136.gdb81de61bd32"
-  }
+    "nitrogen": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+    "nitro-core": "1.0.0-alpha.nightly.136.gdb81de61bd32"
+  },
+  "packageManager": "pnpm@12.18.0"
 }

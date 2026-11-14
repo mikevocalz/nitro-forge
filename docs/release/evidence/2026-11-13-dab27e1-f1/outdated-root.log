@@ -1,0 +1,49 @@
+{
+  "react-native-svg": {
+    "current": "15.16.0",
+    "latest": "15.16.1",
+    "wanted": "15.16.0",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@nitro-forge/example",
+        "location": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f2-plan/f1-freshness/apps/example"
+      },
+      {
+        "name": "@nitro-forge/studio-preview",
+        "location": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f2-plan/f1-freshness/apps/studio-preview"
+      },
+      {
+        "name": "@nitro-forge/studio-workspace",
+        "location": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f2-plan/f1-freshness/packages/studio-workspace"
+      }
+    ]
+  },
+  "react-native-webgpu": {
+    "current": "0.21.0",
+    "latest": "0.21.4",
+    "wanted": "0.21.0",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@nitro-forge/example",
+        "location": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f2-plan/f1-freshness/apps/example"
+      }
+    ]
+  },
+  "react-native-skia": {
+    "current": "3.9.1",
+    "latest": "3.10.1",
+    "wanted": "3.9.1",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@nitro-forge/example",
+        "location": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f2-plan/f1-freshness/apps/example"
+      }
+    ]
+  }
+}

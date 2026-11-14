@@ -1,0 +1,19 @@
+{
+  "command": [
+    "node",
+    "/Users/mikevocalz/Library/pnpm/.tools/pnpm/12.18.0/node_modules/pnpm/bin/pnpm.mjs",
+    "outdated",
+    "-r",
+    "--format",
+    "json"
+  ],
+  "cwd": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f2-plan/f1-freshness",
+  "version": "12.18.0",
+  "beforeBytes": 11499130880,
+  "minimumObservedBytes": 11492786176,
+  "afterBytes": 11483918336,
+  "floorBytes": 10000000000,
+  "estimatedHeadroomBytes": 200000000,
+  "stoppedByGuard": false,
+  "exitCode": 1
+}

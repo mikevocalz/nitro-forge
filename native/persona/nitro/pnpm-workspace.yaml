@@ -1,0 +1,6 @@
+# Isolated generator project: root packages/* and apps/* do not install this directory.
+packages:
+  - "."
+minimumReleaseAge: 0
+allowBuilds:
+  esbuild: false

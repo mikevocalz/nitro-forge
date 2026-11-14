@@ -36,8 +36,8 @@
         ]
       },
       "status": "in-progress",
-      "statusReason": "Dependency baseline PR #78 merged as 17abb543f69da99f8a2821c766e32476cc5b0300: Nitro nightly.136, pnpm 12.18.0 and the other documented bumps landed. RELEASE_TRAIN.md records holds, and cargo-audit PR #83 merged as d31cf2cf9500cb32ed1ec43ef68e628856e9f54f (exact-head audit run 43510259292 passed with seven explicit advisory ignores). Full §5 audit/hold disposition and a fresh pnpm outdated -r review remain incomplete; the original all-22-workflow acceptance has not been independently signed. Historical and current partial CI results are separated in the evidence; this is not a gate pass.",
-      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
+      "statusReason": "Dependency baseline #78, cargo-audit #83 and F2 #85 are merged. The dated F1 routine slice records Expo58.0.25/tooling patches, both locks, all32 manifest/peer/override/source declarations and actual nonzero root/native pnpm outdated output. Skia/WebGPU/SVG have a separate stacked native trial planned; CLI20.2 is tied to the published RN0.88.1 template. Known Rust migration/vendor ABI holds and the macro workaround remain explicit. New CI collection covers full suites, both generators, dated audit database and freshness output, with original22 workflow coverage still requiring actual exact-head executions and independent review. No F1 pass is claimed.",
+      "evidence": "docs/release/evidence/2026-11-13-dab27e1-f1/README.md",
       "commit": null,
       "reviewer": null,
       "reviewedAt": null
