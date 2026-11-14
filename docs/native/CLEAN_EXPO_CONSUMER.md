@@ -127,6 +127,17 @@ a later runner's independently extracted cache is insufficient by itself.
 The installed package checks the same two producer inventories against its
 shipped verified source hash records.
 
+Official rust-installer keeps its root MIT/Apache/COPYRIGHT texts in a
+non-installed archive overlay; minimal rustup installations may omit them.
+When absent from the producing sysroot, collection obtains these three texts
+only from the actual compiler's full immutable rust-lang/rust source commit,
+recording source URL and content hash. Both producing runners' verbose compiler
+identities must match that commit and release. Generated standard-library
+COPYRIGHT-library.html remains required from the actual installed toolchain;
+existing compiler notices/materials are still retained. No missing text is
+waived, no latest-tag license is substituted and no license alternative is
+elected. See the [official distribution implementation](https://github.com/rust-lang/rust/blob/0ef1bc386059596dada8fb65b50425aab2ea637a/src/bootstrap/src/utils/tarball.rs).
+
 The packet preserves declared license expressions verbatim and makes no
 new alternative-license election or permissive classification. Unknown
 license declarations, missing source identities/materials or changed hashes

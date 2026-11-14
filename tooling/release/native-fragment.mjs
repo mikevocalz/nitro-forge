@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { files, hash, json, requireDisk } from './archive-files.mjs';
-import { lockChecksums, registrySourceRecords } from './license-materials.mjs';
+import { lockChecksums, registrySourceRecords, rustCompilerSource } from './license-materials.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const { values } = parseArgs({ options: {
@@ -24,6 +24,8 @@ const toolchain = {
   cargo: execFileSync('cargo', ['--version'], { encoding: 'utf8' }).trim(),
   cargoLockSha256: hash(resolve(root, 'Cargo.lock')),
 };
+toolchain.rustVerbose = execFileSync('rustc', ['--version', '--verbose'], { encoding: 'utf8' }).trim();
+toolchain.rustSource = rustCompilerSource(toolchain.rustVerbose);
 const folders = values.platform === 'apple' ? ['ForgeRust.xcframework'] : ['android'];
 for (const folder of folders) files(resolve(native, folder)); // Reject producer symlinks before copy.
 if (values.platform === 'apple') {

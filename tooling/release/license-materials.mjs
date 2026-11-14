@@ -4,6 +4,20 @@ import { dirname, resolve } from 'node:path';
 import { files, hash, inside, json } from './archive-files.mjs';
 
 export const NITRO_LICENSE_SHA256 = '833ee7046f3908173364391ad4a2028560029503faf3a29e8acb77506dfe52ea';
+export const RUST_ROOT_NOTICES = ['LICENSE-MIT', 'LICENSE-APACHE', 'COPYRIGHT'];
+
+export function rustCompilerSource(verbose) {
+  assert.equal(typeof verbose, 'string', 'Actual producing compiler verbose metadata required');
+  const commitHash = verbose.match(/^commit-hash: ([0-9a-f]{40})$/m)?.[1];
+  const release = verbose.match(/^release: (\d+\.\d+\.\d+)$/m)?.[1];
+  assert.ok(commitHash && release, 'Exact stable producing Rust compiler source identity required');
+  return { commitHash, release };
+}
+export function rustNoticeUrl(commitHash, name) {
+  assert.match(commitHash, /^[0-9a-f]{40}$/);
+  assert.ok(RUST_ROOT_NOTICES.includes(name), 'Only the actual compiler root notice files are admitted');
+  return `https://raw.githubusercontent.com/rust-lang/rust/${commitHash}/${name}`;
+}
 
 /** Called on the producing runner after compilation, before artifact upload. */
 export function registrySourceRecords(metadata, checksums) {
@@ -68,6 +82,19 @@ export function checkLicenseMembers(root, pkg, originalSha, expectedSource) {
       const material = packet.toolchain.materials.find(m => m.path === `rust-toolchain/${name}`);
       assert.ok(material, `Missing Rust toolchain ${name}`);
       assert.equal(hash(inside(packetRoot, material.path)), material.sha256);
+      assert.ok(readFileSync(inside(packetRoot, material.path)).length > 0, `Empty Rust toolchain notice: ${name}`);
+      if (RUST_ROOT_NOTICES.includes(name)) {
+        const identity = rustCompilerSource(packet.toolchain.verbose);
+        assert.equal(packet.toolchain.sourceCommit, identity.commitHash);
+        assert.ok(packet.toolchain.producerCompilerSources, 'Both actual producing Rust source identities required');
+        for (const platform of ['apple', 'android']) assert.deepEqual(packet.toolchain.producerCompilerSources[platform], identity, `Packed ${platform} producing Rust source differs`);
+        assert.equal(material.origin?.compilerCommitHash, identity.commitHash);
+        if (material.origin.kind === 'upstream-compiler-source') assert.equal(material.origin.url, rustNoticeUrl(identity.commitHash, name));
+        else {
+          assert.equal(material.origin.kind, 'installed-producing-toolchain');
+          assert.ok([name, `share/doc/rust/${name}`, `share/doc/rustc/${name}`].includes(material.origin.relativePath));
+        }
+      }
     }
   }
 }

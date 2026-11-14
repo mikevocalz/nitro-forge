@@ -8,13 +8,32 @@ import { candidate } from './candidate-manifest.mjs';
 import { assertInstalledInside, checkExports, checkSourceClosure, files, hash, inside } from './archive-files.mjs';
 import { unpackArchive, verifyRegistrySource } from './unpack-archive.mjs';
 import { fileURLToPath } from 'node:url';
-import { checkLicenseMembers, checkProducerSources, nativeClosure } from './license-materials.mjs';
+import { checkLicenseMembers, checkProducerSources, nativeClosure, RUST_ROOT_NOTICES, rustCompilerSource, rustNoticeUrl } from './license-materials.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(resolve(tmpdir(), 'forge-archive-test-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return root;
 }
+function syntheticToolchain(materials) {
+  // Structural test data only, never compiled/native license evidence.
+  const commitHash = 'd'.repeat(40), identity = { commitHash, release: '1.100.0' };
+  return { sourceCommit: commitHash, verbose: `rustc 1.100.0\ncommit-hash: ${commitHash}\nrelease: 1.100.0`,
+    producerCompilerSources: { apple: identity, android: identity },
+    materials: materials.map(material => {
+      const name = material.path.slice('rust-toolchain/'.length);
+      return RUST_ROOT_NOTICES.includes(name) ? { ...material, origin: { kind: 'upstream-compiler-source', compilerCommitHash: commitHash, url: rustNoticeUrl(commitHash, name) } } : material;
+    }),
+  };
+}
+test('Rust notice sources require exact producing compiler commits and admitted root files', () => {
+  const commitHash = '0ef1bc386059596dada8fb65b50425aab2ea637a';
+  assert.deepEqual(rustCompilerSource(`rustc 1.100.0\ncommit-hash: ${commitHash}\nrelease: 1.100.0\nhost: x86_64-unknown-linux-gnu`), { commitHash, release: '1.100.0' });
+  assert.throws(() => rustCompilerSource('commit-hash: unknown\nrelease: 1.100.0'), /Exact stable/);
+  assert.throws(() => rustNoticeUrl('stable', 'LICENSE-MIT'));
+  assert.throws(() => rustNoticeUrl(commitHash, '../LICENSE-MIT'), /admitted/);
+  assert.equal(rustNoticeUrl(commitHash, 'LICENSE-MIT'), `https://raw.githubusercontent.com/rust-lang/rust/${commitHash}/LICENSE-MIT`);
+});
 test('packed native materials bind notices, Cargo.lock and both producing source inventories', t => {
   // Synthetic structural packet only; no native license or compatibility proof.
   const root = fixture(t), packetRoot = resolve(root, 'native/licenses');
@@ -38,13 +57,19 @@ test('packed native materials bind notices, Cargo.lock and both producing source
   const toolchain = ['LICENSE-MIT', 'LICENSE-APACHE', 'COPYRIGHT', 'COPYRIGHT-library.html'].map(name => material(`rust-toolchain/${name}`, 'synthetic toolchain notice'));
   const producer = { id: 'tiny', checksum: crate.sha256, files: hashes.files };
   const packet = { schemaVersion: 1, sourceCommit: 'a'.repeat(40), originalLicenseSha256: hash(resolve(root, 'LICENSE')), cargoLockSha256: lock.sha256,
-    files: [nf, crate, notice, lock, inventory, ...toolchain], toolchain: { materials: toolchain },
+    files: [nf, crate, notice, lock, inventory, ...toolchain], toolchain: syntheticToolchain(toolchain),
     producerRegistrySources: { apple: [structuredClone(producer)], android: [structuredClone(producer)] },
     resolvedGraph: { packages: [{ id: 'nf', name: 'nf-sys', source: null, license: 'MIT' }, { id: 'tiny', name: 'tiny', version: '1.0.0', source, license: 'MIT OR Apache-2.0' }], resolve: { nodes: [{ id: 'nf', deps: [{ pkg: 'tiny', dep_kinds: [{ kind: null }] }] }, { id: 'tiny', deps: [] }] } },
     components: [{ id: 'nf', licenseExpression: 'MIT', materials: [nf] }, { id: 'tiny', checksum: crate.sha256, licenseExpression: 'MIT OR Apache-2.0', notices: [notice], materials: [crate, notice, inventory] }],
   };
   const check = () => { writeFileSync(resolve(packetRoot, 'provenance.json'), JSON.stringify(packet)); checkLicenseMembers(root, { name: '@nitro-forge/ignition', license: 'MIT' }, packet.originalLicenseSha256, packet.sourceCommit); };
   check();
+  packet.toolchain.producerCompilerSources.android = { commitHash: 'e'.repeat(40), release: '1.100.0' };
+  assert.throws(check, /producing Rust source differs/);
+  packet.toolchain.producerCompilerSources.android = { commitHash: packet.toolchain.sourceCommit, release: '1.100.0' };
+  packet.toolchain.materials[0].origin.url = 'https://raw.githubusercontent.com/rust-lang/rust/stable/LICENSE-MIT';
+  assert.throws(check);
+  packet.toolchain.materials[0].origin.url = rustNoticeUrl(packet.toolchain.sourceCommit, 'LICENSE-MIT');
   packet.producerRegistrySources.android[0].files.LICENSE = 'b'.repeat(64);
   assert.throws(check, /android compiled source differs/);
   packet.producerRegistrySources.android[0] = structuredClone(producer);
@@ -230,7 +255,7 @@ test('prepare keeps archive specifiers and hashes portable across distinct consu
       const toolchain = ['LICENSE-MIT', 'LICENSE-APACHE', 'COPYRIGHT', 'COPYRIGHT-library.html'].map(name => material(`rust-toolchain/${name}`));
       writeFileSync(resolve(packet, 'provenance.json'), JSON.stringify({
         fixtureOnly: true, schemaVersion: 1, sourceCommit: value.sourceCommit, originalLicenseSha256: value.originalLicenseSha256,
-        cargoLockSha256: lock.sha256, files: [manifest, lock, ...toolchain], toolchain: { materials: toolchain },
+        cargoLockSha256: lock.sha256, files: [manifest, lock, ...toolchain], toolchain: syntheticToolchain(toolchain),
         resolvedGraph: { packages: [{ id: 'nf', name: 'nf-sys', source: null, license: 'MIT' }], resolve: { nodes: [{ id: 'nf', deps: [] }] } },
         components: [{ id: 'nf', name: 'nf-sys', licenseExpression: 'MIT', materials: [manifest] }],
       }));

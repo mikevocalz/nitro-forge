@@ -6,7 +6,7 @@ import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { files, hash, inside, json, requireDisk } from './archive-files.mjs';
-import { checkProducerSources, lockChecksums, nativeClosure, NITRO_LICENSE_SHA256 } from './license-materials.mjs';
+import { checkProducerSources, lockChecksums, nativeClosure, NITRO_LICENSE_SHA256, RUST_ROOT_NOTICES, rustCompilerSource, rustNoticeUrl } from './license-materials.mjs';
 import { verifyRegistrySource } from './unpack-archive.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -18,14 +18,20 @@ requireDisk(root);
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 const inventory = json(resolve(root, 'tooling/release/package-inventory.json'));
 const rust = execFileSync('rustc', ['--version'], { encoding: 'utf8' }).trim();
+const rustVerbose = execFileSync('rustc', ['--version', '--verbose'], { encoding: 'utf8' }).trim();
+const compilerSource = rustCompilerSource(rustVerbose);
 const lockSha = hash(resolve(root, 'Cargo.lock'));
 const producerRegistrySources = {};
+const producerCompilerSources = {};
 for (const platform of ['apple', 'android']) {
   const fragment = json(resolve(native, `${platform}.json`));
   assert.equal(fragment.sourceCommit, sourceCommit);
   assert.equal(fragment.toolchain.rust, rust, 'Collect notices from the actual producing Rust toolchain');
   assert.equal(fragment.toolchain.cargoLockSha256, lockSha);
   producerRegistrySources[platform] = fragment.registrySources;
+  assert.deepEqual(fragment.toolchain.rustSource, compilerSource, 'Actual producing compiler source must match notice source');
+  assert.deepEqual(rustCompilerSource(fragment.toolchain.rustVerbose), compilerSource);
+  producerCompilerSources[platform] = fragment.toolchain.rustSource;
 }
 assert.ok(existsSync(resolve(root, 'LICENSE')), 'Authoritative original Forge license text is required');
 assert.equal(hash(resolve(root, 'packages/ignition/licenses/Nitro-MIT.txt')), NITRO_LICENSE_SHA256);
@@ -92,11 +98,28 @@ for (const pkg of selected) {
 const sysroot = execFileSync('rustc', ['--print', 'sysroot'], { encoding: 'utf8' }).trim();
 const toolchain = [];
 const noticeRoots = [sysroot, resolve(sysroot, 'share/doc/rust'), resolve(sysroot, 'share/doc/rustc')];
-for (const name of ['LICENSE-MIT', 'LICENSE-APACHE', 'COPYRIGHT', 'COPYRIGHT-library.html']) {
+for (const name of RUST_ROOT_NOTICES) {
   const file = noticeRoots.map(dir => resolve(dir, name)).find(existsSync);
-  assert.ok(file, `Missing actual producing Rust toolchain ${name}; resolve notices before packing`);
-  toolchain.push(copy(file, `rust-toolchain/${name}`));
+  if (file) {
+    toolchain.push({ ...copy(file, `rust-toolchain/${name}`), origin: { kind: 'installed-producing-toolchain', compilerCommitHash: compilerSource.commitHash, relativePath: relative(sysroot, file).split(sep).join('/') } });
+  } else {
+    // Official rust-installer places these texts in its non-installed overlay.
+    // Resolve only from the exact compiler source commit, never a latest tag
+    // or a different project's license. Generated library notices stay required.
+    const url = rustNoticeUrl(compilerSource.commitHash, name);
+    const response = await fetch(url, { signal: AbortSignal.timeout(60000) });
+    assert.ok(response.ok, `Missing exact producing compiler source notice ${url}: HTTP ${response.status}`);
+    const bytes = Buffer.from(await response.arrayBuffer());
+    assert.ok(bytes.length > 0 && bytes.length <= 1024 * 1024, 'Compiler root notice exceeds its bounded text budget');
+    const destination = `rust-toolchain/${name}`, target = inside(output, destination);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, bytes);
+    toolchain.push({ path: destination, sha256: hash(target), origin: { kind: 'upstream-compiler-source', compilerCommitHash: compilerSource.commitHash, url } });
+  }
 }
+const libraryCopyright = noticeRoots.map(dir => resolve(dir, 'COPYRIGHT-library.html')).find(existsSync);
+assert.ok(libraryCopyright, 'Missing actual producing Rust standard-library copyright notices; resolve before packing');
+toolchain.push(copy(libraryCopyright, 'rust-toolchain/COPYRIGHT-library.html'));
 for (const name of ['license-metadata.json', 'REUSE.toml', 'COPYRIGHT.html']) {
   const file = noticeRoots.map(dir => resolve(dir, name)).find(existsSync);
   if (file) toolchain.push(copy(file, `rust-toolchain/${name}`));
@@ -111,7 +134,7 @@ writeFileSync(resolve(output, 'provenance.json'), JSON.stringify({
     packages: selected.map(({ id, name, version, source, license }) => ({ id, name, version, source, license })),
     resolve: { nodes: metadata.resolve.nodes.filter(n => selected.some(p => p.id === n.id)).map(n => ({ id: n.id, deps: n.deps.filter(d => d.dep_kinds.some(k => k.kind === null || k.kind === 'build')) })) },
   },
-  components, producerRegistrySources, toolchain: { rust, verbose: execFileSync('rustc', ['--version', '--verbose'], { encoding: 'utf8' }).trim(), materials: toolchain },
+  components, producerRegistrySources, toolchain: { rust, verbose: rustVerbose, sourceCommit: compilerSource.commitHash, producerCompilerSources, materials: toolchain },
   licenseClassification: 'Not performed; declarations and complete source archives preserved verbatim. No new permissive classification or alternative-license election.',
   releaseLegalAcceptance: 'PENDING',
   files: files(output).map(path => ({ path, sha256: hash(resolve(output, path)) })),
