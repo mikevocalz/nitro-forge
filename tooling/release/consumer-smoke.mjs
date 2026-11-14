@@ -10,11 +10,12 @@ import { assertInstalledInside, checkExports, checkSourceClosure, files, hash, i
 import { candidate } from './candidate-manifest.mjs';
 import { unpackArchive } from './unpack-archive.mjs';
 import { checkLicenseMembers } from './license-materials.mjs';
+import { consumerInstallArgs } from './consumer-install.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const { values } = parseArgs({ options: {
   manifest: { type: 'string' }, output: { type: 'string' }, stage: { type: 'string', default: 'prepare' },
-  'expected-source': { type: 'string' }, platform: { type: 'string' },
+  'expected-source': { type: 'string' }, platform: { type: 'string' }, 'frozen-lockfile': { type: 'boolean', default: false },
 } });
 assert.ok(values.manifest && values.output && values['expected-source'], '--manifest, --output, --expected-source required');
 const manifestFile = resolve(values.manifest), app = resolve(values.output);
@@ -31,7 +32,7 @@ function run(command, args, cwd = app) {
 function archiveOverrides() {
   return Object.fromEntries(manifest.archives.map(({ name, archive }) => [name, 'file:./artifacts/' + archive]));
 }
-function inspectEffectivePnpmConfig() {
+function inspectEffectivePnpmConfig(frozen) {
   requireDisk(app, 64 * 1024 * 1024);
   const options = { cwd: app, encoding: 'utf8', env: { ...process.env, CI: '1' } };
   const version = execFileSync('corepack', ['pnpm', '--version'], options).trim().split(/\r?\n/).at(-1);
@@ -42,7 +43,7 @@ function inspectEffectivePnpmConfig() {
   assert.deepEqual(config, { overrides: archiveOverrides(), nodeLinker: 'isolated', enableGlobalVirtualStore: false, minimumReleaseAge: 0 },
     'PNPM must actually read the portable tarball overrides and isolated store settings');
   writeFileSync(resolve(app, 'pnpm-effective-config.json'), JSON.stringify({ sourceCommit: manifest.sourceCommit,
-    manifestSha256: identity, workspaceSha256: hash(resolve(app, 'pnpm-workspace.yaml')), pnpmVersion: version, config }, null, 2) + '\n');
+    manifestSha256: identity, workspaceSha256: hash(resolve(app, 'pnpm-workspace.yaml')), pnpmVersion: version, installMode: frozen ? 'frozen-reuse' : 'first-resolution', config }, null, 2) + '\n');
   console.log(JSON.stringify({ stage: 'effective-pnpm-config', pnpmVersion: version, ...config }));
 }
 if (values.stage === 'prepare') {
@@ -100,8 +101,15 @@ if (values.stage === 'prepare') {
   assert.equal(json(receiptPath).manifestSha256, identity, 'Consumer belongs to different archive bytes');
   assert.ok(realpathSync(app) === app, 'Consumer root cannot be a symlink');
   switch (values.stage) {
-    case 'install': inspectEffectivePnpmConfig(); run('corepack', ['pnpm', 'install', '--strict-peer-dependencies', '--ignore-scripts',
-      ...(existsSync(resolve(app, 'pnpm-lock.yaml')) ? ['--frozen-lockfile'] : [])]); break;
+    case 'install': {
+      // Bootstrap/config commands may create a manager-only lock. Its presence
+      // is not evidence that application dependencies were resolved.
+      const args = consumerInstallArgs({ frozen: values['frozen-lockfile'], stages: json(receiptPath).stages });
+      inspectEffectivePnpmConfig(args.includes('--frozen-lockfile'));
+      run('corepack', args);
+      assert.ok(statSync(resolve(app, 'pnpm-lock.yaml')).size > 0, 'Successful installation must produce a lockfile');
+      break;
+    }
     case 'verify': {
       const appRequire = createRequire(resolve(app, 'package.json'));
       const observed = [];

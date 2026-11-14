@@ -1,0 +1,99 @@
+{
+  "artifacts": [
+    {
+      "id": 14097455711,
+      "name": "forge-native-apple",
+      "size_in_bytes": 51540890,
+      "url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14097455711",
+      "archive_download_url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14097455711/zip",
+      "expired": false,
+      "created_at": "2026-11-14T03:46:36Z",
+      "expires_at": "2026-11-21T03:46:32Z",
+      "updated_at": "2026-11-14T03:46:36Z",
+      "digest": "sha256:b7837bfa67073406ddeccfa35c4d6a74112c1b72ad0bdf9a5ee64dfe920db62c",
+      "workflow_run": {
+        "id": 43552579982,
+        "repository_id": 1442983723,
+        "head_repository_id": 1442983723,
+        "head_branch": "feat/f6-clean-consumer-20261113",
+        "head_sha": "0c07863f215420f2ef40c1c5ecb6151b5167193d"
+      }
+    },
+    {
+      "id": 14097410748,
+      "name": "forge-native-android",
+      "size_in_bytes": 74957816,
+      "url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14097410748",
+      "archive_download_url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14097410748/zip",
+      "expired": false,
+      "created_at": "2026-11-14T03:46:41Z",
+      "expires_at": "2026-11-21T03:46:34Z",
+      "updated_at": "2026-11-14T03:46:41Z",
+      "digest": "sha256:70d718aff2bd1d6123fb05a251521b67c14f9be25dfe54940588aa227cfb0a62",
+      "workflow_run": {
+        "id": 43552579982,
+        "repository_id": 1442983723,
+        "head_repository_id": 1442983723,
+        "head_branch": "feat/f6-clean-consumer-20261113",
+        "head_sha": "0c07863f215420f2ef40c1c5ecb6151b5167193d"
+      }
+    },
+    {
+      "id": 14096678625,
+      "name": "forge-license-materials",
+      "size_in_bytes": 21107174,
+      "url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14096678625",
+      "archive_download_url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14096678625/zip",
+      "expired": false,
+      "created_at": "2026-11-14T03:47:17Z",
+      "expires_at": "2026-11-28T03:47:15Z",
+      "updated_at": "2026-11-14T03:47:17Z",
+      "digest": "sha256:ad00ebec72f7791f0556c89699b26a00738e383a2020609371ad1059f20aaba3",
+      "workflow_run": {
+        "id": 43552579982,
+        "repository_id": 1442983723,
+        "head_repository_id": 1442983723,
+        "head_branch": "feat/f6-clean-consumer-20261113",
+        "head_sha": "0c07863f215420f2ef40c1c5ecb6151b5167193d"
+      }
+    },
+    {
+      "id": 14096403889,
+      "name": "forge-candidate",
+      "size_in_bytes": 147263489,
+      "url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14096403889",
+      "archive_download_url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14096403889/zip",
+      "expired": false,
+      "created_at": "2026-11-14T03:47:45Z",
+      "expires_at": "2026-11-28T03:47:40Z",
+      "updated_at": "2026-11-14T03:47:45Z",
+      "digest": "sha256:ad624c5181b8be0c61cd5318d3fffcfbe70e81f132bbc012a9dc8641c54f4289",
+      "workflow_run": {
+        "id": 43552579982,
+        "repository_id": 1442983723,
+        "head_repository_id": 1442983723,
+        "head_branch": "feat/f6-clean-consumer-20261113",
+        "head_sha": "0c07863f215420f2ef40c1c5ecb6151b5167193d"
+      }
+    },
+    {
+      "id": 14096179432,
+      "name": "forge-consumer-graph",
+      "size_in_bytes": 3521,
+      "url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14096179432",
+      "archive_download_url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14096179432/zip",
+      "expired": false,
+      "created_at": "2026-11-14T03:48:15Z",
+      "expires_at": "2026-11-28T03:48:14Z",
+      "updated_at": "2026-11-14T03:48:15Z",
+      "digest": "sha256:84021df78c5a6dac2ceab5d2d8c0f5e0f927cbb45c48d6b937493f593cf6a1e3",
+      "workflow_run": {
+        "id": 43552579982,
+        "repository_id": 1442983723,
+        "head_repository_id": 1442983723,
+        "head_branch": "feat/f6-clean-consumer-20261113",
+        "head_sha": "0c07863f215420f2ef40c1c5ecb6151b5167193d"
+      }
+    }
+  ]
+}

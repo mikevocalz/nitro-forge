@@ -187,7 +187,11 @@ jobs:
         run: |
           set -euo pipefail
           for stage in install verify prebuild; do
-            node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage" --platform '${{ matrix.platform }}'
+            if [ "$stage" = install ]; then
+              node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage" --platform '${{ matrix.platform }}' --frozen-lockfile
+            else
+              node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage" --platform '${{ matrix.platform }}'
+            fi
           done
       - name: Compile bundled Android acceptance app; no consumer Rust build
         if: matrix.platform == 'android'

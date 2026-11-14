@@ -235,3 +235,12 @@ native runtime evidence. This prevents a transitive adapter from looking up
 an unpublished Ignition candidate in the registry; no registry/source fallback
 or authentication workaround is allowed. See [PNPM settings](https://pnpm.io/settings)
 and [the config reader](https://pnpm.io/cli/config).
+
+First Linux dependency resolution explicitly uses `--no-frozen-lockfile`.
+Package-manager bootstrap/config commands can create a manager-only lock,
+so existence/size is not used to infer a completed app graph. Native jobs
+explicitly reuse the successful Linux graph with `--frozen-lockfile`, and
+repeated successful installs remain frozen. The recorded effective config
+states first-resolution versus frozen-reuse mode. An actual PNPM regression
+covers the retained manager-only lock, initial app resolution and rejected
+manifest changes under frozen reuse; it calls no engine/native/UI API.
