@@ -137,6 +137,18 @@ excuse missing materials in an internal candidate.
 
 ## Clean consumer stages
 
+Native compile uses ordinary Release configurations so the resulting iOS
+Simulator app and Android APK contain an embedded JS/Hermes bundle and can
+launch without a local Metro/dependency installation. No generated native
+project or signing settings are manually edited. Android uses the Expo
+template's existing debug signing for this acceptance fixture; these are not
+publication builds. Artifact validation records the actual application ID,
+binary architectures, embedded bundle hash, archive hash, installed lock and
+candidate manifest identity. Android signature verification is retained too.
+Generated/merged native manifests and metadata are retained for inspection.
+Creating these artifacts leaves runtime acceptance `NOT RUN`; actual launch,
+seven-studio durable workflows and independent visible review remain required.
+
 `consumer-smoke.mjs` requires an existing candidate manifest, exact expected
 source commit and an output directory outside the checkout. No package
 build/source/workspace fallback exists. It verifies archive hashes and

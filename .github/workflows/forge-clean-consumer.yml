@@ -187,10 +187,10 @@ jobs:
           for stage in install verify prebuild; do
             node tooling/release/consumer-smoke.mjs --manifest "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/consumer" --expected-source "$GITHUB_SHA" --stage "$stage" --platform '${{ matrix.platform }}'
           done
-      - name: Compile Android; no Rust/compiler checkout dependency in consumer
+      - name: Compile bundled Android acceptance app; no consumer Rust build
         if: matrix.platform == 'android'
         working-directory: ${{ runner.temp }}/consumer/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
       - name: Compile iOS; retain documented Expo macros workaround
         if: matrix.platform == 'ios'
         working-directory: ${{ runner.temp }}/consumer/ios
@@ -199,11 +199,23 @@ jobs:
           set -euo pipefail
           project=$(find . -maxdepth 1 -name '*.xcodeproj' -print -quit)
           scheme=$(basename "$project" .xcodeproj)
-          xcodebuild -project "$project" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/consumer-derived" -IDEPackageEnablePrebuilts=NO CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project "$project" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/consumer-derived" -IDEPackageEnablePrebuilts=NO CODE_SIGNING_ALLOWED=NO build
       - name: Record successful compile separately from runtime
         env:
           FORGE_PLATFORM: ${{ matrix.platform }}
-        run: node -e 'const fs=require("node:fs"),p=require("node:path");const file=p.join(process.env.RUNNER_TEMP,"consumer/forge-consumer-receipt.json");const r=JSON.parse(fs.readFileSync(file,"utf8"));r.stages.push("compile:"+process.env.FORGE_PLATFORM);r.nativeRuntime="NOT RUN";fs.writeFileSync(file,JSON.stringify(r,null,2)+"\n");'
+        run: node -e 'const fs=require("node:fs"),p=require("node:path");const file=p.join(process.env.RUNNER_TEMP,"consumer/forge-consumer-receipt.json");const r=JSON.parse(fs.readFileSync(file,"utf8"));r.stages.push("compile:"+process.env.FORGE_PLATFORM);r.configuration="Release";r.nativeRuntime="NOT RUN";fs.writeFileSync(file,JSON.stringify(r,null,2)+"\n");'
+      - name: Retain verified bundled application for later visible runtime proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ '${{ matrix.platform }}' = android ]; then
+            tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+            node tooling/release/runtime-artifact.mjs --platform android --app "$RUNNER_TEMP/consumer/android/app/build/outputs/apk/release/app-release.apk" --android-tools "$tools" --consumer "$RUNNER_TEMP/consumer" --output "$RUNNER_TEMP/runtime-app"
+          else
+            app=$(find "$RUNNER_TEMP/consumer-derived/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -print)
+            test -n "$app"
+            node tooling/release/runtime-artifact.mjs --platform ios --app "$app" --consumer "$RUNNER_TEMP/consumer" --output "$RUNNER_TEMP/runtime-app"
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -213,7 +225,13 @@ jobs:
             ${{ runner.temp }}/consumer/pnpm-lock.yaml
             ${{ runner.temp }}/consumer/ios/*.xcodeproj/project.pbxproj
             ${{ runner.temp }}/consumer/ios/*.xcodeproj/.spm-injected.json
-            ${{ runner.temp }}/consumer/android/app/build/outputs/apk/debug/*.apk
+            ${{ runner.temp }}/runtime-app/*
+            ${{ runner.temp }}/consumer/android/app/build/outputs/apk/release/*.apk
+            ${{ runner.temp }}/consumer/android/app/src/main/AndroidManifest.xml
+            ${{ runner.temp }}/consumer/android/app/build/intermediates/merged_manifests/**/AndroidManifest.xml
+            ${{ runner.temp }}/consumer/android/app/src/main/res/values/*.xml
+            ${{ runner.temp }}/consumer/ios/**/Info.plist
+            ${{ runner.temp }}/consumer/ios/**/Package.resolved
             ${{ runner.temp }}/consumer-derived/Logs/Build/*.xcactivitylog
           include-hidden-files: true
           retention-days: 14
