@@ -1,0 +1,22 @@
+✔ releaseChannel splits stable and prerelease like Tron (0.932209ms)
+✔ evidenceExists rejects missing, absolute, escaping and directory paths (0.417167ms)
+✔ evidenceExists rejects a symlink that leaves the repository (1.010667ms)
+✔ stable mode is ready only when every gate passed with evidence, commit and reviewer (1.522458ms)
+✔ stable mode blocks on any gate that has not passed (1.039167ms)
+✔ prerelease mode reports without failing (0.109916ms)
+✔ the signing reviewer matches the gate's role after trimming and case folding (0.605625ms)
+✔ a passed gate without existing evidence, full commit or reviewer is invalid in every mode (9.514833ms)
+✔ gate file structure: missing, duplicate, unknown ids and bad status are errors (0.291667ms)
+✔ an unfinished gate may cite partial evidence, but the path must exist (0.252166ms)
+✔ compatibility claims need an existing receipt at a full commit (0.462833ms)
+✔ formatTable prints one row per gate (0.577042ms)
+✔ the committed gate file and compatibility record are well formed (1.979042ms)
+✔ CLI: stable exits 1 with a table, prerelease exits 0 (419.38325ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 592.710458
