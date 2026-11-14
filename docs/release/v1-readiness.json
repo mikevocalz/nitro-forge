@@ -50,8 +50,8 @@
       "acceptance": [
         "Repin to Tron `rc.2` when it exists and to `1.0.0` when it exists. Each repin updates `tooling/nyc-tron.json` and every `@nyc-tron` reference, regenerates lockfiles, runs `verify-nyc-tron-pin.mjs --download`, typechecks the wired rows and runs their tests. Forge v1 does not ship pinned to a prerelease."
       ],
-      "status": "blocked",
-      "statusReason": "Neither Tron v1.0.0-rc.2 nor v1.0.0 exists (gh release list on mikevocalz/NYC-Tron-UI, 2026-11-11: latest is v1.0.0-rc.1). tooling/nyc-tron.json pins v1.0.0-rc.1.",
+      "status": "in-progress",
+      "statusReason": "The published Tron v1.0.0-rc.2 cohort at 0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44 is pinned in tooling/nyc-tron.json and all consumer manifests; both locks were regenerated with pnpm 12.18.0. The repin is under independent R2 review and needs candidate-bound installed consumer/type/runtime CI. The later stable Tron 1.0.0 repin is still pending; Forge v1 cannot ship pinned to this prerelease.",
       "evidence": null,
       "commit": null,
       "reviewer": null,

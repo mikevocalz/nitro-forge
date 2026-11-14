@@ -1,6 +1,25 @@
 # NYC-Tron UI and Nitro Forge: package handoff
 
+## Current release pin, 2026-11-13
+
+`tooling/nyc-tron.json` now selects NYC-Tron
+[`v1.0.0-rc.2`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v1.0.0-rc.2)
+at `0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44`. The published release has
+sixteen archives and `SHA256SUMS`; Forge consumes seven: ui, core,
+expo-controls, reserved-regions, platform-services, native-controls and
+hardware-keys. All 26 dependency references across fourteen manifests use
+those exact release URLs. The SHA-256 of the published checksum manifest is
+`3a44d1bc5b50df8de783010badaf543cac6495fd746d8acd333b1e0be197d3e7`.
+Each consumed archive was checked against that manifest before its pin changed.
+
+The rc.2 repin is under review. It does not establish Forge native/browser
+acceptance, complete F2's later stable `1.0.0` repin or authorize Forge v1.
+The implementation and exact validation limits belong in the F2 evidence
+receipt. The older checkpoints below retain their original versions and scope.
+
 ## One component source
+
+Historical alpha.2 checkpoint:
 
 The [NYC-Tron-UI](https://github.com/mikevocalz/NYC-Tron-UI) repository owns
 every reusable cross-app UI control, basic and professional, under
@@ -44,7 +63,7 @@ was cut from, and for each package the tarball URL and its sha256 from
 exact URL in `package.json`:
 
 ```json
-"@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz"
+"@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz"
 ```
 
 Then run `pnpm install` so the lockfile records it, and check the pin:
@@ -56,8 +75,9 @@ node tooling/verify-nyc-tron-pin.mjs --download  # also re-hash every release as
 
 The script fails on any `@nyc-tron/*` specifier that is not the pinned URL,
 on a lockfile entry resolved from somewhere else, and with `--download` on a
-tarball whose sha256 no longer matches. pnpm stores no integrity hash for
-URL tarballs, so the `--download` run in CI is the integrity check.
+tarball whose sha256 no longer matches. pnpm 12 records SHA-512 integrity for
+these URL tarballs; the `--download` run in CI independently verifies the
+release's SHA-256 pins and published checksum manifest.
 
 To move to a new release, update `tooling/nyc-tron.json` from the new
 `SHA256SUMS`, change the URLs in each `package.json`, reinstall each

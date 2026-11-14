@@ -1,50 +1,50 @@
 {
-  "tag": "v1.0.0-rc.1",
+  "tag": "v1.0.0-rc.2",
   "packages": {
     "@nyc-tron/ui": {
-      "version": "1.0.0-rc.1",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-ui-1.0.0-rc.1.tgz",
-      "sha256": "e3c46a804f4ea4611bb983d11d825665a1781f88178745cbdb55abf5b0c85d77",
-      "file": "nyc-tron-ui-1.0.0-rc.1.tgz"
+      "version": "1.0.0-rc.2",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "sha256": "715c8be55b18ff4ec550e54935dd48ee9c7e1b31aa33217f9036e1b4742254c4",
+      "file": "nyc-tron-ui-1.0.0-rc.2.tgz"
     },
     "@nyc-tron/core": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-core-1.0.0-rc.1.tgz",
-      "sha256": "79413ab76d0a3431bf60c992fdec0538ef7a476d53e8b7f95d0de495228d227f",
-      "version": "1.0.0-rc.1",
-      "file": "nyc-tron-core-1.0.0-rc.1.tgz"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-core-1.0.0-rc.2.tgz",
+      "sha256": "0739fdc157461de8bb080471e61a46a4ffaf73b383ebca6a11a3cf67a08f7744",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-core-1.0.0-rc.2.tgz"
     },
     "@nyc-tron/expo-controls": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-expo-controls-1.0.0-rc.1.tgz",
-      "sha256": "7b2dd6bcfa7a1464ccc952340be06e418d9d8098af3eab4bab39627bc8891e92",
-      "version": "1.0.0-rc.1",
-      "file": "nyc-tron-expo-controls-1.0.0-rc.1.tgz"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-expo-controls-1.0.0-rc.2.tgz",
+      "sha256": "b714c06a340894d39fee02f903224085c6162f5aab7c27f49d51bd79e22c4ae5",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-expo-controls-1.0.0-rc.2.tgz"
     },
     "@nyc-tron/reserved-regions": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-reserved-regions-1.0.0-rc.1.tgz",
-      "sha256": "609b5b893840f9ff6021fcad9c063a06304713ab227883b559688e90c02c1bbf",
-      "version": "1.0.0-rc.1",
-      "file": "nyc-tron-reserved-regions-1.0.0-rc.1.tgz"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-reserved-regions-1.0.0-rc.2.tgz",
+      "sha256": "93a44356aef06e9c21ddb7d590f71afb5e21daaea88a6f88d7444922b368b278",
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-reserved-regions-1.0.0-rc.2.tgz"
     },
     "@nyc-tron/platform-services": {
-      "version": "1.0.0-rc.1",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-platform-services-1.0.0-rc.1.tgz",
-      "sha256": "fd0dc8b3eac29c5c9b9bbc006bc1f4c7634497bd98fd546498f9b08a1ac6bb65",
-      "file": "nyc-tron-platform-services-1.0.0-rc.1.tgz"
+      "version": "1.0.0-rc.2",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-platform-services-1.0.0-rc.2.tgz",
+      "sha256": "4bd1328094a96f0f44f3d8aea9f110b21d7895c284f3d8fc45305ab5af47c292",
+      "file": "nyc-tron-platform-services-1.0.0-rc.2.tgz"
     },
     "@nyc-tron/native-controls": {
-      "version": "1.0.0-rc.1",
-      "file": "nyc-tron-native-controls-1.0.0-rc.1.tgz",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-native-controls-1.0.0-rc.1.tgz",
-      "sha256": "e38b13121f7f273d54694c8e817c9c5f8aab9a404319fe262dc340c6af132529"
+      "version": "1.0.0-rc.2",
+      "file": "nyc-tron-native-controls-1.0.0-rc.2.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-native-controls-1.0.0-rc.2.tgz",
+      "sha256": "14b498c067aa2efaa00bae6dcade369e583738af5651a8d75ae28580b45eeeee"
     },
     "@nyc-tron/hardware-keys": {
-      "version": "1.0.0-rc.1",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-hardware-keys-1.0.0-rc.1.tgz",
-      "sha256": "53c32111af3bf315c9af85f538f6f7c13779131458192171f76593c6165e3ee9",
-      "file": "nyc-tron-hardware-keys-1.0.0-rc.1.tgz"
+      "version": "1.0.0-rc.2",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-hardware-keys-1.0.0-rc.2.tgz",
+      "sha256": "abe573023f5b81ddcb04ddf1bbd4c88b02c2a86f8f40e652cdc3785bb3faf9bb",
+      "file": "nyc-tron-hardware-keys-1.0.0-rc.2.tgz"
     }
   },
   "repository": "mikevocalz/NYC-Tron-UI",
-  "commit": "693e068dc403deb7721c134fabb1bd4026401db7",
-  "sha256sumsUrl": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/SHA256SUMS"
+  "commit": "0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44",
+  "sha256sumsUrl": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/SHA256SUMS"
 }
