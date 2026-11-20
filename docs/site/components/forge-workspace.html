@@ -9,12 +9,13 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 <header class="top">
 <a class="mark" href="../index.html">Nitro Forge</a>
 <form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
 <div class="ctl">
 <select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
-<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
 <select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
 </div>
 </header>
@@ -44,7 +45,7 @@
 <h2 id="variants">Variants</h2>
 <h3 id="studioid">studioId</h3>
 <table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value"><code>&quot;prism&quot;</code></td><td data-l="Effect">Canvas layout: <code>prismThemes</code> palette, a right-hand <code>Studio panels</code> rail instead of the left rail, no header or toolbar bottom border, <code>canvasHeader</code>, <code>canvasToolbar</code> and <code>canvasRail</code> sizes, floating status bar.</td></tr><tr><td data-l="Value">other studios</td><td data-l="Effect"><code>workspaceThemes</code> palette, left rail on non-compact widths.</td></tr></tbody></table>
-<h3 id="density">density</h3>
+<h3 id="density-section">density</h3>
 <table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value"><code>compact</code></td><td data-l="Effect">Space and size scale down (target stays 44).</td></tr><tr><td data-l="Value"><code>standard</code></td><td data-l="Effect">Default.</td></tr><tr><td data-l="Value"><code>comfortable</code></td><td data-l="Effect">Space and size scale up (target 48).</td></tr></tbody></table>
 <h2 id="states">States</h2>
 <table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Busy</td><td data-l="How it is set"><code>busy</code>, or an operation in flight</td><td data-l="What the code does">Ignores a second <code>perform</code>; buttons disabled.</td></tr><tr><td data-l="State">Error</td><td data-l="How it is set"><code>error</code> prop or store error</td><td data-l="What the code does">Status line shows <code>ErrorMessage</code> (night surface).</td></tr><tr><td data-l="State">Status</td><td data-l="How it is set">store <code>status</code></td><td data-l="What the code does">Plain text with <code>accessibilityLiveRegion=&quot;polite&quot;</code>.</td></tr><tr><td data-l="State">Compact</td><td data-l="How it is set">outer width under 700</td><td data-l="What the code does">Left and right docks collapse; bottom bar of panel buttons replaces the rail.</td></tr><tr><td data-l="State">Arranging</td><td data-l="How it is set">Workspace menu &quot;Arrange panels&quot;</td><td data-l="What the code does">Panels show drag handles and a Dock position control; &quot;Done arranging&quot; returns.</td></tr><tr><td data-l="State">Dragging</td><td data-l="How it is set">drag handle</td><td data-l="What the code does"><code>dock-preview</code> overlay and a &quot;Cancel move&quot; button; Escape cancels.</td></tr><tr><td data-l="State">Preset errors</td><td data-l="How it is set">failed <code>loadPreset</code>, empty restore</td><td data-l="What the code does">&quot;Could not load workspace preset&quot;, &quot;Save a layout first&quot;.</td></tr><tr><td data-l="State">Prism header overflow</td><td data-l="How it is set">width under 380 x text scale with <code>headerTrailing</code></td><td data-l="What the code does">Trailing controls move to their own row (<code>workspace-host-controls</code>).</td></tr></tbody></table>
@@ -67,8 +68,8 @@ export function Demo() {
 <h3 id="don-t">Don't</h3>
 <ul><li>Do not put document data in a preset; <code>persistPreset</code> receives layout only.</li><li>Do not mount it without <code>StudioUIProvider</code>; every slot throws.</li><li>Do not read <code>reducedMotion</code> as final on first render; it starts true until the OS value arrives.</li><li>Do not set <code>studioId=&quot;prism&quot;</code> and expect the left rail.</li></ul>
 <h3 id="notes">Notes</h3>
-<ul><li>UNVERIFIED: the class <code>bg-ink-800</code> on selected buttons is defined nowhere in this repo.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
-npx shadcn@4.23.0 add @nitro-forge/forge-workspace</pre>
+<ul><li>UNVERIFIED: the class <code>bg-ink-800</code> on selected buttons is defined nowhere in this repo.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-forge-workspace" hidden>Copy</button></header><pre id="agent-forge-workspace">npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
+npx shadcn@4.23.0 add @nitro-forge/forge-workspace</pre></div>
 </article>
 <aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
 <dt>Needs StudioUIProvider</dt><dd>yes</dd>

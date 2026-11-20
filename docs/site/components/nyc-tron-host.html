@@ -9,12 +9,13 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 <header class="top">
 <a class="mark" href="../index.html">Nitro Forge</a>
 <form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
 <div class="ctl">
 <select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
-<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
 <select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
 </div>
 </header>
@@ -66,8 +67,8 @@ export const studioUI = nycTronStudioUI({
 <h3 id="don-t">Don't</h3>
 <ul><li>Do not add Forge copies of Button or Card; this file is the only mapping (decision 1).</li><li>Do not rely on <code>tone</code>; the host ignores it and colour comes from theme tokens.</li></ul>
 <h3 id="notes">Notes</h3>
-<ul><li>UNVERIFIED: the web host <code>apps/studio-preview/src/studio-ui.tsx</code> was not read.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
-npx shadcn@4.23.0 add @nitro-forge/nyc-tron-host</pre>
+<ul><li>UNVERIFIED: the web host <code>apps/studio-preview/src/studio-ui.tsx</code> was not read.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-nyc-tron-host" hidden>Copy</button></header><pre id="agent-nyc-tron-host">npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
+npx shadcn@4.23.0 add @nitro-forge/nyc-tron-host</pre></div>
 </article>
 <aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
 <dt>Needs StudioUIProvider</dt><dd>yes</dd>

@@ -9,12 +9,13 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 <header class="top">
 <a class="mark" href="../index.html">Nitro Forge</a>
 <form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
 <div class="ctl">
 <select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
-<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
 <select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
 </div>
 </header>
@@ -62,7 +63,7 @@ export const Demo = () =&gt; &lt;ForgeIcon name=&quot;home&quot; selected size=&
 <h3 id="don-t">Don't</h3>
 <ul><li>Do not claim 1,463 icons; 47 are drawn.</li><li>Do not rely on <code>./web</code> working without react-native-web (UNVERIFIED).</li></ul>
 <h3 id="notes">Notes</h3>
-<ul><li>UNVERIFIED: whether the registry will carry the icons as <code>.tsx</code>; source is plain <code>.js</code> with a hand-written <code>.d.ts</code>.</li><li>UNVERIFIED: <code>./web</code> resolves to the same file as <code>./native</code>, so web needs react-native-web; no web build was read.</li><li>Drift kept as separate tokens (decision 5): icon accent <code>#6859E8</code> vs workspace <code>#6950D1</code>; icon dark surface <code>#11131B</code> vs <code>#15171D</code>. <code>iconColorTokens.successColor</code> maps to accent, a possible bug left alone (decision 16).</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>npx shadcn@4.23.0 add @nitro-forge/forge-icon</pre>
+<ul><li>UNVERIFIED: whether the registry will carry the icons as <code>.tsx</code>; source is plain <code>.js</code> with a hand-written <code>.d.ts</code>.</li><li>UNVERIFIED: <code>./web</code> resolves to the same file as <code>./native</code>, so web needs react-native-web; no web build was read.</li><li>Drift kept as separate tokens (decision 5): icon accent <code>#6859E8</code> vs workspace <code>#6950D1</code>; icon dark surface <code>#11131B</code> vs <code>#15171D</code>. <code>iconColorTokens.successColor</code> maps to accent, a possible bug left alone (decision 16).</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-forge-icon" hidden>Copy</button></header><pre id="agent-forge-icon">npx shadcn@4.23.0 add @nitro-forge/forge-icon</pre></div>
 </article>
 <aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
 <dt>Needs StudioUIProvider</dt><dd>no</dd>

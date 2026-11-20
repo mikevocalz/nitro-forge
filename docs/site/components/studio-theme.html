@@ -9,12 +9,13 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 <header class="top">
 <a class="mark" href="../index.html">Nitro Forge</a>
 <form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
 <div class="ctl">
 <select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
-<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
 <select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
 </div>
 </header>
@@ -41,9 +42,9 @@
 <h2 id="props">Props</h2>
 <table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name"><code>workspaceThemes</code></td><td data-l="Type"><code>{dark, light}</code> x 13 keys</td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description">base raised deep line text muted accent ink soft paper paperInk paperMuted error.</td></tr><tr><td data-l="Name"><code>workspaceScale</code></td><td data-l="Type">space, radius, type, font, size</td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description"></td></tr><tr><td data-l="Name"><code>resolveWorkspaceScale(density)</code></td><td data-l="Type"><code>WorkspaceDensityScale</code></td><td data-l="Default"><code>&quot;standard&quot;</code></td><td data-l="Required">no</td><td data-l="Description">Throws <code>RangeError</code> on an unknown density.</td></tr><tr><td data-l="Name"><code>workspaceStatus</code></td><td data-l="Type"><code>{dark, light}</code> info, success, onError</td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description"></td></tr><tr><td data-l="Name"><code>prismThemes</code></td><td data-l="Type">canvas studio override</td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description">Replaces 9 keys.</td></tr></tbody></table>
 <h2 id="variants">Variants</h2>
-<h3 id="scheme">scheme</h3>
+<h3 id="scheme-section">scheme</h3>
 <table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">dark, light</td><td data-l="Effect">Web: <code>[data-theme=&quot;light&quot;]</code> block and <code>.dark</code> block (the NightScope class). Native: <code>@variant light</code> and <code>@variant dark</code>.</td></tr></tbody></table>
-<h3 id="density">density</h3>
+<h3 id="density-section">density</h3>
 <table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">compact, standard, comfortable</td><td data-l="Effect">Changes <code>space</code> and <code>size</code> only; never <code>type</code> or <code>radius</code>.</td></tr></tbody></table>
 <h2 id="states">States</h2>
 <p>none in code.</p>
@@ -61,7 +62,7 @@ export const gap = resolveWorkspaceScale('comfortable').space.group;</code></pre
 <h3 id="don-t">Don't</h3>
 <ul><li>Do not unify the icon accent <code>#6859E8</code> with <code>#6950D1</code>; that changes pixels (decisions 5, 20).</li><li>Do not hand-edit <code>theme.css</code>; the header says it is generated.</li></ul>
 <h3 id="notes">Notes</h3>
-<ul><li>Defines rather than reads. The generated CSS declares 32 custom properties today. tokens.map.json proposes 234 tokens in 19 tiers (instrument 53, motion 36, stage-colour 20, semantic-colour 18, size 15, space 14, chrome 14, type 12, icon-colour 9, icon-size 7, fixed-literal 7, layer 6, shadow 5, radius 4, document-colour 4, lab 4, icon-stroke 2, opacity 2, border 2); status counts: new-value-preserving 185, existing-ts-new-css 21, existing-nyc-tron 15, new-forge-extension 5, reserved-value-undefined-in-repo 4, existing-css-renamed 2, existing-css-keep (AGENTS.md rounded-sm 4px) 1, existing-ts-new-css (value equals title) 1. The <code>tokens</code> array in the front matter lists only the semantic roles <code>theme.ts</code> feeds.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>npx shadcn@4.23.0 add @nitro-forge/studio-theme</pre>
+<ul><li>Defines rather than reads. The generated CSS declares 32 custom properties today. tokens.map.json proposes 234 tokens in 19 tiers (instrument 53, motion 36, stage-colour 20, semantic-colour 18, size 15, space 14, chrome 14, type 12, icon-colour 9, icon-size 7, fixed-literal 7, layer 6, shadow 5, radius 4, document-colour 4, lab 4, icon-stroke 2, opacity 2, border 2); status counts: new-value-preserving 185, existing-ts-new-css 21, existing-nyc-tron 15, new-forge-extension 5, reserved-value-undefined-in-repo 4, existing-css-renamed 2, existing-css-keep (AGENTS.md rounded-sm 4px) 1, existing-ts-new-css (value equals title) 1. The <code>tokens</code> array in the front matter lists only the semantic roles <code>theme.ts</code> feeds.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-studio-theme" hidden>Copy</button></header><pre id="agent-studio-theme">npx shadcn@4.23.0 add @nitro-forge/studio-theme</pre></div>
 </article>
 <aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
 <dt>Needs StudioUIProvider</dt><dd>no</dd>

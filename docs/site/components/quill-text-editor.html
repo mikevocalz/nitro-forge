@@ -9,12 +9,13 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 <header class="top">
 <a class="mark" href="../index.html">Nitro Forge</a>
 <form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
 <div class="ctl">
 <select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
-<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
 <select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
 </div>
 </header>
@@ -44,7 +45,7 @@
 <h2 id="variants">Variants</h2>
 <h3 id="width">width</h3>
 <table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">under 600</td><td data-l="Effect">Smaller padding; manuscript 17 pt on 29 line height.</td></tr><tr><td data-l="Value">600 and over</td><td data-l="Effect">Manuscript 19 pt on 34 line height, max width 792.</td></tr></tbody></table>
-<h3 id="density">density</h3>
+<h3 id="density-section">density</h3>
 <table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value"><code>comfortable</code></td><td data-l="Effect">Adds <code>min-h-12 min-w-12</code> to the button.</td></tr></tbody></table>
 <h2 id="states">States</h2>
 <table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Clean</td><td data-l="How it is set">draft equals base</td><td data-l="What the code does">&quot;Up to date&quot;; Apply disabled.</td></tr><tr><td data-l="State">Dirty</td><td data-l="How it is set">text differs</td><td data-l="What the code does">&quot;Draft changes&quot;; Apply primary.</td></tr><tr><td data-l="State">Busy</td><td data-l="How it is set"><code>flush</code> running</td><td data-l="What the code does">&quot;Applying…&quot;, button loading, input not editable.</td></tr><tr><td data-l="State">Conflict</td><td data-l="How it is set">engine changed under the draft</td><td data-l="What the code does">Danger Banner and &quot;Discard draft and load latest document&quot;; Apply disabled.</td></tr><tr><td data-l="State">Opening</td><td data-l="How it is set"><code>state</code> falsy</td><td data-l="What the code does">Input not editable; flush throws &quot;The document is still opening&quot;.</td></tr></tbody></table>
@@ -66,8 +67,8 @@ export function Demo() {
 <h3 id="don-t">Don't</h3>
 <ul><li>Do not edit the engine behind the editor while a draft is open; it raises a conflict.</li><li>Do not expect <code>density</code> to change manuscript type.</li></ul>
 <h3 id="notes">Notes</h3>
-<ul><li><code>platforms</code> lists only <code>android</code> because that is the only platform the file names (<code>Platform.OS === &quot;android&quot;</code> font branch). The editor runs wherever React Native runs.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
-npx shadcn@4.23.0 add @nitro-forge/quill-text-editor</pre>
+<ul><li><code>platforms</code> lists only <code>android</code> because that is the only platform the file names (<code>Platform.OS === &quot;android&quot;</code> font branch). The editor runs wherever React Native runs.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-quill-text-editor" hidden>Copy</button></header><pre id="agent-quill-text-editor">npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
+npx shadcn@4.23.0 add @nitro-forge/quill-text-editor</pre></div>
 </article>
 <aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
 <dt>Needs StudioUIProvider</dt><dd>yes</dd>

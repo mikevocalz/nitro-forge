@@ -9,12 +9,13 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 <header class="top">
 <a class="mark" href="index.html">Nitro Forge</a>
 <form action="search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
 <div class="ctl">
 <select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
-<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
 <select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
 </div>
 </header>
@@ -49,11 +50,11 @@
   },
   &quot;defaultDensity&quot;: &quot;standard&quot;
 }</pre></div>
-<h2 id="checker">Accent checker</h2>
-<noscript><p>Script is off. These are the ratios for the shipped values, computed at build time.</p></noscript>
+<h2 id="accent-checker">Accent checker</h2>
+<noscript><p>Script is off. The ratios for the shipped values are in the tables below, computed at build time.</p></noscript>
 <div id="checker" class="checker" data-neutrals='{&quot;dark&quot;:{&quot;raised&quot;:&quot;#262932&quot;,&quot;text&quot;:&quot;#F0F1F7&quot;},&quot;light&quot;:{&quot;raised&quot;:&quot;#FFFFFF&quot;,&quot;text&quot;:&quot;#252A3A&quot;}}' data-presets='{&quot;suite&quot;:{&quot;dark&quot;:{&quot;accent&quot;:&quot;#B7A5FF&quot;,&quot;ink&quot;:&quot;#211A3D&quot;,&quot;soft&quot;:&quot;#38304F&quot;},&quot;light&quot;:{&quot;accent&quot;:&quot;#6950D1&quot;,&quot;ink&quot;:&quot;#FFFFFF&quot;,&quot;soft&quot;:&quot;#EEE9FF&quot;}},&quot;prism&quot;:{&quot;dark&quot;:{&quot;accent&quot;:&quot;#66B9FF&quot;,&quot;ink&quot;:&quot;#081D2F&quot;,&quot;soft&quot;:&quot;#173C59&quot;},&quot;light&quot;:{&quot;accent&quot;:&quot;#086CB8&quot;,&quot;ink&quot;:&quot;#FFFFFF&quot;,&quot;soft&quot;:&quot;#D6EAFB&quot;}}}'>
 <label>Start from <select id="c-preset"><option value="suite">Suite</option><option value="prism">Prism</option></select></label><span></span><span></span><label>dark accent<input type="text" id="c-dark-accent" value="#B7A5FF" aria-describedby="checker-out" autocomplete="off" spellcheck="false"></label><label>dark ink<input type="text" id="c-dark-ink" value="#211A3D" aria-describedby="checker-out" autocomplete="off" spellcheck="false"></label><label>dark soft<input type="text" id="c-dark-soft" value="#38304F" aria-describedby="checker-out" autocomplete="off" spellcheck="false"></label><label>light accent<input type="text" id="c-light-accent" value="#6950D1" aria-describedby="checker-out" autocomplete="off" spellcheck="false"></label><label>light ink<input type="text" id="c-light-ink" value="#FFFFFF" aria-describedby="checker-out" autocomplete="off" spellcheck="false"></label><label>light soft<input type="text" id="c-light-soft" value="#EEE9FF" aria-describedby="checker-out" autocomplete="off" spellcheck="false"></label>
-<div class="res" id="checker-out" aria-live="polite"></div></div>
+<div class="demos" aria-hidden="true"><div class="demo" id="demo-dark" style="--r:#262932;--t:#F0F1F7;--a:#B7A5FF;--i:#211A3D;--s:#38304F"><b>dark in use</b><span class="b">Button</span><span class="s">Selected row</span><span class="f">Focus ring</span><span class="l">Link</span></div><div class="demo" id="demo-light" style="--r:#FFFFFF;--t:#252A3A;--a:#6950D1;--i:#FFFFFF;--s:#EEE9FF"><b>light in use</b><span class="b">Button</span><span class="s">Selected row</span><span class="f">Focus ring</span><span class="l">Link</span></div></div><div class="res" id="checker-out" aria-live="polite"></div></div>
 <h3>Precomputed ratios</h3><h3>Suite values</h3><table><thead><tr><th scope="col">Scheme</th><th scope="col">Pair</th><th scope="col">Ratio</th><th scope="col">Needs</th><th scope="col">Result</th></tr></thead><tbody><tr><td>dark</td><td>ink on accent</td><td>7.69</td><td>4.5</td><td>passes</td></tr><tr><td>dark</td><td>accent as focus on raised</td><td>6.81</td><td>3</td><td>passes</td></tr><tr><td>dark</td><td>text on soft</td><td>10.93</td><td>4.5</td><td>passes</td></tr><tr><td>light</td><td>ink on accent</td><td>5.72</td><td>4.5</td><td>passes</td></tr><tr><td>light</td><td>accent as focus on raised</td><td>5.72</td><td>3</td><td>passes</td></tr><tr><td>light</td><td>text on soft</td><td>12.06</td><td>4.5</td><td>passes</td></tr></tbody></table><h3>Prism values</h3><table><thead><tr><th scope="col">Scheme</th><th scope="col">Pair</th><th scope="col">Ratio</th><th scope="col">Needs</th><th scope="col">Result</th></tr></thead><tbody><tr><td>dark</td><td>ink on accent</td><td>8.11</td><td>4.5</td><td>passes</td></tr><tr><td>dark</td><td>accent as focus on raised</td><td>6.88</td><td>3</td><td>passes</td></tr><tr><td>dark</td><td>text on soft</td><td>10.20</td><td>4.5</td><td>passes</td></tr><tr><td>light</td><td>ink on accent</td><td>5.46</td><td>4.5</td><td>passes</td></tr><tr><td>light</td><td>accent as focus on raised</td><td>5.46</td><td>3</td><td>passes</td></tr><tr><td>light</td><td>text on soft</td><td>11.57</td><td>4.5</td><td>passes</td></tr></tbody></table>
 <h2 id="deferred">Deferred</h2>
 <p>The six neutral keys wait for an owner-supplied contrast check (decision 23): <code>base</code>, <code>raised</code>, <code>deep</code>, <code>line</code>, <code>text</code>, <code>muted</code>. The checker does not measure them. A radius override is struck: chrome keeps 4 px (AGENTS.md).</p>

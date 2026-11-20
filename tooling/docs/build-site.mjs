@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { join, dirname, resolve, posix } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT, config, readJson } from '../registry/lib.mjs';
-import { css, js } from './site-assets.mjs';
+import { css, js, searchCore } from './site-assets.mjs';
 
 const cfg = config();
 const theme = await import(pathToFileURL(join(ROOT, 'packages/studio-workspace/src/theme.ts')).href);
@@ -32,7 +32,8 @@ const inputHash = createHash('sha256')
 
 // ---- helpers -----------------------------------------------------------------------------------
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const RESERVED = new Set(['scheme', 'density', 'brand', 'live', 'main', 'q', 'results', 'all', 'index', 'checker', 'starter']);
+const slug = (s) => { const x = s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); return RESERVED.has(x) ? `${x}-section` : x; };
 const pageLinkFix = (h) => h;
 
 function inline(text) {
@@ -151,12 +152,13 @@ function shell({ file, title, desc, body, facts = '', wide = false, lead = '' })
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 <header class="top">
 <a class="mark" href="${href('index.html')}">Nitro Forge</a>
 <form action="${href('search.html')}" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
 <div class="ctl">
 <select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
-<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
 <select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
 </div>
 </header>
@@ -204,7 +206,7 @@ for (const it of items) {
   const forAgents = [it.meta.needsProvider ? `${cmd(['studio-ui-provider', 'nyc-tron-host'])}` : null, cmd([it.name])].filter(Boolean).join('\n');
   const lead = `<p class="lead">${esc(it.description)}</p>${stripHtml}
 ${copyBlock(`cmd-${it.name}`, 'Install command', cmd([it.name]))}`;
-  const agentBlock = `<h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>${esc(forAgents)}</pre>`;
+  const agentBlock = `<h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p>${copyBlock(`agent-${it.name}`, 'Commands for an agent', forAgents)}`;
   const facts = `<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
 <dt>Needs StudioUIProvider</dt><dd>${it.meta.needsProvider ? 'yes' : it.name === cfg.provider ? 'this is the provider' : 'no'}</dd>
 <dt>Needs ignition</dt><dd>${(it.meta.prerequisites ?? []).some((p) => p.id.endsWith('ignition')) ? 'yes, step 1' : 'no'}</dd>
@@ -287,6 +289,7 @@ for (const e of [...engines, ...foundations]) {
   const precomputed = ['suite', 'prism'].map((b) => `<h3>${b === 'suite' ? 'Suite' : 'Prism'} values</h3><table><thead><tr><th scope="col">Scheme</th><th scope="col">Pair</th><th scope="col">Ratio</th><th scope="col">Needs</th><th scope="col">Result</th></tr></thead><tbody>${['dark', 'light'].flatMap((s) => checks(PR[b], s).map(([n, r, m]) => `<tr><td>${s}</td><td>${n}</td><td>${r.toFixed(2)}</td><td>${m}</td><td>${r >= m ? 'passes' : 'fails'}</td></tr>`)).join('')}</tbody></table>`).join('');
   const inputs = ['dark', 'light'].flatMap((s) => ['accent', 'ink', 'soft'].map((k) => `<label>${s} ${k}<input type="text" id="c-${s}-${k}" value="${PR.suite[s][k]}" aria-describedby="checker-out" autocomplete="off" spellcheck="false"></label>`)).join('');
   const t = theme.workspaceThemes;
+  const demos = `<div class="demos" aria-hidden="true">${['dark', 'light'].map((s) => `<div class="demo" id="demo-${s}" style="--r:${N[s].raised};--t:${N[s].text};--a:${PR.suite[s].accent};--i:${PR.suite[s].ink};--s:${PR.suite[s].soft}"><b>${s} in use</b><span class="b">Button</span><span class="s">Selected row</span><span class="f">Focus ring</span><span class="l">Link</span></div>`).join('')}</div>`;
   const contract = `<table><thead><tr><th scope="col">Key</th><th scope="col">Feeds</th><th scope="col">Suite dark</th><th scope="col">Suite light</th><th scope="col">Prism dark</th><th scope="col">Prism light</th></tr></thead><tbody>${['accent', 'ink', 'soft'].map((k) => `<tr><th scope="row"><code>${k}</code></th><td>${tokensMap.rebrand.fanOut[k].map((v) => `<code>${v}</code>`).join(', ')}</td><td><span class="swatch" style="background:${t.dark[k]}"></span>${t.dark[k]}</td><td><span class="swatch" style="background:${t.light[k]}"></span>${t.light[k]}</td><td><span class="swatch" style="background:${theme.prismThemes.dark[k]}"></span>${theme.prismThemes.dark[k]}</td><td><span class="swatch" style="background:${theme.prismThemes.light[k]}"></span>${theme.prismThemes.light[k]}</td></tr>`).join('')}</tbody></table>`;
   const neutrals = ['base', 'raised', 'deep', 'line', 'text', 'muted'];
   const drift = tokensMap.drift.map((d) => `<h3 id="drift-${d.id.toLowerCase()}">${d.id}. ${esc(d.topic)}</h3><table><thead><tr><th scope="col">Source</th><th scope="col">Value</th></tr></thead><tbody>${Object.entries(d.values).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${(String(v).match(/#[0-9A-Fa-f]{6}/g) ?? []).map((h) => `<span class="swatch" style="background:${h}"></span>`).join('')}${esc(v)}</td></tr>`).join('')}</tbody></table>`).join('');
@@ -298,11 +301,11 @@ for (const e of [...engines, ...foundations]) {
 <h2 id="rebrand">Rebrand contract</h2>
 <p>The file is <code>brand.theme.json</code>, separate from <code>tooling/brand/brand.schema.json</code> (decision 24). Minimum override: 3 keys by 2 schemes, 6 values.</p>${contract}
 ${copyBlock('starter', 'brand.theme.json starter (Prism override)', starter)}
-<h2 id="checker">Accent checker</h2>
-<noscript><p>Script is off. These are the ratios for the shipped values, computed at build time.</p></noscript>
+<h2 id="accent-checker">Accent checker</h2>
+<noscript><p>Script is off. The ratios for the shipped values are in the tables below, computed at build time.</p></noscript>
 <div id="checker" class="checker" data-neutrals='${esc(JSON.stringify(N))}' data-presets='${esc(JSON.stringify(PR))}'>
 <label>Start from <select id="c-preset"><option value="suite">Suite</option><option value="prism">Prism</option></select></label><span></span><span></span>${inputs}
-<div class="res" id="checker-out" aria-live="polite"></div></div>
+${demos}<div class="res" id="checker-out" aria-live="polite"></div></div>
 <h3>Precomputed ratios</h3>${precomputed}
 <h2 id="deferred">Deferred</h2>
 <p>The six neutral keys wait for an owner-supplied contrast check (decision 23): ${neutrals.map((n) => `<code>${n}</code>`).join(', ')}. The checker does not measure them. A radius override is struck: chrome keeps 4 px (AGENTS.md).</p>
@@ -359,6 +362,7 @@ if (CHECK) {
     ids.set(f, new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])));
     if ((html.match(/<h1[ >]/g) ?? []).length !== 1) problems.push(`${f}: needs exactly one h1`);
     if ((html.match(/<main[ >]/g) ?? []).length !== 1) problems.push(`${f}: needs exactly one main`);
+    { const seenIds = new Set(); for (const m of html.matchAll(/\sid="([^"]+)"/g)) { if (seenIds.has(m[1])) problems.push(`${f}: duplicate id "${m[1]}" (script looks up ids and gets the first)`); seenIds.add(m[1]); } }
     if (Buffer.byteLength(html) > 150 * 1024 && f !== 'tokens.html') problems.push(`${f}: ${Buffer.byteLength(html)} bytes, over 150 KB`);
     if (/(?:src|href)="https?:\/\//.test(html)) problems.push(`${f}: loads an external resource`);
   }
@@ -386,6 +390,17 @@ if (CHECK) {
   for (const [name, a, b, min] of pairs) { const r = ratioOf(a, b); if (r < min) problems.push(`colour pair ${name} is ${r.toFixed(2)}, needs ${min}`); }
   const sheetLink = ratioOf('#5236B8', theme.workspaceThemes.dark.paper);
   if (sheetLink < 4.5) problems.push(`sheet link colour on paper is ${sheetLink.toFixed(2)}`);
+  {
+    // Replay retrieval-queries.json on the same ranking code the search page ships. Components group, relevant item in the top 3.
+    const core = new Function(`${searchCore}; return { nfPrepare, nfTok };`)();
+    const ix = pages.get('search.html').match(/id="index">([\s\S]*?)<\/script>/)[1].replace(/\\u003c/g, '<');
+    const rank = core.nfPrepare(JSON.parse(ix));
+    const qs = readJson(join(ROOT, 'docs/agent-native/retrieval-queries.json')).queries.filter((q) => q.relevant.length);
+    for (const q of qs) {
+      const top = rank('Components', q.query).slice(0, 3).map((h) => h.e.u.replace('components/', '').replace('.html', ''));
+      if (!q.relevant.every((id) => top.includes(id))) problems.push(`search replay ${q.id} "${q.query}": expected ${q.relevant}, top 3 ${top}`);
+    }
+  }
   if (engines.length !== 12) problems.push(`roster has ${engines.length} engines, expected 12`);
   if (chain.steps.length !== 9) problems.push('install chain is not 9 steps');
   if (readFileSync(join(OUT, 'site.css')).length > 24 * 1024) problems.push('site.css over 24 KB');
