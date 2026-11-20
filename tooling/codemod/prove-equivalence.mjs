@@ -81,6 +81,14 @@ function render(text, file, { substitute, baseNames }) {
         }
         return node;
       }
+      // Widening only: `tokens.x as number|string` keeps a const-typed token from narrowing a
+      // store or default parameter that the original literal left as number|string. The
+      // assertion is erased at runtime, so the proof reads it as the literal alone.
+      if (substitute && ts.isAsExpression(node) && ts.isPropertyAccessExpression(node.expression)
+        && (node.type.kind === ts.SyntaxKind.NumberKeyword || node.type.kind === ts.SyntaxKind.StringKeyword)) {
+        const inner = visit(node.expression);
+        if (ts.isNumericLiteral(inner) || ts.isStringLiteral(inner)) return inner;
+      }
       if (substitute && ts.isPropertyAccessExpression(node)) {
         const path = [];
         let current = node;

@@ -5,7 +5,7 @@ import { tokens } from './tokens';
 type Data = Record<string, any>;
 const record = (value: unknown): Data => value && typeof value === 'object' ? value as Data : {};
 const array = (value: unknown): Data[] => Array.isArray(value) ? value : [];
-const rgba = (value: unknown, fallback = tokens.color.stageFillFallback) => Array.isArray(value) && value.length >= 3
+const rgba = (value: unknown, fallback = tokens.color.stageFillFallback as string) => Array.isArray(value) && value.length >= 3
   ? `rgba(${value[0]},${value[1]},${value[2]},${(value[3] ?? 255) / 255})` : fallback;
 
 

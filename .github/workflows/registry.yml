@@ -50,10 +50,20 @@ jobs:
         run: node tooling/registry/build.mjs
       - name: Generated files match the commit
         run: git diff --exit-code -- r registry.json components.json registry-excluded.json
-      - name: Unresolved imports (checked against NYC-Tron's published registry on main)
-        run: node tooling/registry/check-imports.mjs --nyc-tron-registry https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI/main/registry.json
+      - name: Locate NYC-Tron's published registry
+        # main has it once NYC-Tron-UI PR #80 merges. Until then, read the PR branch so the
+        # check still runs against the real registry rather than skipping.
+        run: |
+          base=https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI
+          if curl -fsI "$base/main/registry.json" >/dev/null; then ref=main; else
+            ref=agent-native-20261119
+            echo "::warning::NYC-Tron registry.json is not on main yet (NYC-Tron-UI PR #80 is unmerged); checking against $ref"
+          fi
+          echo "NYC_TRON_REGISTRY=$base/$ref/registry.json" >> "$GITHUB_ENV"
+      - name: Unresolved imports (checked against NYC-Tron's published registry)
+        run: node tooling/registry/check-imports.mjs --nyc-tron-registry "$NYC_TRON_REGISTRY"
       - name: Schema and structure validation
-        run: node tooling/registry/validate-registry.mjs --nyc-tron-registry https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI/main/registry.json
+        run: node tooling/registry/validate-registry.mjs --nyc-tron-registry "$NYC_TRON_REGISTRY"
       - name: theme.css and theme.native.css match theme.ts and tokens.ts
         run: node packages/studio-workspace/build-theme.mjs --check
       - name: Token tests and brand-theme tests

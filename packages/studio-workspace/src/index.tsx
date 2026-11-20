@@ -47,7 +47,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   const canvasStudio = props.studioId === 'prism';
   const colors: WorkspaceColors = { ...(canvasStudio ? prismThemes : workspaceThemes)[appearance], ...props.themeOverrides };
   const store = useMemo(() => createStudioWorkspaceStore(props.studioId), [props.studioId]);
-  const ui = useMemo(() => createStore(() => ({ arranging: false, reducedMotion: true, width: tokens.spacing.off1200, height: tokens.spacing.off800 })), [props.studioId]);
+  const ui = useMemo(() => createStore(() => ({ arranging: false, reducedMotion: true, width: tokens.spacing.off1200 as number, height: tokens.spacing.off800 as number })), [props.studioId]);
   const arranging = useStore(ui, s => s.arranging);
   const reducedMotion = useStore(ui, s => s.reducedMotion);
   useEffect(() => {

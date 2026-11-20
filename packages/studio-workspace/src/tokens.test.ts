@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+// @ts-expect-error icons/src/tokens.js ships without a declaration file
 import { iconColors, iconLayout, iconMotion, iconOpacity, iconSizes, iconSpring, iconStroke, iconSurface } from '../../icons/src/tokens.js';
 import { forgeDirections, forgeFeedbackMotion, workbenchChrome } from './forge-directions.ts';
 import { forgeHitTarget, forgeMotionProfile } from './interaction-policy.ts';
 import { resolveWorkspaceScale, workspaceScale, workspaceThemes } from './theme.ts';
 import { cssTokens, cssVarName, kebab, tokens } from './tokens.ts';
 
+// The derived keys are spread from Record<string, ...> builders, so the inferred type drops them; read them through an indexable view.
+const derived = tokens as unknown as Record<'color' | 'shadow' | 'duration', Record<string, any>>;
+const here = dirname(fileURLToPath(import.meta.url));
 const css = cssTokens();
 const everyName = [...css.shared, ...css.dark, ...css.light].map(entry => entry.name);
 
@@ -96,11 +102,11 @@ test('derived tokens read the sources that own them', () => {
   assert.equal(tokens.color.surfaceBase.dark, workspaceThemes.dark.base);
   assert.equal(tokens.color.primaryTint.light, workspaceThemes.light.soft);
   assert.equal(tokens.color.paperText.dark, workspaceThemes.dark.paperInk);
-  assert.equal(tokens.color.chromeBody.light, workbenchChrome.light.body);
-  assert.equal(tokens.color.instrumentOpticsBezel2.dark, forgeDirections.optics.materials.dark.bezel[2]);
-  assert.equal(tokens.shadow.instrumentAtelierDial.light, forgeDirections.atelier.depth.light.dial);
-  assert.equal(tokens.duration.panelDock, forgeMotionProfile('panel-dock').durationMs);
-  assert.equal(tokens.duration.turretReveal, forgeDirections.optics.motion.detentMs);
+  assert.equal(derived.color.chromeBody.light, workbenchChrome.light.body);
+  assert.equal(derived.color.instrumentOpticsBezel2.dark, forgeDirections.optics.materials.dark.bezel[2]);
+  assert.equal(derived.shadow.instrumentAtelierDial.light, forgeDirections.atelier.depth.light.dial);
+  assert.equal(derived.duration.panelDock, forgeMotionProfile('panel-dock').durationMs);
+  assert.equal(derived.duration.turretReveal, forgeDirections.optics.motion.detentMs);
   assert.equal(tokens.ease.turretDock, forgeDirections.atelier.motion.easing);
   assert.equal(tokens.duration.feedbackCommit, forgeFeedbackMotion.commit.ms);
   assert.equal(tokens.hit.targetTouch, forgeHitTarget('touch'));
@@ -122,8 +128,8 @@ test('off-scale twins keep the literal exactly, with no snapping', () => {
 });
 
 test('the committed css files contain every declaration tokens.ts produces', () => {
-  const web = readFileSync(new URL('./theme.css', import.meta.url), 'utf8');
-  const native = readFileSync(new URL('./theme.native.css', import.meta.url), 'utf8');
+  const web = readFileSync(join(here, 'theme.css'), 'utf8');
+  const native = readFileSync(join(here, 'theme.native.css'), 'utf8');
   for (const { name, value } of [...css.shared, ...css.dark, ...css.light]) {
     assert.ok(web.includes(`  ${name}: ${value};`), `theme.css is missing ${name}: ${value}; run pnpm build:theme`);
     assert.ok(native.includes(`  ${name}: ${value};`), `theme.native.css is missing ${name}: ${value}; run pnpm build:theme`);
