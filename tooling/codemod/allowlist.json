@@ -1,0 +1,440 @@
+{
+  "version": 1,
+  "description": "Findings the gate accepts today, each with the reason no exact token exists to apply. An entry that stops matching fails the run, so the list shrinks as tokens.map.json grows. A zero (0) is never a finding.",
+  "exemptFiles": [
+    {
+      "path": "packages/studio-workspace/src/forge-directions.ts",
+      "reason": "Forge 2046 direction tables. tokens.ts reads the instrument, chrome and lab tiers from them, so they are token sources."
+    },
+    {
+      "path": "packages/icons/src/glyphs.js",
+      "reason": "SVG path data for the drawn glyphs, not style values."
+    },
+    {
+      "path": "packages/icons/src/catalog.js",
+      "reason": "Icon id catalog data."
+    }
+  ],
+  "entries": [
+    {
+      "file": "packages/icons/src/state.js",
+      "kind": "number",
+      "property": "opacity",
+      "value": "1",
+      "reason": "1 is the identity opacity (fully opaque), not a design value."
+    },
+    {
+      "file": "packages/media-ui/src/video/NativeVideoMonitor.tsx",
+      "kind": "number",
+      "property": "gap",
+      "value": "8",
+      "reason": "packages/media-ui is outside this pass (owned by another change). tokens.map.json has the row (--spacing-fixed-element, 8); media-ui cannot import studio-workspace tokens, so it needs its own token module when it adopts them."
+    },
+    {
+      "file": "packages/pitch/src/office-cluster.ts",
+      "kind": "number",
+      "property": "width",
+      "value": "960",
+      "reason": "Slide canvas of a 960 x 540 document: a document constant (tokens.map.json class exempt-document-constant), not a UI length."
+    },
+    {
+      "file": "packages/pitch/src/office-cluster.ts",
+      "kind": "number",
+      "property": "height",
+      "value": "540",
+      "reason": "Slide canvas of a 960 x 540 document: a document constant (tokens.map.json class exempt-document-constant), not a UI length."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "paddingBottom",
+      "value": "2",
+      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "gap",
+      "value": "2",
+      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it.",
+      "count": 2
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "padding",
+      "value": "1",
+      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "paddingVertical",
+      "value": "2",
+      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it.",
+      "count": 2
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "32",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "38",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "height",
+      "value": "32",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "height",
+      "value": "38",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "fontSize",
+      "value": "15",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "number",
+      "property": "paddingHorizontal",
+      "value": "2",
+      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-composer.tsx",
+      "kind": "colour",
+      "property": "segmentClassName",
+      "value": "border border-transparent hover:bg-forge-border aria-chec...",
+      "reason": "Tailwind arbitrary value `shadow-[0_1px_2px_#252A3A26]` inside a class string. tokens.map.json maps it to --shadow-segment-active. Using it means renaming the class to `shadow-segment-active`, a class-name change that static AST equivalence cannot prove, so it waits for a rendered check."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-composer.tsx",
+      "kind": "number",
+      "property": "opacity",
+      "value": "0.85",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-composer.tsx",
+      "kind": "number",
+      "property": "opacity",
+      "value": "1",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "outlineWidth",
+      "value": "2",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply.",
+      "count": 2
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "outlineOffset",
+      "value": "1",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply.",
+      "count": 2
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "opacity",
+      "value": "0.5",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "opacity",
+      "value": "1",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply.",
+      "count": 2
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "left",
+      "value": "5",
+      "reason": "Arithmetic offset from a computed layout value (radius, toolbar top, ring size). Not listed in tokens.map.json, and a token would not stay tied to the value it is added to."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "top",
+      "value": "5",
+      "reason": "Arithmetic offset from a computed layout value (radius, toolbar top, ring size). Not listed in tokens.map.json, and a token would not stay tied to the value it is added to."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "10",
+      "reason": "Arithmetic offset from a computed layout value (radius, toolbar top, ring size). Not listed in tokens.map.json, and a token would not stay tied to the value it is added to."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "height",
+      "value": "10",
+      "reason": "Arithmetic offset from a computed layout value (radius, toolbar top, ring size). Not listed in tokens.map.json, and a token would not stay tied to the value it is added to."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "borderRadius",
+      "value": "5",
+      "reason": "Arithmetic offset from a computed layout value (radius, toolbar top, ring size). Not listed in tokens.map.json, and a token would not stay tied to the value it is added to."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "borderWidth",
+      "value": "2",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "left",
+      "value": "1.5",
+      "reason": "Factor of the persona turret size scale k (`n * k`, `(a - n * k) * 2`). Not listed in tokens.map.json; a token would still be multiplied by k, so the map has to name one first."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "top",
+      "value": "3",
+      "reason": "Factor of the persona turret size scale k (`n * k`, `(a - n * k) * 2`). Not listed in tokens.map.json; a token would still be multiplied by k, so the map has to name one first."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "left",
+      "value": "6",
+      "reason": "Factor of the persona turret size scale k (`n * k`, `(a - n * k) * 2`). Not listed in tokens.map.json; a token would still be multiplied by k, so the map has to name one first."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "6",
+      "reason": "Factor of the persona turret size scale k (`n * k`, `(a - n * k) * 2`). Not listed in tokens.map.json; a token would still be multiplied by k, so the map has to name one first."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "2",
+      "reason": "Factor of the persona turret size scale k (`n * k`, `(a - n * k) * 2`). Not listed in tokens.map.json; a token would still be multiplied by k, so the map has to name one first."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "top",
+      "value": "22",
+      "reason": "Factor of the persona turret size scale k (`n * k`, `(a - n * k) * 2`). Not listed in tokens.map.json; a token would still be multiplied by k, so the map has to name one first."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "number",
+      "property": "opacity",
+      "value": "0.78",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "number",
+      "property": "minHeight",
+      "value": "4",
+      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it.",
+      "count": 2
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "number",
+      "property": "fontSize",
+      "value": "1",
+      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "number",
+      "property": "top",
+      "value": "1",
+      "reason": "Arithmetic offset from a computed layout value (radius, toolbar top, ring size). Not listed in tokens.map.json, and a token would not stay tied to the value it is added to.",
+      "count": 2
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "number",
+      "property": "left",
+      "value": "1",
+      "reason": "Arithmetic offset from a computed layout value (radius, toolbar top, ring size). Not listed in tokens.map.json, and a token would not stay tied to the value it is added to."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "number",
+      "property": "paddingLeft",
+      "value": "2",
+      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "number",
+      "property": "opacity",
+      "value": ".4",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "number",
+      "property": "opacity",
+      "value": "1",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "number",
+      "property": "borderRadius",
+      "value": "2",
+      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
+    },
+    {
+      "file": "packages/studio-workspace/src/stage.tsx",
+      "kind": "number",
+      "property": "lineHeight",
+      "value": "38",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/stage.tsx",
+      "kind": "number",
+      "property": "lineHeight",
+      "value": "25",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/stage.tsx",
+      "kind": "number",
+      "property": "borderLeftWidth",
+      "value": "3",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/stage.tsx",
+      "kind": "number",
+      "property": "paddingLeft",
+      "value": "12",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/stage.tsx",
+      "kind": "number",
+      "property": "borderRadius",
+      "value": "9999",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "paddingHorizontal",
+      "value": "16",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "paddingHorizontal",
+      "value": "40",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "paddingTop",
+      "value": "18",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "paddingTop",
+      "value": "32",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "paddingHorizontal",
+      "value": "24",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "paddingHorizontal",
+      "value": "64",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "paddingTop",
+      "value": "36",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "paddingTop",
+      "value": "56",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "fontSize",
+      "value": "17",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "fontSize",
+      "value": "19",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "lineHeight",
+      "value": "29",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "number",
+      "property": "lineHeight",
+      "value": "34",
+      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+    }
+  ]
+}

@@ -12,3 +12,8 @@ export const iconMotion=Object.freeze({
   pressScale:0.9, selectedScale:1.075,
 });
 export const iconStates=Object.freeze(["idle","hover","pressed","selected","disabled","loading","success","error","recording"]);
+/** Layout, surface, spring and opacity literals ForgeIcon and resolveIconState used inline. Same values, now named. */
+export const iconLayout=Object.freeze({hitSlop:4,hitTarget:44});
+export const iconSurface=Object.freeze({dark:"#11131B",light:"#FFFFFF"});
+export const iconSpring=Object.freeze({stiffness:260,damping:22,mass:0.8});
+export const iconOpacity=Object.freeze({disabled:0.52});
