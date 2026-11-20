@@ -134,7 +134,7 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
   const compact = width < 600;
   return <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled"
     onLayout={event => { const next = event.nativeEvent.layout.width; if (next > 0 && next !== store.getState().width) store.setState({ width: next }); }}
-    contentContainerStyle={{ paddingHorizontal: compact ? 16 : 40, paddingTop: compact ? 18 : 32, paddingBottom: tokens.spacing.off48, gap: scale.space.group }}>
+    contentContainerStyle={{ paddingHorizontal: compact ? tokens.spacing.off16 : tokens.spacing.off40, paddingTop: compact ? tokens.spacing.off18 : tokens.spacing.fixedCanvas, paddingBottom: tokens.spacing.off48, gap: scale.space.group }}>
     <View style={{ width: '100%', maxWidth: tokens.spacing.off792, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.fixedInset }}>
       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.fixedElement }}>
         <ForgeIcon name="file" size={14} color={colors.muted} reducedMotion />
@@ -142,10 +142,10 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
       </View>
       <Button aria-label="Apply essay text" title={busy ? 'Applying…' : 'Apply text'} disabled={busy || !dirty || conflict} loading={busy}
         onPress={() => { void flush().catch(() => {}); }} variant={dirty ? 'primary' : 'ghost'} tone="carolina" size="sm" cornerRadius={scale.radius.control} targetSize={scale.size.target} className={controlClass}
-        icon={<ForgeIcon name="check" size={16} color={colors.accent} reducedMotion />} />
+        icon={<ForgeIcon name="check" size={tokens.size.iconSm} color={colors.accent} reducedMotion />} />
     </View>
     <View style={{ width: '100%', maxWidth: tokens.spacing.off792, alignSelf: 'center', minHeight: tokens.spacing.off760, backgroundColor: colors.paper,
-      borderRadius: scale.radius.paper, paddingHorizontal: compact ? 24 : 64, paddingTop: compact ? 36 : 56, paddingBottom: tokens.spacing.fixedPage,
+      borderRadius: scale.radius.paper, paddingHorizontal: compact ? tokens.spacing.off24 : tokens.spacing.fixedPage, paddingTop: compact ? 36 : 56, paddingBottom: tokens.spacing.fixedPage,
       boxShadow: tokens.shadow.page }}>
       <TextInput accessibilityLabel="Essay text" multiline editable={!busy && !!props.state} value={text}
         onChangeText={value => store.setState({ text: value, error: null, status: 'Draft changes · Apply text to update your document.' })}

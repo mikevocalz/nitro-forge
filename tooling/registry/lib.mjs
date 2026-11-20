@@ -7,6 +7,53 @@ export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const REG_DIR = join(ROOT, 'tooling', 'registry');
 export const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'));
 export const config = () => readJson(join(REG_DIR, 'config.json'));
+/** Import prefix a consumer's code uses for a @nyc-tron item key, derived from Tron's install target (see config nycTron._note). */
+export function nycTronImportPrefix(cfg = config()) {
+  const { targetPrefix, aliasRoots } = cfg.nycTron;
+  for (const [from, to] of Object.entries(aliasRoots)) if (targetPrefix.startsWith(from)) return to + targetPrefix.slice(from.length);
+  throw new Error(`config nycTron.targetPrefix ${targetPrefix} starts with none of aliasRoots`);
+}
+
+/** Registry URL of one namespace at its configured ref. */
+export function registryUrl(cfg, namespace) {
+  const reg = cfg.registries[namespace];
+  return cfg.urlTemplate.replace('{owner}', cfg.owner).replace('{repo}', reg.repo).replace('{ref}', cfg[reg.refKey]);
+}
+
+/**
+ * The NYC-Tron registry.json Forge checks itself against. Source, in order: --nyc-tron-registry <path|url>;
+ * when CI is set, the raw URL on main; otherwise the first sibling clone in config nycTron.localRegistryPaths
+ * that exists; otherwise the raw URL. Exits 1 when it cannot be read, so a check cannot pass on its own assumptions.
+ */
+export async function loadNycTronRegistry(cfg = config(), argv = process.argv) {
+  const at = argv.indexOf('--nyc-tron-registry');
+  let source = at > -1 ? argv[at + 1] : undefined;
+  if (at > -1 && !source) {
+    console.error('--nyc-tron-registry needs a path or URL.');
+    process.exit(1);
+  }
+  if (!source) {
+    const local = process.env.CI ? undefined : cfg.nycTron.localRegistryPaths.map((p) => join(ROOT, p)).find((p) => existsSync(p));
+    source = local ?? cfg.nycTron.registryUrl;
+  }
+  try {
+    let raw;
+    if (/^https?:\/\//.test(source)) {
+      const res = await fetch(source);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      raw = await res.text();
+    } else raw = readFileSync(source, 'utf8');
+    const registry = JSON.parse(raw);
+    const items = new Map((registry.items ?? []).map((i) => [i.name, i]));
+    if (items.size === 0) throw new Error('no items');
+    return { source, items };
+  } catch (error) {
+    console.error(`cannot read the NYC-Tron registry at ${source}: ${error.message}`);
+    console.error('  Pass --nyc-tron-registry <path|url>. Without the real registry a check would only trust Forge config.');
+    process.exit(1);
+  }
+}
+
 export const itemsFile = () => readJson(join(REG_DIR, 'items.json'));
 
 /**

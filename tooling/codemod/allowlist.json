@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Findings the gate accepts today, each with the reason no exact token exists to apply. An entry that stops matching fails the run, so the list shrinks as tokens.map.json grows. A zero (0) is never a finding.",
+  "description": "Findings the gate accepts today, each with the reason no existing same-valued token can replace the literal without a design call, a class-name change or a density change. An entry that stops matching fails the run, so the list shrinks as tokens.map.json grows. A zero (0) is never a finding and `opacity: 1` is the identity. See the header of check-no-hardcoded.mjs for the exact definition of a finding.",
   "exemptFiles": [
     {
       "path": "packages/studio-workspace/src/forge-directions.ts",
@@ -16,13 +16,6 @@
     }
   ],
   "entries": [
-    {
-      "file": "packages/icons/src/state.js",
-      "kind": "number",
-      "property": "opacity",
-      "value": "1",
-      "reason": "1 is the identity opacity (fully opaque), not a design value."
-    },
     {
       "file": "packages/media-ui/src/video/NativeVideoMonitor.tsx",
       "kind": "number",
@@ -47,21 +40,6 @@
     {
       "file": "packages/studio-workspace/src/index.tsx",
       "kind": "number",
-      "property": "paddingBottom",
-      "value": "2",
-      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
-    },
-    {
-      "file": "packages/studio-workspace/src/index.tsx",
-      "kind": "number",
-      "property": "gap",
-      "value": "2",
-      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it.",
-      "count": 2
-    },
-    {
-      "file": "packages/studio-workspace/src/index.tsx",
-      "kind": "number",
       "property": "padding",
       "value": "1",
       "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
@@ -69,52 +47,16 @@
     {
       "file": "packages/studio-workspace/src/index.tsx",
       "kind": "number",
-      "property": "paddingVertical",
-      "value": "2",
-      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it.",
-      "count": 2
-    },
-    {
-      "file": "packages/studio-workspace/src/index.tsx",
-      "kind": "number",
-      "property": "width",
-      "value": "32",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/index.tsx",
-      "kind": "number",
       "property": "width",
       "value": "38",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/index.tsx",
-      "kind": "number",
-      "property": "height",
-      "value": "32",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/index.tsx",
       "kind": "number",
       "property": "height",
       "value": "38",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/index.tsx",
-      "kind": "number",
-      "property": "fontSize",
-      "value": "15",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/index.tsx",
-      "kind": "number",
-      "property": "paddingHorizontal",
-      "value": "2",
-      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/persona-composer.tsx",
@@ -128,45 +70,14 @@
       "kind": "number",
       "property": "opacity",
       "value": "0.85",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/persona-composer.tsx",
-      "kind": "number",
-      "property": "opacity",
-      "value": "1",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/persona-turret.tsx",
-      "kind": "number",
-      "property": "outlineWidth",
-      "value": "2",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply.",
-      "count": 2
-    },
-    {
-      "file": "packages/studio-workspace/src/persona-turret.tsx",
-      "kind": "number",
-      "property": "outlineOffset",
-      "value": "1",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply.",
-      "count": 2
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/persona-turret.tsx",
       "kind": "number",
       "property": "opacity",
       "value": "0.5",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/persona-turret.tsx",
-      "kind": "number",
-      "property": "opacity",
-      "value": "1",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply.",
-      "count": 2
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/persona-turret.tsx",
@@ -202,13 +113,6 @@
       "property": "borderRadius",
       "value": "5",
       "reason": "Arithmetic offset from a computed layout value (radius, toolbar top, ring size). Not listed in tokens.map.json, and a token would not stay tied to the value it is added to."
-    },
-    {
-      "file": "packages/studio-workspace/src/persona-turret.tsx",
-      "kind": "number",
-      "property": "borderWidth",
-      "value": "2",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
     },
     {
       "file": "packages/studio-workspace/src/persona-turret.tsx",
@@ -257,7 +161,7 @@
       "kind": "number",
       "property": "opacity",
       "value": "0.78",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/prism-editor.tsx",
@@ -292,23 +196,9 @@
     {
       "file": "packages/studio-workspace/src/prism-editor.tsx",
       "kind": "number",
-      "property": "paddingLeft",
-      "value": "2",
-      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
-    },
-    {
-      "file": "packages/studio-workspace/src/prism-editor.tsx",
-      "kind": "number",
       "property": "opacity",
       "value": ".4",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/prism-editor.tsx",
-      "kind": "number",
-      "property": "opacity",
-      "value": "1",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/prism-editor.tsx",
@@ -322,119 +212,245 @@
       "kind": "number",
       "property": "lineHeight",
       "value": "38",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/stage.tsx",
       "kind": "number",
       "property": "lineHeight",
       "value": "25",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/stage.tsx",
-      "kind": "number",
-      "property": "borderLeftWidth",
-      "value": "3",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/stage.tsx",
-      "kind": "number",
-      "property": "paddingLeft",
-      "value": "12",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/stage.tsx",
       "kind": "number",
       "property": "borderRadius",
       "value": "9999",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/text-editor.tsx",
-      "kind": "number",
-      "property": "paddingHorizontal",
-      "value": "16",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/text-editor.tsx",
-      "kind": "number",
-      "property": "paddingHorizontal",
-      "value": "40",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/text-editor.tsx",
-      "kind": "number",
-      "property": "paddingTop",
-      "value": "18",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/text-editor.tsx",
-      "kind": "number",
-      "property": "paddingTop",
-      "value": "32",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/text-editor.tsx",
-      "kind": "number",
-      "property": "paddingHorizontal",
-      "value": "24",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
-    },
-    {
-      "file": "packages/studio-workspace/src/text-editor.tsx",
-      "kind": "number",
-      "property": "paddingHorizontal",
-      "value": "64",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/text-editor.tsx",
       "kind": "number",
       "property": "paddingTop",
       "value": "36",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/text-editor.tsx",
       "kind": "number",
       "property": "paddingTop",
       "value": "56",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/text-editor.tsx",
       "kind": "number",
       "property": "fontSize",
       "value": "17",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/text-editor.tsx",
       "kind": "number",
       "property": "fontSize",
       "value": "19",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/text-editor.tsx",
       "kind": "number",
       "property": "lineHeight",
       "value": "29",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
       "file": "packages/studio-workspace/src/text-editor.tsx",
       "kind": "number",
       "property": "lineHeight",
       "value": "34",
-      "reason": "Not listed in tokens.map.json: its scan matched a direct `prop: n` value, so this site (a ternary branch, a factor or a pair the map never saw) has no row. A same-valued token can be minted when the map is extended; until then there is no exact token to apply."
+      "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
+    },
+    {
+      "file": "packages/audio-ui/src/NativeRecordingTrack.tsx",
+      "kind": "prop",
+      "property": "height",
+      "value": "64",
+      "reason": "packages/audio-ui is outside this pass and has no token module. Waveform track height is a component constant (64 or 72 px). Returns when audio-ui adopts a token dependency (decision 44 family)."
+    },
+    {
+      "file": "packages/audio-ui/src/NativeSourceRecordingTrack.native.tsx",
+      "kind": "prop",
+      "property": "height",
+      "value": "72",
+      "reason": "packages/audio-ui is outside this pass and has no token module. Waveform track height is a component constant (64 or 72 px). Returns when audio-ui adopts a token dependency (decision 44 family)."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "prop",
+      "property": "size",
+      "value": "18",
+      "reason": "ForgeIcon size 18: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "tailwind",
+      "property": "rounded",
+      "value": "rounded-[4px]",
+      "count": 5,
+      "reason": "Tailwind `rounded-[4px]` equals --radius-forge-control (4 px), but swapping the class name to `rounded-forge-control` is a class-name change that static AST equivalence cannot prove, and it can change tailwind-merge precedence against the NYC-Tron control classes. Waits for a rendered check."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "prop",
+      "property": "size",
+      "value": "17",
+      "reason": "ForgeIcon size 17: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/index.tsx",
+      "kind": "prop",
+      "property": "size",
+      "value": "23",
+      "reason": "ForgeIcon size 23: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-composer.tsx",
+      "kind": "tailwind",
+      "property": "shadow",
+      "value": "shadow-[0_1px_2px_#252A3A26]",
+      "reason": "Tailwind `shadow-[0_1px_2px_#252A3A26]` equals --shadow-segment-active in tokens.map.json. Using it renames the class to `shadow-segment-active`, a class-name change static AST equivalence cannot prove. Waits for a rendered check."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-composer.tsx",
+      "kind": "prop",
+      "property": "r",
+      "value": "2",
+      "reason": "SVG drawing geometry in the persona turret or icon coordinate system (radius or stroke derived with R, k and notchBoost). No token of this value in a stroke or radius role; minting one is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-composer.tsx",
+      "kind": "prop",
+      "property": "size",
+      "value": "14",
+      "count": 3,
+      "reason": "ForgeIcon size 14: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "offset",
+      "property": "fs()",
+      "value": "1",
+      "count": 2,
+      "reason": "Offset from a density-aware type step (`fs(scale.type.x + n)`). Replacing the literal with a fixed token keeps the value at standard density only if the sum is rewritten as one token, which would drop density scaling. Stays an expression."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "prop",
+      "property": "r",
+      "value": "2",
+      "reason": "SVG drawing geometry in the persona turret or icon coordinate system (radius or stroke derived with R, k and notchBoost). No token of this value in a stroke or radius role; minting one is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "prop",
+      "property": "r",
+      "value": "2.5",
+      "reason": "SVG drawing geometry in the persona turret or icon coordinate system (radius or stroke derived with R, k and notchBoost). No token of this value in a stroke or radius role; minting one is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "prop",
+      "property": "strokeWidth",
+      "value": "5",
+      "reason": "SVG drawing geometry in the persona turret or icon coordinate system (radius or stroke derived with R, k and notchBoost). No token of this value in a stroke or radius role; minting one is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "prop",
+      "property": "strokeWidth",
+      "value": "4",
+      "reason": "SVG drawing geometry in the persona turret or icon coordinate system (radius or stroke derived with R, k and notchBoost). No token of this value in a stroke or radius role; minting one is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "prop",
+      "property": "strokeWidth",
+      "value": "2.5",
+      "reason": "SVG drawing geometry in the persona turret or icon coordinate system (radius or stroke derived with R, k and notchBoost). No token of this value in a stroke or radius role; minting one is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "prop",
+      "property": "strokeWidth",
+      "value": "1",
+      "reason": "SVG drawing geometry in the persona turret or icon coordinate system (radius or stroke derived with R, k and notchBoost). No token of this value in a stroke or radius role; minting one is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "prop",
+      "property": "strokeWidth",
+      "value": "0.6",
+      "reason": "SVG drawing geometry in the persona turret or icon coordinate system (radius or stroke derived with R, k and notchBoost). No token of this value in a stroke or radius role; minting one is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "offset",
+      "property": "fs()",
+      "value": "2",
+      "reason": "Offset from a density-aware type step (`fs(scale.type.x + n)`). Replacing the literal with a fixed token keeps the value at standard density only if the sum is rewritten as one token, which would drop density scaling. Stays an expression."
+    },
+    {
+      "file": "packages/studio-workspace/src/persona-turret.tsx",
+      "kind": "offset",
+      "property": "fs()",
+      "value": "3",
+      "reason": "Offset from a density-aware type step (`fs(scale.type.x + n)`). Replacing the literal with a fixed token keeps the value at standard density only if the sum is rewritten as one token, which would drop density scaling. Stays an expression."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-canvas.tsx",
+      "kind": "prop",
+      "property": "width",
+      "value": "2",
+      "count": 2,
+      "reason": "Factor of 2 on the checker tile size (`size * 2`): the pattern repeats two tiles. A ratio, not a length."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-canvas.tsx",
+      "kind": "prop",
+      "property": "height",
+      "value": "2",
+      "count": 2,
+      "reason": "Factor of 2 on the checker tile size (`size * 2`): the pattern repeats two tiles. A ratio, not a length."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "prop",
+      "property": "size",
+      "value": "17",
+      "reason": "ForgeIcon size 17: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
+    },
+    {
+      "file": "packages/studio-workspace/src/prism-editor.tsx",
+      "kind": "tailwind",
+      "property": "rounded",
+      "value": "rounded-[4px]",
+      "count": 4,
+      "reason": "Tailwind `rounded-[4px]` equals --radius-forge-control (4 px), but swapping the class name to `rounded-forge-control` is a class-name change that static AST equivalence cannot prove, and it can change tailwind-merge precedence against the NYC-Tron control classes. Waits for a rendered check."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "tailwind",
+      "property": "rounded",
+      "value": "rounded-[4px]",
+      "count": 2,
+      "reason": "Tailwind `rounded-[4px]` equals --radius-forge-control (4 px), but swapping the class name to `rounded-forge-control` is a class-name change that static AST equivalence cannot prove, and it can change tailwind-merge precedence against the NYC-Tron control classes. Waits for a rendered check."
+    },
+    {
+      "file": "packages/studio-workspace/src/text-editor.tsx",
+      "kind": "prop",
+      "property": "size",
+      "value": "14",
+      "reason": "ForgeIcon size 14: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
     }
   ]
 }

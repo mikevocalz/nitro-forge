@@ -358,7 +358,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
               transform: [{ scale: pressed ? forgeFeedbackMotion.press.scale : 1 }],
               ...(Platform.OS === 'web' ? {
                 transitionProperty: 'transform, background-color', transitionDuration: prefs.reduceMotion ? '0ms' : `${forgeFeedbackMotion.press.ms}ms`, transitionTimingFunction: 'ease-out',
-                outlineStyle: focusedStop ? 'solid' : 'none', outlineWidth: 2, outlineColor: focusColor, outlineOffset: 1,
+                outlineStyle: focusedStop ? 'solid' : 'none', outlineWidth: tokens.borderWidth.strong, outlineColor: focusColor, outlineOffset: tokens.borderWidth.hairline,
               } : {}),
             }) as ViewStyle}>
             <Text numberOfLines={stacked ? undefined : 1} style={{ flexShrink: 1, color: lit ? m.text : m.muted, fontSize: fs(scale.type.label + 1), fontWeight: committed || lit ? tokens.fontWeight.bold : '500' }}>{p.label}</Text>
@@ -401,8 +401,8 @@ export function PersonaTurret(props: PersonaTurretProps) {
           {/* Focus ring sits outside the bezel so it never covers a detent. */}
           <View pointerEvents="none" style={{
             position: 'absolute', left: cx - R - 5, top: frame.boxTop - R - 5, width: ringSize + 10, height: ringSize + 10, borderRadius: R + 5,
-            borderWidth: state.focused ? 2 : 0, borderColor: focusColor,
-            ...(state.focused && Platform.OS === 'web' ? { outlineStyle: 'solid', outlineWidth: forced ? 2 : 0, outlineColor: focusColor, outlineOffset: 1 } : {}),
+            borderWidth: state.focused ? tokens.borderWidth.strong : 0, borderColor: focusColor,
+            ...(state.focused && Platform.OS === 'web' ? { outlineStyle: 'solid', outlineWidth: forced ? tokens.borderWidth.strong : 0, outlineColor: focusColor, outlineOffset: tokens.borderWidth.hairline } : {}),
           } as ViewStyle} />
           <StudioGesture disabled={!!props.disabled}
             onBegin={point => { void measureOrigin().then(origin => { store.setState({ origin }); if (origin) dragTo(origin, point); }); }}
@@ -446,14 +446,14 @@ export function PersonaTurret(props: PersonaTurretProps) {
                   </LinearGradient>
                 </Defs>
                 <Circle r={R - 2} fill={`url(#bezel-${direction.id})`} />
-                <Circle r={R - 2.5} fill="none" stroke={`url(#rim-${direction.id})`} strokeWidth={1.5} />
+                <Circle r={R - 2.5} fill="none" stroke={`url(#rim-${direction.id})`} strokeWidth={tokens.borderWidth.off1_5} />
                 {/* Knurl: fine cuts around the bezel, skipped where a detent slot sits. */}
                 {Array.from({ length: geo.knurlCount }, (_, i) => {
                   const deg = i * 360 / geo.knurlCount;
                   const nearStop = stops.some((_, s) => Math.abs((((deg - turretDisplayAngle(s, stops.length, rtl)) % 360) + 540) % 360 - 180) < 4);
                   if (nearStop) return null;
                   const a = polar(deg, R - 3 * k), b = polar(deg, R - 8 * k);
-                  return <Line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={m.knurl} strokeWidth={1} strokeOpacity={0.55} />;
+                  return <Line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={m.knurl} strokeWidth={tokens.borderWidth.hairline} strokeOpacity={0.55} />;
                 })}
                 {/* Detent slots, one per persona. The committed slot carries the
                     accent over a halo, so it holds 3:1 on a light bezel. */}
@@ -467,7 +467,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
                     <Line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={committed ? m.accent : m.knurl} strokeWidth={(committed ? 2.5 : 1) + notchBoost} strokeLinecap="round" />
                   </G>;
                 })}
-                <Circle r={g.face} fill={`url(#face-${direction.id})`} stroke={m.notch} strokeWidth={1} />
+                <Circle r={g.face} fill={`url(#face-${direction.id})`} stroke={m.notch} strokeWidth={tokens.borderWidth.hairline} />
                 {[6, 13, 20, 27, 34].map(d => <Circle key={d} r={g.face - d * k} fill="none" stroke={m.lathe} strokeWidth={0.6} strokeOpacity={direction.light.model === 'refract' ? 0.14 : 0.07} />)}
               </Svg>
               <TurretRim pulse={state.pulse} reduceMotion={prefs.reduceMotion} size={ringSize} commitColor={m.accent} limitColor={m.muted} />

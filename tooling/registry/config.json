@@ -1,24 +1,45 @@
 {
-  "_tag": "PLACEHOLDER. No release tag exists yet. The owner replaces this one value with the real tag, then runs `node tooling/registry/build.mjs`. It sets the tag in components.json for both namespaces. Split it in two if NYC-Tron tags its registry separately.",
-  "tag": "v0.1.0-agent-native",
+  "_refs": "nitroForgeRef and nycTronRef are MOVING refs (branches), not release tags. A moving ref means a consumer's URL serves whatever is on that branch today. Pinning to a release tag is the recommendation, but cutting a tag is the owner's call (decision 45). To pin: node tooling/registry/set-ref.mjs <nitroForgeRef> [nycTronRef]. That rewrites these two values and regenerates every generated file. nycTronRef must point at a ref where NYC-Tron's r/ exists.",
+  "nitroForgeRef": "master",
+  "nycTronRef": "main",
   "namespace": "@nitro-forge",
   "shadcnVersion": "4.23.0",
   "owner": "mikevocalz",
   "registries": {
-    "@nitro-forge": { "repo": "nitro-forge", "defaultBranch": "master" },
-    "@nyc-tron": { "repo": "NYC-Tron-UI" }
+    "@nitro-forge": {
+      "repo": "nitro-forge",
+      "refKey": "nitroForgeRef"
+    },
+    "@nyc-tron": {
+      "repo": "NYC-Tron-UI",
+      "refKey": "nycTronRef"
+    }
   },
-  "urlTemplate": "https://raw.githubusercontent.com/{owner}/{repo}/{tag}/r/{name}.json",
+  "urlTemplate": "https://raw.githubusercontent.com/{owner}/{repo}/{ref}/r/{name}.json",
   "homepage": "https://github.com/mikevocalz/nitro-forge",
   "installDir": "@components/forge",
   "iconsSubdir": "icons",
   "nycTron": {
-    "_note": "ASSUMED, not verified: NYC-Tron had no built registry when this was written. Items are named by export key after ./components/ with slashes kept (template rule, decision 33). Installed files are assumed to resolve at <importPrefix><key>. Change importPrefix here if the NYC-Tron registry targets differ.",
+    "_note": "Derived from the NYC-Tron registry, not assumed. Every @nyc-tron item installs its files at targetPrefix + <export key> + extension (checked against NYC-Tron's built registry.json: 22 of 22 items Forge depends on). shadcn expands the leading '@components' with the consumer's components.json aliases.components ('@/components'), so a consumer imports <importPrefix><key>. importPrefix is computed in tooling/registry/lib.mjs as targetPrefix with '@components/' replaced by aliasRoots['@components/']. check-imports re-reads NYC-Tron's registry (--nyc-tron-registry) and fails if a Forge import does not land on a file that registry installs.",
     "specifierPrefix": "@nyc-tron/ui/components/",
-    "importPrefix": "@/components/ui/",
+    "targetPrefix": "@components/nyc-tron/ui/components/",
+    "aliasRoots": {
+      "@components/": "@/components/"
+    },
+    "localRegistryPaths": [
+      "../NYC-Tron-UI/registry.json",
+      "../nyc-tron-ui/registry.json",
+      "../tron/registry.json"
+    ],
+    "registryUrl": "https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI/main/registry.json",
     "providedBy": {
-      "gestures/drag-transport": ["gestures/PanResponderDrag", "gestures/GestureHandlerDrag"],
-      "forge/layers/layer-model": ["forge/layers/LayerStack"]
+      "gestures/drag-transport": [
+        "gestures/PanResponderDrag",
+        "gestures/GestureHandlerDrag"
+      ],
+      "forge/layers/layer-model": [
+        "forge/layers/LayerStack"
+      ]
     }
   },
   "npmVersions": {
@@ -27,7 +48,10 @@
     "react-native-gesture-handler": "^3.5.0",
     "react-native-reanimated": "^4.7.1"
   },
-  "builtinPackages": ["react", "react-native"],
+  "builtinPackages": [
+    "react",
+    "react-native"
+  ],
   "prerequisites": {
     "@nitro-forge/ignition": {
       "step": 1,
@@ -41,5 +65,9 @@
     }
   },
   "provider": "studio-ui-provider",
-  "a11yMap": { "PASS": "reviewed-pass", "FAIL": "reviewed-fail", "UNVERIFIED": "unverified" }
+  "a11yMap": {
+    "PASS": "reviewed-pass",
+    "FAIL": "reviewed-fail",
+    "UNVERIFIED": "unverified"
+  }
 }

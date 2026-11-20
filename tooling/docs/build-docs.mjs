@@ -15,8 +15,7 @@ const excluded = readJson(join(ROOT, 'registry-excluded.json'));
 const a11y = readJson(join(ROOT, 'docs/agent-native/a11y-status.json'));
 const handoff = readFileSync(join(ROOT, 'docs/agent-native/03-design-handoff.md'), 'utf8');
 const itemsFile = readJson(join(ROOT, 'tooling/registry/items.json'));
-const tag = cfg.tag;
-const rawBase = `https://raw.githubusercontent.com/${cfg.owner}/nitro-forge/${tag}`;
+const rawBase = `https://raw.githubusercontent.com/${cfg.owner}/nitro-forge/${cfg.nitroForgeRef}`;
 
 const fail = (m) => { console.error(`build-docs: ${m}`); process.exit(1); };
 const SECTIONS = ['Purpose', 'Install', 'Props', 'Variants', 'States', 'A11y', 'Example', "Do/Don't"];
@@ -274,7 +273,7 @@ const link = (path, title, desc) => `- [${title}](${rawBase}/${path}): ${oneLine
 const llms = [
   '# Nitro Forge',
   '',
-  `> Document studios on one Rust engine, with a shadcn registry (@nitro-forge) for the studio-workspace chrome, theme, provider and icons. Controls come from @nyc-tron. Nothing is on npm: the engines, ignition and studio-layout are monorepo packages at 0.0.0, and steps 1 to 3 of the install order cannot be reproduced outside this repo today. The ${'`' + tag + '`'} tag in these links is a placeholder until the owner publishes a release.`,
+  `> Document studios on one Rust engine, with a shadcn registry (@nitro-forge) for the studio-workspace chrome, theme, provider and icons. Controls come from @nyc-tron. Nothing is on npm: the engines, ignition and studio-layout are monorepo packages at 0.0.0, and steps 1 to 3 of the install order cannot be reproduced outside this repo today. The links use the moving branch ${'`' + cfg.nitroForgeRef + '`'}, not a release tag, until the owner cuts one.`,
   '',
   'Start here: the provider prerequisite. Every studio component throws without StudioUIProvider (install studio-ui-provider and nyc-tron-host first). Install order has nine steps, numbered 0 to 8; a registry add covers steps 4 and 8 and the file parts of 5, 6 and 7.',
   '',

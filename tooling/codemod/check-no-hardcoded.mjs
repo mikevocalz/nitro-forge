@@ -5,10 +5,20 @@
 // tests, declaration files, token files, and the files listed with a reason in
 // allowlist.json `exemptFiles`.
 //
-// A finding is
-//   - a string literal that contains a hex colour (#rgb, #rgba, #rrggbb, #rrggbbaa) or a literal `rgb(`/`rgba(`/`hsl(` call, or
-//   - a non-zero numeric literal that is, or sits in a ternary or arithmetic branch of, the value of a style property
-//     (width, padding, gap, fontSize, borderRadius, zIndex, opacity ...).
+// What this gate means by "no hard-coded values" (the definition every doc points at). A finding is
+//   - kind colour:    a string literal that contains a hex colour (#rgb, #rgba, #rrggbb, #rrggbbaa) or a literal `rgb(`/`rgba(`/`hsl(` call, or
+//   - kind number:    a non-zero numeric literal that is, or sits in a ternary or arithmetic branch of, the value of a style
+//                     property (width, padding, gap, fontSize, borderRadius, zIndex, opacity ...). `opacity: 1` is the identity
+//                     and is not a finding.
+//   - kind prop:      a non-zero numeric literal given to a JSX numeric prop (size, width, height, strokeWidth, fontSize, r, rx, ry),
+//                     including both branches of a ternary.
+//   - kind tailwind:  a Tailwind arbitrary value with a length unit or a colour inside a class string (`rounded-[4px]`,
+//                     `shadow-[0_1px_2px_#252A3A26]`, `min-h-[44px]`). `[var(--x)]` and unitless arbitrary values are not findings.
+//   - kind offset:    a numeric literal added to or subtracted from an expression inside a type-scale call `fs(...)`
+//                     (`fs(scale.type.label + 1)`).
+// Not covered, so a grep can still find numbers here: SVG geometry (cx, cy, x, y, points, viewBox, path data), array
+// and object data that is not a style property, native Kotlin and Swift, apps/*, and tests. The count the gate reports
+// is the count under this definition, not a claim about every number in the packages.
 // Findings in allowlist.json `entries` are reported as allowed, each with its reason. An entry that
 // matches nothing is stale and fails the run, so the list cannot rot.
 //
@@ -38,6 +48,9 @@ const STYLE_PROPS = new Set([
   'fontSize', 'lineHeight', 'letterSpacing', 'zIndex', 'opacity', 'hitSlop', 'outlineWidth', 'outlineOffset',
   'shadowRadius', 'shadowOpacity', 'elevation', 'flexBasis', 'fontWeight',
 ]);
+const JSX_NUMERIC_PROPS = new Set(['size', 'width', 'height', 'strokeWidth', 'fontSize', 'r', 'rx', 'ry']);
+/** Tailwind arbitrary value whose bracket holds a length unit or a colour. */
+const tailwindArbitrary = /(?:^|[\s"'`:!])(-?[a-z][a-z0-9-]*-\[[^\]\s]*(?:\d(?:\.\d+)?(?:px|rem|em|vh|vw)|#[0-9a-fA-F]{3,8}|rgba?\()[^\]\s]*\])/g;
 const hexInString = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_-])/;
 const colourCall = /\b(?:rgba?|hsla?)\(\s*[0-9.]/;
 
@@ -81,10 +94,29 @@ for (const file of files) {
       const text = node.getLiteralText();
       const parent = node.getParent();
       if (Node.isImportDeclaration(parent) || Node.isExportDeclaration(parent)) return;
+      for (const m of text.matchAll(tailwindArbitrary)) add(node, 'tailwind', m[1].slice(0, m[1].indexOf('-[')), m[1]);
       if (hexInString.test(text) || colourCall.test(text)) add(node, 'colour', Node.isPropertyAssignment(parent) ? parent.getName() : '-', text.length > 60 ? `${text.slice(0, 57)}...` : text);
     } else if (Node.isTemplateExpression(node)) {
       const text = [node.getHead().getLiteralText(), ...node.getTemplateSpans().map(span => span.getLiteral().getLiteralText())].join('');
       if (hexInString.test(text)) add(node, 'colour', '-', text);
+    } else if (Node.isJsxAttribute(node)) {
+      const name = node.getNameNode().getText();
+      if (!JSX_NUMERIC_PROPS.has(name)) return;
+      const initializer = node.getInitializer();
+      if (!initializer || !Node.isJsxExpression(initializer) || !initializer.getExpression()) return;
+      for (const part of numericParts(initializer.getExpression())) {
+        const value = Number(part.getText());
+        if (value === 0) continue;
+        add(part, 'prop', name, `${Node.isPrefixUnaryExpression(part.getParent()) ? '-' : ''}${part.getText()}`);
+      }
+    } else if (Node.isCallExpression(node) && node.getExpression().getText() === 'fs') {
+      for (const argument of node.getArguments()) {
+        for (const part of numericParts(argument)) {
+          const value = Number(part.getText());
+          if (value === 0) continue;
+          add(part, 'offset', 'fs()', `${Node.isPrefixUnaryExpression(part.getParent()) ? '-' : ''}${part.getText()}`);
+        }
+      }
     } else if (Node.isPropertyAssignment(node)) {
       const nameNode = node.getNameNode();
       const name = Node.isStringLiteral(nameNode) ? nameNode.getLiteralText() : node.getName();
@@ -95,6 +127,7 @@ for (const file of files) {
       for (const part of numericParts(initializer)) {
         const value = Number(part.getText());
         if (value === 0) continue;
+        if (name === 'opacity' && value === 1) continue;
         const negative = Node.isPrefixUnaryExpression(part.getParent());
         add(part, 'number', name, `${negative ? '-' : ''}${part.getText()}`);
       }

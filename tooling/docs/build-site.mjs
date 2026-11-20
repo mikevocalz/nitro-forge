@@ -136,7 +136,7 @@ function shell({ file, title, desc, body, facts = '', wide = false, lead = '' })
 <ul>${[...engines, ...foundations].map((e) => li(`engines/${e.name}.html`, e.package)).join('')}</ul>
 </div></details></nav>`;
   const status = `<footer class="status" role="contentinfo">
-<span>Registry: ${rBuilt ? `r/ built, ${items.length} items, tag <code>${esc(cfg.tag)}</code> (placeholder)` : 'r/ not built: shadcn add resolves nothing yet'}</span>
+<span>Registry: ${rBuilt ? `r/ built, ${items.length} items, ref <code>${esc(cfg.nitroForgeRef)}</code> (moving branch)` : 'r/ not built: shadcn add resolves nothing yet'}</span>
 <span>Distribution: GitHub release tarballs, ${esc(compat.version)}, npm ${esc(compat.distribution.npm)}, status ${esc(compat.distribution.status)}</span>
 <span>Generated from inputs <code>${inputHash}</code></span>
 <span><a href="${href('../../llms.txt')}">llms.txt</a> <a href="${href('../../AGENTS.md')}">AGENTS.md</a></span>
@@ -243,7 +243,7 @@ for (const e of [...engines, ...foundations]) {
 </tbody></table>`;
   const list = (group) => `<ul>${group.map((i) => `<li id="${i.name}"><a href="components/${i.name}.html">${esc(i.title)}</a>. ${esc(i.description)} Accessibility: ${esc(A11Y_WORD[i.meta.a11yStatus])}.</li>`).join('')}</ul>`;
   const body = `<p class="lead">Document studios on one Rust engine, delivered as a shadcn registry of source files plus tarball packages. Controls come from NYC-Tron.</p>
-<div class="banner" role="note"><strong>Status.</strong> ${rBuilt ? `The registry is built: ${items.length} items in <code>r/</code>.` : '<code>r/</code> is not built.'} The tag <code>${esc(cfg.tag)}</code> in the registry URLs is a placeholder, so <code>shadcn add</code> against GitHub resolves nothing until a release exists. Packages are at ${esc(compat.version)} and nothing is on npm. Steps 1 to 3 of the install cannot be reproduced outside the monorepo today. <a href="install.html#step-1">See step 1</a>.</div>
+<div class="banner" role="note"><strong>Status.</strong> ${rBuilt ? `The registry is built: ${items.length} items in <code>r/</code>.` : '<code>r/</code> is not built.'} The registry URLs point at the moving branches <code>${esc(cfg.nitroForgeRef)}</code> (Forge) and <code>${esc(cfg.nycTronRef)}</code> (NYC-Tron), not a release tag, so what <code>shadcn add</code> fetches changes with each push until the owner cuts tags. The <code>@nyc-tron</code> items resolve only once NYC-Tron's <code>r/</code> is on its <code>${esc(cfg.nycTronRef)}</code> branch. Packages are at ${esc(compat.version)} and nothing is on npm. Steps 1 to 3 of the install cannot be reproduced outside the monorepo today. <a href="install.html#step-1">See step 1</a>.</div>
 <div class="paths"><a class="btn primary" href="install.html">Read the install order</a><a class="btn" href="components/${providerItems[0].name}.html">Wire a component</a><a class="btn" href="tokens.html#rebrand">Rebrand</a></div>
 <h2 id="engines">Engines</h2><p>Twelve engines, read from <code>ENGINE_KINDS</code>. None has a registry item today (decision 3).</p>${table}
 <h2 id="foundations">Foundations</h2>${found}
@@ -251,7 +251,7 @@ for (const e of [...engines, ...foundations]) {
 <h3 id="needs-provider">Needs StudioUIProvider (${providerItems.length})</h3>${list(providerItems)}
 <h3 id="no-provider">No provider needed (${freeItems.length})</h3>${list(freeItems)}
 <h2 id="not-in-registry">Not in the registry</h2><p>Four binding adapters, 12 engines, ignition and studio-layout. Each has a reason in <a href="../../registry-excluded.json">registry-excluded.json</a>.</p>`;
-  add('index.html', shell({ file: 'index.html', title: 'Nitro Forge', desc: 'Document studios on one Rust engine, delivered as a shadcn registry and tarball packages.', body, facts: `<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl><dt>Registry items</dt><dd>${items.length}</dd><dt>Excluded</dt><dd>${excluded.adapters.length} adapters, ${engines.length} engines, ${foundations.length} foundations</dd><dt>Tag</dt><dd class="mono">${esc(cfg.tag)} (placeholder)</dd><dt>Generated from</dt><dd class="mono">${inputHash}</dd></dl></aside>` }));
+  add('index.html', shell({ file: 'index.html', title: 'Nitro Forge', desc: 'Document studios on one Rust engine, delivered as a shadcn registry and tarball packages.', body, facts: `<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl><dt>Registry items</dt><dd>${items.length}</dd><dt>Excluded</dt><dd>${excluded.adapters.length} adapters, ${engines.length} engines, ${foundations.length} foundations</dd><dt>Registry refs</dt><dd class="mono">${esc(cfg.nitroForgeRef)}, ${esc(cfg.nycTronRef)} (moving)</dd><dt>Generated from</dt><dd class="mono">${inputHash}</dd></dl></aside>` }));
 }
 
 // Install.
@@ -300,6 +300,13 @@ for (const e of [...engines, ...foundations]) {
   const body = `<p class="lead">A brand changes three keys per scheme: <code>accent</code>, <code>ink</code> and <code>soft</code>. Everything else is locked or deferred.</p>
 <h2 id="rebrand">Rebrand contract</h2>
 <p>The file is <code>brand.theme.json</code>, separate from <code>tooling/brand/brand.schema.json</code> (decision 24). Minimum override: 3 keys by 2 schemes, 6 values.</p>${contract}
+<h3 id="channels">Two channels carry a brand</h3>
+<p>A rebrand needs both. The CSS variables reach the NYC-Tron controls. The JS overrides reach the Forge components that read colours in JavaScript.</p>
+<table><thead><tr><th scope="col">Channel</th><th scope="col">Call</th><th scope="col">Reaches</th><th scope="col">Does not reach</th></tr></thead><tbody>
+<tr><th scope="row">CSS variables</th><td><code>brandCssVariables(theme, scheme)</code> on a <code>[data-brand]</code> block, <code>:root</code> or a <code>TokenScope</code></td><td>Every NYC-Tron control (Button, TabBar, SegmentedControl, Select, Banner) and Tailwind utilities reading <code>--color-primary</code>, <code>--color-accent</code>, <code>--color-focus</code>, <code>--color-on-primary</code>, <code>--color-primary-tint</code></td><td>Colours Forge reads in JavaScript</td></tr>
+<tr><th scope="row">JS overrides</th><td><code>brandThemeOverrides(theme, scheme)</code> as <code>themeOverrides</code> on <code>ForgeWorkspace</code></td><td>Workspace header, rail label, studio glyphs and the soft chip behind them. <code>PersonaTurret</code> reads <code>colors.accent</code> and <code>PersonaComposer</code> reads <code>colors.accent</code> and <code>colors.soft</code> from their own <code>colors</code> prop, which <code>ForgeWorkspace</code> does not fill: pass the same overrides to them</td><td>The CSS variables</td></tr>
+</tbody></table>
+<p>Neither channel reaches <code>PrismEditor</code>, <code>QuillTextEditor</code>, <code>ForgeDocumentStage</code> or the default <code>ForgeIcon</code> palette. Applying only the CSS variables recolours the controls and leaves the workspace header, glyphs and persona turret on the old accent.</p>
 ${copyBlock('starter', 'brand.theme.json starter (Prism override)', starter)}
 <h2 id="accent-checker">Accent checker</h2>
 <noscript><p>Script is off. The ratios for the shipped values are in the tables below, computed at build time.</p></noscript>
@@ -360,6 +367,11 @@ if (CHECK) {
   for (const f of files) {
     const html = pages.get(f);
     ids.set(f, new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])));
+    for (const m of html.matchAll(/data-copy="([^"]+)"/g)) {
+      const body = html.match(new RegExp(String.raw`<pre id="${m[1]}">([\s\S]*?)</pre>`))?.[1];
+      if (body === undefined) problems.push(`${f}: copy button targets #${m[1]}, which is not a <pre> on the page`);
+      else if (!body.trim()) problems.push(`${f}: copy button targets #${m[1]}, which is empty`);
+    }
     if ((html.match(/<h1[ >]/g) ?? []).length !== 1) problems.push(`${f}: needs exactly one h1`);
     if ((html.match(/<main[ >]/g) ?? []).length !== 1) problems.push(`${f}: needs exactly one main`);
     { const seenIds = new Set(); for (const m of html.matchAll(/\sid="([^"]+)"/g)) { if (seenIds.has(m[1])) problems.push(`${f}: duplicate id "${m[1]}" (script looks up ids and gets the first)`); seenIds.add(m[1]); } }
@@ -399,6 +411,17 @@ if (CHECK) {
     for (const q of qs) {
       const top = rank('Components', q.query).slice(0, 3).map((h) => h.e.u.replace('components/', '').replace('.html', ''));
       if (!q.relevant.every((id) => top.includes(id))) problems.push(`search replay ${q.id} "${q.query}": expected ${q.relevant}, top 3 ${top}`);
+    }
+  }
+  {
+    // Highlighting must not split an HTML entity: a query like "amp" matches inside "&amp;" if marking runs after escaping.
+    const escSrc = siteJs.match(/var esc=function\(s\)\{.*?\}\)\};/s)?.[0];
+    const mkSrc = siteJs.match(/var mk=function\(s,qt\)\{.*?\)\.join\(''\)\};/s)?.[0];
+    if (!escSrc || !mkSrc) problems.push('site.js: could not find esc and mk for the highlight test');
+    else {
+      const mk = new Function(`${escSrc}${mkSrc}; return mk;`)();
+      const cases = [['Tom & amp', ['amp'], 'Tom &amp; <mark>amp</mark>'], ['a<b>', ['lt', 'gt'], 'a&lt;b&gt;'], ['x "quot" y', ['quot'], 'x &quot;<mark>quot</mark>&quot; y']];
+      for (const [text, qt, want] of cases) if (mk(text, qt) !== want) problems.push(`site.js highlight: mk(${JSON.stringify(text)}, ${JSON.stringify(qt)}) gave ${mk(text, qt)}, wanted ${want}`);
     }
   }
   if (engines.length !== 12) problems.push(`roster has ${engines.length} engines, expected 12`);

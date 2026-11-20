@@ -296,7 +296,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
                     return { drag: { ...st.drag, originY, target: dragTargetIndex(st.drag.index, point.y - originY, rowHeights) } };
                   })}
                   onCommit={() => { const d = ui.getState().drag; ui.setState({ drag: null }); if (d && d.target !== d.index) move(d.index, d.target - d.index); }}
-                  onCancel={() => ui.setState({ drag: null })}><ForgeIcon name="menu" size={16} color={c.muted} reducedMotion /></DragGrabHandle> : null}
+                  onCancel={() => ui.setState({ drag: null })}><ForgeIcon name="menu" size={tokens.size.iconSm} color={c.muted} reducedMotion /></DragGrabHandle> : null}
                 {/* The same numeral the chosen tile carries. */}
                 <Text style={{ color: c.accent, fontSize: scale.type.label, fontWeight: tokens.fontWeight.bold, fontVariant: ['tabular-nums'], minWidth: tokens.spacing.off18, textAlign: 'center' }}>{String(index + 1)}</Text>
               </View>,
@@ -313,7 +313,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
                 }}>{rowMenu(`Move or remove ${name}`)}</Menu> : <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Button title="Up" aria-label={`Move ${name} up`} disabled={index === 0} onPress={() => move(index, -1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
                 <Button title="Down" aria-label={`Move ${name} down`} disabled={index === draft.rail.length - 1} onPress={() => move(index, 1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
-                <IconButton aria-label={`Remove ${name} from the rail`} icon={<ForgeIcon name="close" size={16} color={c.muted} reducedMotion />}
+                <IconButton aria-label={`Remove ${name} from the rail`} icon={<ForgeIcon name="close" size={tokens.size.iconSm} color={c.muted} reducedMotion />}
                   onPress={() => setDraft({ rail: draft.rail.filter(x => x !== id) })} variant="ghost" size="sm" tone="carolina" className={HC_EDGE} />
               </View>,
             });

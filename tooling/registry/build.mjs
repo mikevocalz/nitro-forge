@@ -8,7 +8,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { basename, dirname, join, posix } from 'node:path';
-import { ROOT, REG_DIR, config, itemsFile, readJson, scanImports, isRelative, packageOf, NODE_BUILTIN } from './lib.mjs';
+import { ROOT, REG_DIR, config, itemsFile, readJson, scanImports, isRelative, packageOf, NODE_BUILTIN, nycTronImportPrefix, registryUrl } from './lib.mjs';
 
 const cfg = config();
 const { items: itemDefs } = itemsFile();
@@ -32,10 +32,7 @@ const fail = (message) => {
   process.exit(1);
 };
 
-const urlFor = (namespace) => {
-  const reg = cfg.registries[namespace];
-  return cfg.urlTemplate.replace('{owner}', cfg.owner).replace('{repo}', reg.repo).replace('{tag}', cfg.tag);
-};
+const IMPORT_PREFIX = nycTronImportPrefix(cfg);
 
 /** Installed target of one file, relative to the install directory. */
 const targetOf = (file) => file.target ?? basename(file.from);
@@ -71,7 +68,7 @@ function rewriteSpecifier(spec, fromTarget) {
   };
   if (spec === '@nitro-forge/icons/native' || spec === '@nitro-forge/icons/web') return iconTarget('ForgeIcon');
   if (spec === '@nitro-forge/icons') return iconTarget('index');
-  if (spec.startsWith(cfg.nycTron.specifierPrefix)) return cfg.nycTron.importPrefix + spec.slice(cfg.nycTron.specifierPrefix.length);
+  if (spec.startsWith(cfg.nycTron.specifierPrefix)) return IMPORT_PREFIX + spec.slice(cfg.nycTron.specifierPrefix.length);
   return spec;
 }
 
@@ -234,9 +231,9 @@ write(join(ROOT, 'components.json'), {
   tsx: true,
   tailwind: { baseColor: 'neutral', css: 'global.css' },
   aliases: { components: '@/components', ui: '@/components/ui', lib: '@/lib', utils: '@/lib/utils', hooks: '@/hooks' },
-  registries: { '@nitro-forge': urlFor('@nitro-forge'), '@nyc-tron': urlFor('@nyc-tron') },
+  registries: { '@nitro-forge': registryUrl(cfg, '@nitro-forge'), '@nyc-tron': registryUrl(cfg, '@nyc-tron') },
 });
-console.log(`build: staged ${registryItems.length} items, ${registryItems.reduce((n, i) => n + i.files.length, 0)} files, tag ${cfg.tag}`);
+console.log(`build: staged ${registryItems.length} items, ${registryItems.reduce((n, i) => n + i.files.length, 0)} files, refs ${cfg.nitroForgeRef} (forge) and ${cfg.nycTronRef} (tron)`);
 
 // registry-excluded.json: what is not in registry.json, with the reason and the condition for returning.
 {

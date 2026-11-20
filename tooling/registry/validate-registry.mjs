@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-// Structural validation of registry.json, r/*.json and the brand theme contract. No network, no dependencies.
+// Structural validation of registry.json, r/*.json and the brand theme contract. No dependencies. Reads the NYC-Tron registry (file or URL).
 // `shadcn build` (zod) validates the item schema itself; this script checks what the schema cannot:
 // the index matches r/, dependencies resolve, targets do not collide, meta values are in range,
-// the icon wording matches the source, and brand.theme.example.json follows brand.theme.schema.json.
+// the icon wording matches the source, brand.theme.example.json follows brand.theme.schema.json, and every
+// @nyc-tron/<name> dependency is an item in NYC-Tron's built registry (--nyc-tron-registry <path|url>, see lib.mjs).
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, config, readJson } from './lib.mjs';
+import { ROOT, config, readJson, loadNycTronRegistry } from './lib.mjs';
 
 const cfg = config();
 const problems = [];
@@ -101,10 +102,18 @@ for (const item of registry.items) if (item.registryDependencies?.some((d) => d.
   else problems.length = before;
 }
 
+{
+  const tron = await loadNycTronRegistry(cfg);
+  for (const dep of [...nycDeps].sort()) {
+    if (!tron.items.has(dep.replace(/^@nyc-tron\//, ''))) bad(`${dep} is not an item in the NYC-Tron registry at ${tron.source}`);
+  }
+  console.log(`validate-registry: ${nycDeps.size} @nyc-tron dependencies checked against ${tron.source} (${tron.items.size} items)`);
+}
+
 if (problems.length) {
   console.error(`validate-registry: ${problems.length} problem(s)`);
   for (const p of problems) console.error(`  ${p}`);
   process.exit(1);
 }
 console.log(`validate-registry: ${names.length} items, ${targets.size} installed files, ${nycDeps.size} distinct @nyc-tron dependencies. OK`);
-console.log(`validate-registry: @nyc-tron names to confirm against NYC-Tron's built registry: ${[...nycDeps].sort().join(', ')}`);
+

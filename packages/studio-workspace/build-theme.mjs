@@ -1,4 +1,14 @@
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+// node build-theme.mjs          write src/theme.css and src/theme.native.css
+// node build-theme.mjs --check  write nothing; exit 1 when either file differs from what theme.ts and tokens.ts generate
+const check = process.argv.includes('--check');
+const drift = [];
+const emit = (url, text) => {
+  if (!check) return writeFileSync(url, text);
+  let current = null;
+  try { current = readFileSync(url, 'utf8'); } catch { /* missing counts as drift */ }
+  if (current !== text) drift.push(url.pathname.split('/').slice(-1)[0]);
+};
 import { workspaceThemes, workspaceScale, workspaceStatus } from './src/theme.ts';
 import { cssTokens } from './src/tokens.ts';
 const names = { base: 'surface', raised: 'raised', deep: 'mat', line: 'border', text: 'text', muted: 'muted', accent: 'accent', ink: 'on-accent', soft: 'tint', paper: 'paper', paperInk: 'paper-ink', paperMuted: 'paper-muted', error: 'error' };
@@ -31,7 +41,7 @@ const metrics = `  --spacing-forge-target: ${workspaceScale.size.target}px;
 // night surface inside a light page keeps the dark values. It follows the
 // light block so it wins at equal specificity.
 const output = `/* Generated from theme.ts; do not edit. Tailwind v4 semantic tokens. */\n@theme {\n${rules('dark')}\n${metrics}\n${declare(added.shared)}\n${declare(added.dark)}\n}\n[data-theme="light"] {\n${rules('light')}\n${declare(added.light)}\n}\n.dark {\n${rules('dark')}\n${declare(added.dark)}\n}\n${densityBlocks}`;
-writeFileSync(new URL('./src/theme.css', import.meta.url), output);
+emit(new URL('./src/theme.css', import.meta.url), output);
 
 const nativeOutput = `/* Generated from theme.ts; do not edit. Uniwind native variants. */
 @theme {
@@ -51,4 +61,11 @@ ${declare(added.dark)}
   }
 }
 `;
-writeFileSync(new URL('./src/theme.native.css', import.meta.url), nativeOutput);
+emit(new URL('./src/theme.native.css', import.meta.url), nativeOutput);
+if (check) {
+  if (drift.length) {
+    console.error(`build-theme --check: ${drift.join(', ')} differ from theme.ts and tokens.ts. Run pnpm --filter @nitro-forge/studio-workspace build:theme and commit.`);
+    process.exit(1);
+  }
+  console.log('build-theme --check: theme.css and theme.native.css match theme.ts and tokens.ts');
+}

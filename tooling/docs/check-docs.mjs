@@ -89,7 +89,7 @@ function checkPage(file, text, expectedName) {
           const exists = registry.items.some((it) => (it.files ?? []).some((f) => f.target.replace(`${cfg.installDir}/`, '').replace(/\.(tsx?|jsx?)$/, '') === stem));
           const builtExists = existsSync(join(ROOT, 'r')) && readdirSync(join(ROOT, 'r')).some((n) => n.endsWith('.json') && n !== 'registry.json' && (readJson(join(ROOT, 'r', n)).files ?? []).some((f) => f.target.replace(`${cfg.installDir}/`, '').replace(/\.(tsx?|jsx?)$/, '') === stem));
           if (!exists && !builtExists) bad(file, `example imports ${spec}, which no item installs`);
-        } else if (!['react', 'react-native', 'uniwind'].includes(spec) && !spec.startsWith('@/components/ui/') && !spec.startsWith('@nyc-tron/')) bad(file, `example imports ${spec}, which is not an installed path`);
+        } else if (!['react', 'react-native', 'uniwind'].includes(spec) && !spec.startsWith('@/components/nyc-tron/ui/') && !spec.startsWith('@nyc-tron/')) bad(file, `example imports ${spec}, which is not an installed path`);
       }
     }
   }

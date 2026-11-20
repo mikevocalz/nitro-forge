@@ -8,6 +8,8 @@ on:
       - 'packages/studio-workspace/**'
       - 'packages/icons/**'
       - 'tooling/registry/**'
+      - 'tooling/codemod/**'
+      - 'docs/agent-native/tokens.map.json'
       - 'docs/agent-native/copy.json'
       - 'docs/agent-native/a11y-status.json'
       - 'registry.json'
@@ -21,6 +23,7 @@ on:
       - 'packages/studio-workspace/**'
       - 'packages/icons/**'
       - 'tooling/registry/**'
+      - 'tooling/codemod/**'
       - 'r/**'
       - 'registry.json'
 
@@ -37,6 +40,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # prove-equivalence reads the base branch with `git show <ref>:<path>`, so it needs history.
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
@@ -44,14 +50,26 @@ jobs:
         run: node tooling/registry/build.mjs
       - name: Generated files match the commit
         run: git diff --exit-code -- r registry.json components.json registry-excluded.json
-      - name: Unresolved imports
-        run: node tooling/registry/check-imports.mjs
+      - name: Unresolved imports (checked against NYC-Tron's published registry on main)
+        run: node tooling/registry/check-imports.mjs --nyc-tron-registry https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI/main/registry.json
       - name: Schema and structure validation
-        run: node tooling/registry/validate-registry.mjs
-      - name: No hardcoded values in packages
+        run: node tooling/registry/validate-registry.mjs --nyc-tron-registry https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI/main/registry.json
+      - name: theme.css and theme.native.css match theme.ts and tokens.ts
+        run: node packages/studio-workspace/build-theme.mjs --check
+      - name: Token tests and brand-theme tests
         run: |
-          if [ -f tooling/codemod/check-no-hardcoded.mjs ]; then
-            node tooling/codemod/check-no-hardcoded.mjs
-          else
-            echo "::notice title=check-no-hardcoded skipped::tooling/codemod/check-no-hardcoded.mjs is not in this checkout, so the literal gate did not run."
-          fi
+          node --experimental-strip-types --test packages/studio-workspace/src/tokens.test.ts
+          node --experimental-strip-types --test tooling/registry/theme/brand-theme.test.mjs
+      - name: Install ts-morph for the codemod gates (version from the root devDependency, nothing else)
+        run: |
+          version="$(node -p "require('./package.json').devDependencies['ts-morph']")"
+          mkdir -p "$RUNNER_TEMP/codemod-tools"
+          npm i --prefix "$RUNNER_TEMP/codemod-tools" --no-audit --no-fund --ignore-scripts "ts-morph@${version}"
+          echo "CODEMOD_TOOLS_DIR=$RUNNER_TEMP/codemod-tools" >> "$GITHUB_ENV"
+      - name: Token map matches tokens.ts
+        run: node tooling/codemod/check-token-map.mjs
+      - name: No hardcoded values in packages
+        run: node tooling/codemod/check-no-hardcoded.mjs
+      - name: Static equivalence of the tokenization (pull requests only; the base is the target branch)
+        if: github.event_name == 'pull_request'
+        run: node tooling/codemod/prove-equivalence.mjs --base "origin/${{ github.base_ref }}"
