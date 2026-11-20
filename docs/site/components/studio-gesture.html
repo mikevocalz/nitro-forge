@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio Gesture | Nitro Forge</title>
+<meta name="description" content="Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html" aria-current="page">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>Studio Gesture</h1>
+<p class="lead">Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>No provider needed.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-studio-gesture" hidden>Copy</button></header><pre id="cmd-studio-gesture">npx shadcn@4.23.0 add @nitro-forge/studio-gesture</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p>One-finger gesture recogniser with a shared contract. Web uses <code>PanResponder</code>; native uses a Gesture Handler Pan raced against a Tap.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/studio-gesture</code> (registry item)</li><li>Import: <code>import { StudioGesture } from '@/components/forge/studio-gesture';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>react-native-gesture-handler</code> &gt;=3.4 &lt;4 (native file)</li><li>Requires: <code>@nyc-tron/gestures/GestureHandlerDrag</code>; <code>@nyc-tron/gestures/PanResponderDrag</code></li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/studio-gesture</code></li><li>Installs: <code>react-native-gesture-handler@^3.5.0</code> (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/studio-gesture.tsx</code>, <code>components/forge/studio-gesture.native.tsx</code>, <code>components/forge/studio-gesture-types.ts</code>, <code>components/forge/keyboard-event.ts</code>, <code>components/forge/drag-transport.ts</code>, <code>components/forge/drag-transport.native.ts</code></li></ul>
+<h2 id="props">Props</h2>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">children</td><td data-l="Type"><code>ReactElement</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">One element; it receives the handlers.</td></tr><tr><td data-l="Name">onBegin</td><td data-l="Type"><code>(point) =&gt; void</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">onMove</td><td data-l="Type"><code>(point, touches) =&gt; void</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">onRelease</td><td data-l="Type"><code>(point) =&gt; void</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">onCancel</td><td data-l="Type"><code>() =&gt; void</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">disabled</td><td data-l="Type"><code>boolean</code></td><td data-l="Default">falsy</td><td data-l="Required">no</td><td data-l="Description"></td></tr></tbody></table>
+<h2 id="variants">Variants</h2>
+<h3 id="file">file</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value"><code>studio-gesture.tsx</code></td><td data-l="Effect">Web <code>PanResponder</code>.</td></tr><tr><td data-l="Value"><code>studio-gesture.native.tsx</code></td><td data-l="Effect">Gesture Handler <code>Pan</code> (minDistance 0, maxPointers 1) raced with <code>Tap</code> (maxDistance 4).</td></tr></tbody></table>
+<h2 id="states">States</h2>
+<table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Disabled</td><td data-l="How it is set"><code>disabled</code></td><td data-l="What the code does">Gestures not enabled.</td></tr><tr><td data-l="State">Second touch</td><td data-l="How it is set">more than one pointer</td><td data-l="What the code does"><code>onCancel</code>.</td></tr><tr><td data-l="State">Pan loses to Tap</td><td data-l="How it is set">native race</td><td data-l="What the code does">Tap release still fires; the lost Pan does not cancel it.</td></tr></tbody></table>
+<h3 id="motion">Motion</h3>
+<p>None.</p>
+<h2 id="a11y">A11y</h2>
+<ul><li>Sets no role, label or state; it clones handlers onto its child.</li><li>Review status: reviewed-pass, reviewed, no failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { View } from 'react-native';
+import { StudioGesture } from '@/components/forge/studio-gesture';
+
+export const Demo = () =&gt; (
+  &lt;StudioGesture onBegin={() =&gt; {}} onMove={() =&gt; {}} onRelease={() =&gt; {}} onCancel={() =&gt; {}}&gt;&lt;View /&gt;&lt;/StudioGesture&gt;
+);</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Give it a single child element (<code>children</code>).</li><li>Handle <code>onCancel</code> to drop preview state.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not wrap more than one child.</li><li>Do not use it for multi-touch; <code>maxPointers(1)</code> and the second-touch cancel reject it.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-studio-gesture" hidden>Copy</button></header><pre id="agent-studio-gesture">npx shadcn@4.23.0 add @nitro-forge/studio-gesture</pre></div>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>no</dd>
+<dt>Needs ignition</dt><dd>no</dd>
+<dt>Needs studio-layout</dt><dd>no</dd>
+<dt>Accessibility</dt><dd>reviewed-pass: source read, no failures found</dd>
+<dt>Peers</dt><dd><code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>react-native-gesture-handler</code> &gt;=3.4 &lt;4 (native file)</dd>
+<dt>Installs</dt><dd><code>react-native-gesture-handler@^3.5.0</code></dd>
+<dt>Source files</dt><dd class="mono">studio-workspace/src/studio-gesture.tsx<br>studio-workspace/src/studio-gesture.native.tsx<br>studio-workspace/src/studio-gesture-types.ts<br>studio-workspace/src/keyboard-event.ts<br>studio-workspace/src/drag-transport.ts<br>studio-workspace/src/drag-transport.native.ts</dd>
+<dt>Generated from</dt><dd class="mono">a38d6bc0</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
+<span>Generated from inputs <code>a38d6bc0</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

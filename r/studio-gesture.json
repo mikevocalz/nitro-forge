@@ -1,0 +1,73 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "studio-gesture",
+  "title": "Studio Gesture",
+  "description": "Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.",
+  "dependencies": [
+    "react-native-gesture-handler@^3.5.0"
+  ],
+  "registryDependencies": [
+    "@nyc-tron/gestures/GestureHandlerDrag",
+    "@nyc-tron/gestures/PanResponderDrag"
+  ],
+  "files": [
+    {
+      "path": "tooling/registry/stage/studio-gesture/studio-gesture.tsx",
+      "content": "import { cloneElement, useMemo, useRef } from 'react';\nimport { PanResponder } from 'react-native';\nimport type { StudioGestureProps } from './studio-gesture-types';\n\n/** Browser responder transport. Native resolves the Gesture Handler sibling. */\nexport function StudioGesture(props: StudioGestureProps) {\n  const current = useRef(props); current.current = props;\n  const responder = useMemo(() => PanResponder.create({\n    onStartShouldSetPanResponder: event => !current.current.disabled && event.nativeEvent.touches.length === 1,\n    onPanResponderGrant: event => current.current.onBegin({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }),\n    onPanResponderStart: event => { if (event.nativeEvent.touches.length !== 1) current.current.onCancel(); },\n    onPanResponderMove: (event, state) => current.current.onMove({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }, state.numberActiveTouches),\n    onPanResponderRelease: event => current.current.onRelease({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }),\n    onPanResponderTerminationRequest: () => true,\n    onPanResponderTerminate: () => current.current.onCancel(),\n  }), []);\n  return cloneElement(props.children, responder.panHandlers);\n}\n",
+      "type": "registry:ui",
+      "target": "@components/forge/studio-gesture.tsx"
+    },
+    {
+      "path": "tooling/registry/stage/studio-gesture/studio-gesture.native.tsx",
+      "content": "import { useMemo, useRef } from 'react';\nimport { Gesture, GestureDetector } from 'react-native-gesture-handler';\nimport type { StudioGestureProps, GesturePoint } from './studio-gesture-types';\n\n/** Native recognition; document commands and async measurement stay on JS. */\nexport function StudioGesture(props: StudioGestureProps) {\n  const current = useRef(props); current.current = props;\n  const gesture = useMemo(() => {\n    let start: GesturePoint = { x: 0, y: 0 };\n    let panClaimed = false;\n    let tapRejected = false;\n    const pan = Gesture.Pan()\n      .enabled(!props.disabled).minDistance(0).maxPointers(1).runOnJS(true)\n      // Pan may remain BEGAN for DOWN→UP without a MOVE, even at distance zero.\n      .onBegin(event => { start = { x: event.absoluteX, y: event.absoluteY }; panClaimed = false; })\n      .onStart(() => { panClaimed = true; current.current.onBegin(start); })\n      .onTouchesDown(event => { if (event.numberOfTouches !== 1) current.current.onCancel(); })\n      .onUpdate(event => current.current.onMove({ x: event.absoluteX, y: event.absoluteY }, event.numberOfPointers))\n      .onEnd((event, success) => {\n        if (success) current.current.onRelease({ x: event.absoluteX, y: event.absoluteY });\n        else if (panClaimed) current.current.onCancel();\n      })\n      // The losing Pan must not cancel the winning Tap's async release.\n      .onFinalize((_event, success) => { if (!success && panClaimed) current.current.onCancel(); });\n    const tap = Gesture.Tap().enabled(!props.disabled).maxDistance(4).runOnJS(true)\n      .onBegin(event => { tapRejected = event.numberOfPointers !== 1; })\n      .onTouchesDown(event => { if (event.numberOfTouches !== 1) tapRejected = true; })\n      .onEnd((event, success) => {\n        if (!success || tapRejected) return;\n        const point = { x: event.absoluteX, y: event.absoluteY };\n        current.current.onBegin(point);\n        current.current.onRelease(point);\n      });\n    return Gesture.Race(pan, tap);\n  }, [props.disabled]);\n  return <GestureDetector gesture={gesture}>{props.children}</GestureDetector>;\n}\n",
+      "type": "registry:ui",
+      "target": "@components/forge/studio-gesture.native.tsx"
+    },
+    {
+      "path": "tooling/registry/stage/studio-gesture/studio-gesture-types.ts",
+      "content": "import type { ReactElement } from 'react';\nexport type GesturePoint = { x: number; y: number };\nexport type StudioGestureProps = {\n  children: ReactElement; disabled?: boolean;\n  onBegin: (point: GesturePoint) => void;\n  onMove: (point: GesturePoint, touches: number) => void;\n  onRelease: (point: GesturePoint) => void;\n  onCancel: () => void;\n};\n",
+      "type": "registry:lib",
+      "target": "@components/forge/studio-gesture-types.ts"
+    },
+    {
+      "path": "tooling/registry/stage/studio-gesture/keyboard-event.ts",
+      "content": "/** RNWeb exposes key directly; native RN keyboard events carry it in nativeEvent. */\nexport type StudioKeyboardEvent = {\n  readonly key?: string;\n  readonly nativeEvent?: { readonly key?: string };\n};\nexport function keyboardKey(event: StudioKeyboardEvent): string | undefined {\n  return event.key ?? event.nativeEvent?.key;\n}\n",
+      "type": "registry:lib",
+      "target": "@components/forge/keyboard-event.ts"
+    },
+    {
+      "path": "tooling/registry/stage/studio-gesture/drag-transport.ts",
+      "content": "import { PanResponderDrag } from '@/components/nyc-tron/ui/components/gestures/PanResponderDrag';\nimport type { DragTransport } from '@/components/nyc-tron/ui/components/gestures/drag-transport';\n\n/** Pointer recogniser for NYC-Tron drag parts in Forge: the browser responder\n * here, Gesture Handler on native (drag-transport.native.ts), matching\n * StudioGesture so docking and reordering keep their platform recognisers. */\nexport const forgeDragTransport: DragTransport = PanResponderDrag;\n",
+      "type": "registry:lib",
+      "target": "@components/forge/drag-transport.ts"
+    },
+    {
+      "path": "tooling/registry/stage/studio-gesture/drag-transport.native.ts",
+      "content": "import { GestureHandlerDrag } from '@/components/nyc-tron/ui/components/gestures/GestureHandlerDrag';\nimport type { DragTransport } from '@/components/nyc-tron/ui/components/gestures/drag-transport';\n\n/** Native drags run on Gesture Handler, as StudioGesture does. */\nexport const forgeDragTransport: DragTransport = GestureHandlerDrag;\n",
+      "type": "registry:lib",
+      "target": "@components/forge/drag-transport.native.ts"
+    }
+  ],
+  "meta": {
+    "tier": 1,
+    "docs": "handwritten",
+    "docsPath": "docs/components/studio-gesture.md",
+    "category": "primitive",
+    "a11yStatus": "reviewed-pass",
+    "needsProvider": false,
+    "sourceFiles": [
+      "packages/studio-workspace/src/studio-gesture.tsx",
+      "packages/studio-workspace/src/studio-gesture.native.tsx",
+      "packages/studio-workspace/src/studio-gesture-types.ts",
+      "packages/studio-workspace/src/keyboard-event.ts",
+      "packages/studio-workspace/src/drag-transport.ts",
+      "packages/studio-workspace/src/drag-transport.native.ts"
+    ],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ]
+  },
+  "type": "registry:ui"
+}

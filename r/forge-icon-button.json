@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "forge-icon-button",
+  "title": "Forge Icon Button",
+  "description": "Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.",
+  "registryDependencies": [
+    "@nitro-forge/forge-icon"
+  ],
+  "files": [],
+  "meta": {
+    "tier": 1,
+    "docs": "handwritten",
+    "docsPath": "docs/components/forge-icon-button.md",
+    "category": "input",
+    "a11yStatus": "reviewed-fail",
+    "needsProvider": false,
+    "sourceFiles": [],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "a11yFailures": [
+      "N08 1.4.1, 4.1.2: status is not in accessibilityState or accessibilityValue (ForgeIcon.js:91-93)"
+    ]
+  },
+  "type": "registry:ui"
+}

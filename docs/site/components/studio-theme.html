@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio Theme | Nitro Forge</title>
+<meta name="description" content="Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html" aria-current="page">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>Studio Theme</h1>
+<p class="lead">Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>No provider needed.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-studio-theme" hidden>Copy</button></header><pre id="cmd-studio-theme">npx shadcn@4.23.0 add @nitro-forge/studio-theme</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p>The token source and its two generated stylesheets. <code>theme.ts</code> defines <code>workspaceThemes</code> (dark, light; 13 colour keys), <code>workspaceScale</code>, three densities, <code>workspaceStatus</code> and the Prism override <code>prismThemes</code>. <code>build-theme.mjs</code> writes <code>theme.css</code> (Tailwind v4 <code>@theme</code>) and <code>theme.native.css</code> (Uniwind variants). Tokens, not a component.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/studio-theme</code> (registry item)</li><li>Import: <code>import { workspaceThemes, workspaceScale, resolveWorkspaceScale } from '@/components/forge/theme';</code></li><li>Peers: none at runtime</li><li>Requires: Generator step: <code>pnpm --filter @nitro-forge/studio-workspace build:theme</code> (needs a Node with type stripping; root requires &gt;=24.3.0)</li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/studio-theme</code></li><li>Installs: none (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/theme.ts</code>, <code>components/forge/theme.css</code>, <code>components/forge/theme.native.css</code></li></ul>
+<h2 id="props">Props</h2>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name"><code>workspaceThemes</code></td><td data-l="Type"><code>{dark, light}</code> x 13 keys</td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description">base raised deep line text muted accent ink soft paper paperInk paperMuted error.</td></tr><tr><td data-l="Name"><code>workspaceScale</code></td><td data-l="Type">space, radius, type, font, size</td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description"></td></tr><tr><td data-l="Name"><code>resolveWorkspaceScale(density)</code></td><td data-l="Type"><code>WorkspaceDensityScale</code></td><td data-l="Default"><code>&quot;standard&quot;</code></td><td data-l="Required">no</td><td data-l="Description">Throws <code>RangeError</code> on an unknown density.</td></tr><tr><td data-l="Name"><code>workspaceStatus</code></td><td data-l="Type"><code>{dark, light}</code> info, success, onError</td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description"></td></tr><tr><td data-l="Name"><code>prismThemes</code></td><td data-l="Type">canvas studio override</td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description">Replaces 9 keys.</td></tr></tbody></table>
+<h2 id="variants">Variants</h2>
+<h3 id="scheme-section">scheme</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">dark, light</td><td data-l="Effect">Web: <code>[data-theme=&quot;light&quot;]</code> block and <code>.dark</code> block (the NightScope class). Native: <code>@variant light</code> and <code>@variant dark</code>.</td></tr></tbody></table>
+<h3 id="density-section">density</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">compact, standard, comfortable</td><td data-l="Effect">Changes <code>space</code> and <code>size</code> only; never <code>type</code> or <code>radius</code>.</td></tr></tbody></table>
+<h2 id="states">States</h2>
+<p>none in code.</p>
+<h3 id="motion">Motion</h3>
+<p>No motion tokens exist in <code>theme.ts</code>. tokens.map.json proposes 36 motion tokens from icons, interaction policy and turret constants.</p>
+<h2 id="a11y">A11y</h2>
+<ul><li>Not applicable. Contrast pairs for the Workbench chrome are checked in <code>forge-directions.test.ts</code> (not run here, UNVERIFIED).</li><li>Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li><li>Failing: N01 1.4.3: light muted 4.43:1 on base, 4.01:1 on deep (theme.ts:7)</li><li>Failing: N02 1.4.3: paperMuted 3.98:1 on paper (theme.ts:6-7)</li><li>Failing: N06 1.4.11: --color-border 1.2 to 1.54:1 where it is the only edge (theme.ts:6-7)</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { resolveWorkspaceScale } from '@/components/forge/theme';
+
+export const gap = resolveWorkspaceScale('comfortable').space.group;</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Regenerate CSS with <code>build:theme</code> after editing <code>theme.ts</code>.</li><li>Rebrand with the three accent keys (<code>accent</code>, <code>ink</code>, <code>soft</code>) per scheme only (decision 23).</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not unify the icon accent <code>#6859E8</code> with <code>#6950D1</code>; that changes pixels (decisions 5, 20).</li><li>Do not hand-edit <code>theme.css</code>; the header says it is generated.</li></ul>
+<h3 id="notes">Notes</h3>
+<ul><li>Defines rather than reads. The generated CSS declares 32 custom properties today. tokens.map.json proposes 234 tokens in 19 tiers (instrument 53, motion 36, stage-colour 20, semantic-colour 18, size 15, space 14, chrome 14, type 12, icon-colour 9, icon-size 7, fixed-literal 7, layer 6, shadow 5, radius 4, document-colour 4, lab 4, icon-stroke 2, opacity 2, border 2); status counts: new-value-preserving 185, existing-ts-new-css 21, existing-nyc-tron 15, new-forge-extension 5, reserved-value-undefined-in-repo 4, existing-css-renamed 2, existing-css-keep (AGENTS.md rounded-sm 4px) 1, existing-ts-new-css (value equals title) 1. The <code>tokens</code> array in the front matter lists only the semantic roles <code>theme.ts</code> feeds.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-studio-theme" hidden>Copy</button></header><pre id="agent-studio-theme">npx shadcn@4.23.0 add @nitro-forge/studio-theme</pre></div>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>no</dd>
+<dt>Needs ignition</dt><dd>no</dd>
+<dt>Needs studio-layout</dt><dd>no</dd>
+<dt>Accessibility</dt><dd>reviewed-fail: source read, failures found</dd>
+<dt>Peers</dt><dd>none at runtime</dd>
+<dt>Installs</dt><dd>none</dd>
+<dt>Source files</dt><dd class="mono">studio-workspace/src/theme.ts<br>studio-workspace/src/theme.css<br>studio-workspace/src/theme.native.css</dd>
+<dt>Generated from</dt><dd class="mono">a38d6bc0</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
+<span>Generated from inputs <code>a38d6bc0</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

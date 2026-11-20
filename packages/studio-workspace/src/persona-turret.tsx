@@ -18,6 +18,7 @@ import {
   systemColor, type ForgeDirectionId, type ForgeRenderPrefs, type ForgeScheme,
 } from './forge-directions';
 import { TurretPointer, TurretRim, type TurretPulse } from './turret-motion';
+import { tokens } from './tokens';
 
 export { BUILT_IN_PERSONAS } from './persona';
 export type { PersonaSurface } from './persona';
@@ -193,7 +194,7 @@ const polar = (deg: number, r: number) => {
   const rad = deg * Math.PI / 180;
   return { x: r * Math.sin(rad), y: -r * Math.cos(rad) };
 };
-const visuallyHidden = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0, clip: 'rect(0 0 0 0)' } as unknown as ViewStyle;
+const visuallyHidden = { position: 'absolute', width: tokens.borderWidth.hairline, height: tokens.borderWidth.hairline, overflow: 'hidden', opacity: 0, clip: 'rect(0 0 0 0)' } as unknown as ViewStyle;
 
 /**
  * The design studio's persona switcher: a machined four-stop turret with a
@@ -349,7 +350,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
             onPress={() => dispatch({ type: 'shortcut', digit: s + 1 }, null)}
             style={({ pressed }) => ({
               ...place,
-              borderRadius: scale.radius.control, borderWidth: 1,
+              borderRadius: scale.radius.control, borderWidth: tokens.borderWidth.hairline,
               // A transparent edge keeps the stop's shape under Windows High Contrast.
               borderColor: focusedStop ? focusColor : 'transparent',
               // Pressed: the name sinks into the panel, an inset of the notch colour.
@@ -357,12 +358,12 @@ export function PersonaTurret(props: PersonaTurretProps) {
               transform: [{ scale: pressed ? forgeFeedbackMotion.press.scale : 1 }],
               ...(Platform.OS === 'web' ? {
                 transitionProperty: 'transform, background-color', transitionDuration: prefs.reduceMotion ? '0ms' : `${forgeFeedbackMotion.press.ms}ms`, transitionTimingFunction: 'ease-out',
-                outlineStyle: focusedStop ? 'solid' : 'none', outlineWidth: 2, outlineColor: focusColor, outlineOffset: 1,
+                outlineStyle: focusedStop ? 'solid' : 'none', outlineWidth: tokens.borderWidth.strong, outlineColor: focusColor, outlineOffset: tokens.borderWidth.hairline,
               } : {}),
             }) as ViewStyle}>
-            <Text numberOfLines={stacked ? undefined : 1} style={{ flexShrink: 1, color: lit ? m.text : m.muted, fontSize: fs(scale.type.label + 1), fontWeight: committed || lit ? '700' : '500' }}>{p.label}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.stack, minHeight: 14 }}>
-              {committed && <View style={{ width: 6, height: 2, borderRadius: 1, backgroundColor: m.accent }} />}
+            <Text numberOfLines={stacked ? undefined : 1} style={{ flexShrink: 1, color: lit ? m.text : m.muted, fontSize: fs(scale.type.label + 1), fontWeight: committed || lit ? tokens.fontWeight.bold : '500' }}>{p.label}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.stack, minHeight: tokens.spacing.off14 }}>
+              {committed && <View style={{ width: tokens.spacing.off6, height: tokens.spacing.off2, borderRadius: tokens.radius.off1, backgroundColor: m.accent }} />}
               {tag && <Text style={{ color: m.muted, fontSize: fs(scale.type.micro + 1), fontVariant: ['tabular-nums'] }}>{tag}</Text>}
             </View>
           </Pressable>
@@ -400,8 +401,8 @@ export function PersonaTurret(props: PersonaTurretProps) {
           {/* Focus ring sits outside the bezel so it never covers a detent. */}
           <View pointerEvents="none" style={{
             position: 'absolute', left: cx - R - 5, top: frame.boxTop - R - 5, width: ringSize + 10, height: ringSize + 10, borderRadius: R + 5,
-            borderWidth: state.focused ? 2 : 0, borderColor: focusColor,
-            ...(state.focused && Platform.OS === 'web' ? { outlineStyle: 'solid', outlineWidth: forced ? 2 : 0, outlineColor: focusColor, outlineOffset: 1 } : {}),
+            borderWidth: state.focused ? tokens.borderWidth.strong : 0, borderColor: focusColor,
+            ...(state.focused && Platform.OS === 'web' ? { outlineStyle: 'solid', outlineWidth: forced ? tokens.borderWidth.strong : 0, outlineColor: focusColor, outlineOffset: tokens.borderWidth.hairline } : {}),
           } as ViewStyle} />
           <StudioGesture disabled={!!props.disabled}
             onBegin={point => { void measureOrigin().then(origin => { store.setState({ origin }); if (origin) dragTo(origin, point); }); }}
@@ -445,14 +446,14 @@ export function PersonaTurret(props: PersonaTurretProps) {
                   </LinearGradient>
                 </Defs>
                 <Circle r={R - 2} fill={`url(#bezel-${direction.id})`} />
-                <Circle r={R - 2.5} fill="none" stroke={`url(#rim-${direction.id})`} strokeWidth={1.5} />
+                <Circle r={R - 2.5} fill="none" stroke={`url(#rim-${direction.id})`} strokeWidth={tokens.borderWidth.off1_5} />
                 {/* Knurl: fine cuts around the bezel, skipped where a detent slot sits. */}
                 {Array.from({ length: geo.knurlCount }, (_, i) => {
                   const deg = i * 360 / geo.knurlCount;
                   const nearStop = stops.some((_, s) => Math.abs((((deg - turretDisplayAngle(s, stops.length, rtl)) % 360) + 540) % 360 - 180) < 4);
                   if (nearStop) return null;
                   const a = polar(deg, R - 3 * k), b = polar(deg, R - 8 * k);
-                  return <Line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={m.knurl} strokeWidth={1} strokeOpacity={0.55} />;
+                  return <Line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={m.knurl} strokeWidth={tokens.borderWidth.hairline} strokeOpacity={0.55} />;
                 })}
                 {/* Detent slots, one per persona. The committed slot carries the
                     accent over a halo, so it holds 3:1 on a light bezel. */}
@@ -466,19 +467,19 @@ export function PersonaTurret(props: PersonaTurretProps) {
                     <Line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={committed ? m.accent : m.knurl} strokeWidth={(committed ? 2.5 : 1) + notchBoost} strokeLinecap="round" />
                   </G>;
                 })}
-                <Circle r={g.face} fill={`url(#face-${direction.id})`} stroke={m.notch} strokeWidth={1} />
+                <Circle r={g.face} fill={`url(#face-${direction.id})`} stroke={m.notch} strokeWidth={tokens.borderWidth.hairline} />
                 {[6, 13, 20, 27, 34].map(d => <Circle key={d} r={g.face - d * k} fill="none" stroke={m.lathe} strokeWidth={0.6} strokeOpacity={direction.light.model === 'refract' ? 0.14 : 0.07} />)}
               </Svg>
               <TurretRim pulse={state.pulse} reduceMotion={prefs.reduceMotion} size={ringSize} commitColor={m.accent} limitColor={m.muted} />
               {/* The pointer: a slot milled from the face to the shown detent. */}
               <TurretPointer deg={indicatorDeg} durationMs={travel} easing={direction.motion.easing} bezier={direction.motion.bezier}
                 reduceMotion={prefs.reduceMotion} pulse={state.pulse} size={ringSize}>
-                <View style={{ position: 'absolute', left: R - 1.5 * k, top: R - g.face + 3 * k, width: 3 * k, height: 10 * k, borderRadius: 1.5 * k, backgroundColor: peeking ? m.faceText : m.accent }} />
+                <View style={{ position: 'absolute', left: R - 1.5 * k, top: R - g.face + 3 * k, width: tokens.spacing.off3 * k, height: tokens.spacing.off10 * k, borderRadius: tokens.radius.off1_5 * k, backgroundColor: peeking ? m.faceText : m.accent }} />
               </TurretPointer>
-              <View pointerEvents="none" style={{ position: 'absolute', left: R - g.face + 6 * k, width: (g.face - 6 * k) * 2, top: R - 22 * k, alignItems: 'center', gap: 2 * k }}>
-                <Text numberOfLines={1} style={{ color: m.faceText, fontSize: fs(scale.type.body + 2), fontWeight: '700', letterSpacing: -0.2 }}>{persona?.label ?? turretCopy.ringLabel}</Text>
+              <View pointerEvents="none" style={{ position: 'absolute', left: R - g.face + 6 * k, width: (g.face - 6 * k) * 2, top: R - 22 * k, alignItems: 'center', gap: tokens.spacing.off2 * k }}>
+                <Text numberOfLines={1} style={{ color: m.faceText, fontSize: fs(scale.type.body + 2), fontWeight: tokens.fontWeight.bold, letterSpacing: tokens.tracking.offNeg0_2 }}>{persona?.label ?? turretCopy.ringLabel}</Text>
                 {/* The count is a readout: 13 pt, the phone floor for readouts. */}
-                <Text style={{ color: m.faceText, opacity: peeking ? 1 : 0.78, fontWeight: peeking ? '700' : '400', fontSize: fs(scale.type.micro + 3), fontVariant: ['tabular-nums'] }}>
+                <Text style={{ color: m.faceText, opacity: peeking ? 1 : 0.78, fontWeight: peeking ? tokens.fontWeight.bold : '400', fontSize: fs(scale.type.micro + 3), fontVariant: ['tabular-nums'] }}>
                   {stops.length ? turretCopy.position(shown + 1, stops.length) : '0 of 0'}
                 </Text>
               </View>
@@ -491,7 +492,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
       <Text testID="persona-turret-hint" numberOfLines={textScale > 1.3 ? undefined : 2}
         style={{ color: peeking ? m.accent : m.muted, fontSize: fs(scale.type.label), fontWeight: peeking ? '600' : '400', textAlign: 'center', maxWidth: stacked ? undefined : lineWidth, alignSelf: stacked ? 'stretch' : 'auto' }}>{hint}</Text>
       {/* Full width, so the capability lines share the panel's gutter with its title and footer. */}
-      <View testID="persona-turret-readout" style={{ alignSelf: 'stretch', gap: scale.space.stack, borderTopWidth: 1, borderTopColor: m.panelEdge, paddingTop: scale.space.element }}>
+      <View testID="persona-turret-readout" style={{ alignSelf: 'stretch', gap: scale.space.stack, borderTopWidth: tokens.borderWidth.hairline, borderTopColor: m.panelEdge, paddingTop: scale.space.element }}>
         {persona && (missing.length === 0
           ? <Text style={{ color: m.muted, fontSize: fs(scale.type.label) }}>{turretCopy.allReady(persona.label)}</Text>
           : missing.map(line => <Text key={line.id} style={{ color: m.muted, fontSize: fs(scale.type.label) }}>{line.note}</Text>))}

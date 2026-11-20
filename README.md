@@ -1,8 +1,9 @@
 # Nitro-Forge
 
-Native document engines for React Native. Seven products — **Prism** (image),
+Native document engines for React Native. Twelve products — **Prism** (image),
 **Cadence** (audio), **Splice** (video), **Folio** (PDF), **Pitch** (slides),
-**Tally** (sheets), **Quill** (rich text) — each a pure-Rust engine behind the
+**Tally** (sheets), **Quill** (rich text), **Photo**, **Motion**, **Design**,
+**Draft** and **Scene** — each a pure-Rust engine behind the
 shared **Ignition** contract, exposed to React Native through a single Nitro
 Module and to Node/tests through the `nf-cli` protocol host.
 

@@ -9,12 +9,13 @@ import { View, Text, Button } from './ui';
 import { StudioGesture } from './studio-gesture';
 import { shapeOutline, windowToPageRect, type CanvasDocument, type CanvasRect } from './prism-canvas-model';
 import { createCanvasGesture, type CanvasPreview } from './prism-canvas-model';
+import { tokens } from './tokens';
 
 /** The engine composite is transparent where nothing is painted (an empty
  * raster layer stays clear), so the artboard shows that as a fine checker
  * instead of a white block: 8 pt squares in two near-white neutrals, quiet
  * enough that every fill reads over it. */
-export const ARTBOARD_CHECKER = { size: 8, light: '#FFFFFF', dark: '#EDEFF3' } as const;
+export const ARTBOARD_CHECKER = { size: 8, light: tokens.color.artboardCheckerA, dark: tokens.color.artboardCheckerB } as const;
 
 function TransparencyChecker({ width, height }: { width: number; height: number }) {
   const { size, light, dark } = ARTBOARD_CHECKER;
@@ -87,13 +88,13 @@ export function PrismCanvas(props: {
     <View ref={view} collapsable={false} focusable onLayout={() => gesture.cancel()}
     {...{ onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') gesture.cancel(); } }}
     testID="prism-artboard" accessibilityLabel="Prism artboard. Select layers or use Transform for accessible move actions."
-    style={{ ...touchStyle, width: props.width, height: props.height, backgroundColor: ARTBOARD_CHECKER.light, overflow: 'hidden', boxShadow: '0 12px 35px #00000035' }}>
+    style={{ ...touchStyle, width: props.width, height: props.height, backgroundColor: ARTBOARD_CHECKER.light, overflow: 'hidden', boxShadow: tokens.shadow.artboard }}>
     <TransparencyChecker width={props.width} height={props.height} />
     <View pointerEvents="none" style={{ position: 'absolute', inset: 0 }}>{props.children}</View>
     {props.overlay}
-    {!props.overlay && outline && <View pointerEvents="none" testID="prism-selection-bounds" style={{ position: 'absolute', left: outline.x, top: outline.y, width: outline.width, height: outline.height, borderWidth: 2, borderColor: props.color, borderStyle: preview ? 'dashed' : 'solid' }} />}
-    {preview && <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: '#111827', padding: 4 }}>
-      <Text style={{ color: '#FFFFFF', fontSize: 11 }}>Move preview · release to apply</Text>
+    {!props.overlay && outline && <View pointerEvents="none" testID="prism-selection-bounds" style={{ position: 'absolute', left: outline.x, top: outline.y, width: outline.width, height: outline.height, borderWidth: tokens.borderWidth.strong, borderColor: props.color, borderStyle: preview ? 'dashed' : 'solid' }} />}
+    {preview && <View style={{ position: 'absolute', bottom: tokens.spacing.fixedStack, left: tokens.spacing.fixedStack, backgroundColor: tokens.color.overlayChip, padding: tokens.spacing.fixedStack }}>
+      <Text style={{ color: tokens.color.onOverlayChip, fontSize: tokens.text.off11 }}>Move preview · release to apply</Text>
       <Button title="Cancel move" aria-label="Cancel shape move" onPress={() => gesture.cancel()} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
     </View>}
   </View></StudioGesture>;

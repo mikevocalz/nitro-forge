@@ -1,0 +1,73 @@
+{
+  "_refs": "nitroForgeRef and nycTronRef are MOVING refs (branches), not release tags. A moving ref means a consumer's URL serves whatever is on that branch today. Pinning to a release tag is the recommendation, but cutting a tag is the owner's call (decision 45). To pin: node tooling/registry/set-ref.mjs <nitroForgeRef> [nycTronRef]. That rewrites these two values and regenerates every generated file. nycTronRef must point at a ref where NYC-Tron's r/ exists.",
+  "nitroForgeRef": "master",
+  "nycTronRef": "main",
+  "namespace": "@nitro-forge",
+  "shadcnVersion": "4.23.0",
+  "owner": "mikevocalz",
+  "registries": {
+    "@nitro-forge": {
+      "repo": "nitro-forge",
+      "refKey": "nitroForgeRef"
+    },
+    "@nyc-tron": {
+      "repo": "NYC-Tron-UI",
+      "refKey": "nycTronRef"
+    }
+  },
+  "urlTemplate": "https://raw.githubusercontent.com/{owner}/{repo}/{ref}/r/{name}.json",
+  "homepage": "https://github.com/mikevocalz/nitro-forge",
+  "installDir": "@components/forge",
+  "iconsSubdir": "icons",
+  "nycTron": {
+    "_note": "Derived from the NYC-Tron registry, not assumed. Every @nyc-tron item installs its files at targetPrefix + <export key> + extension (checked against NYC-Tron's built registry.json: 22 of 22 items Forge depends on). shadcn expands the leading '@components' with the consumer's components.json aliases.components ('@/components'), so a consumer imports <importPrefix><key>. importPrefix is computed in tooling/registry/lib.mjs as targetPrefix with '@components/' replaced by aliasRoots['@components/']. check-imports re-reads NYC-Tron's registry (--nyc-tron-registry) and fails if a Forge import does not land on a file that registry installs.",
+    "specifierPrefix": "@nyc-tron/ui/components/",
+    "targetPrefix": "@components/nyc-tron/ui/components/",
+    "aliasRoots": {
+      "@components/": "@/components/"
+    },
+    "localRegistryPaths": [
+      "../NYC-Tron-UI/registry.json",
+      "../nyc-tron-ui/registry.json",
+      "../tron/registry.json"
+    ],
+    "registryUrl": "https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI/main/registry.json",
+    "providedBy": {
+      "gestures/drag-transport": [
+        "gestures/PanResponderDrag",
+        "gestures/GestureHandlerDrag"
+      ],
+      "forge/layers/layer-model": [
+        "forge/layers/LayerStack"
+      ]
+    }
+  },
+  "npmVersions": {
+    "zustand": "5.1.0",
+    "react-native-svg": "15.16.0",
+    "react-native-gesture-handler": "^3.5.0",
+    "react-native-reanimated": "^4.7.1"
+  },
+  "builtinPackages": [
+    "react",
+    "react-native"
+  ],
+  "prerequisites": {
+    "@nitro-forge/ignition": {
+      "step": 1,
+      "reason": "Native host. shadcn copies files and cannot run nitrogen, pod install or CMake (decision 4).",
+      "doc": "docs/agent-native/install-order.md#step-1-nitro-forgeignition-host-native-module-nitrogen-output"
+    },
+    "@nitro-forge/studio-layout": {
+      "step": 3,
+      "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).",
+      "doc": "docs/agent-native/install-order.md#step-3-nitro-forgestudio-layout"
+    }
+  },
+  "provider": "studio-ui-provider",
+  "a11yMap": {
+    "PASS": "reviewed-pass",
+    "FAIL": "reviewed-fail",
+    "UNVERIFIED": "unverified"
+  }
+}

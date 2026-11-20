@@ -1,0 +1,3348 @@
+# Nitro Forge
+
+> Document studios on one Rust engine, with a shadcn registry (@nitro-forge) for the studio-workspace chrome, theme, provider and icons. Controls come from @nyc-tron. Nothing is on npm: the engines, ignition and studio-layout are monorepo packages at 0.0.0, and steps 1 to 3 of the install order cannot be reproduced outside this repo today. The links use the moving branch `master`, not a release tag, until the owner cuts one.
+
+Start here: the provider prerequisite. Every studio component throws without StudioUIProvider (install studio-ui-provider and nyc-tron-host first). Install order has nine steps, numbered 0 to 8; a registry add covers steps 4 and 8 and the file parts of 5, 6 and 7.
+
+## Install and rules
+
+- [Install order](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/agent-native/install-order.md): The nine-step chain, which steps `shadcn add` covers, and the commands for the rest.
+- [Agent skill](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/SKILL.md): Provider first, install order, rebrand contract, token rules, what is deferred and why.
+- [Agent guide](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/AGENTS.md): Contracts, commands and contributor rules, plus the agent-native section.
+- [Not in the registry](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/registry-excluded.json): Four deferred adapters, 12 engines, ignition and studio-layout, each with a reason.
+
+## Needs StudioUIProvider (8)
+
+- [Forge Document Stage](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-document-stage.md): Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout.
+- [Forge Workspace](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-workspace.md): Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout.
+- [NYC-Tron Host](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/nyc-tron-host.md): Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.
+- [Persona Composer](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/persona-composer.md): Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore.
+- [Persona Turret](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/persona-turret.md): Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions.
+- [Prism Canvas](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/prism-canvas.md): Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture.
+- [Prism Editor](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/prism-editor.md): Vector canvas editor: shape tools, layers panel, transforms, personas. Needs @nitro-forge/ignition first, StudioUIProvider, @nyc-tron.
+- [Quill Text Editor](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/quill-text-editor.md): Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload.
+
+## No provider needed (10)
+
+- [Studio UI Provider](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/studio-ui-provider.md): Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.
+- [Studio Theme](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/studio-theme.md): Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both.
+- [Brand Theme](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/brand-theme.md): Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.
+- [Forge Directions](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-directions.md): Theme: workbench, optics and atelier palettes for Prism chrome and the persona turret, plus WCAG contrast helpers. Needs studio-theme.
+- [Forge Icon](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-icon.md): Icon: outline when idle, filled when selected. 47 glyphs drawn; 42 of 1,463 catalog ids resolve to one; 6 drawn glyphs are not catalog ids. A name with no glyph renders nothing. Needs react-native-svg.
+- [Forge Icon Button](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-icon-button.md): Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.
+- [Instrument System](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/instrument-system.md): Instrument policy, not UI: 18 blueprints, precision scrubbing math, ruler ticks, motion budgets, overlay planner. No provider needed.
+- [Persona Model](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/persona-model.md): Persona data, not UI: 4 personas, 11 capabilities, 7 surfaces, compose, import, export, per-document store. No provider needed.
+- [Studio Gesture](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/studio-gesture.md): Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.
+- [Workspace Utilities](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/workspace-utilities.md): Helpers, not UI: APP_MANIFESTS (task line, glyph, category per studio), jsonProblem (JSON parse error as a sentence). Needs studio-layout.
+
+## Engines and foundations (docs only, no registry item)
+
+- [@nitro-forge/prism](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/prism.md): Decision 3.
+- [@nitro-forge/cadence](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/cadence.md): Decision 3.
+- [@nitro-forge/splice](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/splice.md): Decision 3.
+- [@nitro-forge/folio](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/folio.md): Decision 3.
+- [@nitro-forge/pitch](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/pitch.md): Decision 3.
+- [@nitro-forge/tally](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/tally.md): Decision 3.
+- [@nitro-forge/quill](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/quill.md): Decision 3.
+- [@nitro-forge/photo](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/photo.md): Decision 3.
+- [@nitro-forge/motion](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/motion.md): Decision 3.
+- [@nitro-forge/design](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/design.md): Decision 3.
+- [@nitro-forge/draft](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/draft.md): Decision 3.
+- [@nitro-forge/scene](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/scene.md): Decision 3.
+- [@nitro-forge/ignition](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/ignition.md): Decision 4.
+- [@nitro-forge/studio-layout](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/studio-layout.md): Decision 3.
+
+## Optional
+
+- [Design system](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/agent-native/02-design-system.md): Token tiers, the rebrand contract and the five colour drift records.
+- [Accessibility review](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/agent-native/05-accessibility-review.md): Source review of the 17 items; no item is verified.
+- [Full text](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/llms-full.txt): Every page above in one file.
+
+
+---
+
+
+<!-- component: studio-ui-provider -->
+---
+name: "StudioUiProvider"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/ui"
+tier: 1
+docs: "handwritten"
+platforms: ["ios", "android", "web"]
+category: "shell"
+tokens: []
+registryDependencies: []
+a11yStatus: "reviewed-pass"
+---
+
+# StudioUiProvider
+
+## Purpose
+
+**Prerequisite.** This item is the provider. Install it first, then a host such as `nyc-tron-host`.
+
+The slot contract between Studio and the host UI. `StudioUIProvider` puts a `StudioUIComponents` object in context and each wrapper reads its slot and forwards props. With no provider any wrapper throws "Studio requires StudioUIProvider with your application UI components. No substitute UI is installed." No fallback UI exists.
+
+## Install
+
+- Package: `@nitro-forge/studio-ui-provider` (registry item)
+- Import: `import { StudioUIProvider, View, Text, Button /* and the other wrappers */ } from '@/components/forge/ui';`
+- Peers: `react` >=19, `react-native` >=0.81
+- Requires: A `StudioUIComponents` implementation (registry item `nyc-tron-host` builds one from NYC-Tron)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider`
+- Installs: none (the CLI adds them when they are absent)
+- Files: `components/forge/ui.tsx`
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| components | `StudioUIComponents` | none | yes | 27 slots; 24 required, 3 optional (Popover, NativeDropdown, TokenScope). Table in the Slots section above. |
+| children | `ReactNode` | none | yes |  |
+| slot props | `Studio*Props` types in `ui.tsx` |  |  | `tone` and `surface` are accepted for older call sites and ignored by the NYC-Tron host. |
+
+## Variants
+
+### Button `variant`
+
+| Value | Effect |
+|---|---|
+| primary, outline, ghost | NYC-Tron host maps outline to secondary. |
+
+### Button `size`
+
+| Value | Effect |
+|---|---|
+| sm, md |  |
+
+### Banner `tone`
+
+| Value | Effect |
+|---|---|
+| info, danger, success, neutral |  |
+
+### Card, KeyValueList `surface`
+
+| Value | Effect |
+|---|---|
+| page, night | night wraps in `NightScope`. |
+
+### Toolbar `density`
+
+| Value | Effect |
+|---|---|
+| default, compact |  |
+
+### TabBar `semantics`
+
+| Value | Effect |
+|---|---|
+| tabs, navigation |  |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| No provider | wrapper called outside the provider | Throws. |
+| Optional slot absent | Popover or NativeDropdown not supplied | Throws a named error; no generic popup is substituted. |
+| TokenScope absent | native | Children render unscoped. |
+| TokenScope absent | web | `display: contents` view carries the variables. |
+
+### Motion
+
+None.
+
+## A11y
+
+- The wrappers set nothing; `aria-label` and similar props pass through to the host component.
+- Review status: reviewed-pass, reviewed, no failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+
+## Example
+
+```tsx example=studio-ui-provider
+import { StudioUIProvider, type StudioUIComponents } from '@/components/forge/ui';
+
+declare const studioUI: StudioUIComponents;
+export const Root = ({ children }: { children: React.ReactNode }) => (
+  <StudioUIProvider components={studioUI}>{children}</StudioUIProvider>
+);
+```
+
+## Do/Don't
+
+### Do
+
+- Mount the provider once above every studio component (`components`).
+- Supply `Popover` and `NativeDropdown` when you use Prism, which calls them.
+
+### Don't
+
+- Do not expect a default UI; none is installed.
+- Do not recreate controls in Forge; NYC-Tron owns them (decision 1).
+
+
+<!-- component: studio-theme -->
+---
+name: "StudioTheme"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/theme"
+tier: 1
+docs: "handwritten"
+platforms: ["ios", "android", "web"]
+category: "primitive"
+tokens: ["--color-accent", "--color-border", "--color-danger", "--color-focus", "--color-info", "--color-on-danger", "--color-on-primary", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-primary", "--color-primary-tint", "--color-success", "--color-surface-base", "--color-surface-raised", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-editorial", "--font-mono-plain", "--radius-card", "--radius-control", "--radius-paper", "--spacing-canvas", "--spacing-canvas-header", "--spacing-canvas-rail", "--spacing-canvas-toolbar", "--spacing-element", "--spacing-group", "--spacing-header", "--spacing-inset", "--spacing-page", "--spacing-rail", "--spacing-section", "--spacing-stack", "--spacing-status", "--spacing-target", "--spacing-toolbar", "--text-body", "--text-display", "--text-label", "--text-manuscript", "--text-micro", "--text-title"]
+registryDependencies: []
+a11yStatus: "reviewed-fail"
+---
+
+# StudioTheme
+
+## Purpose
+
+**Prerequisite.** No StudioUIProvider is needed.
+
+The token source and its two generated stylesheets. `theme.ts` defines `workspaceThemes` (dark, light; 13 colour keys), `workspaceScale`, three densities, `workspaceStatus` and the Prism override `prismThemes`. `build-theme.mjs` writes `theme.css` (Tailwind v4 `@theme`) and `theme.native.css` (Uniwind variants). Tokens, not a component.
+
+## Install
+
+- Package: `@nitro-forge/studio-theme` (registry item)
+- Import: `import { workspaceThemes, workspaceScale, resolveWorkspaceScale } from '@/components/forge/theme';`
+- Peers: none at runtime
+- Requires: Generator step: `pnpm --filter @nitro-forge/studio-workspace build:theme` (needs a Node with type stripping; root requires >=24.3.0)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/studio-theme`
+- Installs: none (the CLI adds them when they are absent)
+- Files: `components/forge/theme.ts`, `components/forge/theme.css`, `components/forge/theme.native.css`
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `workspaceThemes` | `{dark, light}` x 13 keys |  |  | base raised deep line text muted accent ink soft paper paperInk paperMuted error. |
+| `workspaceScale` | space, radius, type, font, size |  |  |  |
+| `resolveWorkspaceScale(density)` | `WorkspaceDensityScale` | `"standard"` | no | Throws `RangeError` on an unknown density. |
+| `workspaceStatus` | `{dark, light}` info, success, onError |  |  |  |
+| `prismThemes` | canvas studio override |  |  | Replaces 9 keys. |
+
+## Variants
+
+### scheme
+
+| Value | Effect |
+|---|---|
+| dark, light | Web: `[data-theme="light"]` block and `.dark` block (the NightScope class). Native: `@variant light` and `@variant dark`. |
+
+### density
+
+| Value | Effect |
+|---|---|
+| compact, standard, comfortable | Changes `space` and `size` only; never `type` or `radius`. |
+
+## States
+
+none in code.
+
+### Motion
+
+No motion tokens exist in `theme.ts`. tokens.map.json proposes 36 motion tokens from icons, interaction policy and turret constants.
+
+## A11y
+
+- Not applicable. Contrast pairs for the Workbench chrome are checked in `forge-directions.test.ts` (not run here, UNVERIFIED).
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N01 1.4.3: light muted 4.43:1 on base, 4.01:1 on deep (theme.ts:7)
+- Failing: N02 1.4.3: paperMuted 3.98:1 on paper (theme.ts:6-7)
+- Failing: N06 1.4.11: --color-border 1.2 to 1.54:1 where it is the only edge (theme.ts:6-7)
+
+## Example
+
+```tsx example=studio-theme
+import { resolveWorkspaceScale } from '@/components/forge/theme';
+
+export const gap = resolveWorkspaceScale('comfortable').space.group;
+```
+
+## Do/Don't
+
+### Do
+
+- Regenerate CSS with `build:theme` after editing `theme.ts`.
+- Rebrand with the three accent keys (`accent`, `ink`, `soft`) per scheme only (decision 23).
+
+### Don't
+
+- Do not unify the icon accent `#6859E8` with `#6950D1`; that changes pixels (decisions 5, 20).
+- Do not hand-edit `theme.css`; the header says it is generated.
+
+### Notes
+
+- Defines rather than reads. The generated CSS declares 32 custom properties today. tokens.map.json proposes 234 tokens in 19 tiers (instrument 53, motion 36, stage-colour 20, semantic-colour 18, size 15, space 14, chrome 14, type 12, icon-colour 9, icon-size 7, fixed-literal 7, layer 6, shadow 5, radius 4, document-colour 4, lab 4, icon-stroke 2, opacity 2, border 2); status counts: new-value-preserving 185, existing-ts-new-css 21, existing-nyc-tron 15, new-forge-extension 5, reserved-value-undefined-in-repo 4, existing-css-renamed 2, existing-css-keep (AGENTS.md rounded-sm 4px) 1, existing-ts-new-css (value equals title) 1. The `tokens` array in the front matter lists only the semantic roles `theme.ts` feeds.
+
+
+<!-- component: brand-theme -->
+---
+name: "BrandTheme"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/brand-theme"
+tier: 1
+docs: "handwritten"
+platforms: []
+category: "primitive"
+tokens: ["--color-accent", "--color-focus", "--color-on-primary", "--color-primary", "--color-primary-tint"]
+registryDependencies: ["@nitro-forge/studio-theme"]
+a11yStatus: "unverified"
+---
+
+# BrandTheme
+
+## Purpose
+
+**Prerequisite.** Needs the `studio-theme` item for the neutral colours it checks against. No StudioUIProvider is needed.
+
+The rebrand contract as a file and a validator. A brand sets three keys per scheme, `accent`, `ink` and `soft`, and nothing else. `brand-theme.ts` maps them to CSS variables and checks the three contrast pairs the contract requires.
+
+A brand reaches the UI through two channels, and a rebrand needs both:
+
+| Channel | Call | Reaches | Does not reach |
+|---|---|---|---|
+| CSS variables | `brandCssVariables(theme, scheme)` on a `[data-brand]` block, `:root` or a `TokenScope` | Every NYC-Tron control (Button, TabBar, SegmentedControl, Select, Banner) and any Tailwind utility reading `--color-primary`, `--color-accent`, `--color-focus`, `--color-on-primary` or `--color-primary-tint` | Anything Forge paints from JavaScript colour values |
+| JS overrides | `brandThemeOverrides(theme, scheme)` as `themeOverrides` on `ForgeWorkspace` | Workspace header, rail label, studio glyphs and the soft chip behind them. `PersonaTurret` reads `colors.accent` and `PersonaComposer` reads `colors.accent` and `colors.soft` from their own `colors` prop, which `ForgeWorkspace` does not fill: pass the same overrides to them | The CSS variables above |
+
+Neither channel reaches `PrismEditor` (chrome and direction palettes), `QuillTextEditor` (`workspaceThemes` by scheme), `ForgeDocumentStage` (stage palette) or the default `ForgeIcon` palette. They keep their own colours until they take an override prop.
+
+## Install
+
+- Package: `@nitro-forge/brand-theme` (registry item)
+- Import: `import { brandThemeProblems, checkBrandTheme, brandCssVariables } from '@/components/forge/brand-theme';`
+- Peers: none
+- Requires: `@nitro-forge/studio-theme`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/brand-theme`
+- Installs: none (the CLI adds them when they are absent)
+- Files: `components/forge/brand-theme.ts`, `components/forge/brand.theme.schema.json`, `components/forge/brand.theme.json`
+
+## Props
+
+Not a component. Exports and what they take:
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| BRAND_OVERRIDE_KEYS | `readonly ["accent", "ink", "soft"]` | none | no | The only overridable keys. |
+| BRAND_FAN_OUT | `Record<key, readonly string[]>` | none | no | CSS variables each key feeds: `accent` to `--color-primary`, `--color-accent`, `--color-focus`; `ink` to `--color-on-primary`; `soft` to `--color-primary-tint`. |
+| brandThemeProblems | `(value: unknown) => string[]` | none | no | Empty array when the value follows the contract. Names every locked key it finds, every colour that is not six hex digits and a `defaultDensity` outside `compact`, `standard`, `comfortable`. |
+| checkBrandTheme | `(theme: unknown) => BrandCheck[]` | none | no | Three pairs per scheme: `ink` on `accent` at 4.5:1, `accent` as a focus ring on the raised surface at 3:1, `text` on `soft` at 4.5:1. Always returns six entries and never throws: a missing or malformed colour gives an entry with `pass: false`, `ratio: null` and a `problem` that names it. |
+| brandCssVariables | `(theme, scheme) => Record<string, string>` | none | no | Channel 1. Variables for a `[data-brand]` block or a `TokenScope`. |
+| brandThemeOverrides | `(theme, scheme) => { accent, ink, soft }` | none | no | Channel 2. The partial colour object for `ForgeWorkspace` `themeOverrides`. |
+| contrastRatio, luminance | `(a: string, b: string) => number`, `(hex: string) => number` | none | no | WCAG 2.x. |
+
+The file `brand.theme.schema.json` is the JSON Schema for `brand.theme.json`. `brand.theme.json` is a starter written as today's Prism override.
+
+## Variants
+
+none
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Valid | `brandThemeProblems` returns `[]` | The file follows the contract. Contrast is a separate check. |
+| Locked key | A key other than `accent`, `ink` or `soft`, or a key outside `dark`, `light`, `defaultDensity` | Reported as a problem. |
+| Low contrast | `checkBrandTheme` returns an entry with `pass: false` and a numeric `ratio` | The brand is readable only if every entry passes. |
+| Incomplete input | `checkBrandTheme` returns an entry with `pass: false`, `ratio: null` and a `problem` | No throw. Run `brandThemeProblems` as well to see the structure problems. |
+
+## A11y
+
+- No UI. The three checks protect text and focus contrast for any brand.
+- The six neutral keys stay locked until the owner supplies a contrast check (decision 23). The check does not measure them.
+- Review status: unverified. No rendered check exists.
+- Review status: unverified, not reviewed or not reviewable from source. Nothing was rendered, so no item is verified (decision 34).
+
+## Example
+
+```tsx example=brand-theme
+import { brandCssVariables, brandThemeOverrides, brandThemeProblems, checkBrandTheme, type BrandTheme } from '@/components/forge/brand-theme';
+
+const theme: BrandTheme = {
+  dark: { accent: '#66B9FF', ink: '#081D2F', soft: '#173C59' },
+  light: { accent: '#086CB8', ink: '#FFFFFF', soft: '#D6EAFB' },
+  defaultDensity: 'standard',
+};
+
+export const problems = brandThemeProblems(theme);
+export const failing = checkBrandTheme(theme).filter((check) => !check.pass);
+
+// Channel 1: CSS variables for the NYC-Tron controls. Apply on a [data-brand] block or a TokenScope.
+export const cssVariables = brandCssVariables(theme, 'dark');
+// Channel 2: JS colours. Pass as themeOverrides to ForgeWorkspace, and as colors to PersonaTurret and PersonaComposer.
+export const themeOverrides = brandThemeOverrides(theme, 'dark');
+```
+
+## Do/Don't
+
+### Do
+
+- Override only `accent`, `ink` and `soft` in both `dark` and `light` (`BRAND_OVERRIDE_KEYS`).
+- Run `brandThemeProblems` and `checkBrandTheme` before shipping a palette and read every entry with `pass: false`.
+- Apply both channels: `brandCssVariables` for the NYC-Tron controls and `brandThemeOverrides` for `ForgeWorkspace`, `PersonaTurret` and `PersonaComposer`.
+
+### Don't
+
+- Do not add `base`, `raised`, `text` or any radius key; `brandThemeProblems` reports each as locked.
+- Do not expect `brandCssVariables` alone to recolour the workspace header, studio glyphs or persona turret. They read JavaScript colours.
+- Do not edit `tooling/brand/brand.schema.json` for colour; it stays closed and feeds the Expo plugin (decision 24).
+
+
+<!-- component: forge-directions -->
+---
+name: "ForgeDirections"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/forge-directions"
+tier: 1
+docs: "handwritten"
+platforms: []
+category: "forge"
+tokens: ["--color-chrome-accent", "--color-chrome-body", "--color-chrome-chip-edge", "--color-chrome-chip-ring", "--color-chrome-disabled-ink", "--color-chrome-edge", "--color-chrome-muted", "--color-chrome-press", "--color-chrome-rule", "--color-chrome-selected", "--color-chrome-selected-muted", "--color-chrome-text", "--color-chrome-well", "--color-instrument-atelier-accent", "--color-instrument-atelier-accent-halo", "--color-instrument-atelier-bezel-0", "--color-instrument-atelier-bezel-1", "--color-instrument-atelier-face-0", "--color-instrument-atelier-face-1", "--color-instrument-atelier-face-text", "--color-instrument-atelier-knurl", "--color-instrument-atelier-lathe", "--color-instrument-atelier-muted", "--color-instrument-atelier-notch", "--color-instrument-atelier-panel", "--color-instrument-atelier-panel-edge", "--color-instrument-atelier-panel-solid", "--color-instrument-atelier-text", "--color-instrument-optics-accent", "--color-instrument-optics-accent-halo", "--color-instrument-optics-bezel-0", "--color-instrument-optics-bezel-1", "--color-instrument-optics-bezel-2", "--color-instrument-optics-bezel-3", "--color-instrument-optics-face-0", "--color-instrument-optics-face-1", "--color-instrument-optics-face-text", "--color-instrument-optics-knurl", "--color-instrument-optics-lathe", "--color-instrument-optics-muted", "--color-instrument-optics-notch", "--color-instrument-optics-panel", "--color-instrument-optics-panel-edge", "--color-instrument-optics-panel-solid", "--color-instrument-optics-text", "--color-instrument-workbench-accent", "--color-instrument-workbench-accent-halo", "--color-instrument-workbench-bezel-0", "--color-instrument-workbench-bezel-1", "--color-instrument-workbench-face-0", "--color-instrument-workbench-face-1", "--color-instrument-workbench-face-text", "--color-instrument-workbench-knurl", "--color-instrument-workbench-lathe", "--color-instrument-workbench-muted", "--color-instrument-workbench-notch", "--color-instrument-workbench-panel", "--color-instrument-workbench-panel-edge", "--color-instrument-workbench-panel-solid", "--color-instrument-workbench-text", "--color-lab-ground", "--color-lab-mat", "--color-lab-paper", "--color-lab-paper-ink", "--shadow-chrome-depth", "--shadow-instrument-atelier-dial", "--shadow-instrument-atelier-panel", "--shadow-instrument-optics-dial", "--shadow-instrument-optics-panel", "--shadow-instrument-workbench-dial", "--shadow-instrument-workbench-panel"]
+registryDependencies: ["@nitro-forge/instrument-system", "@nitro-forge/studio-theme"]
+a11yStatus: "reviewed-pass"
+---
+
+# ForgeDirections
+
+## Purpose
+
+**Prerequisite.** No StudioUIProvider is needed.
+
+Three material directions for the Prism chrome and persona turret (workbench, optics, atelier), the Workbench chrome palette, helpers that turn a palette into the NYC-Tron semantic variables, WCAG contrast helpers and turret geometry. Audit B counts 149 hex literals here (regex-based). Not a component.
+
+## Install
+
+- Package: `@nitro-forge/forge-directions` (registry item)
+- Import: `import { forgeDirections, chromePalette, nycTronTokens } from '@/components/forge/forge-directions';`
+- Peers: none
+- Requires: `@nitro-forge/studio-theme`; `@nitro-forge/instrument-system`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-directions`
+- Installs: none (the CLI adds them when they are absent)
+- Files: `components/forge/forge-directions.ts`, `components/forge/tokens.ts`
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `forgeDirections`, `FORGE_DIRECTION_IDS`, `DEFAULT_TURRET_DIRECTION` |  | `"workbench"` |  |  |
+| `workbenchChrome`, `chromePalette(scheme)`, `directionPalette(direction, scheme)` |  |  |  | Palettes as `WorkspaceColors`. |
+| `nycTronTokens(scheme)`, `nycTronTokensFor(colors, selected?)` |  |  |  | Variables for a `TokenScope`. |
+| `luminance`, `contrastRatio` |  |  |  | WCAG. |
+| `systemColor(name)`, `glassAllowed`, `detentDurationMs`, `forgeFeedbackMotion`, `turretGeometry`, `prismFillSwatches`, `labCanvas` |  |  |  |  |
+
+## Variants
+
+### direction
+
+| Value | Effect |
+|---|---|
+| workbench | Graphite or white ceramic; no glass. |
+| optics | Glass: blur 18, saturate 1.4. |
+| atelier | Ceramic with two shadow planes. |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Glass | direction has glass and neither Reduce Transparency nor More Contrast | Allowed (`glassAllowed`). |
+| Forced colors | `systemColor` | Emits `var(--forge-system-<name>, <name>)`. |
+
+### Motion
+
+Detent travel and feedback timings: see persona-turret.
+
+## A11y
+
+- Not applicable. Non-visual; contrast helpers support checks.
+- Review status: reviewed-pass, reviewed, no failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+
+## Example
+
+```tsx example=forge-directions
+import { nycTronTokens } from '@/components/forge/forge-directions';
+
+export const vars = nycTronTokens('dark');
+```
+
+## Do/Don't
+
+### Do
+
+- Feed `nycTronTokens(scheme)` to `TokenScope` so NYC-Tron parts match the panel.
+- Check new palettes with `contrastRatio`.
+
+### Don't
+
+- Do not merge the three direction palettes; each is a separate token tier (decision 20).
+- Do not treat `labCanvas` as app chrome; it backs lab pages.
+
+### Notes
+
+- Defines the instrument tier (53 tokens), chrome tier (14) and lab tier (4) in tokens.map.json, all value-preserving and not yet in source.
+
+
+<!-- component: forge-document-stage -->
+---
+name: "ForgeDocumentStage"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/stage"
+tier: 1
+docs: "handwritten"
+platforms: []
+category: "display"
+tokens: ["--border-width-hairline", "--color-stage-caption", "--color-stage-cell-text", "--color-stage-clip-audio", "--color-stage-clip-video", "--color-stage-empty-hint", "--color-stage-fill-fallback", "--color-stage-grid-head", "--color-stage-grid-head-text", "--color-stage-grid-line", "--color-stage-heading", "--color-stage-on-clip", "--color-stage-paper", "--color-stage-paper-text", "--color-stage-paper-text-muted", "--color-stage-paper-title", "--color-stage-quote-rule", "--color-stage-slide-text", "--color-stage-track", "--color-stage-track-border", "--color-stage-track-label", "--font-weight-medium", "--radius-control", "--radius-paper", "--spacing-fixed-canvas", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-section", "--spacing-fixed-stack", "--text-body", "--text-label", "--text-micro"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-ui-provider"]
+a11yStatus: "reviewed-fail"
+---
+
+# ForgeDocumentStage
+
+## Purpose
+
+**Prerequisite.** Needs `StudioUIProvider`: install `studio-ui-provider` and `nyc-tron-host` first, and wrap the app once. Every studio component throws without it (install-order.md step 7).
+
+Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).
+
+Default read-only stage. It projects live engine state per studio: quill text and styles, tally cells, pitch slide objects, prism shape layers, cadence and splice tracks and clips, photo originals and versions, motion layers, design nodes, draft counts, and a PDF page overview as the fallback. It does not paint, composite or play.
+
+## Install
+
+- Package: `@nitro-forge/forge-document-stage` (registry item)
+- Import: `import { ForgeDocumentStage } from '@/components/forge/index';`
+- Peers: `react` >=19, `react-native` >=0.81
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-document-stage`
+- Installs: none (the CLI adds them when they are absent)
+- Files: `components/forge/stage.tsx`
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| studioId | `Studio` | none | yes | Picks the projection branch. |
+| state | `unknown` | none | yes | Engine `describe` output; falsy shows "Opening document…". |
+| theme | `"dark" \| "light"` | `"dark"` | no | Caption and heading colour. |
+
+## Variants
+
+### studioId
+
+| Value | Effect |
+|---|---|
+| quill, tally, pitch, prism, photo, motion, design, draft | One branch each. |
+| cadence, splice | Shared timeline branch with ticks (cadence) or seconds (splice). |
+| other (folio) | PDF overview fallback. |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Opening | `state` falsy | "Opening document…". |
+| Empty | no content in the document | Per-studio hint, for example "No tracks yet. Add a track in Commands.". |
+| Projection | state present | Each branch ends with a caption saying what the host must supply (raster compositing, PDF painting, original bytes). |
+
+### Motion
+
+None.
+
+## A11y
+
+- The file sets no role, label or state. It renders `ScrollView testID="stage-<studioId>"`.
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N03 1.4.3: #798373 on #f7f5ed 3.63:1 and #637161 on #e5e9dd 4.19:1, both 12 pt (stage.tsx:30,40)
+- Failing: N13 1.3.1: Tally grid is Text cells with no table, row or cell roles (stage.tsx:30-31)
+
+## Example
+
+```tsx example=forge-document-stage
+import { ForgeDocumentStage } from '@/components/forge/index';
+
+export const Demo = () => <ForgeDocumentStage studioId="quill" state={null} />;
+```
+
+## Do/Don't
+
+### Do
+
+- Use it as the fallback stage while a native canvas is not ready (`studioId`, `state`).
+- Treat its olive palette as `--color-stage-*` tokens, kept separate by value (decision 27).
+
+### Don't
+
+- Do not expect pixels from it: prism and folio branches are projections only.
+- Do not fold its colours into `--color-paper`; that changes pixels (decision 27).
+
+
+<!-- component: forge-icon -->
+---
+name: "ForgeIcon"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/icons/ForgeIcon"
+tier: 1
+docs: "handwritten"
+platforms: ["ios", "android", "web"]
+category: "primitive"
+tokens: ["--color-icon", "--color-icon-accent-bright", "--color-icon-cyan", "--color-icon-danger", "--color-icon-muted", "--color-icon-selected", "--color-icon-success", "--color-icon-surface", "--color-icon-warning", "--duration-icon-deselect", "--duration-icon-error", "--duration-icon-hover", "--duration-icon-loading", "--duration-icon-press", "--duration-icon-select", "--duration-icon-success", "--hit-target", "--opacity-disabled", "--scale-icon-press", "--scale-icon-selected", "--size-icon-default", "--size-icon-feature", "--size-icon-hero", "--size-icon-sm", "--size-icon-toolbar", "--size-icon-touch", "--size-icon-xs", "--spring-icon-damping", "--spring-icon-mass", "--spring-icon-stiffness", "--stroke-icon-box", "--stroke-icon-width"]
+registryDependencies: []
+a11yStatus: "reviewed-fail"
+---
+
+# ForgeIcon
+
+## Purpose
+
+**Prerequisite.** No StudioUIProvider is needed.
+
+Shared icon. Idle is a rounded outline, selected a filled silhouette, with a crossfade between them. Renders `react-native-svg` paths or a host Rive artboard through `renderRive`. COVERAGE: the catalog reserves 1,463 ids in 25 categories. 47 glyphs are drawn; 42 of the 1,463 catalog ids resolve to one; 6 drawn glyphs are not catalog ids. `ForgeIcon` returns null for an id without artwork. Do not advertise 1,463 as available.
+
+## Install
+
+- Package: `@nitro-forge/forge-icon` (registry item)
+- Import: `import { ForgeIcon } from '@/components/forge/icons/ForgeIcon';`
+- Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` >=15 (all optional peers; root patches 15.16.0)
+- Requires: none
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-icon`
+- Installs: `react-native-svg@15.16.0` (the CLI adds them when they are absent)
+- Files: `components/forge/icons/ForgeIcon.js`, `components/forge/icons/state.js`, `components/forge/icons/tokens.js`, `components/forge/icons/glyphs.js`, `components/forge/icons/catalog.js`, `components/forge/icons/ForgeIcon.d.ts`, `components/forge/icons/index.d.ts`, `components/forge/icons/index.js`
+
+## Props
+
+Extends: Helpers: `resolveIconState`, `riveIconInputs`, `getGlyph`, `hasIconId`, `getIconMetadata`, `iconsInCategory`, `searchIcons`. Authored ids (47): home dashboard menu search save file folder undo redo pen pencil brush eraser highlighter hand move pointer lasso rectangle ellipse text image layers comment play pause stop scissors table chart slide pdf video audio music bluetooth check close plus minus share export settings sparkles microphone timeline color-wheel.
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| name | `string` | none | yes | Must be one of the 47 `glyphIds` to render. |
+| selected, disabled, loading, pressed, hovered | `boolean` | false | no | See States. |
+| status | `"idle" \| "success" \| "error" \| "recording"` | `"idle"` | no |  |
+| size | `number \| "xs" \| "sm" \| "toolbar" \| "default" \| "touch" \| "feature" \| "hero"` | `"default"` | no | 12, 16, 20, 24, 28, 32, 48; numbers 8 to 256. |
+| appearance | `"light" \| "dark"` | `"light"` | no |  |
+| color, selectedColor, disabledColor, successColor, errorColor, surfaceColor | `string` | token defaults | no | Per-instance overrides. |
+| reducedMotion | `boolean` | false | no |  |
+| renderRive | `(inputs) => ReactNode` | none | no | Host Rive hook; no runtime bundled. |
+| testID | `string` | none | no |  |
+
+## Variants
+
+### variant
+
+| Value | Effect |
+|---|---|
+| outline | Idle. |
+| filled | Selected. |
+
+### size
+
+| Value | Effect |
+|---|---|
+| xs 12, sm 16, toolbar 20, default 24, touch 28, feature 32, hero 48 | Pixels. |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| disabled | `disabled` | Opacity 0.52; color `disabledColor` or muted; no motion. |
+| loading | `loading` | 850 ms linear spin loop. |
+| success / error / recording | `status` | Success and error recolour; recording is a state value for Rive. |
+| pressed | `pressed` | Spring to scale 0.9. |
+| selected | `selected` | Crossfade to filled, scale 1.075. |
+| hover | `hovered` | State value only; no visual change authored. |
+
+### Motion
+
+Select crossfade 225 ms, deselect 175 ms, `Easing.out(Easing.cubic)`. Press spring stiffness 260, damping 22, mass 0.8. All motion stops under `reducedMotion` or `disabled`. Native driver on. State precedence: disabled, loading, success, error, recording, pressed, selected, hover, idle.
+
+## A11y
+
+- Hidden from assistive tech: `accessible: false`, `aria-hidden`, `importantForAccessibility="no-hide-descendants"`. Name comes from the wrapper (ForgeIconButton).
+- Size outside 8 to 256 throws `RangeError`.
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N09 1.4.11: default appearance=light ink 1.02:1 on dark workspace base; default accent #6859E8 2.89:1 on dark raised (ForgeIcon.js:29, state.js)
+- Failing: N08 1.4.1: status success, error, recording change colour only and the glyph is hidden from assistive tech (state.js)
+
+## Example
+
+```tsx example=forge-icon
+import { ForgeIcon } from '@/components/forge/icons/ForgeIcon';
+
+export const Demo = () => <ForgeIcon name="home" selected size="toolbar" appearance="dark" />;
+```
+
+## Do/Don't
+
+### Do
+
+- Check `hasIconId` and `glyphIds` before showing an icon name (`name`).
+- Tie `loading` and `status` to real operation state; the README forbids timers faking success.
+
+### Don't
+
+- Do not claim 1,463 icons; 47 are drawn.
+- Do not rely on `./web` working without react-native-web (UNVERIFIED).
+
+### Notes
+
+- UNVERIFIED: whether the registry will carry the icons as `.tsx`; source is plain `.js` with a hand-written `.d.ts`.
+- UNVERIFIED: `./web` resolves to the same file as `./native`, so web needs react-native-web; no web build was read.
+- Drift kept as separate tokens (decision 5): icon accent `#6859E8` vs workspace `#6950D1`; icon dark surface `#11131B` vs `#15171D`. `iconColorTokens.successColor` maps to accent, a possible bug left alone (decision 16).
+
+
+<!-- component: forge-icon-button -->
+---
+name: "ForgeIconButton"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/icons/ForgeIcon"
+tier: 1
+docs: "handwritten"
+platforms: ["ios", "android", "web"]
+category: "input"
+tokens: ["--hit-target", "--spacing-fixed-stack", "--spacing-fixed-target"]
+registryDependencies: ["@nitro-forge/forge-icon"]
+a11yStatus: "reviewed-fail"
+---
+
+# ForgeIconButton
+
+## Purpose
+
+**Prerequisite.** No StudioUIProvider is needed.
+
+Pressable wrapper around `ForgeIcon` with a minimum 44 by 44 hit target and hit slop 4. It throws a `TypeError` when `label` is blank, so an unnamed icon button cannot ship. Same source file as `forge-icon`; the split is an authoring choice.
+
+## Install
+
+- Package: `@nitro-forge/forge-icon-button` (registry item)
+- Import: `import { ForgeIconButton } from '@/components/forge/icons/ForgeIcon';`
+- Peers: same as forge-icon
+- Requires: `@nitro-forge/forge-icon`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-icon-button`
+- Installs: none (the CLI adds them when they are absent)
+- Files: none; the item only depends on forge-icon
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| name | `string` | none | yes | Icon id. |
+| label | `string` | none | yes | Non-blank; becomes `accessibilityLabel`. |
+| onPress | `() => void` | none | no |  |
+| selected, disabled, loading | `boolean` | false | no |  |
+| size | as `ForgeIcon` | `"default"` | no |  |
+| testID | `string` | none | no |  |
+| rest | any other `ForgeIcon` prop |  | no | Forwarded. |
+
+## Variants
+
+### inherits
+
+| Value | Effect |
+|---|---|
+| forge-icon | Same outline, filled and size variants. |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Disabled or loading | `disabled` or `loading` | Pressable disabled; loading shows the spin. |
+| Pressed | Pressable state | Fed to the icon as `pressed`. |
+| Selected | `selected` | `accessibilityState.selected`. |
+
+### Motion
+
+Inherits `forge-icon`.
+
+## A11y
+
+- `accessibilityRole="button"`, `accessibilityLabel={label}`, `accessibilityState {selected, disabled, busy}`.
+- Target `minWidth: 44`, `minHeight: 44`, `hitSlop: 4`.
+- A blank label throws.
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N08 1.4.1, 4.1.2: status is not in accessibilityState or accessibilityValue (ForgeIcon.js:91-93)
+
+## Example
+
+```tsx example=forge-icon-button
+import { ForgeIconButton } from '@/components/forge/icons/ForgeIcon';
+
+export const Demo = () => <ForgeIconButton name="save" label="Save" onPress={() => {}} />;
+```
+
+## Do/Don't
+
+### Do
+
+- Pass a visible-meaning `label` (`label`).
+- Set `loading` from real work so the button blocks double presses.
+
+### Don't
+
+- Do not pass an empty `label`; it throws.
+- Do not use an id outside `glyphIds`; the icon renders nothing but the 44 pt target remains.
+
+
+<!-- component: forge-workspace -->
+---
+name: "ForgeWorkspace"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/index"
+tier: 1
+docs: "handwritten"
+platforms: ["ios", "android", "web"]
+category: "shell"
+tokens: ["--border-width-hairline", "--border-width-strong", "--color-accent", "--color-border", "--color-icon-on-active", "--color-on-primary", "--color-primary-tint", "--color-surface-base", "--color-surface-raised", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-weight-medium", "--font-weight-semibold", "--radius-card", "--radius-control", "--shadow-float-md", "--shadow-float-sm", "--spacing-canvas-header", "--spacing-canvas-rail", "--spacing-canvas-toolbar", "--spacing-element", "--spacing-fixed-element", "--spacing-fixed-stack", "--spacing-fixed-status", "--spacing-group", "--spacing-header", "--spacing-inset", "--spacing-rail", "--spacing-stack", "--spacing-status", "--spacing-target", "--spacing-toolbar", "--text-body", "--text-label", "--text-micro", "--z-chrome"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-document-stage", "@nitro-forge/forge-icon", "@nitro-forge/persona-turret", "@nitro-forge/quill-text-editor", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
+a11yStatus: "reviewed-fail"
+---
+
+# ForgeWorkspace
+
+## Purpose
+
+**Prerequisite.** Needs `StudioUIProvider`: install `studio-ui-provider` and `nyc-tron-host` first, and wrap the app once. Every studio component throws without it (install-order.md step 7).
+
+Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).
+
+Shared inner editor chrome for every studio: header with title and Save, a toolbar with Undo, Redo and a Workspace menu, three dock zones (left, right, bottom) plus floating panels, a panel rail, a compact bottom bar and a status line. Layout state sits in one vanilla Zustand store per instance. Presets hold layout only, never document data.
+
+## Install
+
+- Package: `@nitro-forge/forge-workspace` (registry item)
+- Import: `import { ForgeWorkspace, createStudioWorkspaceStore, ForgeDocumentStage } from '@/components/forge/index';`
+- Peers: `react`, `react-native`, `react-native-gesture-handler` >=3.4 <4, `zustand` 5.1.0; `react-native-reanimated` >=4.7.1 <5 only through persona-turret on native
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-document-stage`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-turret`; `@nitro-forge/quill-text-editor`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); NYC-Tron parts reached through the provider: Menu, SegmentedControl, TabBar, Button, IconButton, KeyValueList, FieldGroup, ErrorMessage, Toolbar, List, ListItem
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-workspace`
+- Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
+- Files: `components/forge/index.tsx`, `components/forge/model.ts`
+
+## Props
+
+Extends: Also exports `createStudioWorkspaceStore`, `ForgeDocumentStage`, `QuillTextEditor`, `PANEL_IDS` (`outline`, `properties`, `actions`, `history`), `MIN_STAGE_WIDTH` 320, `MIN_STAGE_HEIGHT` 240.
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| studioId | `Studio` | none | yes | Which studio; `"prism"` selects the canvas layout. |
+| title | `string` | none | yes | Small header label. |
+| documentTitle | `string` | none | yes | Document name in the header. |
+| state | `unknown` | none | yes | Engine state handed to the default stage. |
+| rows | `WorkspaceRow[]` | none | yes | `{label, value}` rows for the Document and Properties panels. |
+| actions | `WorkspaceAction[]` | none | yes | `{title, run}` commands for the Commands panel. |
+| onUndo, onRedo, onSave, onRefresh | `() => Promise<unknown> \| unknown` | none | yes | Document commands. Each runs through one guarded `perform`. |
+| headerLeading, headerTrailing, leadingActions | `ReactNode` | none | no | Header and toolbar slots. |
+| children | `ReactNode` | `ForgeDocumentStage` | no | Replaces the stage (native canvas, editor). |
+| themeOverrides | `Partial<WorkspaceColors>` | none | no | Merged over the palette. |
+| density | `WorkspaceDensity` | `"standard"` | no | compact, standard, comfortable. |
+| onDensityChange | `(d: WorkspaceDensity) => void` | none | no | Without it the density entries are left out of the Workspace menu. |
+| theme | `"dark" \| "light"` | system color scheme | no | Light only when the value is `"light"`. |
+| busy | `boolean` | falsy | no | Blocks `perform` and disables actions. |
+| error | `string \| null` | none | no | Shown in the status line through `ErrorMessage`. |
+| loadPreset, persistPreset | `() => Promise<string \| null>`, `(raw) => Promise<void>` | none | no | Host storage ports for layout presets. |
+| blockedRegions | `readonly Rect[]` | none | no | Screen rects a dock drop may not use. |
+
+## Variants
+
+### studioId
+
+| Value | Effect |
+|---|---|
+| `"prism"` | Canvas layout: `prismThemes` palette, a right-hand `Studio panels` rail instead of the left rail, no header or toolbar bottom border, `canvasHeader`, `canvasToolbar` and `canvasRail` sizes, floating status bar. |
+| other studios | `workspaceThemes` palette, left rail on non-compact widths. |
+
+### density
+
+| Value | Effect |
+|---|---|
+| `compact` | Space and size scale down (target stays 44). |
+| `standard` | Default. |
+| `comfortable` | Space and size scale up (target 48). |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Busy | `busy`, or an operation in flight | Ignores a second `perform`; buttons disabled. |
+| Error | `error` prop or store error | Status line shows `ErrorMessage` (night surface). |
+| Status | store `status` | Plain text with `accessibilityLiveRegion="polite"`. |
+| Compact | outer width under 700 | Left and right docks collapse; bottom bar of panel buttons replaces the rail. |
+| Arranging | Workspace menu "Arrange panels" | Panels show drag handles and a Dock position control; "Done arranging" returns. |
+| Dragging | drag handle | `dock-preview` overlay and a "Cancel move" button; Escape cancels. |
+| Preset errors | failed `loadPreset`, empty restore | "Could not load workspace preset", "Save a layout first". |
+| Prism header overflow | width under 380 x text scale with `headerTrailing` | Trailing controls move to their own row (`workspace-host-controls`). |
+
+### Motion
+
+No animation authored here. Reads `AccessibilityInfo` reduce motion (initial true until the first read resolves) and passes it to `ForgeIcon`.
+
+## A11y
+
+- Dock tabs: `TabBar` with `aria-label="<dock> dock panels"`.
+- Dock position: `SegmentedControl` with `aria-label="Dock position for <panel>"`.
+- Icon buttons carry `aria-label`; toggle buttons pass `accessibilityState.selected`.
+- Drag handle label: "Drag <panel> to a dock edge". Escape cancels a drag.
+- Prism rail labelled "Studio panels".
+- Button target size is `scale.size.target` (44, 48 comfortable).
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N01 1.4.3: light muted #687287 on base 4.43:1 for 9 to 11 pt header, status and rail text (index.tsx:190,196)
+- Failing: N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:273)
+
+## Example
+
+```tsx example=forge-workspace
+import { ForgeWorkspace } from '@/components/forge/index';
+
+export function Demo() {
+  return (
+    <ForgeWorkspace studioId="quill" title="Quill" documentTitle="Untitled" state={null}
+      rows={[]} actions={[]} onUndo={() => {}} onRedo={() => {}} onSave={() => {}} onRefresh={() => {}} />
+  );
+}
+```
+
+## Do/Don't
+
+### Do
+
+- Pass one stable engine document; the host owns it (`state`, `onSave`).
+- Supply `loadPreset` and `persistPreset` together so Save layout and Restore layout work.
+- Pass a native canvas as `children` for editing; the default stage is a projection.
+- Give `density` a user setting, not a window-width guess.
+
+### Don't
+
+- Do not put document data in a preset; `persistPreset` receives layout only.
+- Do not mount it without `StudioUIProvider`; every slot throws.
+- Do not read `reducedMotion` as final on first render; it starts true until the OS value arrives.
+- Do not set `studioId="prism"` and expect the left rail.
+
+### Notes
+
+- UNVERIFIED: the class `bg-ink-800` on selected buttons is defined nowhere in this repo.
+
+
+<!-- component: instrument-system -->
+---
+name: "InstrumentSystem"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/instrument-system"
+tier: 1
+docs: "handwritten"
+platforms: []
+category: "forge"
+tokens: ["--duration-cancel", "--duration-commit", "--duration-detent", "--duration-error", "--duration-hover", "--duration-panel-dock", "--duration-popover", "--duration-press", "--duration-selection"]
+registryDependencies: []
+a11yStatus: "reviewed-pass"
+---
+
+# InstrumentSystem
+
+## Purpose
+
+**Prerequisite.** No StudioUIProvider is needed.
+
+Non-visual policy: 18 instrument blueprints with input modalities and edit boundaries, precision scrubbing math, timebase and ruler tick helpers, per-event motion budgets, hit-target sizes and an overlay placement planner. The planner never renders. Not a component; this page lists the API.
+
+## Install
+
+- Package: `@nitro-forge/instrument-system` (registry item)
+- Import: `import { forgeInstrumentBlueprints, forgeMotionProfile, planForgeOverlay } from '@/components/forge/instrument-system';`  (the original line carried a note; see Notes)
+- Peers: none
+- Requires: none
+- Command: `npx shadcn@4.23.0 add @nitro-forge/instrument-system`
+- Installs: none (the CLI adds them when they are absent)
+- Files: `components/forge/instrument-system.ts`, `components/forge/interaction-policy.ts`
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `forgeInstrumentBlueprints`, `instrumentsForStudio` |  |  |  | 18 blueprints. |
+| `scrubPrecision`, `scrubModeForOffset`, `beginPrecisionGesture`, `advancePrecisionGesture`, `snapTypedPrecision` |  |  |  | Fine, normal, coarse modes. |
+| `nearestTimeUnit`, `timeAtUnit`, `temporalRulerTicks` |  |  |  | Timebase helpers. |
+| `forgeMotionProfile(event, {reducedMotion, highContrast})` |  |  |  | In `interaction-policy.ts`. |
+| `forgeHitTarget(input, density)` |  |  |  | 48 for touch, pen, controller or presentation, else 44. |
+| `planForgeOverlay(query)` |  |  |  | Sheet or anchored plan; throws `RangeError` on bad geometry. |
+
+## Variants
+
+### motion event
+
+| Value | Effect |
+|---|---|
+| hover | 70 ms |
+| press | 90 ms, scale 0.985 |
+| selection | 120 ms |
+| popover | 150 ms, scale 0.98, travel 5 |
+| panel-dock | 190 ms, travel 8 |
+| detent | 65 ms linear |
+| commit | 110 ms |
+| cancel | 85 ms |
+| error | 140 ms |
+
+### overlay plan
+
+| Value | Effect |
+|---|---|
+| sheet | reason compact, occluded or insufficient-space |
+| anchored | side above or below, scrollable if clipped |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Reduced motion | `reducedMotion: true` | Duration 0, easing instant, no travel or scale. |
+
+### Motion
+
+Durations are a design budget; the file says they are not a measured claim. Eases `--ease-standard` and `--ease-emphasized` are struck (decision 25): no file defines the curves.
+
+## A11y
+
+- Not applicable. Hit-target policy: `forgeHitTarget` returns at least 44.
+- Review status: reviewed-pass, reviewed, no failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+
+## Example
+
+```tsx example=instrument-system
+import { forgeMotionProfile } from '@/components/forge/interaction-policy';
+
+export const press = forgeMotionProfile('press', { reducedMotion: false });
+```
+
+## Do/Don't
+
+### Do
+
+- Pass a measured pane that excludes the hinge to `planForgeOverlay`.
+- Pass `reducedMotion` from the OS setting to `forgeMotionProfile`.
+
+### Don't
+
+- Do not persist screen coordinates from a plan.
+- Do not claim measured latency from these durations.
+
+
+<!-- component: nyc-tron-host -->
+---
+name: "NycTronHost"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/nyc-tron-host"
+tier: 1
+docs: "handwritten"
+platforms: []
+category: "shell"
+tokens: []
+registryDependencies: ["@nitro-forge/studio-ui-provider", "@nyc-tron/Button", "@nyc-tron/Card", "@nyc-tron/FieldGroup", "@nyc-tron/IconButton", "@nyc-tron/List", "@nyc-tron/SegmentedControl", "@nyc-tron/Select", "@nyc-tron/TabBar", "@nyc-tron/Toolbar", "@nyc-tron/content/KeyValueList", "@nyc-tron/feedback/Badge", "@nyc-tron/feedback/Banner", "@nyc-tron/feedback/EmptyState", "@nyc-tron/feedback/ErrorMessage", "@nyc-tron/files/DropZone", "@nyc-tron/overlays/AnchoredPopover", "@nyc-tron/theme/NightScope"]
+a11yStatus: "unverified"
+---
+
+# NycTronHost
+
+## Purpose
+
+**Prerequisite.** Needs `StudioUIProvider`: install `studio-ui-provider` and `nyc-tron-host` first, and wrap the app once. Every studio component throws without it (install-order.md step 7).
+
+`nycTronStudioUI(host)` builds a `StudioUIComponents` from NYC-Tron UI. The host supplies only platform primitives and three platform parts. Button maps Forge `outline` to NYC-Tron `secondary`; Card forces `surface="raised"` and wraps `NightScope` for `surface="night"`; IconButton applies `targetSize` as min width and height.
+
+## Install
+
+- Package: `@nitro-forge/nyc-tron-host` (registry item)
+- Import: `import { nycTronStudioUI } from '@/components/forge/nyc-tron-host';`
+- Peers: `react` >=19, `react-native` >=0.81
+- Requires: `@nitro-forge/studio-ui-provider`; `@nyc-tron/Button`; `@nyc-tron/Card`; `@nyc-tron/FieldGroup`; `@nyc-tron/IconButton`; `@nyc-tron/List`; `@nyc-tron/SegmentedControl`; `@nyc-tron/Select`; `@nyc-tron/TabBar`; `@nyc-tron/Toolbar`; `@nyc-tron/content/KeyValueList`; `@nyc-tron/feedback/Badge`; `@nyc-tron/feedback/Banner`; `@nyc-tron/feedback/EmptyState`; `@nyc-tron/feedback/ErrorMessage`; `@nyc-tron/files/DropZone`; `@nyc-tron/overlays/AnchoredPopover`; `@nyc-tron/theme/NightScope`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/nyc-tron-host`
+- Installs: none (the CLI adds them when they are absent)
+- Files: `components/forge/nyc-tron-host.tsx`, `components/forge/nyc-tron-options.ts`
+
+## Props
+
+Extends: Argument type `NycTronHostParts`. Returns the 27-slot object.
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| View, Text, Pressable, ScrollView, TextInput, Image | host primitives | none | yes |  |
+| Select | host part | none | yes |  |
+| TokenScope | host part | none | no |  |
+| ActionMenu | `HostActionMenu` | none | yes | `@nyc-tron/expo-controls/NativeActionMenu` in the Expo host. |
+| NativePopover | `ComponentType<PopoverProps>` | none | yes |  |
+| GroupedSelect | `ComponentType<SelectProps>` | none | yes | Fed by `studioDropdownGroups`. |
+
+## Variants
+
+none
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Menu title | NYC-Tron menus have no title row | Trigger label names the menu: `triggerLabel ?? title ?? "Actions"`. |
+| Popover placement | prop `placement` | Ignored; NYC-Tron measures the usable region. |
+
+### Motion
+
+None.
+
+## A11y
+
+- Button passes `selected` as `accessibilityState.selected`.
+- Menu and Popover derive `accessibilityLabel` from the trigger label and title.
+- Review status: unverified, not reviewed or not reviewable from source. Nothing was rendered, so no item is verified (decision 34).
+
+## Example
+
+```tsx example=nyc-tron-host
+import { View, Text, Pressable, ScrollView, TextInput, Image } from 'react-native';
+import { Select } from '@nyc-tron/expo-controls/Select';
+import { NativePopover } from '@nyc-tron/expo-controls/NativePopover';
+import { NativeActionMenu } from '@nyc-tron/expo-controls/NativeActionMenu';
+import { nycTronStudioUI } from '@/components/forge/nyc-tron-host';
+
+export const studioUI = nycTronStudioUI({
+  View, Text, Pressable, Image, Select, ActionMenu: NativeActionMenu, NativePopover, GroupedSelect: Select,
+  ScrollView: ScrollView as never, TextInput: TextInput as never,
+});
+```
+
+## Do/Don't
+
+### Do
+
+- Pass NYC-Tron `Select` for both `Select` and `GroupedSelect` as the Expo host does.
+- Add a `TokenScope` (Uniwind `ScopedVariables`) on native so Prism panels can scope tokens.
+
+### Don't
+
+- Do not add Forge copies of Button or Card; this file is the only mapping (decision 1).
+- Do not rely on `tone`; the host ignores it and colour comes from theme tokens.
+
+### Notes
+
+- UNVERIFIED: the web host `apps/studio-preview/src/studio-ui.tsx` was not read.
+
+
+<!-- component: persona-composer -->
+---
+name: "PersonaComposer"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/persona-composer"
+tier: 1
+docs: "handwritten"
+platforms: ["ios", "android", "web"]
+category: "forge"
+tokens: ["--border-width-hairline", "--font-mono-plain", "--font-weight-bold", "--font-weight-semibold", "--radius-card", "--radius-control", "--shadow-segment-active", "--spacing-element", "--spacing-fixed-rail", "--spacing-fixed-status", "--spacing-group", "--spacing-inset", "--spacing-section", "--spacing-stack", "--spacing-target", "--text-body", "--text-label", "--text-title"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/instrument-system", "@nitro-forge/persona-model", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
+a11yStatus: "reviewed-fail"
+---
+
+# PersonaComposer
+
+## Purpose
+
+**Prerequisite.** Needs `StudioUIProvider`: install `studio-ui-provider` and `nyc-tron-host` first, and wrap the app once. Every studio component throws without it (install-order.md step 7).
+
+Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).
+
+A form for naming a persona, ordering its instrument rail, choosing capabilities and surfaces, previewing the manifest for the current surface, then saving, exporting, importing or removing through a `PersonaStore`.
+
+## Install
+
+- Package: `@nitro-forge/persona-composer` (registry item)
+- Import: `import { PersonaComposer } from '@/components/forge/persona-composer';`
+- Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/instrument-system`; `@nitro-forge/persona-model`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/persona-composer`
+- Installs: `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
+- Files: `components/forge/persona-composer.tsx`, `components/forge/persona-composer-model.ts`
+
+## Props
+
+Extends: Also exports `ComposerGlyph` (`more`, `chevron-left`, `chevron-down`, `chevron-up`). Name limit `PERSONA_NAME_MAX` 40.
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| store | `PersonaStore` | none | yes | Every save, import and removal goes through it. |
+| theme | `"dark" \| "light"` | `"dark"` | no | Dark wraps the body in `NightScope`. |
+| colors | `WorkspaceColors` | `prismThemes[theme]` | no |  |
+| onExportPersona | `(json, persona) => Promise<"copied" \| "shared">` | shows JSON in a field | no | Host copy or share. |
+
+## Variants
+
+### layout by width
+
+| Value | Effect |
+|---|---|
+| wide | Width >= 1000 (`COMPOSER_WIDE`). |
+| single | Between 600 and 1000. |
+| phone | Under 600 (`COMPOSER_PHONE`); instrument and capability grids fold into disclosures. |
+
+### theme
+
+| Value | Effect |
+|---|---|
+| `light` | Own segment classes on web (`LIGHT_SEGMENTS`). |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Save blocked | `saveBlocker(draft)` | Reason shown. |
+| Notice | save, import, export, remove | Banner tone success, danger or info. |
+| Import open | Import button | Multiline field "Persona JSON to import". |
+| Built-in | persona `builtIn` | Not removable or exportable; caption explains. |
+| Reorder | drag, Move up, Move down | Live announcement of the new position. |
+
+### Motion
+
+None authored.
+
+## A11y
+
+- Name field `accessibilityLabel="Persona name"`; import and export fields labelled.
+- Toggles: `accessibilityRole="button"` with `accessibilityState.selected` or `expanded`.
+- Lists: `accessibilityRole="list"` with `listitem` rows; headings with `aria-level`.
+- Reorder by Move up and Move down buttons (`aria-label="Move <name> up"`), screen reader and drag.
+- Web live region; iOS and Android use `announceForAccessibility`.
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N06 1.4.11: field borders c.line 1.16 to 1.78:1 against field ground and 1.37 to 1.57:1 against the panel (persona-composer.tsx:195,405,426)
+
+## Example
+
+```tsx example=persona-composer
+import { PersonaComposer } from '@/components/forge/persona-composer';
+import { createPersonaStore } from '@/components/forge/persona-store';
+
+const store = createPersonaStore({ surface: 'web' });
+export const Demo = () => <PersonaComposer store={store} />;
+```
+
+## Do/Don't
+
+### Do
+
+- Pass `onExportPersona` to use the clipboard or share sheet.
+- Use the store from the open document so saves persist with it.
+
+### Don't
+
+- Do not offer remove or export for built-in personas; the store refuses them.
+- Do not hide capabilities with `engine: "not-in-engine"`; the form keeps them selectable and tags them.
+
+
+<!-- component: persona-model -->
+---
+name: "PersonaModel"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/persona"
+tier: 1
+docs: "handwritten"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: ["@nitro-forge/instrument-system", "@nitro-forge/workspace-utilities"]
+a11yStatus: "reviewed-pass"
+---
+
+# PersonaModel
+
+## Purpose
+
+**Prerequisite.** No StudioUIProvider is needed.
+
+Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).
+
+Non-visual persona model: 4 built-in personas (vector, pixel, layout, sketch), 11 capabilities (4 backed by Prism ops, 7 marked `not-in-engine`), 7 surfaces, compose, import, export, switch, and a per-document store with a host storage port. Not a component; the template covers components, so this page lists the API.
+
+## Install
+
+- Package: `@nitro-forge/persona-model` (registry item)
+- Import: `import { createPersonaStore } from '@/components/forge/persona-store';`
+- Peers: `zustand` 5.1.0
+- Requires: `@nitro-forge/instrument-system`; `@nitro-forge/workspace-utilities`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/persona-model`
+- Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
+- Files: `components/forge/persona.ts`, `components/forge/persona-store.ts`
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| createPersonaStore(options) | `{surface, storage?, initialPersonaId?}` | none | yes | Returns a Zustand vanilla store. |
+| PersonaStoragePort | `{load, save}` | none | no | Host durable storage (MMKV, file, browser). |
+| actions | `switchTo`, `setSurface`, `setContinuity`, `compose`, `importJson`, `exportJson`, `remove`, `clearError` |  |  | On `PersonaStoreActions`. |
+| `PERSONA_FORMAT` | `1` |  |  | Export format version. |
+
+## Variants
+
+none
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Error | failed switch, compose, import, or unreadable saved personas | Plain-words string in store `error`. |
+
+### Motion
+
+None.
+
+## A11y
+
+- Not applicable. Non-visual.
+- Review status: reviewed-pass, reviewed, no failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+
+## Example
+
+```tsx example=persona-model
+import { createPersonaStore } from '@/components/forge/persona-store';
+
+export const store = createPersonaStore({ surface: 'iphone' });
+```
+
+## Do/Don't
+
+### Do
+
+- Provide a `PersonaStoragePort` to keep user personas.
+- Call `setSurface` when a fold opens or a display attaches.
+
+### Don't
+
+- Do not store document data here; personas hold none.
+- Do not choose the storage backend in the store; the host does.
+
+
+<!-- component: persona-turret -->
+---
+name: "PersonaTurret"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/persona-turret"
+tier: 1
+docs: "handwritten"
+platforms: ["ios", "android", "web"]
+category: "forge"
+tokens: ["--border-width-hairline", "--color-accent", "--font-weight-bold", "--radius-control", "--spacing-element", "--spacing-inset", "--spacing-stack", "--text-body", "--text-label", "--text-micro"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/persona-model", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
+a11yStatus: "reviewed-fail"
+---
+
+# PersonaTurret
+
+## Purpose
+
+**Prerequisite.** Needs `StudioUIProvider`: install `studio-ui-provider` and `nyc-tron-host` first, and wrap the app once. Every studio component throws without it (install-order.md step 7).
+
+Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).
+
+The design studio persona switcher: a four-stop machined dial with a detent per persona. Drag or arrow keys preview, release or Enter commits, Escape cancels. Also exports the hooks `useStudioTextScale`, `useForgeRenderPrefs`, `useTurretShortcut` and `documentRtl`.
+
+## Install
+
+- Package: `@nitro-forge/persona-turret` (registry item)
+- Import: `import { PersonaTurret, useStudioTextScale } from '@/components/forge/persona-turret';`
+- Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0, `react-native-reanimated` >=4.7.1 <5 (native motion file)
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/persona-model`; `@nitro-forge/studio-gesture`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/persona-turret`
+- Installs: `react-native-reanimated@^4.7.1`, `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
+- Files: `components/forge/persona-turret.tsx`, `components/forge/turret.ts`, `components/forge/turret-motion.tsx`, `components/forge/turret-motion.native.tsx`, `components/forge/turret-motion-types.ts`
+
+## Props
+
+Extends: Also exports `TURRET_SIZE`, `turretBoxWidth(textScale, count)`, `turretCopy`, `BUILT_IN_PERSONAS`.
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| personas | `readonly PersonaSpec[]` | none | yes |  |
+| surface | `PersonaSurface` | none | yes | Stops are `personasOn(personas, surface)`. |
+| activeId | `string` | none | yes | Committed persona. |
+| onSwitch | `(personaId) => void` | none | yes | Once per committed switch; never touches the document. |
+| onEffect | `(effect: TurretEffect) => void` | none | no | Haptics and sound hook. |
+| onAnnounce | `(text) => void` | own node | no | Web host status node. |
+| onDismiss | `() => void` | none | no | Escape with no preview open. |
+| autoFocus | `boolean` | falsy | no |  |
+| rtl | `boolean` | document or `I18nManager` | no |  |
+| direction | `ForgeDirectionId` | `"workbench"` | no |  |
+| scheme | `ForgeScheme` | `"dark"` | no |  |
+| colors | `WorkspaceColors` | none | no | Only `accent` is used. |
+| disabled | `boolean` | falsy | no |  |
+| handle | `Ref<PersonaTurretHandle>` | none | no | `cancel()`, `focus()`. |
+
+## Variants
+
+### direction
+
+| Value | Effect |
+|---|---|
+| `workbench` | Detent travel 120 ms, curve (0.22, 1, 0.36, 1). |
+| `optics` | 200 ms, (0.16, 1, 0.3, 1). |
+| `atelier` | 280 ms, (0.25, 1, 0.5, 1). |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Peeking | drag or key | Indicator moves; commit on release, Enter or digit shortcut. |
+| End stop | drag past first or last stop | Two-beat nudge, or an opacity pulse under Reduce Motion. |
+| Disabled | `disabled` | "Persona switching waits for the engine to finish". |
+| No stops | no persona runs on this surface | "No persona runs on this device". |
+
+### Motion
+
+`forgeFeedbackMotion`: press 80 ms scale 0.96, end-stop beat 60 ms by 3 degrees, commit rim 200 ms peak opacity 0.9. Reduce Motion sets travel to 0 ms. Web uses a CSS transition and one Web Animation; native uses Reanimated on the UI thread.
+
+## A11y
+
+- Container `accessibilityRole="radiogroup"`; each stop `accessibilityRole="radio"` with `accessibilityState.checked` and `aria-checked`.
+- Ring `accessibilityRole="adjustable"`.
+- Announcements: `AccessibilityInfo` on native, a hidden live region on web.
+- Reads reduce motion, reduce transparency, contrast, forced colors, text scale; shortcut tags only for a fine pointer on web.
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N10 iOS 44 pt: stop targets scale to 0.85 of 44, 37.4 pt, in the narrow ring layout (persona-turret.tsx:399, turret.ts:150)
+
+## Example
+
+```tsx example=persona-turret
+import { PersonaTurret, BUILT_IN_PERSONAS } from '@/components/forge/persona-turret';
+
+export const Demo = () => (
+  <PersonaTurret personas={BUILT_IN_PERSONAS} surface="web" activeId="vector" onSwitch={() => {}} />
+);
+```
+
+## Do/Don't
+
+### Do
+
+- Size the host panel with `turretBoxWidth(useStudioTextScale(), count)`.
+- Call `handle.cancel()` on Android Back or a closing sheet.
+
+### Don't
+
+- Do not let `onSwitch` mutate the document; personas hold none.
+- Do not mount the native motion file without `react-native-reanimated`; the import is unconditional (UNVERIFIED by build).
+
+
+<!-- component: prism-canvas -->
+---
+name: "PrismCanvas"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/prism-canvas"
+tier: 1
+docs: "handwritten"
+platforms: []
+category: "forge"
+tokens: ["--border-width-strong", "--color-artboard-checker-a", "--color-artboard-checker-b", "--color-on-overlay-chip", "--color-overlay-chip", "--shadow-artboard", "--spacing-fixed-stack"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-gesture", "@nitro-forge/studio-ui-provider"]
+a11yStatus: "reviewed-fail"
+---
+
+# PrismCanvas
+
+## Purpose
+
+**Prerequisite.** Needs `StudioUIProvider`: install `studio-ui-provider` and `nyc-tron-host` first, and wrap the app once. Every studio component throws without it (install-order.md step 7).
+
+The Prism artboard: a transparency checker, the engine composite as children, an optional overlay, a selection outline, and one-finger move gestures that preview bounds and commit once on release.
+
+## Install
+
+- Package: `@nitro-forge/prism-canvas` (registry item)
+- Import: `import { PrismCanvas, ARTBOARD_CHECKER } from '@/components/forge/prism-canvas';`  (the original line carried a note; see Notes)
+- Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-gesture`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/prism-canvas`
+- Installs: `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
+- Files: `components/forge/prism-canvas.tsx`, `components/forge/prism-canvas-model.ts`
+
+## Props
+
+Extends: Exports `ARTBOARD_CHECKER` = `{size: 8, light: "#FFFFFF", dark: "#EDEFF3"}`.
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| document | `CanvasDocument` | none | yes | `{width, height, layers}`. |
+| width, height | `number` | none | yes | Artboard size in points. |
+| selectedId | `number \| null` | none | yes |  |
+| disabled | `boolean` | none | yes | Cancels any gesture. |
+| color | `string` | none | yes | Selection outline colour. |
+| children | `ReactNode` | none | yes | The engine composite. |
+| overlay | `ReactNode` | none | no | Replaces the built-in outline. |
+| onSelect | `(id: number \| null) => void` | none | yes |  |
+| onMoveShape | `(id, dx, dy) => void` | none | yes | Called once on release. |
+
+## Variants
+
+none
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Selected | `selectedId` matches a layer | Outline `prism-selection-bounds`. |
+| Moving | drag | Preview badge "Move preview · release to apply" and "Cancel move". |
+| Disabled | `disabled` | Gestures ignored. |
+| Reset | document, size or disabled changes | Any open gesture is cancelled. |
+
+### Motion
+
+None. The preview is a static outline offset.
+
+## A11y
+
+- Artboard label: "Prism artboard. Select layers or use Transform for accessible move actions."
+- Escape cancels a gesture.
+- Web: `touchAction: none`; scroll, resize and blur cancel the gesture because measured geometry goes stale.
+- The cancel button is a provider `Button` with `aria-label="Cancel shape move"`.
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N04 1.4.3: Cancel move ghost label on #111827 chip 1.11:1 (chrome light) and 1.24:1 (reference light) (prism-canvas.tsx:96-97)
+
+## Example
+
+```tsx example=prism-canvas
+import { PrismCanvas } from '@/components/forge/prism-canvas';
+import { View } from 'react-native';
+
+export const Demo = () => (
+  <PrismCanvas document={{ width: 800, height: 600, layers: [] }} width={400} height={300}
+    selectedId={null} disabled={false} color="#086CB8" onSelect={() => {}} onMoveShape={() => {}}>
+    <View />
+  </PrismCanvas>
+);
+```
+
+## Do/Don't
+
+### Do
+
+- Commit on `onMoveShape` only; it fires once per release.
+- Pass `disabled` while the engine is busy.
+- Use `overlay` to draw your own selection UI.
+
+### Don't
+
+- Do not treat the move preview as document state.
+- Do not rely on `platforms: ["web"]` meaning web only: the file branches on `Platform.OS === "web"` for listeners and runs on native through `studio-gesture`.
+
+
+<!-- component: prism-editor -->
+---
+name: "PrismEditor"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/prism-editor"
+tier: 1
+docs: "handwritten"
+platforms: ["ios", "android", "web"]
+category: "forge"
+tokens: ["--border-width-hairline", "--border-width-strong", "--color-accent", "--color-danger", "--color-paper-text", "--color-scrim", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-weight-semibold", "--opacity-scrim", "--radius-card", "--radius-control", "--spacing-canvas-rail", "--spacing-element", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-stack", "--spacing-fixed-target", "--spacing-fixed-toolbar", "--spacing-group", "--spacing-inset", "--spacing-stack", "--spacing-target", "--swatch-amber", "--swatch-rose", "--swatch-teal", "--swatch-violet", "--text-label", "--text-micro", "--z-chrome", "--z-fill-bar", "--z-layer-row", "--z-overlay", "--z-panel", "--z-toast"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/persona-model", "@nitro-forge/persona-turret", "@nitro-forge/prism-canvas", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/forge/inputs/PrecisionScrubber", "@nyc-tron/forge/layers/LayerStack"]
+a11yStatus: "reviewed-fail"
+---
+
+# PrismEditor
+
+## Purpose
+
+**Prerequisite.** Needs `StudioUIProvider`: install `studio-ui-provider` and `nyc-tron-host` first, and wrap the app once. Every studio component throws without it (install-order.md step 7).
+
+Needs `@nitro-forge/ignition` first (step 1). Native host. shadcn copies files and cannot run nitrogen, pod install or CMake (decision 4).
+
+Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).
+
+A Prism canvas editor over real engine commands: bounded PNG composite of the engine render, shape tools, four fill chips, transform actions, a layers panel (NYC-Tron `LayerStack` with a `PrecisionScrubber` for opacity) and a persona panel. Selection and panel state are local. Every edit is one engine op, so one undo step.
+
+## Install
+
+- Package: `@nitro-forge/prism-editor` (registry item)
+- Import: `import { PrismEditor } from '@/components/forge/prism-editor';`
+- Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-model`; `@nitro-forge/persona-turret`; `@nitro-forge/prism-canvas`; `@nitro-forge/studio-gesture`; `@nyc-tron/forge/inputs/PrecisionScrubber`; `@nyc-tron/forge/layers/LayerStack`; `@nitro-forge/ignition` (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports `base64ToBytes` and `bytesToBase64` from the package index; Prism engine document supplying `apply` and `reload` (engine facade, deferred); NYC-Tron `layer-model` type
+- Command: `npx shadcn@4.23.0 add @nitro-forge/prism-editor`
+- Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
+- Files: `components/forge/prism-editor.tsx`, `components/forge/prism-layers.ts`, `components/forge/prism-layer-label.ts`, `components/forge/prism-layout.ts`, `components/forge/prism-transform.ts`, `components/forge/rgba-png.ts`
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| state | `unknown` | none | yes | Prism state `{width, height, layers}`. |
+| apply | `(op, payload?) => Promise<unknown>` | none | yes | Engine command port. |
+| reload | `() => Promise<void>` | none | yes |  |
+| documentIdentity | `unknown` | none | no | Rejects work finished after the document was replaced. |
+| applyOwnsRefresh | `boolean` | falsy | no | The apply owner already refreshes state. |
+| renderCanvasOverlay | `(viewport) => ReactNode` | none | no | Host overlay on the exact measured artboard. |
+| theme | `"dark" \| "light"` | `"dark"` | no |  |
+| density | `WorkspaceDensity` | `"standard"` | no |  |
+| direction | `ForgeDirectionId` | `"workbench"` | no | Material comparison only. |
+| busy | `boolean` | falsy | no |  |
+| selectedLayerId, onSelectLayer | `number \| null`, `(id) => void` | local selection | no | Host-owned focus shared with inspectors. |
+| personas | `PersonaStore` | own store | no |  |
+| onPersonaEffect | `(effect: TurretEffect) => void` | none | no | Haptics hook. |
+| onOpenPersonas, onComposePersona | `() => void` | none | no | Host-presented persona panel and composer. |
+
+## Variants
+
+### direction
+
+| Value | Effect |
+|---|---|
+| `workbench` | Graphite or white ceramic chrome (default). |
+| `optics` | Glass chrome; glass only if allowed by render prefs. |
+| `atelier` | Ceramic with two shadow planes. |
+
+### width
+
+| Value | Effect |
+|---|---|
+| under 600 | Persona panel is a bottom sheet over a scrim. |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Empty | no layers | EmptyState "No layers", action "Add rectangle". |
+| Rendering / busy | local store | Controls disabled. |
+| Error, preview error | engine rejects, preview over `MAX_PREVIEW_PIXELS` 1,048,576 | Message shown. |
+| Layers open | Layers button | Panel width 280 (`PRISM_LAYERS_PANEL_WIDTH`); docking threshold 1100 (`PRISM_DOCKED_LAYERS_MIN_WIDTH`), side of the threshold not traced. |
+| Forced colors (web) | forced-colors media | Chips keep colour (`forcedColorAdjust: none`); accent becomes system Highlight. |
+
+### Motion
+
+No authored animation here; see persona-turret.
+
+## A11y
+
+- Persona trigger: `accessibilityRole="button"`, `accessibilityLabel="Persona: <label>"`, `accessibilityHint="Opens the persona turret"`, `aria-expanded`.
+- Persona panel: `role="dialog"`, `aria-label="Personas"`, modal on the sheet.
+- Fill chips: `accessibilityRole="button"`, label "Choose <colour> fill", `accessibilityState.selected`.
+- Composite `Image` label "Prism canvas composite"; tool rail "Creation tools".
+- Icon buttons carry `aria-label`.
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N05 1.4.11: light fill chips amber 1.98:1, rose 2.62:1, hairline 2.08:1 (prism-editor.tsx:444)
+
+## Example
+
+```tsx example=prism-editor
+import { PrismEditor } from '@/components/forge/prism-editor';
+
+export const Demo = () => (
+  <PrismEditor state={null} apply={async () => ({ data: null })} reload={async () => {}} />
+);
+```
+
+## Do/Don't
+
+### Do
+
+- Wire `apply` to the engine so each edit is one undo step.
+- Pass `selectedLayerId` and `onSelectLayer` when an inspector shares focus.
+- Use `renderCanvasOverlay` to draw on the measured artboard.
+
+### Don't
+
+- Do not change `direction` to change document content; it changes material only.
+- Do not feed previews above `MAX_PREVIEW_PIXELS`; validation rejects them.
+
+### Notes
+
+- The Prism engine package is not imported here. `state` and `apply` are props, so any host can feed the editor. The only native-adjacent import is the ignition index.
+
+
+<!-- component: quill-text-editor -->
+---
+name: "QuillTextEditor"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/text-editor"
+tier: 1
+docs: "handwritten"
+platforms: []
+category: "input"
+tokens: ["--color-accent", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-text-muted", "--font-editorial", "--radius-control", "--radius-paper", "--shadow-page", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-page", "--spacing-group", "--spacing-target"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
+a11yStatus: "reviewed-fail"
+---
+
+# QuillTextEditor
+
+## Purpose
+
+**Prerequisite.** Needs `StudioUIProvider`: install `studio-ui-provider` and `nyc-tron-host` first, and wrap the app once. Every studio component throws without it (install-order.md step 7).
+
+A writing surface for Quill documents, supplied through the stage slot. It keeps a local draft in a Zustand store and writes one atomic `replaceRange` edit through `apply` on Apply text or `flush()`. An outside edit during a draft raises a conflict and keeps the draft.
+
+## Install
+
+- Package: `@nitro-forge/quill-text-editor` (registry item)
+- Import: `import { QuillTextEditor, type QuillTextEditorHandle } from '@/components/forge/index';`
+- Peers: `react` >=19, `react-native` >=0.81, `zustand` 5.1.0
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; Quill engine document supplying `apply` and `reload` (engine facade, deferred)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/quill-text-editor`
+- Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
+- Files: `components/forge/text-editor.tsx`, `components/forge/text-diff.ts`
+
+## Props
+
+Extends: Ref handle `QuillTextEditorHandle`: `flush(): Promise<void>`, `isDirty(): boolean`.
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| state | `unknown` | none | yes | Quill `describe` data. |
+| apply | `(op: string, payload?: unknown) => Promise<unknown>` | none | yes | Engine command port. |
+| reload | `() => Promise<void>` | none | yes | Refresh host state after a write. |
+| theme | `"dark" \| "light"` | `"dark"` | no | Selects `workspaceThemes`. |
+| density | `WorkspaceDensity` | `"standard"` | no | Chrome only; never manuscript type or page geometry. |
+| documentTitle | `string` | none | no | Declared in the interface; the file does not read it. |
+
+## Variants
+
+### width
+
+| Value | Effect |
+|---|---|
+| under 600 | Smaller padding; manuscript 17 pt on 29 line height. |
+| 600 and over | Manuscript 19 pt on 34 line height, max width 792. |
+
+### density
+
+| Value | Effect |
+|---|---|
+| `comfortable` | Adds `min-h-12 min-w-12` to the button. |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Clean | draft equals base | "Up to date"; Apply disabled. |
+| Dirty | text differs | "Draft changes"; Apply primary. |
+| Busy | `flush` running | "Applying…", button loading, input not editable. |
+| Conflict | engine changed under the draft | Danger Banner and "Discard draft and load latest document"; Apply disabled. |
+| Opening | `state` falsy | Input not editable; flush throws "The document is still opening". |
+
+### Motion
+
+None authored; `ForgeIcon` always gets `reducedMotion`.
+
+## A11y
+
+- TextInput `accessibilityLabel="Essay text"`.
+- Apply button `aria-label="Apply essay text"`; discard button `aria-label="Discard draft and load latest document"`.
+- Button target `scale.size.target`.
+- Android uses the `serif` font; other platforms Georgia.
+- Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+- Failing: N02 1.4.3: placeholder paperMuted #797F8D on #FFFEFC 3.98:1 in both schemes (text-editor.tsx:151)
+- Failing: N01 1.4.3: word count muted on stage mat 4.01:1 in light (text-editor.tsx:140)
+
+## Example
+
+```tsx example=quill-text-editor
+import { useRef } from 'react';
+import { QuillTextEditor, type QuillTextEditorHandle } from '@/components/forge/index';
+
+export function Demo() {
+  const ref = useRef<QuillTextEditorHandle>(null);
+  return <QuillTextEditor ref={ref} state={null} apply={async () => ({ data: null })} reload={async () => {}} />;
+}
+```
+
+## Do/Don't
+
+### Do
+
+- Call `ref.current.flush()` before save or export so the draft reaches the engine.
+- Check `isDirty()` before opening another document over the draft.
+- Pass `apply` that supports `describe` and `replaceRange`.
+
+### Don't
+
+- Do not edit the engine behind the editor while a draft is open; it raises a conflict.
+- Do not expect `density` to change manuscript type.
+
+### Notes
+
+- `platforms` lists only `android` because that is the only platform the file names (`Platform.OS === "android"` font branch). The editor runs wherever React Native runs.
+
+
+<!-- component: studio-gesture -->
+---
+name: "StudioGesture"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/studio-gesture"
+tier: 1
+docs: "handwritten"
+platforms: ["ios", "android", "web"]
+category: "primitive"
+tokens: []
+registryDependencies: ["@nyc-tron/gestures/GestureHandlerDrag", "@nyc-tron/gestures/PanResponderDrag"]
+a11yStatus: "reviewed-pass"
+---
+
+# StudioGesture
+
+## Purpose
+
+**Prerequisite.** No StudioUIProvider is needed.
+
+One-finger gesture recogniser with a shared contract. Web uses `PanResponder`; native uses a Gesture Handler Pan raced against a Tap.
+
+## Install
+
+- Package: `@nitro-forge/studio-gesture` (registry item)
+- Import: `import { StudioGesture } from '@/components/forge/studio-gesture';`
+- Peers: `react` >=19, `react-native` >=0.81, `react-native-gesture-handler` >=3.4 <4 (native file)
+- Requires: `@nyc-tron/gestures/GestureHandlerDrag`; `@nyc-tron/gestures/PanResponderDrag`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/studio-gesture`
+- Installs: `react-native-gesture-handler@^3.5.0` (the CLI adds them when they are absent)
+- Files: `components/forge/studio-gesture.tsx`, `components/forge/studio-gesture.native.tsx`, `components/forge/studio-gesture-types.ts`, `components/forge/keyboard-event.ts`, `components/forge/drag-transport.ts`, `components/forge/drag-transport.native.ts`
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| children | `ReactElement` | none | yes | One element; it receives the handlers. |
+| onBegin | `(point) => void` | none | yes |  |
+| onMove | `(point, touches) => void` | none | yes |  |
+| onRelease | `(point) => void` | none | yes |  |
+| onCancel | `() => void` | none | yes |  |
+| disabled | `boolean` | falsy | no |  |
+
+## Variants
+
+### file
+
+| Value | Effect |
+|---|---|
+| `studio-gesture.tsx` | Web `PanResponder`. |
+| `studio-gesture.native.tsx` | Gesture Handler `Pan` (minDistance 0, maxPointers 1) raced with `Tap` (maxDistance 4). |
+
+## States
+
+| State | How it is set | What the code does |
+|---|---|---|
+| Disabled | `disabled` | Gestures not enabled. |
+| Second touch | more than one pointer | `onCancel`. |
+| Pan loses to Tap | native race | Tap release still fires; the lost Pan does not cancel it. |
+
+### Motion
+
+None.
+
+## A11y
+
+- Sets no role, label or state; it clones handlers onto its child.
+- Review status: reviewed-pass, reviewed, no failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+
+## Example
+
+```tsx example=studio-gesture
+import { View } from 'react-native';
+import { StudioGesture } from '@/components/forge/studio-gesture';
+
+export const Demo = () => (
+  <StudioGesture onBegin={() => {}} onMove={() => {}} onRelease={() => {}} onCancel={() => {}}><View /></StudioGesture>
+);
+```
+
+## Do/Don't
+
+### Do
+
+- Give it a single child element (`children`).
+- Handle `onCancel` to drop preview state.
+
+### Don't
+
+- Do not wrap more than one child.
+- Do not use it for multi-touch; `maxPointers(1)` and the second-touch cancel reject it.
+
+
+<!-- component: workspace-utilities -->
+---
+name: "WorkspaceUtilities"
+namespace: "@nitro-forge"
+subpath: "@/components/forge/app-manifest"
+tier: 1
+docs: "handwritten"
+platforms: []
+category: "primitive"
+tokens: []
+registryDependencies: []
+a11yStatus: "reviewed-pass"
+---
+
+# WorkspaceUtilities
+
+## Purpose
+
+**Prerequisite.** No StudioUIProvider is needed.
+
+Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).
+
+`APP_MANIFESTS` gives each of the 11 studios a task line, detail, glyph id and category for launchers. `jsonProblem` and `jsonFaultOffset` turn a JSON parse failure into a plain sentence and an offset. Not components.
+
+## Install
+
+- Package: `@nitro-forge/workspace-utilities` (registry item)
+- Import: `import { APP_MANIFESTS } from '@/components/forge/app-manifest';`
+- Peers: none
+- Requires: `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/workspace-utilities`
+- Installs: none (the CLI adds them when they are absent)
+- Files: `components/forge/app-manifest.ts`, `components/forge/json-problem.ts`
+
+## Props
+
+| Name | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `APP_MANIFESTS` | `Record<Studio, {task, detail, glyph, category}>` |  |  | 11 studios. |
+| `jsonProblem(text, error?)` | `string` |  |  | Plain-words parse failure. |
+| `jsonFaultOffset(text)` | `number` |  |  | Offset of the fault. |
+
+## Variants
+
+none
+
+## States
+
+none in code.
+
+### Motion
+
+None.
+
+## A11y
+
+- Not applicable. Non-visual.
+- Review status: reviewed-pass, reviewed, no failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
+
+## Example
+
+```tsx example=workspace-utilities
+import { APP_MANIFESTS } from '@/components/forge/app-manifest';
+
+export const label = APP_MANIFESTS.quill.task;
+```
+
+## Do/Don't
+
+### Do
+
+- Use `glyph` ids that exist in `glyphIds` (47 drawn).
+- Use `jsonProblem` for import error messages.
+
+### Don't
+
+- Do not assume a glyph id renders because it is in the catalog of 1,463 reserved ids.
+- Do not add a studio without a manifest row; the record type requires one.
+
+
+<!-- engine: prism -->
+---
+name: "Prism"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/prism"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Prism
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/prism/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Nitro-Forge prism document API. Studio task line (APP_MANIFESTS): "Create an image". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/prism/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/prism`
+- Import: `import {} from '@nitro-forge/prism';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/prism` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/prism/package.json,packages/prism/src/index.ts -->
+Not a component, so there are no props. 3 entry points: `@nitro-forge/prism`, `@nitro-forge/prism/canvas-cluster`, `@nitro-forge/prism/color-cluster`. Top-level exports of `src/index.ts` (9): `OPS`, `PrismColors`, `PrismColorChange`, `RectShape`, `EllipseShape`, `Shape`, `ShapeTransform`, `Filter`, `PrismDocument`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/prism/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/prism/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/prism/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/prism/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `prism` before calling `apply`.
+- Treat `@nitro-forge/prism` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/prism needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: cadence -->
+---
+name: "Cadence"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/cadence"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Cadence
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/cadence/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Nitro-Forge cadence document API. Studio task line (APP_MANIFESTS): "Make an audio project". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/cadence/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/cadence`
+- Import: `import {} from '@nitro-forge/cadence';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/cadence` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/cadence/package.json,packages/cadence/src/index.ts -->
+Not a component, so there are no props. 6 entry points: `@nitro-forge/cadence`, `@nitro-forge/cadence/instrument-adapter`, `@nitro-forge/cadence/instrument-session`, `@nitro-forge/cadence/editor-adapter`, `@nitro-forge/cadence/mixer-cluster`, `@nitro-forge/cadence/transfer`. Top-level exports of `src/index.ts` (22): `OPS`, `TrackKind`, `InsertKind`, `AutomationParam`, `AutomationMode`, `EqBandType`, `EqBand`, `CompressorParams`, `InsertParams`, `AnalysisRange`, `MeterReading`, `MeterResult`, `LoudnessResult`, `SpectrogramResult`, `BeatDetectionResult`, `BeatDetectionOptions`, `CadenceMarker`, `MarkerInput`, `MarkerPatch`, `InsertPreset`, `ProjectInfo`, `CadenceDocument`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/cadence/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/cadence/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/cadence/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/cadence/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `cadence` before calling `apply`.
+- Treat `@nitro-forge/cadence` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/cadence needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: splice -->
+---
+name: "Splice"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/splice"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Splice
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/splice/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Nitro-Forge splice document API. Studio task line (APP_MANIFESTS): "Edit a video timeline". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/splice/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/splice`
+- Import: `import {} from '@nitro-forge/splice';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/splice` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/splice/package.json,packages/splice/src/index.ts -->
+Not a component, so there are no props. 3 entry points: `@nitro-forge/splice`, `@nitro-forge/splice/timeline-cluster`, `@nitro-forge/splice/transfer`. Top-level exports of `src/index.ts` (14): `OPS`, `BatchableOp`, `TrackKind`, `RippleScope`, `PlacementMode`, `TRANSITION_KINDS`, `TransitionKind`, `TrackFlags`, `SpeedKey`, `CLIP_GAIN_DB_RANGE`, `CLIP_PAN_RANGE`, `ClipMix`, `ClipEditResult`, `SpliceDocument`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/splice/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/splice/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/splice/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/splice/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `splice` before calling `apply`.
+- Treat `@nitro-forge/splice` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/splice needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: folio -->
+---
+name: "Folio"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/folio"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Folio
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/folio/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Nitro-Forge folio document API. Studio task line (APP_MANIFESTS): "Work with a PDF". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/folio/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/folio`
+- Import: `import {} from '@nitro-forge/folio';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/folio` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/folio/package.json,packages/folio/src/index.ts -->
+Not a component, so there are no props. 4 entry points: `@nitro-forge/folio`, `@nitro-forge/folio/office-cluster`, `@nitro-forge/folio/render`, `@nitro-forge/folio/transfer`. Top-level exports of `src/index.ts` (27): `OPS`, `Rect`, `AnnotSubtype`, `InkStroke`, `InkPaths`, `FolioPermission`, `FolioImageFormat`, `FolioPageImage`, `FolioEncryptOptions`, `Annotation`, `FolioCommentMetadata`, `FolioCommentEntry`, `FolioCommentThread`, `FolioOutlineItem`, `FolioFormField`, `FolioSignature`, `FolioAttachmentInfo`, `FolioRedactRetainedReason`, `FolioRedactReport`, `FolioComparePageChange`, `FolioCompareAnnotEntry`, `FolioCompareField`, `FolioCompareOutlineItem`, `FolioCompareSignature`, `FolioCompareResult`, `FolioPageInfo`, `FolioDocument`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/folio/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/folio/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/folio/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/folio/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `folio` before calling `apply`.
+- Treat `@nitro-forge/folio` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/folio needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: pitch -->
+---
+name: "Pitch"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/pitch"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Pitch
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/pitch/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Nitro-Forge pitch document API. Studio task line (APP_MANIFESTS): "Build a presentation". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/pitch/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/pitch`
+- Import: `import {} from '@nitro-forge/pitch';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/pitch` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/pitch/package.json,packages/pitch/src/index.ts -->
+Not a component, so there are no props. 2 entry points: `@nitro-forge/pitch`, `@nitro-forge/pitch/office-cluster`. Top-level exports of `src/index.ts` (55): `OPS`, `Rgba`, `PitchTextStyle`, `PitchSection`, `PitchPlaceholderKind`, `PitchPlaceholder`, `PitchPlaceholderInput`, `PitchPlaceholderPatch`, `PitchMaster`, `PitchLayout`, `PitchThemeColorSlot`, `PitchThemeFontSlot`, `PitchTheme`, `Layout`, `PitchShapeKind`, `PitchShapeStroke`, `PitchAnchorSide`, `PitchConnectorEnd`, `PitchConnectorRoute`, `PitchConnectorArrows`, `PitchConnectorSpec`, `PitchConnectorUpdate`, `PitchMediaKind`, `PitchMediaFit`, `PitchMediaSpec`, `PitchMediaInput`, `PitchMediaUpdate`, `PitchChartKind`, `PitchChartPoint`, `PitchChartSeries`, `PitchChartSpec`, `PitchChartUpdate`, `PitchTableCellValue`, `PitchTableCell`, `PitchTableSpec`, `PitchTableUpdate`, `InkKind`, `PitchInkStroke`, `PitchInkStrokeInput`, `PitchInkStrokePatch`, and more.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/pitch/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/pitch/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/pitch/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/pitch/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `pitch` before calling `apply`.
+- Treat `@nitro-forge/pitch` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/pitch needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: tally -->
+---
+name: "Tally"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/tally"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Tally
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/tally/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Nitro-Forge tally document API. Studio task line (APP_MANIFESTS): "Open a spreadsheet". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/tally/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/tally`
+- Import: `import {} from '@nitro-forge/tally';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/tally` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/tally/package.json,packages/tally/src/index.ts -->
+Not a component, so there are no props. 4 entry points: `@nitro-forge/tally`, `@nitro-forge/tally/grid-adapter`, `@nitro-forge/tally/grid-cluster`, `@nitro-forge/tally/transfer`. Top-level exports of `src/index.ts` (51): `OPS`, `CellValue`, `CellError`, `CellInfo`, `BorderSide`, `BorderStyle`, `CellBorder`, `CellFormat`, `CellFormatPatch`, `FormatTarget`, `SheetTabTone`, `WorkbookInfo`, `NamedRangeInfo`, `ValidationCriteria`, `ValidationRuleInfo`, `CellValidation`, `FunctionInfo`, `ConditionalFormat`, `ConditionalRuleInput`, `ConditionalRuleInfo`, `ConditionalMatch`, `SortKey`, `FilterRuleInfo`, `FilterRowVisibility`, `FilterRowMatch`, `ChartKind`, `ChartSeriesInput`, `ChartInput`, `ChartInfo`, `ChartPatch`, `SparklineKind`, `SparklineInfo`, `SparklineTarget`, `SheetViewFilter`, `SheetViewInfo`, `CommentInfo`, `CommentAnchor`, `PivotAgg`, `PivotValueInput`, `PivotFilterInput`, and more.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/tally/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/tally/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/tally/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/tally/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `tally` before calling `apply`.
+- Treat `@nitro-forge/tally` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/tally needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: quill -->
+---
+name: "Quill"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/quill"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Quill
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/quill/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Nitro-Forge quill document API. Studio task line (APP_MANIFESTS): "Write a document". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/quill/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/quill`
+- Import: `import {} from '@nitro-forge/quill';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/quill` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/quill/package.json,packages/quill/src/index.ts -->
+Not a component, so there are no props. 3 entry points: `@nitro-forge/quill`, `@nitro-forge/quill/office-cluster`, `@nitro-forge/quill/transfer`. Top-level exports of `src/index.ts` (67): `OPS`, `TextCase`, `BlockKind`, `ListKind`, `ListFormat`, `ListLevel`, `ListDefinition`, `ListItem`, `Pos`, `Range`, `Style`, `LayoutLine`, `LayoutPage`, `TocPageEntry`, `TocFieldPages`, `LayoutResult`, `RenderPageResult`, `RenderPageOptions`, `FindMatch`, `CellPos`, `CellFindMatch`, `Bookmark`, `NamedStyleKind`, `ParagraphAlignment`, `TabAlignment`, `TabLeader`, `TabStop`, `ParagraphFormat`, `ParagraphFormatPatch`, `NamedStyleProperties`, `NamedStyle`, `FindOptions`, `CommentAnchor`, `DocComment`, `RevisionKind`, `Revision`, `FootnoteKind`, `Footnote`, `TocEntry`, `TocField`, and more.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/quill/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/quill/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/quill/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/quill/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `quill` before calling `apply`.
+- Treat `@nitro-forge/quill` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/quill needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: photo -->
+---
+name: "Photo"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/photo"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Photo
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/photo/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Persistent photo catalog metadata and version identities. Studio task line (APP_MANIFESTS): "Organize a photo catalog". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/photo/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/photo`
+- Import: `import {} from '@nitro-forge/photo';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/photo` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/photo/package.json,packages/photo/src/index.ts -->
+Not a component, so there are no props. 2 entry points: `@nitro-forge/photo`, `@nitro-forge/photo/raw`. Top-level exports of `src/index.ts` (6): `OriginalDescriptor`, `PhotoOriginal`, `PhotoVersion`, `PhotoCatalog`, `OPS`, `PhotoDocument`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/photo/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/photo/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/photo/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/photo/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `photo` before calling `apply`.
+- Treat `@nitro-forge/photo` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/photo needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: motion -->
+---
+name: "Motion"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/motion"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Motion
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/motion/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Bounded persistent 2D motion with Prism frame rendering. Studio task line (APP_MANIFESTS): "Build a motion composition". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/motion/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/motion`
+- Import: `import {} from '@nitro-forge/motion';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/motion` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/motion/package.json,packages/motion/src/index.ts -->
+Not a component, so there are no props. 1 entry point: `@nitro-forge/motion`. Top-level exports of `src/index.ts` (40): `MotionProperty`, `MotionPathNode`, `MotionPath`, `CurvePoint`, `MotionKey`, `MotionKeyInput`, `Transform`, `Transform3D`, `ProjectedTransform2D`, `MotionLight`, `Shape`, `LayerKind`, `MotionBlendMode`, `MotionMatteMode`, `MotionMatte`, `MotionMatteInput`, `MotionEffect`, `MotionSprite`, `MotionEmitter`, `MotionExpression`, `MotionGraphNodeKind`, `MotionGraphEdge`, `MotionGraphNodeParams`, `MotionGraphNode`, `MotionGraphBinding`, `MotionGraph`, `MotionGraphInput`, `MotionLayerMedia`, `MotionLayer`, `MOTION_RASTER_FORMAT`, `MotionRasterAsset`, `CompositionSettings`, `MotionComposition`, `MotionState`, `MotionEvaluation`, `RenderJobStatus`, `RenderJob`, `RenderQueueSummary`, `RenderQueueStep`, `MotionDocument`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/motion/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/motion/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/motion/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/motion/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `motion` before calling `apply`.
+- Treat `@nitro-forge/motion` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/motion needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: design -->
+---
+name: "Design"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/design"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Design
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/design/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Bounded persistent fixed-frame design layout with real Prism rendering. Studio task line (APP_MANIFESTS): "Design an interface". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/design/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/design`
+- Import: `import {} from '@nitro-forge/design';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/design` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/design/package.json,packages/design/src/index.ts -->
+Not a component, so there are no props. 1 entry point: `@nitro-forge/design`. Top-level exports of `src/index.ts` (79): `OPS`, `SizeMode`, `Axis`, `AxisSizing`, `AxisSizingUpdate`, `SizingSettings`, `NodeKind`, `OverridePath`, `OverrideValue`, `NodeOverride`, `ComponentVariant`, `InstanceSpec`, `TextFontStyle`, `TextStyle`, `FontStylePatch`, `TextStylePatch`, `VariableType`, `VariableValue`, `DesignVariable`, `DesignMode`, `BindPath`, `VariableBinding`, `VariableBindingInfo`, `VariableInfo`, `VariablesDescription`, `HorizontalAnchor`, `VerticalAnchor`, `NodeConstraints`, `ConstraintNodeInfo`, `ConstraintSolveInfo`, `ConstraintsDescription`, `LayoutConstraintReport`, `PrototypeTrigger`, `PrototypeAction`, `TransitionKind`, `TransitionEasing`, `SlideDirection`, `PrototypeTarget`, `PrototypeScreen`, `PrototypeHotspot`, and more.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/design/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/design/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/design/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/design/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `design` before calling `apply`.
+- Treat `@nitro-forge/design` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/design needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: draft -->
+---
+name: "Draft"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/draft"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Draft
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/draft/package.json,packages/studio-workspace/src/app-manifest.ts -->
+Bounded persistent world-space 2D drafting and linear coordinate constraints. Studio task line (APP_MANIFESTS): "Draw a CAD document". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/draft/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/draft`
+- Import: `import {} from '@nitro-forge/draft';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/draft` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/draft/package.json,packages/draft/src/index.ts -->
+Not a component, so there are no props. 1 entry point: `@nitro-forge/draft`. Top-level exports of `src/index.ts` (29): `DraftPoint`, `DraftLayer`, `DraftSegment`, `DraftCircle`, `DraftArc`, `ConstraintDefinition`, `DraftConstraint`, `DraftHatchLoops`, `DraftHatchPattern`, `DraftHatch`, `DraftDimensionKind`, `DraftDimensionAxis`, `DraftDimension`, `DraftDimensionMeasured`, `DraftDimensionState`, `DraftSheet`, `DraftViewportEntity`, `DraftBlock`, `DraftInsert`, `SnapSettings`, `DraftState`, `SolveReport`, `SnapResult`, `DraftSnapQuery`, `DraftProfileBounds`, `DraftProfile`, `DraftProfiles`, `DraftViewport`, `DraftDocument`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/draft/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/draft/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/draft/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/draft/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `draft` before calling `apply`.
+- Treat `@nitro-forge/draft` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/draft needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- engine: scene -->
+---
+name: "Scene"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/scene"
+tier: 2
+docs: "generated"
+platforms: []
+category: "forge"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Scene
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/scene/package.json -->
+Bounded persistent 3D scene graph: TRS nodes, PBR-state materials, host-side deterministic rendering. No studio manifest names this engine. Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/scene/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/scene`
+- Import: `import {} from '@nitro-forge/scene';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/scene` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/scene/package.json,packages/scene/src/index.ts -->
+Not a component, so there are no props. 1 entry point: `@nitro-forge/scene`. Top-level exports of `src/index.ts` (19): `SceneTransform`, `SceneNodeKind`, `SceneCameraParams`, `SceneLightParams`, `SceneNode`, `SceneColor`, `SceneMaterial`, `SceneMesh`, `SceneState`, `SceneBounds`, `ScenePickHit`, `ScenePickResult`, `SceneTextures`, `SceneRenderRequest`, `SceneRenderDescription`, `ScenePrimitiveKind`, `ScenePrimitiveParams`, `SceneMaterialInput`, `SceneDocument`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/scene/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/scene/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/scene/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/scene/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Read `docs/ENGINE_OPS.md` for the op names and payloads of `scene` before calling `apply`.
+- Treat `@nitro-forge/scene` as a monorepo dependency until a tarball release exists.
+
+### Don't
+
+- Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/scene needs the Rust binary).
+- Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+<!-- generated:end dont -->
+
+
+<!-- foundation: ignition -->
+---
+name: "Ignition"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/ignition"
+tier: 2
+docs: "generated"
+platforms: []
+category: "primitive"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# Ignition
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/ignition/package.json -->
+Nitro-Forge native integration layer: engine session contracts, Nitro HybridObject spec, and host transports. Not a registry item. Decision 4. shadcn copies files. It cannot run nitrogen, pod install or CMake. Documented as a prerequisite with the exact commands in docs/agent-native/install-order.md.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/ignition/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/ignition`
+- Import: `import {} from '@nitro-forge/ignition';`
+- Peers: `react-native-nitro-modules`, `nitro-core`
+- Requires: Rust, Xcode or the Android NDK; see docs/agent-native/install-order.md steps 0 and 1
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/ignition` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/ignition/package.json,packages/ignition/src/index.ts -->
+Not a component, so there are no props. 13 entry points: `@nitro-forge/ignition`, `@nitro-forge/ignition/cli`, `@nitro-forge/ignition/nitro`, `@nitro-forge/ignition/v1-host`, `@nitro-forge/ignition/workspace`, `@nitro-forge/ignition/transfer`, `@nitro-forge/ignition/workspace-ui`, `@nitro-forge/ignition/transfer-ui`, `@nitro-forge/ignition/autosave`, `@nitro-forge/ignition/transactions`, `@nitro-forge/ignition/collaboration`, `@nitro-forge/ignition/collaboration-http`, `@nitro-forge/ignition/collaboration-checkpoint`. 
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/ignition/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/ignition/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/ignition/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/ignition/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Follow the commands in docs/agent-native/install-order.md for `@nitro-forge/ignition`.
+- Check `registry-excluded.json` for the reason and the condition for returning.
+
+### Don't
+
+- Do not run `shadcn add` for this package; Decision 4.
+- Do not publish or invent a release URL for it.
+<!-- generated:end dont -->
+
+
+<!-- foundation: studio-layout -->
+---
+name: "StudioLayout"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/studio-layout"
+tier: 2
+docs: "generated"
+platforms: []
+category: "primitive"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# StudioLayout
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/studio-layout/package.json -->
+The package has no description field. Not a registry item. Decision 3. Private workspace package with no tarball and no versioning scheme.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/studio-layout/package.json,compatibility.v1.json -->
+- Package: `@nitro-forge/studio-layout`
+- Import: `import {} from '@nitro-forge/studio-layout';`
+- Peers: none
+- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/studio-layout` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/studio-layout/package.json,packages/studio-layout/src/index.ts -->
+Not a component, so there are no props. 1 entry point: `@nitro-forge/studio-layout`. Top-level exports of `src/index.ts` (24): `STUDIOS`, `Studio`, `DOCKS`, `Dock`, `Rect`, `Geometry`, `DockSizes`, `Layout`, `Reason`, `Result`, `createWorkspace`, `parsePreset`, `serializePreset`, `stageFits`, `dockPanel`, `collapsePanel`, `floatPanel`, `resizeDock`, `DockAction`, `applyDockAction`, `Point`, `DockDropPreview`, `DockDropQuery`, `resolveDockDropPreview`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/studio-layout/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/studio-layout/package.json -->
+_Not documented._
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/studio-layout/package.json -->
+_Not documented._
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=packages/studio-layout/package.json -->
+_Not documented._
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Follow the commands in docs/agent-native/install-order.md for `@nitro-forge/studio-layout`.
+- Check `registry-excluded.json` for the reason and the condition for returning.
+
+### Don't
+
+- Do not run `shadcn add` for this package; Decision 3.
+- Do not publish or invent a release URL for it.
+<!-- generated:end dont -->
+
+
+<!-- file: docs/agent-native/install-order.md -->
+# Agent-native phase 1.3: install order for a new studio
+
+Status: read from `package.json` files, `tooling/`, `packages/ignition/scripts/`, `docs/native/NITRO_V1_HOST_INTEGRATION.md`, `.github/workflows/` and `apps/example`. No command here was run on this machine (4.9 GB free, no install allowed). Where a command comes from CI or a script, the source is named. UNVERIFIED marks a step the files do not settle.
+
+Nothing here is published to npm. `compatibility.v1.json` records `distribution: github-release-tarballs`, `npm: not-used`, and no tag or release exists for the Forge packages. Every `@nitro-forge/*` package is `0.0.0` at the root or `0.1.0` per package and resolves through `workspace:*`. A consumer outside this monorepo has no installable `@nitro-forge/ignition`, engine or `studio-layout` today.
+
+## The chain
+
+Each step needs the one above it. Step 7 fails at first render if step 6 is skipped, and every studio-workspace component throws without `StudioUIProvider` ("No substitute UI is installed").
+
+| # | Step | Command or edit | Registry add can do it? |
+|---|---|---|---|
+| 0 | Toolchain | Node >=24.3.0, pnpm 12.18.0 (`packageManager`), Rust with `cargo`, Xcode for Apple, Android NDK and `cargo-ndk` for Android | No |
+| 1 | `@nitro-forge/ignition` (native host) | see below | No (decision 4) |
+| 2 | Engine package, for example `@nitro-forge/tally` | `workspace:*` dependency, Rust crate linked through `nf-sys` | No (decision 3) |
+| 3 | `@nitro-forge/studio-layout` | `workspace:*` dependency, private package | No (decision 3) |
+| 4 | `@nitro-forge/icons` | registry item `forge-icon` | Yes, plus peers |
+| 5 | NYC-Tron tarballs | URL dependencies from `tooling/nyc-tron.json` | No for the packages, yes for registry items that wrap them |
+| 6 | Theme CSS | generated `theme.css` or `theme.native.css`, plus an import | Files yes, build step no |
+| 7 | `StudioUIProvider` and host | registry items `studio-ui-provider`, `nyc-tron-host` plus app code | Files yes, host wiring is app code |
+| 8 | Studio components | registry items from `03-design-handoff.md` | Yes |
+
+Registry mechanics (decision 28, corrected by decision 45): the built `r/*.json` files are committed in each repo and served from `raw.githubusercontent.com/<owner>/<repo>/<ref>/r/{name}.json`. `<ref>` is a moving branch (`master` for `@nitro-forge`, `main` for `@nyc-tron`) until the owner cuts release tags, then `node tooling/registry/set-ref.mjs <tag> [<tag>]` pins both. A consumer adds an item with `npx shadcn@latest add @nitro-forge/<item>`. The `@nyc-tron` items it depends on resolve only once NYC-Tron's `r/` is on its `main` branch. Pin the CLI version too (`npx shadcn@4.23.0`) if you need a reproducible install, because `@latest` moves. A live fetch from raw.githubusercontent.com has not been run. UNVERIFIED.
+
+### Step 0. Toolchain
+
+- Node >=24.3.0 and pnpm 12.18.0 come from the root `package.json` (`engines`, `packageManager`). CI runs `corepack enable && pnpm install --frozen-lockfile --ignore-scripts` on Node 24 (`.github/workflows/ignition-v1-integration.yml`).
+- Rust: `cargo` is required for every native archive. The Apple script builds three targets (`aarch64-apple-ios`, `aarch64-apple-ios-sim`, `x86_64-apple-ios`); install them with `rustup target add` (the script does not install them).
+- Android: `ANDROID_NDK_HOME` must point at the NDK the Expo app uses, and `cargo-ndk` must be installed.
+- The workspace pins one Nitro runtime for the whole graph: `react-native-nitro-modules` and `nitro-core` at `1.0.0-alpha.nightly.136.gdb81de61bd32` (`pnpm-workspace.yaml` overrides). Metro is pinned at 0.87.2 and ten dependencies carry pnpm patches (`patches/`). A consumer outside the monorepo needs the same pins. UNVERIFIED: whether a clean consumer app builds without the patches.
+
+### Step 1. `@nitro-forge/ignition` (host, native module, Nitrogen output)
+
+From the repo root:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @nitro-forge/ignition codegen          # nitrogen; output is committed, regenerate only after a spec change
+pnpm --filter @nitro-forge/ignition typecheck
+pnpm --filter @nitro-forge/ignition exec vitest run tests/nitro-host.test.ts
+cargo test --locked -p nf-sys && cargo build --locked -p nf-sys
+```
+
+Native archives, run before Expo prebuild or build (`docs/native/NITRO_V1_HOST_INTEGRATION.md`):
+
+```bash
+bash packages/ignition/scripts/build-apple.sh        # writes packages/ignition/native/ForgeRust.xcframework
+ANDROID_NDK_HOME=/path/to/ndk bash packages/ignition/scripts/build-android.sh   # default ABIs: armeabi-v7a arm64-v8a x86 x86_64, platform 24
+bash packages/ignition/scripts/build-android.sh arm64-v8a                       # a subset
+```
+
+Facts to know:
+
+- `build-apple.sh` refuses to run if `native/ForgeRust.xcframework` already exists ("Remove the previous generated ... before rebuilding").
+- The integration doc says the Apple archive covers arm64 iPhone and Apple Silicon simulators, not Intel simulators. The script builds `x86_64-apple-ios` and lipos it into the simulator slice. The script and the doc disagree. The script is the later source of truth; UNVERIFIED which is right on a real Intel simulator.
+- iOS minimum is 16 (`Package.swift`, `IPHONEOS_DEPLOYMENT_TARGET=16.0`). The Expo example sets Android `minSdkVersion` 29. The Android script builds with `--platform 24`.
+- Nitro v1 links through SwiftPM on Apple (`experiments.swiftPackageManager: true` in `apps/example/app.json`); the podspec `NitroForgeV1.podspec` is for React Native dependency discovery only.
+- For tests without a device, `cargo build --locked -p nf-cli` builds the JSON-lines host (`@nitro-forge/ignition/cli`).
+- Not run on this machine: Rust tests, Android NDK link, Xcode link, any device launch. The integration doc itself lists those as not run at integration time. UNVERIFIED on current commit.
+
+### Step 2. Engine package
+
+Add the package as a `workspace:*` dependency, for example `"@nitro-forge/tally": "workspace:*"` (`apps/example/package.json` shows all of them). Each engine package depends on `@nitro-forge/ignition` and has no install command of its own. The Rust side is already linked: `rust/nf-sys/Cargo.toml` depends on all 12 engine crates (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene), so the step 1 archive contains every engine. A new studio that needs one engine still ships all 12 in the archive. UNVERIFIED: whether a feature flag trims that.
+
+Engine contract tests need `@nyc-tron/ui` as a devDependency (URL tarball); apps do not.
+
+### Step 3. `@nitro-forge/studio-layout`
+
+Private, pure TypeScript, no build step (`"exports": {".": "./src/index.ts"}`). Used by `studio-workspace` (`model.ts`, `index.tsx`, `stage.tsx`, `app-manifest.ts`). Add `"@nitro-forge/studio-layout": "workspace:*"`. No tarball exists. Distribution is blocked on the versioning scheme in decision 3.
+
+### Step 4. `@nitro-forge/icons`
+
+`workspace:*` today. Peers (all optional in the package, required in practice): `react` >=19, `react-native` >=0.81, `react-native-svg` >=15. The root patches `react-native-svg@15.16.0` (`patches/react-native-svg@15.16.0.patch`); the example and `studio-workspace` pin 15.16.0. Entry points: `@nitro-forge/icons` (catalog and glyph data, headless), `@nitro-forge/icons/native` and `/web` (the `ForgeIcon` component).
+
+### Step 5. NYC-Tron tarballs
+
+Seven packages pinned in `tooling/nyc-tron.json`, release `v1.0.0-rc.2` of `mikevocalz/NYC-Tron-UI`, commit `0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44`. They are GitHub release assets, not npm packages. The URL pattern is:
+
+```
+https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-<name>-1.0.0-rc.2.tgz
+```
+
+| Package | Used by |
+|---|---|
+| `@nyc-tron/ui` | `studio-workspace` (dependency), `apps/example`, engine devDependencies |
+| `@nyc-tron/core` | `apps/example` |
+| `@nyc-tron/expo-controls` | `apps/example` (Select, NativePopover, NativeActionMenu) |
+| `@nyc-tron/reserved-regions` | `apps/example` |
+| `@nyc-tron/platform-services` | pinned, not in `apps/example` dependencies |
+| `@nyc-tron/native-controls` | pinned, named in cadence comments, not in `apps/example` dependencies |
+| `@nyc-tron/hardware-keys` | pinned, not in `apps/example` dependencies |
+
+Put the exact URL in the consumer's `package.json` (`"@nyc-tron/ui": "<url>"`). The sha256 for each file is in `tooling/nyc-tron.json` and in the release's `SHA256SUMS`. Checks:
+
+```bash
+pnpm verify:nyc-tron                                  # node tooling/verify-nyc-tron-pin.mjs: manifests and lockfile use the pinned URL
+node tooling/verify-nyc-tron-pin.mjs --download       # also re-hashes the release assets
+```
+
+The pin check requires dependency sections to use the exact URL and peer ranges to be caret ranges the pinned version satisfies.
+
+Optional dev link to a local NYC-Tron checkout: `withNycTronDevLink(config, { projectRoot })` from `tooling/nyc-tron-metro.cjs`, active only when `NYC_TRON_ROOT` is set. Native modules still come from the installed tarball.
+
+Peer set `studio-workspace` also needs: `zustand` 5.1.0, `react-native-gesture-handler` >=3.4 <4, and `react-native-reanimated` >=4.7.1 <5 (the turret's native motion file imports it; the package marks it optional). The example pins gesture-handler 3.5.0, reanimated 4.7.1 and `react-native-worklets` 0.13.1.
+
+### Step 6. Theme CSS
+
+`packages/studio-workspace/src/theme.css` and `theme.native.css` are generated and committed. Regenerate after editing `theme.ts`:
+
+```bash
+pnpm --filter @nitro-forge/studio-workspace build:theme   # node build-theme.mjs
+```
+
+Then import the right file:
+
+- Expo with Uniwind (`apps/example/global.css`): `@import 'tailwindcss';`, `@import 'uniwind';`, then `@import '../../packages/studio-workspace/src/theme.native.css';`. Metro config wraps Expo's config with `withUniwindConfig(config, { cssEntryFile: './global.css', dtsFile: './src/uniwind-types.d.ts', polyfills: { rem: 14 } })`.
+- Web with Vite and Tailwind 4 (`apps/studio-preview/src/style.css`): `@import "tailwindcss" important;`, `@source` lines for `packages/studio-workspace/src`, `node_modules/@nyc-tron/ui/dist/components` and `node_modules/@nyc-tron/expo-controls/dist/components` (NYC-Tron publishes only `dist/`, so Tailwind must scan it), then `@import` of `theme.css`.
+
+NYC-Tron ships no colours. Its components read the semantic variables the generated CSS declares (`--color-primary`, `--color-surface-raised`, `--color-border`, `--color-text` and the rest). Without this step the controls render without brand colour. A registry add can copy the CSS files but cannot run the generator or edit the app's CSS entry file.
+
+### Step 7. `StudioUIProvider` and host
+
+Provider and host mapping, from `apps/example/src/studio-ui.tsx` and `apps/example/app/_layout.tsx`:
+
+```tsx
+import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ScopedVariables } from 'uniwind';
+import { Select } from '@nyc-tron/expo-controls/Select';
+import { NativePopover } from '@nyc-tron/expo-controls/NativePopover';
+import { NativeActionMenu } from '@nyc-tron/expo-controls/NativeActionMenu';
+import { nycTronStudioUI } from '@nitro-forge/studio-workspace/nyc-tron-host';
+
+export const studioUI = nycTronStudioUI({
+  View, Text, Pressable, Image, Select, ActionMenu: NativeActionMenu, NativePopover, GroupedSelect: Select,
+  TokenScope: ({ variables, children }) => <ScopedVariables variables={variables}>{children}</ScopedVariables>,
+  ScrollView: ScrollView as never, TextInput: TextInput as never,
+});
+
+// root layout
+<StudioUIProvider components={studioUI}>{/* app */}</StudioUIProvider>
+```
+
+The example casts `ScrollView` and `TextInput` because React Native 0.88 types their refs as instance interfaces. The web host (`apps/studio-preview/src/studio-ui.tsx`) is the web counterpart and was not read for this document (UNVERIFIED).
+
+### Step 8. Components
+
+Only now do the registry items for studio chrome work: `forge-workspace`, `prism-editor`, `persona-turret` and the rest.
+
+## Registry add versus tarball or native install
+
+| Needs | Registry add | Tarball, workspace or native install |
+|---|---|---|
+| Copy `forge-workspace`, `prism-editor`, `persona-*`, `forge-directions`, `studio-theme` sources | Yes | |
+| Copy `forge-icon`, `forge-icon-button`, `studio-ui-provider`, `nyc-tron-host` sources | Yes | |
+| Install `react-native-svg`, `zustand`, gesture-handler, reanimated | Yes, as npm dependencies of the item | |
+| Run `build-theme.mjs` | | Yes (a script, and it imports `theme.ts` directly) |
+| Edit the app's CSS entry and Metro config | | Yes (app code) |
+| `@nyc-tron/*` packages | Items declare `registryDependencies`; the packages themselves are GitHub tarball URLs | Yes |
+| `@nitro-forge/ignition`: Nitrogen codegen, `ForgeRust.xcframework`, Android static archives, CMake, podspec, Swift package | | Yes (decision 4) |
+| Engine packages and their Rust crates | | Yes (decision 3) |
+| `@nitro-forge/studio-layout` | | Yes (decision 3) |
+| Quill, Tally, Splice and Prism binding adapters | Deferred | Need the engine facade first |
+| Expo config plugin for brand identity (`tooling/brand/plugin.cjs`) | | Yes, not in registry scope |
+
+Two items need a native prerequisite even though their own files are plain TypeScript. `prism-editor` imports `base64ToBytes` and `bytesToBase64` from the `@nitro-forge/ignition` package index, so a copy of it resolves only after step 1. `forge-workspace`, `forge-document-stage` and `studio-layout` consumers need `@nitro-forge/studio-layout` from step 3 for the `Studio` type and the dock model.
+
+## Known gaps in the chain
+
+- No document today gives these steps in order. This file is the first.
+- Steps 1 to 3 cannot be reproduced outside the monorepo: no tarball or release exists for `ignition`, the engines or `studio-layout`.
+- The Apple archive script and the integration doc disagree on Intel simulator support (step 1).
+- Seven NYC-Tron packages are pinned; the example installs four. Which of the other three a new studio needs is not stated in the repo. UNVERIFIED.
+
+
+<!-- file: SKILL.md -->
+---
+name: nitro-forge
+description: Install and use the Nitro Forge studio components (workspace chrome, persona turret, Prism editor, theme, StudioUIProvider, icons) through the @nitro-forge shadcn registry. Use when adding a Forge item, wiring StudioUIProvider, rebranding the accent, checking a token, or deciding why an engine or ignition cannot be installed with shadcn.
+---
+
+# Nitro Forge
+
+Nitro Forge is a set of document studios on one Rust engine. The `@nitro-forge` registry ships the studio UI as source files. The engines, `@nitro-forge/ignition` and `@nitro-forge/studio-layout` are not in it. Controls such as Button and TabBar come from the `@nyc-tron` registry, which owns them.
+
+## Provider prerequisite: do this first
+
+Every studio component throws "No substitute UI is installed" at first render unless the app is wrapped once in `StudioUIProvider`. Install the provider and a host before any component:
+
+```bash
+npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
+```
+
+Then fill the 27 slots with `nycTronStudioUI()` from the installed `nyc-tron-host` file and wrap the root layout:
+
+```tsx
+<StudioUIProvider components={studioUI}>{/* app */}</StudioUIProvider>
+```
+
+The host needs the `@nyc-tron` controls and three host parts (`Select`, `NativePopover`, `NativeActionMenu` from `@nyc-tron/expo-controls`). The wiring is app code, so shadcn cannot do it. The working example is `apps/example/src/studio-ui.tsx` in the repo.
+
+Items that need the provider are marked `meta.needsProvider: true` in `r/<item>.json`. Items that do not: `studio-gesture`, `persona-model`, `instrument-system`, `workspace-utilities`, `studio-theme`, `forge-directions`, `forge-icon`, `forge-icon-button`, `brand-theme`.
+
+## Install order
+
+Nine steps, numbered 0 to 8. A registry add covers step 4 and step 8, plus the file part of steps 5, 6 and 7.
+
+| Step | What | `shadcn add` |
+|---|---|---|
+| 0 | Toolchain: Node >=24.3.0, pnpm 12.18.0, Rust, Xcode or Android NDK with `cargo-ndk` | no |
+| 1 | `@nitro-forge/ignition` native host | no (decision 4) |
+| 2 | An engine package, for example `@nitro-forge/tally` | no (decision 3) |
+| 3 | `@nitro-forge/studio-layout` | no (decision 3) |
+| 4 | `@nitro-forge/icons` as item `forge-icon` | yes |
+| 5 | NYC-Tron tarballs from `tooling/nyc-tron.json` | packages no, wrapper items yes |
+| 6 | Theme CSS from `studio-theme` | files yes, the generator and CSS import no |
+| 7 | `StudioUIProvider` and host | files yes, wiring no |
+| 8 | Studio components | yes |
+
+Steps 1 to 3 cannot be reproduced outside this monorepo today. No tag, release or tarball exists for them, nothing is on npm, and `compatibility.v1.json` records distribution as not run. Stop and ask rather than invent a release URL. The commands for steps 0 to 3, 5 and 6 are in `docs/agent-native/install-order.md`. They were read from the repo and were not run on the machine that wrote this skill.
+
+Items that name a prerequisite shadcn cannot install list it in `meta.prerequisites` and in the `docs` text the CLI prints after an add. `prism-editor` needs `@nitro-forge/ignition` (it imports `base64ToBytes` and `bytesToBase64`). `forge-workspace`, `forge-document-stage` and `workspace-utilities` need `@nitro-forge/studio-layout`, and so does everything that depends on them.
+
+## Commands
+
+Verified against a local server with shadcn CLI 4.23.0, in an app whose `components.json` maps both namespaces:
+
+```bash
+npx shadcn@4.23.0 list @nitro-forge
+npx shadcn@4.23.0 view @nitro-forge/persona-composer
+npx shadcn@4.23.0 add @nitro-forge/persona-composer
+npx shadcn@4.23.0 mcp
+```
+
+`components.json` at the repo root points the two namespaces at `https://raw.githubusercontent.com/mikevocalz/<repo>/<ref>/r/{name}.json`. `<ref>` is `nitroForgeRef` (`master`) for `@nitro-forge` and `nycTronRef` (`main`) for `@nyc-tron`, both in `tooling/registry/config.json`. They are moving branches, not release tags, until the owner cuts tags: what an install fetches changes with each push, and the `@nyc-tron` items resolve only once NYC-Tron's `r/` is on its `main` branch. To pin, run `node tooling/registry/set-ref.mjs <nitroForgeRef> [nycTronRef]`; it rewrites the config and regenerates every generated file. The install proof against a local server accepted `text/plain` responses, which is what raw.githubusercontent.com serves. A live fetch from raw GitHub has not been done. `.mcp.json` runs `npx shadcn@latest mcp` because the mission specifies it. Pin it to `shadcn@4.23.0`, the version the registry is built with, if you want a reproducible tool version.
+
+Item names keep slashes: `@nyc-tron/forge/layers/LayerStack`. The `@nyc-tron` item names are the export keys after `./components/`. All 22 that Forge depends on exist in NYC-Tron's built `registry.json`; `check-imports` reads that registry on every run.
+
+Installed files land in `components/forge/` (icons in `components/forge/icons/`). Imports between them are relative. Imports of NYC-Tron files are written as `@/components/nyc-tron/ui/components/<key>`, which is where the `@nyc-tron` items install (their `files[].target` is `@components/nyc-tron/ui/components/<key>.tsx`, and `@components` expands to your `components` alias).
+
+## Rebrand contract
+
+A brand sets three keys per scheme in `brand.theme.json`: `accent`, `ink` and `soft`. Together they feed `--color-primary`, `--color-accent`, `--color-focus`, `--color-on-primary` and `--color-primary-tint`. That is 6 values.
+
+```json
+{
+  "dark": { "accent": "#66B9FF", "ink": "#081D2F", "soft": "#173C59" },
+  "light": { "accent": "#086CB8", "ink": "#FFFFFF", "soft": "#D6EAFB" },
+  "defaultDensity": "standard"
+}
+```
+
+Install `brand-theme` for the schema and the checker. `brandThemeProblems(file)` returns the locked keys it finds, colours that are not six hex digits and a `defaultDensity` outside `compact`, `standard`, `comfortable`. `checkBrandTheme(file)` always returns six entries and never throws: it measures `ink` on `accent` (4.5:1), `accent` as a focus ring on the raised surface (3:1) and `text` on `soft` (4.5:1), and an incomplete file gives entries with `pass: false`, `ratio: null` and a `problem`.
+
+A brand reaches the UI through two channels. Apply both.
+
+| Channel | Call | Reaches | Does not reach |
+|---|---|---|---|
+| CSS variables | `brandCssVariables(theme, scheme)` on a `[data-brand]` block, `:root` or a `TokenScope` | NYC-Tron controls (Button, TabBar, SegmentedControl, Select, Banner) and Tailwind utilities reading `--color-primary`, `--color-accent`, `--color-focus`, `--color-on-primary`, `--color-primary-tint` | Colours Forge reads in JavaScript |
+| JS overrides | `brandThemeOverrides(theme, scheme)` as `themeOverrides` on `ForgeWorkspace` | Workspace header, rail label, studio glyphs and the soft chip behind them | The CSS variables |
+
+`PersonaTurret` (reads `colors.accent`) and `PersonaComposer` (reads `colors.accent` and `colors.soft`) take their own `colors` prop, which `ForgeWorkspace` does not fill, so pass the same overrides there. `PrismEditor`, `QuillTextEditor`, `ForgeDocumentStage` and the default `ForgeIcon` palette are reached by neither channel today. Installing `brand-theme` and applying only the CSS variables recolours the controls and leaves the workspace header, glyphs and turret on the old accent. The file is separate from `tooling/brand/brand.schema.json`, which stays closed and feeds the Expo plugin (decision 24).
+
+Deferred: the six neutral keys (`base`, `raised`, `deep`, `line`, `text`, `muted`) wait for an owner-supplied contrast check (decision 23). Struck: any radius override, because chrome keeps 4 px. Locked: status colours, `paper*`, every scale and hit target.
+
+## Token rules
+
+- Use the CSS variables from `studio-theme`, for example `--color-surface-raised`, not a hex value. `docs/agent-native/tokens.map.json` lists 234 proposed tokens with their dark and light values.
+- Every token carries the exact value of the literal it replaces, so tokenizing changes no pixel. Spacing keys are unit multiples (`space.2`, `space.1.5`), the same numbering as Tailwind.
+- Colour drift stays as separate tokens: icon accent `#6859E8` against workspace accent `#6950D1`, Prism blue against the launcher purple, stage paper `#F7F5ED` against `#FFFEFC`. Unifying them changes pixels and is the owner's call (decisions 5, 20, 26, 27).
+- Do not add a hex literal, a numeric style literal, a numeric JSX size prop, a Tailwind arbitrary value or a `fs(x + n)` offset to a file under `packages/`. `tooling/codemod/check-no-hardcoded.mjs` enforces exactly that list (its header is the definition). It is not a claim that no number remains: SVG geometry, data arrays, native Kotlin and Swift, `apps/` and tests are out of its scope, and 76 findings in 53 lines are allowlisted in `tooling/codemod/allowlist.json`, each with the reason no existing same-valued token fits.
+- Registry files are generated. Import specifiers are rewritten only in `r/*.json` (decision 39). The repo source keeps `@nyc-tron/ui/components/...` imports.
+
+## Accessibility status
+
+Values are `reviewed-pass`, `reviewed-fail` and `unverified`. Nothing was rendered, so no item is `verified`. Of the 17 admitted items, 6 are reviewed-pass, 10 are reviewed-fail and 1 (`nyc-tron-host`) is unverified. The failures are listed per item in `meta.a11yFailures` and in each page's A11y section. Examples: light muted text on base at 4.43:1 in `forge-workspace`; a ghost label at 1.11:1 in `prism-canvas`; status changes only colour in `forge-icon`.
+
+## Icons
+
+`forge-icon` ships 47 drawn glyphs. 42 of the 1,463 catalog ids resolve to one, and 6 drawn glyphs are not catalog ids. A name with no glyph renders nothing. Never describe the catalog as 1,463 available icons.
+
+## Not in the registry, and why
+
+- Four binding adapters (`quill-office-binding`, `tally-sheet-binding`, `splice-timeline-binding`, `prism-canvas-binding`): each imports its engine facade, which a registry add cannot install (decision 30).
+- Twelve engines (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene): they need the Rust binary through ignition and ship as release tarballs at 0.0.0 (decision 3).
+- `ignition`: shadcn cannot run nitrogen, pod install or CMake (decision 4).
+- `studio-layout`: private workspace package with no tarball.
+
+`registry-excluded.json` holds each reason and the condition for returning. Engine and foundation pages are in `docs/engines/`.
+
+## Rebuild after a source change
+
+```bash
+node tooling/registry/build.mjs
+node tooling/registry/check-imports.mjs
+node tooling/registry/validate-registry.mjs
+node tooling/docs/build-docs.mjs
+node tooling/docs/check-docs.mjs
+```
+
+`build.mjs` runs `shadcn build` through `npx` unless `SHADCN_BIN` points at a local shadcn 4.23.0 binary. Never edit `r/`, `registry.json`, `docs/components/` or `llms.txt` by hand. CI fails when a rebuild changes them.
+
+## Where to read more
+
+- `llms.txt` for the page index and `llms-full.txt` for all pages in one file.
+- `docs/components/<item>.md` for props, states, accessibility and examples.
+- `docs/agent-native/install-order.md` and `docs/agent-native/02-design-system.md`.

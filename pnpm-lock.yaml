@@ -200,6 +200,9 @@ importers:
       '@types/node':
         specifier: 26.6.6
         version: 26.6.6
+      ts-morph:
+        specifier: 28.0.0
+        version: 28.0.0
       tsx:
         specifier: 4.23.15
         version: 4.23.15

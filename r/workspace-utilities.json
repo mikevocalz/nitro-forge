@@ -1,0 +1,43 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "workspace-utilities",
+  "title": "Workspace Utilities",
+  "description": "Helpers, not UI: APP_MANIFESTS (task line, glyph, category per studio), jsonProblem (JSON parse error as a sentence). Needs studio-layout.",
+  "files": [
+    {
+      "path": "tooling/registry/stage/workspace-utilities/app-manifest.ts",
+      "content": "import type { Studio } from '@nitro-forge/studio-layout';\n\nexport const APP_MANIFESTS: Record<Studio, { task: string; detail: string; glyph: string; category: string }> = {\n  quill: { task: 'Write a document', detail: 'Type an essay, work on a draft, or open a Word document.', glyph: 'text', category: 'Writing' },\n  prism: { task: 'Create an image', detail: 'Work with image layers, shapes and artwork.', glyph: 'brush', category: 'Image & vector' },\n  tally: { task: 'Open a spreadsheet', detail: 'Organize figures, formulas and sheets.', glyph: 'table', category: 'Spreadsheets' },\n  pitch: { task: 'Build a presentation', detail: 'Arrange slides, text and visual elements.', glyph: 'slide', category: 'Presentations' },\n  folio: { task: 'Work with a PDF', detail: 'Inspect pages, rotate and annotate a document.', glyph: 'pdf', category: 'PDF documents' },\n  splice: { task: 'Edit a video timeline', detail: 'Arrange sources, clips and timing.', glyph: 'scissors', category: 'Video' },\n  cadence: { task: 'Make an audio project', detail: 'Work with tracks, notes and arrangements.', glyph: 'music', category: 'Audio' },\n  photo: { task: 'Organize a photo catalog', detail: 'Rate originals, manage versions and preview develop recipes.', glyph: 'image', category: 'Photography' },\n  motion: { task: 'Build a motion composition', detail: 'Animate layers, evaluate frames and render previews.', glyph: 'play', category: 'Motion' },\n  design: { task: 'Design an interface', detail: 'Arrange frames, text and components on a canvas.', glyph: 'color-wheel', category: 'Design' },\n  draft: { task: 'Draw a CAD document', detail: 'Draft geometry, constraints and paper-space sheets.', glyph: 'pencil', category: 'CAD drafting' },\n};\n\n",
+      "type": "registry:lib",
+      "target": "@components/forge/app-manifest.ts"
+    },
+    {
+      "path": "tooling/registry/stage/workspace-utilities/json-problem.ts",
+      "content": "/** Where a JSON text stops parsing, as a 0-based UTF-16 offset. Equal to the\n * text's trimmed length when the text ends early. `-1` when it parses. */\nexport function jsonFaultOffset(text: string): number {\n  let i = 0;\n  const fail = (): never => { throw i; };\n  const ws = () => { while (i < text.length && ' \\t\\n\\r'.includes(text[i]!)) i++; };\n  const word = (w: string) => { for (const ch of w) { if (text[i] !== ch) fail(); i++; } };\n  const string = () => {\n    i++;\n    for (;;) {\n      if (i >= text.length) fail();\n      const ch = text[i]!;\n      if (ch === '\"') { i++; return; }\n      if (ch < ' ') fail();\n      if (ch === '\\\\') {\n        i++;\n        if (text[i] === 'u') { for (let k = 0; k < 4; k++) { i++; if (!/[0-9a-fA-F]/.test(text[i] ?? '')) fail(); } }\n        else if (!'\"\\\\/bfnrt'.includes(text[i] ?? '\\0')) fail();\n      }\n      i++;\n    }\n  };\n  const value = (): void => {\n    ws();\n    const ch = text[i];\n    if (ch === '{') {\n      i++; ws();\n      if (text[i] === '}') { i++; return; }\n      for (;;) {\n        ws(); if (text[i] !== '\"') fail(); string(); ws();\n        if (text[i] !== ':') fail(); i++; value(); ws();\n        if (text[i] === ',') { i++; continue; }\n        if (text[i] === '}') { i++; return; }\n        fail();\n      }\n    }\n    if (ch === '[') {\n      i++; ws();\n      if (text[i] === ']') { i++; return; }\n      for (;;) {\n        value(); ws();\n        if (text[i] === ',') { i++; continue; }\n        if (text[i] === ']') { i++; return; }\n        fail();\n      }\n    }\n    if (ch === '\"') return string();\n    if (ch === 't') return word('true');\n    if (ch === 'f') return word('false');\n    if (ch === 'n') return word('null');\n    const number = /^-?(0|[1-9]\\d*)(\\.\\d+)?([eE][+-]?\\d+)?/.exec(text.slice(i));\n    if (!number) fail();\n    i += number![0].length;\n  };\n  try { value(); ws(); if (i < text.length) fail(); return -1; }\n  catch (at) { return typeof at === 'number' ? at : 0; }\n}\n\n/** The offset an engine's `JSON.parse` error names, when it names one (V8:\n * \"… in JSON at position 31 (line 1 column 32)\"). */\nfunction reportedOffset(error: unknown): number | undefined {\n  const text = error instanceof Error ? error.message : String(error ?? '');\n  const at = /position (\\d+)/.exec(text);\n  return at ? Number(at[1]) : undefined;\n}\n\n/** Recovery copy for JSON that failed to parse: where it stops and what to do.\n * Uses the position the engine reported; engines that report none (Safari,\n * Hermes, V8 on an unexpected token) get the same offset from a scan. */\nexport function jsonProblem(text: string, error?: unknown): string {\n  const offset = reportedOffset(error) ?? jsonFaultOffset(text);\n  const end = text.trimEnd().length;\n  if (end === 0) return 'The text is empty. Paste the whole file and try again.';\n  if (offset < 0 || offset >= end) return `Ends early at character ${end}. Paste the whole file and try again.`;\n  const line = text.slice(0, offset).split('\\n').length;\n  const where = line > 1 ? `line ${line}, character ${offset - text.lastIndexOf('\\n', offset - 1)}` : `character ${offset + 1}`;\n  return `Stops at ${where}, at “${text[offset]}”. Paste the file exactly as exported and try again.`;\n}\n",
+      "type": "registry:lib",
+      "target": "@components/forge/json-problem.ts"
+    }
+  ],
+  "meta": {
+    "tier": 1,
+    "docs": "handwritten",
+    "docsPath": "docs/components/workspace-utilities.md",
+    "category": "primitive",
+    "a11yStatus": "reviewed-pass",
+    "needsProvider": false,
+    "sourceFiles": [
+      "packages/studio-workspace/src/app-manifest.ts",
+      "packages/studio-workspace/src/json-problem.ts"
+    ],
+    "prerequisites": [
+      {
+        "id": "@nitro-forge/studio-layout",
+        "step": 3,
+        "installable": false,
+        "via": "direct import",
+        "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3)."
+      }
+    ]
+  },
+  "docs": "Needs @nitro-forge/studio-layout first (step 3 of docs/agent-native/install-order.md). shadcn cannot install it.",
+  "type": "registry:lib"
+}

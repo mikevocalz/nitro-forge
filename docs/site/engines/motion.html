@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@nitro-forge/motion | Nitro Forge</title>
+<meta name="description" content="Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html" aria-current="page">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>@nitro-forge/motion</h1>
+<div class="strip" role="note"><strong>Not a registry item</strong><p>Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary. Returns when the tarball versioning scheme is decided and the facade is installable (decision 3).</p></div>
+<h2 id="purpose">Purpose</h2>
+<p>Bounded persistent 2D motion with Prism frame rendering. Studio task line (APP_MANIFESTS): &quot;Build a motion composition&quot;. Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/motion</code></li><li>Import: <code>import {} from '@nitro-forge/motion';</code></li><li>Peers: none</li><li>Requires: <code>@nitro-forge/ignition</code> (native host, install-order.md step 1)</li><li>Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by <code>workspace:*</code> inside this repo.</li><li>Installs: none</li><li>Files: <code>packages/motion</code> in the repo; nothing is copied by shadcn</li></ul>
+<h2 id="props">Props</h2>
+<p>Not a component, so there are no props. 1 entry point: <code>@nitro-forge/motion</code>. Top-level exports of <code>src/index.ts</code> (40): <code>MotionProperty</code>, <code>MotionPathNode</code>, <code>MotionPath</code>, <code>CurvePoint</code>, <code>MotionKey</code>, <code>MotionKeyInput</code>, <code>Transform</code>, <code>Transform3D</code>, <code>ProjectedTransform2D</code>, <code>MotionLight</code>, <code>Shape</code>, <code>LayerKind</code>, <code>MotionBlendMode</code>, <code>MotionMatteMode</code>, <code>MotionMatte</code>, <code>MotionMatteInput</code>, <code>MotionEffect</code>, <code>MotionSprite</code>, <code>MotionEmitter</code>, <code>MotionExpression</code>, <code>MotionGraphNodeKind</code>, <code>MotionGraphEdge</code>, <code>MotionGraphNodeParams</code>, <code>MotionGraphNode</code>, <code>MotionGraphBinding</code>, <code>MotionGraph</code>, <code>MotionGraphInput</code>, <code>MotionLayerMedia</code>, <code>MotionLayer</code>, <code>MOTION_RASTER_FORMAT</code>, <code>MotionRasterAsset</code>, <code>CompositionSettings</code>, <code>MotionComposition</code>, <code>MotionState</code>, <code>MotionEvaluation</code>, <code>RenderJobStatus</code>, <code>RenderJob</code>, <code>RenderQueueSummary</code>, <code>RenderQueueStep</code>, <code>MotionDocument</code>.</p>
+<h2 id="variants">Variants</h2>
+<p>none</p>
+<h2 id="states">States</h2>
+<p>_Not documented._</p>
+<h2 id="a11y">A11y</h2>
+<p>_Not documented._</p>
+<h2 id="example">Example</h2>
+<p>_Not documented._</p>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Read <code>docs/ENGINE_OPS.md</code> for the op names and payloads of <code>motion</code> before calling <code>apply</code>.</li><li>Treat <code>@nitro-forge/motion</code> as a monorepo dependency until a tarball release exists.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not run <code>shadcn add</code> for this package; it has no registry item (@nitro-forge/motion needs the Rust binary).</li><li>Do not claim an npm install; <code>compatibility.v1.json</code> records npm as not used.</li></ul>
+</article>
+
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
+<span>Generated from inputs <code>a38d6bc0</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

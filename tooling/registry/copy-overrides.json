@@ -1,0 +1,9 @@
+{
+  "_note": "Overrides applied over docs/agent-native/copy.json. Decision 35 corrects the icon wording. copy.json still carries the older text and is outside this build's ownership.",
+  "forge-icon": {
+    "description": "Icon: outline when idle, filled when selected. 47 glyphs drawn; 42 of 1,463 catalog ids resolve to one; 6 drawn glyphs are not catalog ids. A name with no glyph renders nothing. Needs react-native-svg."
+  },
+  "forge-icon-button": {
+    "description": "Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg."
+  }
+}

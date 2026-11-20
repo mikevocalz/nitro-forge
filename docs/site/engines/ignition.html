@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@nitro-forge/ignition | Nitro Forge</title>
+<meta name="description" content="Decision 4. shadcn copies files. It cannot run nitrogen, pod install or CMake. Documented as a prerequisite with the exact commands in docs/agent-native/install-order.md.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html" aria-current="page">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>@nitro-forge/ignition</h1>
+<div class="strip" role="note"><strong>Not a registry item</strong><p>Decision 4. shadcn copies files. It cannot run nitrogen, pod install or CMake. Documented as a prerequisite with the exact commands in docs/agent-native/install-order.md. Returns only if a build step outside shadcn can produce the native archives for a consumer.</p></div>
+<h2 id="purpose">Purpose</h2>
+<p>Nitro-Forge native integration layer: engine session contracts, Nitro HybridObject spec, and host transports. Not a registry item. Decision 4. shadcn copies files. It cannot run nitrogen, pod install or CMake. Documented as a prerequisite with the exact commands in docs/agent-native/install-order.md.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/ignition</code></li><li>Import: <code>import {} from '@nitro-forge/ignition';</code></li><li>Peers: <code>react-native-nitro-modules</code>, <code>nitro-core</code></li><li>Requires: Rust, Xcode or the Android NDK; see docs/agent-native/install-order.md steps 0 and 1</li><li>Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by <code>workspace:*</code> inside this repo.</li><li>Installs: none</li><li>Files: <code>packages/ignition</code> in the repo; nothing is copied by shadcn</li></ul>
+<h2 id="props">Props</h2>
+<p>Not a component, so there are no props. 13 entry points: <code>@nitro-forge/ignition</code>, <code>@nitro-forge/ignition/cli</code>, <code>@nitro-forge/ignition/nitro</code>, <code>@nitro-forge/ignition/v1-host</code>, <code>@nitro-forge/ignition/workspace</code>, <code>@nitro-forge/ignition/transfer</code>, <code>@nitro-forge/ignition/workspace-ui</code>, <code>@nitro-forge/ignition/transfer-ui</code>, <code>@nitro-forge/ignition/autosave</code>, <code>@nitro-forge/ignition/transactions</code>, <code>@nitro-forge/ignition/collaboration</code>, <code>@nitro-forge/ignition/collaboration-http</code>, <code>@nitro-forge/ignition/collaboration-checkpoint</code>. </p>
+<h2 id="variants">Variants</h2>
+<p>none</p>
+<h2 id="states">States</h2>
+<p>_Not documented._</p>
+<h2 id="a11y">A11y</h2>
+<p>_Not documented._</p>
+<h2 id="example">Example</h2>
+<p>_Not documented._</p>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Follow the commands in docs/agent-native/install-order.md for <code>@nitro-forge/ignition</code>.</li><li>Check <code>registry-excluded.json</code> for the reason and the condition for returning.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not run <code>shadcn add</code> for this package; Decision 4.</li><li>Do not publish or invent a release URL for it.</li></ul>
+</article>
+
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
+<span>Generated from inputs <code>a38d6bc0</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

@@ -20,6 +20,7 @@ import {
   SURFACE_PROSE, toPersonaDraft, toggleGrid, toggleId, type ComposerDraft, type SurfaceMode,
 } from './persona-composer-model';
 import { prismThemes, workspaceScale as scale, type WorkspaceColors } from './theme';
+import { tokens } from './tokens';
 
 /** How the host delivered an exported persona, so the confirmation can say what happened. */
 export type PersonaExportOutcome = 'copied' | 'shared';
@@ -184,7 +185,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
   </FieldGroup.Section>;
   const label = (text: string) => <Text style={{ color: c.muted, fontSize: scale.type.label }}>{text}</Text>;
   // Web: one h1 for the page title, h2 for each section (React Native Web reads aria-level).
-  const heading = (text: string, id?: string) => <Text accessibilityRole="header" {...LEVEL_2} nativeID={id} style={{ color: c.text, fontSize: scale.type.body, fontWeight: '600' }}>{text}</Text>;
+  const heading = (text: string, id?: string) => <Text accessibilityRole="header" {...LEVEL_2} nativeID={id} style={{ color: c.text, fontSize: scale.type.body, fontWeight: tokens.fontWeight.semibold }}>{text}</Text>;
   const rowHeights = draft.rail.map(() => (draft.rail.length ? s.railHeight / draft.rail.length : 0));
 
   const nameSection = section(
@@ -192,7 +193,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
       {heading('Name')}
       <TextInput testID="composer-name" accessibilityLabel="Persona name" placeholder="Print layout" maxLength={PERSONA_NAME_MAX}
         value={draft.label} onChangeText={text => setDraft({ label: text })} returnKeyType="done"
-        style={{ minHeight: scale.size.target, borderWidth: 1, borderColor: c.line, borderRadius: scale.radius.control, paddingHorizontal: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.body }} />
+        style={{ minHeight: scale.size.target, borderWidth: tokens.borderWidth.hairline, borderColor: c.line, borderRadius: scale.radius.control, paddingHorizontal: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.body }} />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: scale.space.element }}>
         {label('Shown on the turret and the rail header')}
         <Text style={{ color: c.muted, fontSize: scale.type.label, fontVariant: ['tabular-nums'] }}>{nameCounter(draft.label)}</Text>
@@ -204,14 +205,14 @@ export function PersonaComposer(props: PersonaComposerProps) {
     <Pressable key={key} testID={props.testID} accessibilityRole="button" accessibilityLabel={props.name} accessibilityState={{ selected: props.on }} onPress={props.onPress}
       style={({ pressed }) => ({
         width: grid.tile || undefined, flexGrow: grid.tile ? 0 : 1, minHeight: scale.size.target, flexDirection: 'row', alignItems: 'center', gap: scale.space.element,
-        paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element, borderRadius: scale.radius.control, borderWidth: 1,
+        paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element, borderRadius: scale.radius.control, borderWidth: tokens.borderWidth.hairline,
         borderColor: props.on ? c.accent : c.line, backgroundColor: props.on ? c.soft : pressed ? c.raised : c.deep, opacity: pressed ? 0.85 : 1,
       })}>
-      <View style={{ width: 18, alignItems: 'center' }}>{props.mark ?? (props.on
+      <View style={{ width: tokens.spacing.off18, alignItems: 'center' }}>{props.mark ?? (props.on
         ? <ForgeIcon name="check" size={14} color={c.accent} reducedMotion />
         : <ForgeIcon name="plus" size={14} color={c.muted} reducedMotion />)}</View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ color: c.text, fontSize: scale.type.label, fontWeight: props.on ? '600' : '400' }}>{props.title}</Text>
+        <Text style={{ color: c.text, fontSize: scale.type.label, fontWeight: props.on ? tokens.fontWeight.semibold : '400' }}>{props.title}</Text>
         {props.note && <Text style={{ color: c.muted, fontSize: scale.type.label }}>{props.note}</Text>}
       </View>
     </Pressable>;
@@ -226,7 +227,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
     return <Pressable testID={`composer-fold-${which}`} accessibilityRole="button" accessibilityLabel={`${title}, ${count}`} accessibilityState={{ expanded: open }}
       onPress={() => ui.setState(st => ({ open: { ...st.open, [which]: !st.open[which] } }))}
       style={{ minHeight: scale.size.target, flexDirection: 'row', alignItems: 'center', gap: scale.space.element }}>
-      <Text style={{ color: c.text, fontSize: scale.type.body, fontWeight: '600', flex: 1 }}>{title}</Text>
+      <Text style={{ color: c.text, fontSize: scale.type.body, fontWeight: tokens.fontWeight.semibold, flex: 1 }}>{title}</Text>
       <Text style={{ color: c.muted, fontSize: scale.type.label, fontVariant: ['tabular-nums'] }}>{count}</Text>
       <ComposerGlyph name={open ? 'chevron-up' : 'chevron-down'} color={c.muted} />
     </Pressable>;
@@ -248,11 +249,11 @@ export function PersonaComposer(props: PersonaComposerProps) {
     <View key={key} role="listitem" style={{
       minHeight: scale.size.target, flexDirection: 'row', alignItems: 'center', gap: scale.space.element,
       paddingLeft: parts.leading ? scale.space.stack : scale.space.inset, paddingRight: scale.space.stack, paddingVertical: scale.space.stack,
-      borderRadius: scale.radius.control, borderWidth: 1, borderColor: parts.on ? c.accent : c.line, backgroundColor: parts.on ? c.soft : c.deep,
+      borderRadius: scale.radius.control, borderWidth: tokens.borderWidth.hairline, borderColor: parts.on ? c.accent : c.line, backgroundColor: parts.on ? c.soft : c.deep,
     }}>
       {parts.leading}
-      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <Text style={{ color: c.text, fontSize: scale.type.label, fontWeight: '600' }}>{parts.title}</Text>
+      <View style={{ flex: 1, minWidth: 0, gap: tokens.spacing.off2 }}>
+        <Text style={{ color: c.text, fontSize: scale.type.label, fontWeight: tokens.fontWeight.semibold }}>{parts.title}</Text>
         {parts.note && <Text style={{ color: c.muted, fontSize: scale.type.label }}>{parts.note}</Text>}
       </View>
       {parts.trailing}
@@ -278,7 +279,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
       {heading('Rail')}
       {label('Top to bottom, the order the rail will show them. Instruments marked Not in this build keep their place until they ship. Drag the handle or use the row controls to reorder.')}
       {draft.rail.length === 0
-        ? <View testID="composer-rail-empty" style={{ minHeight: scale.size.target, justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: c.line, borderRadius: scale.radius.control, paddingHorizontal: scale.space.inset }}>
+        ? <View testID="composer-rail-empty" style={{ minHeight: scale.size.target, justifyContent: 'center', borderWidth: tokens.borderWidth.hairline, borderStyle: 'dashed', borderColor: c.line, borderRadius: scale.radius.control, paddingHorizontal: scale.space.inset }}>
           <Text style={{ color: c.muted, fontSize: scale.type.label }}>{phone ? 'The rail is empty. Open Instruments below and pick one.' : 'The rail is empty. Pick an instrument below.'}</Text>
         </View>
         : rowStack('composer-rail', 'Rail order', draft.rail.map((id, index) => {
@@ -295,9 +296,9 @@ export function PersonaComposer(props: PersonaComposerProps) {
                     return { drag: { ...st.drag, originY, target: dragTargetIndex(st.drag.index, point.y - originY, rowHeights) } };
                   })}
                   onCommit={() => { const d = ui.getState().drag; ui.setState({ drag: null }); if (d && d.target !== d.index) move(d.index, d.target - d.index); }}
-                  onCancel={() => ui.setState({ drag: null })}><ForgeIcon name="menu" size={16} color={c.muted} reducedMotion /></DragGrabHandle> : null}
+                  onCancel={() => ui.setState({ drag: null })}><ForgeIcon name="menu" size={tokens.size.iconSm} color={c.muted} reducedMotion /></DragGrabHandle> : null}
                 {/* The same numeral the chosen tile carries. */}
-                <Text style={{ color: c.accent, fontSize: scale.type.label, fontWeight: '700', fontVariant: ['tabular-nums'], minWidth: 18, textAlign: 'center' }}>{String(index + 1)}</Text>
+                <Text style={{ color: c.accent, fontSize: scale.type.label, fontWeight: tokens.fontWeight.bold, fontVariant: ['tabular-nums'], minWidth: tokens.spacing.off18, textAlign: 'center' }}>{String(index + 1)}</Text>
               </View>,
               trailing: !wide ? <Menu title={name} triggerLabel={`Move or remove ${name}`}
                 actions={[
@@ -312,7 +313,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
                 }}>{rowMenu(`Move or remove ${name}`)}</Menu> : <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Button title="Up" aria-label={`Move ${name} up`} disabled={index === 0} onPress={() => move(index, -1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
                 <Button title="Down" aria-label={`Move ${name} down`} disabled={index === draft.rail.length - 1} onPress={() => move(index, 1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
-                <IconButton aria-label={`Remove ${name} from the rail`} icon={<ForgeIcon name="close" size={16} color={c.muted} reducedMotion />}
+                <IconButton aria-label={`Remove ${name} from the rail`} icon={<ForgeIcon name="close" size={tokens.size.iconSm} color={c.muted} reducedMotion />}
                   onPress={() => setDraft({ rail: draft.rail.filter(x => x !== id) })} variant="ghost" size="sm" tone="carolina" className={HC_EDGE} />
               </View>,
             });
@@ -326,13 +327,13 @@ export function PersonaComposer(props: PersonaComposerProps) {
           const tag = instrumentTag(i);
           return tile(i.id, {
             on: position !== undefined, title: i.label, name: instrumentToggleName(i.label, position, tag), testID: `composer-instrument-${i.id}`, ...(tag ? { note: tag } : {}),
-            ...(position !== undefined ? { mark: <Text style={{ color: c.accent, fontSize: scale.type.label, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{String(position)}</Text> } : {}),
+            ...(position !== undefined ? { mark: <Text style={{ color: c.accent, fontSize: scale.type.label, fontWeight: tokens.fontWeight.bold, fontVariant: ['tabular-nums'] }}>{String(position)}</Text> } : {}),
             onPress: () => setDraft({ rail: toggleId(draft.rail, i.id) }),
           });
         }))}
         {/* Phone: both grids fold, so their disclosures sit together in one
             section, split by a hairline, with no section gap between them. */}
-        {phone && <View style={{ gap: scale.space.element, borderTopWidth: 1, borderTopColor: c.line }}>{capabilityBody}</View>}
+        {phone && <View style={{ gap: scale.space.element, borderTopWidth: tokens.borderWidth.hairline, borderTopColor: c.line }}>{capabilityBody}</View>}
       </View>
     </View>);
 
@@ -367,7 +368,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
     {noticeBanner('save')}
   </>;
 
-  const previewSection = <View testID="composer-preview" style={{ gap: scale.space.element, padding: scale.space.group, backgroundColor: c.raised, borderRadius: scale.radius.panel, borderWidth: 1, borderColor: c.line }}>
+  const previewSection = <View testID="composer-preview" style={{ gap: scale.space.element, padding: scale.space.group, backgroundColor: c.raised, borderRadius: scale.radius.panel, borderWidth: tokens.borderWidth.hairline, borderColor: c.line }}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: scale.space.element }}>
       {heading(`${draft.label.trim() || 'Untitled persona'} on ${surfaceWord}`)}
       <Text style={{ color: c.muted, fontSize: scale.type.label, fontVariant: ['tabular-nums'] }}>{`${draft.rail.length} on rail`}</Text>
@@ -381,7 +382,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
     </View>}
     {manifest.lines.length === 0
       ? <Text style={{ color: c.muted, fontSize: scale.type.label }}>No capabilities picked. The rail works without them.</Text>
-      : manifest.lines.map(line => <View key={line.id} style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.element, minHeight: 28 }}>
+      : manifest.lines.map(line => <View key={line.id} style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.element, minHeight: tokens.spacing.fixedStatus }}>
         <ForgeIcon name={line.ready ? 'check' : 'minus'} size={14} color={line.ready ? c.accent : c.muted} reducedMotion />
         <Text style={{ color: line.ready ? c.text : c.muted, fontSize: scale.type.label, flex: 1 }}>{line.ready ? `${line.label}: works here` : line.note}</Text>
       </View>)}
@@ -402,7 +403,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
       <TextInput testID="composer-import" accessibilityLabel="Persona JSON to import" multiline numberOfLines={4} value={s.importText}
         placeholder='Paste an exported persona, starting with {"format":1' autoCapitalize="none" autoCorrect={false}
         onChangeText={text => ui.setState({ importText: text })}
-        style={{ minHeight: 96, borderWidth: 1, borderColor: c.line, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono, textAlignVertical: 'top' }} />
+        style={{ minHeight: tokens.spacing.off96, borderWidth: tokens.borderWidth.hairline, borderColor: c.line, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono, textAlignVertical: 'top' }} />
       <Button title="Import persona" onPress={runImport} disabled={!s.importText.trim()} variant="primary" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
     </View>}
     {noticeBanner('list')}
@@ -423,7 +424,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
     {s.exported && <View style={{ gap: scale.space.stack }}>
       {label(`${s.exported.label} as JSON`)}
       <TextInput testID="composer-export" accessibilityLabel={`${s.exported.label} as JSON`} value={s.exported.json} editable={false} selectTextOnFocus multiline
-        style={{ minHeight: 72, borderWidth: 1, borderColor: c.line, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono }} />
+        style={{ minHeight: tokens.spacing.fixedRail, borderWidth: tokens.borderWidth.hairline, borderColor: c.line, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono }} />
     </View>}
   </View>;
 
@@ -434,10 +435,10 @@ export function PersonaComposer(props: PersonaComposerProps) {
     {...{ onKeyDown: cancelDrag }}
     style={{ gap: scale.space.group, padding: wide ? scale.space.section : scale.space.group, backgroundColor: c.base }}>
     <View style={{ gap: scale.space.stack }}>
-      <Text accessibilityRole="header" {...LEVEL_1} style={{ color: c.text, fontSize: scale.type.title, fontWeight: '700' }}>New persona</Text>
+      <Text accessibilityRole="header" {...LEVEL_1} style={{ color: c.text, fontSize: scale.type.title, fontWeight: tokens.fontWeight.bold }}>New persona</Text>
       <Text style={{ color: c.muted, fontSize: scale.type.label }}>{`Pick the rail and capabilities for a persona in the design studio. The preview shows what works on ${surfaceWord}.`}</Text>
     </View>
-    {isWeb && <Text accessibilityLiveRegion="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}>{s.announcement}</Text>}
+    {isWeb && <Text accessibilityLiveRegion="polite" style={{ position: 'absolute', width: tokens.borderWidth.hairline, height: tokens.borderWidth.hairline, overflow: 'hidden', opacity: 0 }}>{s.announcement}</Text>}
     {wide
       ? <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: scale.space.section }}>
         <View style={{ flex: 3, minWidth: 0 }}>{form}</View>

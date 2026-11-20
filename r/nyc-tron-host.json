@@ -1,0 +1,54 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "nyc-tron-host",
+  "title": "NYC-Tron Host",
+  "description": "Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.",
+  "registryDependencies": [
+    "@nitro-forge/studio-ui-provider",
+    "@nyc-tron/Button",
+    "@nyc-tron/Card",
+    "@nyc-tron/FieldGroup",
+    "@nyc-tron/IconButton",
+    "@nyc-tron/List",
+    "@nyc-tron/SegmentedControl",
+    "@nyc-tron/Select",
+    "@nyc-tron/TabBar",
+    "@nyc-tron/Toolbar",
+    "@nyc-tron/content/KeyValueList",
+    "@nyc-tron/feedback/Badge",
+    "@nyc-tron/feedback/Banner",
+    "@nyc-tron/feedback/EmptyState",
+    "@nyc-tron/feedback/ErrorMessage",
+    "@nyc-tron/files/DropZone",
+    "@nyc-tron/overlays/AnchoredPopover",
+    "@nyc-tron/theme/NightScope"
+  ],
+  "files": [
+    {
+      "path": "tooling/registry/stage/nyc-tron-host/nyc-tron-host.tsx",
+      "content": "import type { ComponentType, ReactNode } from 'react';\nimport { Button as TronButton } from '@/components/nyc-tron/ui/components/Button';\nimport { Card as TronCard } from '@/components/nyc-tron/ui/components/Card';\nimport { SegmentedControl } from '@/components/nyc-tron/ui/components/SegmentedControl';\nimport { TabBar } from '@/components/nyc-tron/ui/components/TabBar';\nimport { Toolbar } from '@/components/nyc-tron/ui/components/Toolbar';\nimport { List, ListItem } from '@/components/nyc-tron/ui/components/List';\nimport { IconButton } from '@/components/nyc-tron/ui/components/IconButton';\nimport { FieldGroup } from '@/components/nyc-tron/ui/components/FieldGroup';\nimport { Banner } from '@/components/nyc-tron/ui/components/feedback/Banner';\nimport { Badge } from '@/components/nyc-tron/ui/components/feedback/Badge';\nimport { EmptyState } from '@/components/nyc-tron/ui/components/feedback/EmptyState';\nimport { ErrorMessage } from '@/components/nyc-tron/ui/components/feedback/ErrorMessage';\nimport { KeyValueList } from '@/components/nyc-tron/ui/components/content/KeyValueList';\nimport { NightScope } from '@/components/nyc-tron/ui/components/theme/NightScope';\nimport { DropZone } from '@/components/nyc-tron/ui/components/files/DropZone';\nimport type { PopoverProps } from '@/components/nyc-tron/ui/components/overlays/AnchoredPopover';\nimport type { SelectProps } from '@/components/nyc-tron/ui/components/Select';\nimport type { StudioButtonProps, StudioCardProps, StudioMenuProps, StudioPopoverProps, StudioDropdownProps, StudioUIComponents } from './ui';\nimport { studioDropdownGroups } from './nyc-tron-options';\n\n/**\n * The action menu a host passes in: `@nyc-tron/expo-controls/NativeActionMenu`\n * (SwiftUI/Compose menu on iOS and Android, a focus-trapped list on web).\n * Typed by shape so this package does not depend on Expo.\n */\nexport type HostActionMenu = ComponentType<{\n  trigger: ReactNode;\n  actions: StudioMenuProps['actions'];\n  onAction: (id: string) => void;\n  accessibilityLabel: string;\n}>;\n\n/** What only the host can supply: the platform primitives, the platform\n * Select and action menu, and optionally a token scope. */\nexport type NycTronHostParts = Pick<StudioUIComponents, 'View' | 'Text' | 'Pressable' | 'ScrollView' | 'TextInput' | 'Image' | 'Select' | 'TokenScope'> & {\n  ActionMenu: HostActionMenu;\n  NativePopover: ComponentType<PopoverProps>;\n  GroupedSelect: ComponentType<SelectProps>;\n};\n\n/** Forge's `outline` is NYC-Tron's bordered `secondary`. `tone` is ignored:\n * colour comes from the theme tokens. */\nfunction Button({ variant, tone: _tone, cornerRadius, selected, targetSize, ...props }: StudioButtonProps) {\n  return <TronButton {...props} {...(targetSize === undefined ? {} : {targetSize})} {...(variant === undefined ? {} : { variant: variant === 'outline' ? 'secondary' as const : variant })}\n    {...(selected === undefined ? {} : { accessibilityState: { selected } })}\n    style={{ ...(cornerRadius === undefined ? {} : { borderRadius: cornerRadius }), ...(targetSize === undefined ? {} : { minHeight: targetSize, minWidth: targetSize }) }} />;\n}\n\n/** `surface=\"night\"` keeps a dark card on a light page through NightScope. */\nfunction Card({ surface, ...props }: StudioCardProps) {\n  const card = <TronCard {...props} surface=\"raised\" />;\n  return surface === 'night' ? <NightScope>{card}</NightScope> : card;\n}\n\n/**\n * The Studio UI contract on NYC-Tron UI (rule #38: Forge imports NYC-Tron).\n *\n * Alpha.3 supplies trigger measurement and grouped choices. Grouped Select\n * delegates to the native dropdown where supported and retains disabled\n * choices through NYC-Tron's canonical Select implementation.\n */\nexport function nycTronStudioUI(host: NycTronHostParts): StudioUIComponents {\n  const { ActionMenu, NativePopover, GroupedSelect, ...parts } = host;\n  // NYC-Tron menus have no title row or placement; the trigger label names the menu.\n  const Menu = ({ children, actions, onAction, title, triggerLabel }: StudioMenuProps) =>\n    <ActionMenu trigger={children} actions={actions} onAction={onAction} accessibilityLabel={triggerLabel ?? title ?? 'Actions'} />;\n  // Placement is chosen by NYC-Tron's measured usable region. The optional\n  // Studio preference cannot override clipping or native presentation.\n  const Popover = ({ accessibleLabel, title, placement: _placement, ...props }: StudioPopoverProps) =>\n    <NativePopover {...props} accessibilityLabel={title ? `${accessibleLabel}: ${title}` : accessibleLabel} />;\n  const NativeDropdown = ({ groups, ...props }: StudioDropdownProps) =>\n    <GroupedSelect {...props} groups={studioDropdownGroups(groups)} />;\n  return {\n    ...parts, Menu, Popover, NativeDropdown, Button, Card, SegmentedControl, TabBar, Toolbar, List, ListItem, IconButton: ({targetSize,...props}) => <IconButton {...props} {...(targetSize === undefined ? {} : {style:{minWidth:targetSize,minHeight:targetSize}})} />, FieldGroup,\n    Banner, Badge, EmptyState, ErrorMessage, KeyValueList, NightScope, DropZone,\n  };\n}\n",
+      "type": "registry:ui",
+      "target": "@components/forge/nyc-tron-host.tsx"
+    },
+    {
+      "path": "tooling/registry/stage/nyc-tron-host/nyc-tron-options.ts",
+      "content": "import type { StudioDropdownProps } from './ui';\n\n/** Keep group headings, unavailable choices and supporting text in the canonical picker. */\nexport function studioDropdownGroups(groups: StudioDropdownProps['groups']) {\n  return groups.map(group => ({\n    heading: group.label?.trim() || group.id,\n    options: group.options.map(option => ({\n      value: option.value,\n      label: option.supportingText ? `${option.label} (${option.supportingText})` : option.label,\n      ...(option.disabled === undefined ? {} : { disabled: option.disabled }),\n    })),\n  }));\n}\n",
+      "type": "registry:lib",
+      "target": "@components/forge/nyc-tron-options.ts"
+    }
+  ],
+  "meta": {
+    "tier": 1,
+    "docs": "handwritten",
+    "docsPath": "docs/components/nyc-tron-host.md",
+    "category": "shell",
+    "a11yStatus": "unverified",
+    "needsProvider": true,
+    "sourceFiles": [
+      "packages/studio-workspace/src/nyc-tron-host.tsx",
+      "packages/studio-workspace/src/nyc-tron-options.ts"
+    ]
+  },
+  "docs": "Needs @nitro-forge/studio-ui-provider (StudioUIProvider) and a host such as nyc-tron-host. Every studio component throws without it. See docs/agent-native/install-order.md step 7.",
+  "type": "registry:lib"
+}

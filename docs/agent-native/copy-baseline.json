@@ -1,0 +1,87 @@
+[
+ {
+  "id": "forge-workspace",
+  "title": "forge-workspace",
+  "description": "Shared inner editor chrome for every studio: header with title and Save, a toolbar with Undo, Redo and a Workspace menu, three dock zones..."
+ },
+ {
+  "id": "forge-document-stage",
+  "title": "forge-document-stage",
+  "description": "Default read-only stage."
+ },
+ {
+  "id": "quill-text-editor",
+  "title": "quill-text-editor",
+  "description": "A writing surface for Quill documents, supplied through the stage slot."
+ },
+ {
+  "id": "prism-editor",
+  "title": "prism-editor",
+  "description": "A Prism canvas editor over real engine commands: bounded PNG composite of the engine render, shape tools, four fill chips, transform acti..."
+ },
+ {
+  "id": "prism-canvas",
+  "title": "prism-canvas",
+  "description": "The Prism artboard: a transparency checker, the engine composite as children, an optional overlay, a selection outline, and one-finger mo..."
+ },
+ {
+  "id": "studio-gesture",
+  "title": "studio-gesture",
+  "description": "One-finger gesture recogniser with a shared contract."
+ },
+ {
+  "id": "persona-turret",
+  "title": "persona-turret",
+  "description": "The design studio persona switcher: a four-stop machined dial with a detent per persona."
+ },
+ {
+  "id": "persona-composer",
+  "title": "persona-composer",
+  "description": "A form for naming a persona, ordering its instrument rail, choosing capabilities and surfaces, previewing the manifest for the current su..."
+ },
+ {
+  "id": "persona-model",
+  "title": "persona-model",
+  "description": "Non-visual persona model: 4 built-in personas (vector, pixel, layout, sketch), 11 capabilities (4 backed by Prism ops, 7 marked not-in-en..."
+ },
+ {
+  "id": "instrument-system",
+  "title": "instrument-system",
+  "description": "Non-visual policy: 18 instrument blueprints with input modalities and edit boundaries, precision scrubbing math, timebase and ruler tick..."
+ },
+ {
+  "id": "workspace-utilities",
+  "title": "workspace-utilities",
+  "description": "APP_MANIFESTS gives each of the 11 studios a task line, detail, glyph id and category for launchers."
+ },
+ {
+  "id": "studio-ui-provider",
+  "title": "studio-ui-provider",
+  "description": "The slot contract between Studio and the host UI."
+ },
+ {
+  "id": "nyc-tron-host",
+  "title": "nyc-tron-host",
+  "description": "nycTronStudioUI(host) builds a StudioUIComponents from NYC-Tron UI."
+ },
+ {
+  "id": "studio-theme",
+  "title": "studio-theme",
+  "description": "The token source and its two generated stylesheets."
+ },
+ {
+  "id": "forge-directions",
+  "title": "forge-directions",
+  "description": "Three material directions for the Prism chrome and persona turret (workbench, optics, atelier), the Workbench chrome palette, helpers tha..."
+ },
+ {
+  "id": "forge-icon",
+  "title": "forge-icon",
+  "description": "Shared icon."
+ },
+ {
+  "id": "forge-icon-button",
+  "title": "forge-icon-button",
+  "description": "Pressable wrapper around ForgeIcon with a minimum 44 by 44 hit target and hit slop 4."
+ }
+]
