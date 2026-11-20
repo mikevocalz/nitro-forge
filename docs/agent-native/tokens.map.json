@@ -1,0 +1,5291 @@
+{
+ "version": 1,
+ "generatedFromCommit": "ff3abae",
+ "branch": "agent-native-20261119",
+ "rules": [
+  "No visual change: every proposed token carries the identical value of the literal it replaces.",
+  "A literal maps to a scale token only when it equals that step at standard density. Density-aware tokens (--spacing-stack etc.) are never used for a literal that does not already follow density, because compact and comfortable would change pixels. Those literals map to the density-invariant --spacing-fixed-* twin.",
+  "A literal that matches no step is minted as an --*-off-<value> token with the same value. Nothing is snapped.",
+  "Colour drift stays as separate named tokens (--color-icon-*, --color-stage-*, instrument tier) and is listed in drift[] for the owner."
+ ],
+ "overridableSets": {
+  "accent-family": [
+   "--color-primary",
+   "--color-on-primary",
+   "--color-primary-tint",
+   "--color-accent",
+   "--color-focus"
+  ],
+  "neutrals": [
+   "--color-surface-base",
+   "--color-surface-raised",
+   "--color-surface-sunken",
+   "--color-border",
+   "--color-text",
+   "--color-text-muted"
+  ]
+ },
+ "locked": [
+  "status colours (danger, on-danger, info, success)",
+  "paper tier",
+  "radius",
+  "space",
+  "type",
+  "motion",
+  "hit targets",
+  "instrument and chrome tiers (derived from Prism override)",
+  "document colours (swatches, artboard checker)"
+ ],
+ "densities": {
+  "names": [
+   "compact",
+   "standard",
+   "comfortable"
+  ],
+  "default": "standard",
+  "changes": [
+   "space",
+   "size"
+  ],
+  "neverChanges": [
+   "type",
+   "radius"
+  ]
+ },
+ "drift": [
+  {
+   "id": "D1",
+   "topic": "accent",
+   "values": {
+    "icons iconColors.accent": "#6859E8",
+    "studio-workspace light accent": "#6950D1",
+    "studio-workspace dark accent": "#B7A5FF",
+    "Prism override accent dark/light": "#66B9FF / #086CB8",
+    "tooling/brand/icon-family.mjs prism": "#9C5FE6"
+   },
+   "tokens": [
+    "--color-icon-selected",
+    "--color-primary",
+    "--color-instrument-*"
+   ]
+  },
+  {
+   "id": "D2",
+   "topic": "dark surface",
+   "values": {
+    "ForgeIcon.js dark surface": "#11131B",
+    "workspace deep (surface-sunken) dark": "#15171D",
+    "apps/studio-preview style.css html/body": "#17191B",
+    "stage track": "#222829"
+   },
+   "tokens": [
+    "--color-icon-surface",
+    "--color-surface-sunken",
+    "--color-stage-track"
+   ]
+  },
+  {
+   "id": "D3",
+   "topic": "success and danger",
+   "values": {
+    "icon positive": "#139E75",
+    "workspace success light/dark": "#1E7A3C / #6FD08C",
+    "icon negative": "#D94462",
+    "workspace danger light/dark": "#B33E46 / #FFAAA7"
+   },
+   "tokens": [
+    "--color-icon-success",
+    "--color-success",
+    "--color-icon-danger",
+    "--color-danger"
+   ]
+  },
+  {
+   "id": "D4",
+   "topic": "muted and ink",
+   "values": {
+    "icon muted": "#737F91",
+    "workspace muted light/dark": "#687287 / #ADB3C4",
+    "icon ink / inkInverse": "#18202D / #F8FAFC",
+    "workspace text light/dark": "#252A3A / #F0F1F7"
+   },
+   "tokens": [
+    "--color-icon-muted",
+    "--color-icon",
+    "--color-text-muted",
+    "--color-text"
+   ]
+  },
+  {
+   "id": "D5",
+   "topic": "paper",
+   "values": {
+    "theme.ts paper": "#FFFEFC",
+    "stage.tsx paper": "#F7F5ED"
+   },
+   "tokens": [
+    "--color-paper",
+    "--color-stage-paper"
+   ]
+  }
+ ],
+ "rebrand": {
+  "mechanismToday": "apps/example/brands/*.json carries identity only; tooling/brand/brand.schema.json has additionalProperties:false; Prism colours come from the hand-written prismThemes override in theme.ts",
+  "proposedField": "theme (optional object) in brand.schema.json",
+  "overridableTsKeys": [
+   "base",
+   "raised",
+   "deep",
+   "line",
+   "text",
+   "muted",
+   "accent",
+   "ink",
+   "soft"
+  ],
+  "perScheme": [
+   "dark",
+   "light"
+  ],
+  "minimumViable": [
+   "accent",
+   "ink",
+   "soft"
+  ],
+  "fanOut": {
+   "accent": [
+    "--color-primary",
+    "--color-accent",
+    "--color-focus"
+   ],
+   "ink": [
+    "--color-on-primary"
+   ],
+   "soft": [
+    "--color-primary-tint"
+   ],
+   "base": [
+    "--color-surface-base"
+   ],
+   "raised": [
+    "--color-surface-raised"
+   ],
+   "deep": [
+    "--color-surface-sunken"
+   ],
+   "line": [
+    "--color-border"
+   ],
+   "text": [
+    "--color-text"
+   ],
+   "muted": [
+    "--color-text-muted"
+   ]
+  },
+  "locked": [
+   "paper",
+   "paperInk",
+   "paperMuted",
+   "error",
+   "workspaceStatus.*",
+   "workspaceScale.*",
+   "instrument tier",
+   "chrome tier",
+   "stage tier",
+   "document colours"
+  ],
+  "density": {
+   "field": "theme.defaultDensity",
+   "values": [
+    "compact",
+    "standard",
+    "comfortable"
+   ],
+   "default": "standard"
+  },
+  "checks": [
+   "onPrimary on primary >= 4.5:1",
+   "text and textMuted on surfaceRaised and surfaceSunken >= 4.5:1",
+   "focus on surfaceRaised >= 3:1",
+   "computed with contrastRatio and luminance from forge-directions.ts"
+  ]
+ },
+ "tokens": [
+  {
+   "name": "--color-primary",
+   "tier": "semantic-colour",
+   "role": "Brand fill for the main action and selected state",
+   "dark": "#B7A5FF",
+   "light": "#6950D1",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.accent",
+   "overridable": "accent-family"
+  },
+  {
+   "name": "--color-on-primary",
+   "tier": "semantic-colour",
+   "role": "Content on primary",
+   "dark": "#211A3D",
+   "light": "#FFFFFF",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.ink",
+   "overridable": "accent-family"
+  },
+  {
+   "name": "--color-surface-raised",
+   "tier": "semantic-colour",
+   "role": "Card, rail, control ground",
+   "dark": "#262932",
+   "light": "#FFFFFF",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.raised",
+   "overridable": "neutrals"
+  },
+  {
+   "name": "--color-surface-sunken",
+   "tier": "semantic-colour",
+   "role": "Recessed ground: wells, inputs, mat",
+   "dark": "#15171D",
+   "light": "#E7EAF1",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.deep",
+   "overridable": "neutrals"
+  },
+  {
+   "name": "--color-border",
+   "tier": "semantic-colour",
+   "role": "Hairlines and edges",
+   "dark": "#393D49",
+   "light": "#DDE1EB",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.line",
+   "overridable": "neutrals"
+  },
+  {
+   "name": "--color-text",
+   "tier": "semantic-colour",
+   "role": "Body text",
+   "dark": "#F0F1F7",
+   "light": "#252A3A",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.text",
+   "overridable": "neutrals"
+  },
+  {
+   "name": "--color-text-muted",
+   "tier": "semantic-colour",
+   "role": "Secondary text",
+   "dark": "#ADB3C4",
+   "light": "#687287",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.muted",
+   "overridable": "neutrals"
+  },
+  {
+   "name": "--color-danger",
+   "tier": "semantic-colour",
+   "role": "Error fill and text",
+   "dark": "#FFAAA7",
+   "light": "#B33E46",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.error",
+   "overridable": false
+  },
+  {
+   "name": "--color-on-danger",
+   "tier": "semantic-colour",
+   "role": "Content on danger",
+   "dark": "#2B0703",
+   "light": "#FFFFFF",
+   "status": "existing-nyc-tron",
+   "source": "workspaceStatus.onError",
+   "overridable": false
+  },
+  {
+   "name": "--color-accent",
+   "tier": "semantic-colour",
+   "role": "Secondary emphasis: progress, drag, highlights",
+   "dark": "#B7A5FF",
+   "light": "#6950D1",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.accent",
+   "overridable": "accent-family"
+  },
+  {
+   "name": "--color-info",
+   "tier": "semantic-colour",
+   "role": "Info tone",
+   "dark": "#8AB8FF",
+   "light": "#1D5FA8",
+   "status": "existing-nyc-tron",
+   "source": "workspaceStatus.info",
+   "overridable": false
+  },
+  {
+   "name": "--color-success",
+   "tier": "semantic-colour",
+   "role": "Success tone",
+   "dark": "#6FD08C",
+   "light": "#1E7A3C",
+   "status": "existing-nyc-tron",
+   "source": "workspaceStatus.success",
+   "overridable": false
+  },
+  {
+   "name": "--color-focus",
+   "tier": "semantic-colour",
+   "role": "Keyboard focus ring",
+   "dark": "#B7A5FF",
+   "light": "#6950D1",
+   "status": "existing-nyc-tron",
+   "source": "workspaceThemes.accent",
+   "overridable": "accent-family"
+  },
+  {
+   "name": "--color-surface-base",
+   "tier": "semantic-colour",
+   "role": "Middle chrome ground between raised and sunken",
+   "dark": "#1C1E25",
+   "light": "#F4F5F8",
+   "status": "new-forge-extension",
+   "source": "workspaceThemes.base",
+   "overridable": "neutrals"
+  },
+  {
+   "name": "--color-primary-tint",
+   "tier": "semantic-colour",
+   "role": "Selected-row ground, soft accent wash",
+   "dark": "#38304F",
+   "light": "#EEE9FF",
+   "status": "new-forge-extension",
+   "source": "workspaceThemes.soft",
+   "overridable": "accent-family"
+  },
+  {
+   "name": "--color-paper",
+   "tier": "semantic-colour",
+   "role": "Document page ground",
+   "dark": "#FFFEFC",
+   "light": "#FFFEFC",
+   "status": "new-forge-extension",
+   "source": "workspaceThemes.paper",
+   "overridable": false
+  },
+  {
+   "name": "--color-paper-text",
+   "tier": "semantic-colour",
+   "role": "Text on paper",
+   "dark": "#303440",
+   "light": "#303440",
+   "status": "new-forge-extension",
+   "source": "workspaceThemes.paperInk",
+   "overridable": false
+  },
+  {
+   "name": "--color-paper-text-muted",
+   "tier": "semantic-colour",
+   "role": "Secondary text on paper",
+   "dark": "#797F8D",
+   "light": "#797F8D",
+   "status": "new-forge-extension",
+   "source": "workspaceThemes.paperMuted",
+   "overridable": false
+  },
+  {
+   "name": "--spacing-stack",
+   "tier": "space",
+   "role": "stack",
+   "values": {
+    "compact": 4,
+    "standard": 4,
+    "comfortable": 4
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-element",
+   "tier": "space",
+   "role": "element",
+   "values": {
+    "compact": 4,
+    "standard": 8,
+    "comfortable": 12
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-inset",
+   "tier": "space",
+   "role": "inset",
+   "values": {
+    "compact": 8,
+    "standard": 12,
+    "comfortable": 16
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-group",
+   "tier": "space",
+   "role": "group",
+   "values": {
+    "compact": 12,
+    "standard": 16,
+    "comfortable": 20
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-section",
+   "tier": "space",
+   "role": "section",
+   "values": {
+    "compact": 20,
+    "standard": 24,
+    "comfortable": 32
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-canvas",
+   "tier": "space",
+   "role": "canvas",
+   "values": {
+    "compact": 24,
+    "standard": 32,
+    "comfortable": 40
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-page",
+   "tier": "space",
+   "role": "page",
+   "values": {
+    "compact": 64,
+    "standard": 64,
+    "comfortable": 64
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-fixed-stack",
+   "tier": "space",
+   "role": "stack, density-invariant twin (standard value)",
+   "value": "4px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-element",
+   "tier": "space",
+   "role": "element, density-invariant twin (standard value)",
+   "value": "8px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-inset",
+   "tier": "space",
+   "role": "inset, density-invariant twin (standard value)",
+   "value": "12px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-group",
+   "tier": "space",
+   "role": "group, density-invariant twin (standard value)",
+   "value": "16px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-section",
+   "tier": "space",
+   "role": "section, density-invariant twin (standard value)",
+   "value": "24px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-canvas",
+   "tier": "space",
+   "role": "canvas, density-invariant twin (standard value)",
+   "value": "32px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-page",
+   "tier": "space",
+   "role": "page, density-invariant twin (standard value)",
+   "value": "64px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-target",
+   "tier": "size",
+   "role": "target",
+   "values": {
+    "compact": 44,
+    "standard": 44,
+    "comfortable": 48
+   },
+   "status": "existing-css-renamed"
+  },
+  {
+   "name": "--spacing-rail",
+   "tier": "size",
+   "role": "rail",
+   "values": {
+    "compact": 64,
+    "standard": 72,
+    "comfortable": 80
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-header",
+   "tier": "size",
+   "role": "header",
+   "values": {
+    "compact": 52,
+    "standard": 60,
+    "comfortable": 68
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-toolbar",
+   "tier": "size",
+   "role": "toolbar",
+   "values": {
+    "compact": 44,
+    "standard": 52,
+    "comfortable": 60
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-status",
+   "tier": "size",
+   "role": "status",
+   "values": {
+    "compact": 24,
+    "standard": 28,
+    "comfortable": 32
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-canvas-header",
+   "tier": "size",
+   "role": "canvasHeader",
+   "values": {
+    "compact": 44,
+    "standard": 52,
+    "comfortable": 60
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-canvas-toolbar",
+   "tier": "size",
+   "role": "canvasToolbar",
+   "values": {
+    "compact": 44,
+    "standard": 44,
+    "comfortable": 52
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-canvas-rail",
+   "tier": "size",
+   "role": "canvasRail",
+   "values": {
+    "compact": 48,
+    "standard": 52,
+    "comfortable": 60
+   },
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--spacing-fixed-target",
+   "tier": "size",
+   "role": "target, density-invariant twin (standard value)",
+   "value": "44px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-rail",
+   "tier": "size",
+   "role": "rail, density-invariant twin (standard value)",
+   "value": "72px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-header",
+   "tier": "size",
+   "role": "header, density-invariant twin (standard value)",
+   "value": "60px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-toolbar",
+   "tier": "size",
+   "role": "toolbar, density-invariant twin (standard value)",
+   "value": "52px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spacing-fixed-status",
+   "tier": "size",
+   "role": "status, density-invariant twin (standard value)",
+   "value": "28px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--radius-control",
+   "tier": "radius",
+   "value": "4px",
+   "status": "existing-nyc-tron"
+  },
+  {
+   "name": "--radius-card",
+   "tier": "radius",
+   "value": "4px",
+   "status": "existing-nyc-tron",
+   "source": "workspaceScale.radius.panel"
+  },
+  {
+   "name": "--radius-sm",
+   "tier": "radius",
+   "value": "4px",
+   "status": "existing-css-keep (AGENTS.md rounded-sm 4px)"
+  },
+  {
+   "name": "--radius-paper",
+   "tier": "radius",
+   "value": "2px",
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--text-micro",
+   "tier": "type",
+   "value": "10px",
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--text-label",
+   "tier": "type",
+   "value": "12px",
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--text-body",
+   "tier": "type",
+   "value": "14px",
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--text-title",
+   "tier": "type",
+   "value": "20px",
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--text-display",
+   "tier": "type",
+   "value": "32px",
+   "status": "existing-ts-new-css"
+  },
+  {
+   "name": "--text-manuscript",
+   "tier": "type",
+   "value": "20px",
+   "status": "existing-ts-new-css (value equals title)"
+  },
+  {
+   "name": "--font-editorial",
+   "tier": "type",
+   "value": "Georgia, 'Times New Roman', serif",
+   "status": "existing-css-renamed",
+   "note": "theme.ts font.serif is the bare string Georgia; the CSS stack adds fallbacks. Both preserved."
+  },
+  {
+   "name": "--font-mono-plain",
+   "tier": "type",
+   "value": "monospace",
+   "status": "existing-ts-new-css",
+   "source": "workspaceScale.font.mono"
+  },
+  {
+   "name": "--font-weight-regular",
+   "tier": "type",
+   "value": "400",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--font-weight-medium",
+   "tier": "type",
+   "value": "500",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--font-weight-semibold",
+   "tier": "type",
+   "value": "600",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--font-weight-bold",
+   "tier": "type",
+   "value": "700",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--color-icon",
+   "tier": "icon-colour",
+   "dark": "#F8FAFC",
+   "light": "#18202D",
+   "status": "new-value-preserving",
+   "source": "iconColors.ink / inkInverse",
+   "drift": "vs --color-text"
+  },
+  {
+   "name": "--color-icon-muted",
+   "tier": "icon-colour",
+   "value": "#737F91",
+   "status": "new-value-preserving",
+   "source": "iconColors.muted",
+   "drift": "vs --color-text-muted"
+  },
+  {
+   "name": "--color-icon-selected",
+   "tier": "icon-colour",
+   "value": "#6859E8",
+   "status": "new-value-preserving",
+   "source": "iconColors.accent",
+   "drift": "vs --color-primary (light #6950D1)"
+  },
+  {
+   "name": "--color-icon-accent-bright",
+   "tier": "icon-colour",
+   "value": "#8E83FF",
+   "status": "new-value-preserving",
+   "source": "iconColors.accentBright",
+   "note": "no consumer found in packages/ or apps/studio-preview/src"
+  },
+  {
+   "name": "--color-icon-cyan",
+   "tier": "icon-colour",
+   "value": "#00B6C7",
+   "status": "new-value-preserving",
+   "source": "iconColors.cyan",
+   "note": "no consumer found; role unassigned"
+  },
+  {
+   "name": "--color-icon-success",
+   "tier": "icon-colour",
+   "value": "#139E75",
+   "status": "new-value-preserving",
+   "source": "iconColors.positive",
+   "drift": "vs --color-success"
+  },
+  {
+   "name": "--color-icon-warning",
+   "tier": "icon-colour",
+   "value": "#C68B27",
+   "status": "new-value-preserving",
+   "source": "iconColors.warning",
+   "note": "no consumer found; no warning role in the semantic set"
+  },
+  {
+   "name": "--color-icon-danger",
+   "tier": "icon-colour",
+   "value": "#D94462",
+   "status": "new-value-preserving",
+   "source": "iconColors.negative",
+   "drift": "vs --color-danger"
+  },
+  {
+   "name": "--color-icon-surface",
+   "tier": "icon-colour",
+   "dark": "#11131B",
+   "light": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "ForgeIcon.js:36",
+   "drift": "dark vs --color-surface-sunken #15171D"
+  },
+  {
+   "name": "--size-icon-xs",
+   "tier": "icon-size",
+   "value": "12px",
+   "status": "new-value-preserving",
+   "source": "iconSizes.xs"
+  },
+  {
+   "name": "--size-icon-sm",
+   "tier": "icon-size",
+   "value": "16px",
+   "status": "new-value-preserving",
+   "source": "iconSizes.sm"
+  },
+  {
+   "name": "--size-icon-toolbar",
+   "tier": "icon-size",
+   "value": "20px",
+   "status": "new-value-preserving",
+   "source": "iconSizes.toolbar"
+  },
+  {
+   "name": "--size-icon-default",
+   "tier": "icon-size",
+   "value": "24px",
+   "status": "new-value-preserving",
+   "source": "iconSizes.default"
+  },
+  {
+   "name": "--size-icon-touch",
+   "tier": "icon-size",
+   "value": "28px",
+   "status": "new-value-preserving",
+   "source": "iconSizes.touch"
+  },
+  {
+   "name": "--size-icon-feature",
+   "tier": "icon-size",
+   "value": "32px",
+   "status": "new-value-preserving",
+   "source": "iconSizes.feature"
+  },
+  {
+   "name": "--size-icon-hero",
+   "tier": "icon-size",
+   "value": "48px",
+   "status": "new-value-preserving",
+   "source": "iconSizes.hero"
+  },
+  {
+   "name": "--stroke-icon-width",
+   "tier": "icon-stroke",
+   "value": "2.35",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--stroke-icon-box",
+   "tier": "icon-stroke",
+   "value": "24",
+   "status": "new-value-preserving",
+   "note": "viewBox side, equals iconSizes.default"
+  },
+  {
+   "name": "--duration-icon-hover",
+   "tier": "motion",
+   "value": "120ms",
+   "status": "new-value-preserving",
+   "source": "iconMotion.hoverMs"
+  },
+  {
+   "name": "--duration-icon-press",
+   "tier": "motion",
+   "value": "110ms",
+   "status": "new-value-preserving",
+   "source": "iconMotion.pressMs"
+  },
+  {
+   "name": "--duration-icon-select",
+   "tier": "motion",
+   "value": "225ms",
+   "status": "new-value-preserving",
+   "source": "iconMotion.selectMs"
+  },
+  {
+   "name": "--duration-icon-deselect",
+   "tier": "motion",
+   "value": "175ms",
+   "status": "new-value-preserving",
+   "source": "iconMotion.deselectMs"
+  },
+  {
+   "name": "--duration-icon-success",
+   "tier": "motion",
+   "value": "320ms",
+   "status": "new-value-preserving",
+   "source": "iconMotion.successMs"
+  },
+  {
+   "name": "--duration-icon-error",
+   "tier": "motion",
+   "value": "240ms",
+   "status": "new-value-preserving",
+   "source": "iconMotion.errorMs"
+  },
+  {
+   "name": "--duration-icon-loading",
+   "tier": "motion",
+   "value": "850ms",
+   "status": "new-value-preserving",
+   "source": "iconMotion.loadingMs"
+  },
+  {
+   "name": "--scale-icon-press",
+   "tier": "motion",
+   "value": "0.9",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--scale-icon-selected",
+   "tier": "motion",
+   "value": "1.075",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--spring-icon-stiffness",
+   "tier": "motion",
+   "value": "260",
+   "status": "new-value-preserving",
+   "source": "ForgeIcon.js spring literal"
+  },
+  {
+   "name": "--spring-icon-damping",
+   "tier": "motion",
+   "value": "22",
+   "status": "new-value-preserving",
+   "source": "ForgeIcon.js spring literal"
+  },
+  {
+   "name": "--spring-icon-mass",
+   "tier": "motion",
+   "value": "0.8",
+   "status": "new-value-preserving",
+   "source": "ForgeIcon.js spring literal"
+  },
+  {
+   "name": "--opacity-disabled",
+   "tier": "opacity",
+   "value": "0.52",
+   "status": "new-value-preserving",
+   "source": "icons state.js"
+  },
+  {
+   "name": "--duration-hover",
+   "tier": "motion",
+   "value": "70ms",
+   "status": "new-value-preserving",
+   "source": "interaction-policy presets.hover",
+   "easingName": "standard",
+   "transformScale": 1,
+   "travelPx": 0,
+   "haptic": "none"
+  },
+  {
+   "name": "--duration-press",
+   "tier": "motion",
+   "value": "90ms",
+   "status": "new-value-preserving",
+   "source": "interaction-policy presets.press",
+   "easingName": "standard",
+   "transformScale": 0.985,
+   "travelPx": 0,
+   "haptic": "impact-light"
+  },
+  {
+   "name": "--duration-selection",
+   "tier": "motion",
+   "value": "120ms",
+   "status": "new-value-preserving",
+   "source": "interaction-policy presets.selection",
+   "easingName": "standard",
+   "transformScale": 1,
+   "travelPx": 0,
+   "haptic": "selection"
+  },
+  {
+   "name": "--duration-popover",
+   "tier": "motion",
+   "value": "150ms",
+   "status": "new-value-preserving",
+   "source": "interaction-policy presets.popover",
+   "easingName": "emphasized",
+   "transformScale": 0.98,
+   "travelPx": 5,
+   "haptic": "none"
+  },
+  {
+   "name": "--duration-panel-dock",
+   "tier": "motion",
+   "value": "190ms",
+   "status": "new-value-preserving",
+   "source": "interaction-policy presets.panel-dock",
+   "easingName": "emphasized",
+   "transformScale": 1,
+   "travelPx": 8,
+   "haptic": "selection"
+  },
+  {
+   "name": "--duration-detent",
+   "tier": "motion",
+   "value": "65ms",
+   "status": "new-value-preserving",
+   "source": "interaction-policy presets.detent",
+   "easingName": "linear",
+   "transformScale": 1,
+   "travelPx": 0,
+   "haptic": "selection"
+  },
+  {
+   "name": "--duration-commit",
+   "tier": "motion",
+   "value": "110ms",
+   "status": "new-value-preserving",
+   "source": "interaction-policy presets.commit",
+   "easingName": "standard",
+   "transformScale": 1,
+   "travelPx": 0,
+   "haptic": "none"
+  },
+  {
+   "name": "--duration-cancel",
+   "tier": "motion",
+   "value": "85ms",
+   "status": "new-value-preserving",
+   "source": "interaction-policy presets.cancel",
+   "easingName": "standard",
+   "transformScale": 1,
+   "travelPx": 0,
+   "haptic": "none"
+  },
+  {
+   "name": "--duration-error",
+   "tier": "motion",
+   "value": "140ms",
+   "status": "new-value-preserving",
+   "source": "interaction-policy presets.error",
+   "easingName": "standard",
+   "transformScale": 1,
+   "travelPx": 0,
+   "haptic": "error"
+  },
+  {
+   "name": "--ease-standard",
+   "tier": "motion",
+   "value": null,
+   "status": "reserved-value-undefined-in-repo",
+   "note": "interaction-policy names the curve; no file defines its control points"
+  },
+  {
+   "name": "--ease-emphasized",
+   "tier": "motion",
+   "value": null,
+   "status": "reserved-value-undefined-in-repo",
+   "note": "interaction-policy names the curve; no file defines its control points"
+  },
+  {
+   "name": "--ease-linear",
+   "tier": "motion",
+   "value": null,
+   "status": "reserved-value-undefined-in-repo",
+   "note": "interaction-policy names the curve; no file defines its control points"
+  },
+  {
+   "name": "--ease-instant",
+   "tier": "motion",
+   "value": null,
+   "status": "reserved-value-undefined-in-repo",
+   "note": "interaction-policy names the curve; no file defines its control points"
+  },
+  {
+   "name": "--duration-feedback-press",
+   "tier": "motion",
+   "value": "80ms",
+   "status": "new-value-preserving",
+   "source": "forgeFeedbackMotion.press"
+  },
+  {
+   "name": "--scale-feedback-press",
+   "tier": "motion",
+   "value": "0.96",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--duration-feedback-endstop-beat",
+   "tier": "motion",
+   "value": "60ms",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--angle-feedback-endstop",
+   "tier": "motion",
+   "value": "3deg",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--duration-feedback-commit",
+   "tier": "motion",
+   "value": "200ms",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--opacity-feedback-commit-peak",
+   "tier": "opacity",
+   "value": "0.9",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--duration-turret-snap",
+   "tier": "motion",
+   "value": "120ms",
+   "direction": "workbench",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--ease-turret-snap",
+   "tier": "motion",
+   "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+   "direction": "workbench",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--duration-turret-reveal",
+   "tier": "motion",
+   "value": "200ms",
+   "direction": "optics",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--ease-turret-reveal",
+   "tier": "motion",
+   "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+   "direction": "optics",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--duration-turret-dock",
+   "tier": "motion",
+   "value": "280ms",
+   "direction": "atelier",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--ease-turret-dock",
+   "tier": "motion",
+   "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+   "direction": "atelier",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--hit-target",
+   "tier": "size",
+   "value": "44px",
+   "status": "new-value-preserving",
+   "source": "forgeHitTarget (pointer/keyboard)"
+  },
+  {
+   "name": "--hit-target-touch",
+   "tier": "size",
+   "value": "48px",
+   "status": "new-value-preserving",
+   "source": "forgeHitTarget (touch/pen/controller/presentation)"
+  },
+  {
+   "name": "--color-scrim",
+   "tier": "fixed-literal",
+   "value": "#000000",
+   "status": "new-value-preserving",
+   "source": "prism-editor.tsx persona sheet backdrop"
+  },
+  {
+   "name": "--opacity-scrim",
+   "tier": "fixed-literal",
+   "value": "0.45",
+   "status": "new-value-preserving",
+   "source": "prism-editor.tsx"
+  },
+  {
+   "name": "--shadow-float-sm",
+   "tier": "shadow",
+   "value": "0 3px 12px #00000020",
+   "status": "new-value-preserving",
+   "source": "studio-workspace/index.tsx:203"
+  },
+  {
+   "name": "--shadow-float-md",
+   "tier": "shadow",
+   "value": "0 4px 16px #00000030",
+   "status": "new-value-preserving",
+   "source": "studio-workspace/index.tsx:271"
+  },
+  {
+   "name": "--shadow-artboard",
+   "tier": "shadow",
+   "value": "0 12px 35px #00000035",
+   "status": "new-value-preserving",
+   "source": "prism-canvas.tsx:90"
+  },
+  {
+   "name": "--shadow-page",
+   "tier": "shadow",
+   "value": "0 8px 40px rgba(0,0,0,0.12)",
+   "status": "new-value-preserving",
+   "source": "text-editor.tsx:148"
+  },
+  {
+   "name": "--shadow-segment-active",
+   "tier": "shadow",
+   "value": "0 1px 2px #252A3A26",
+   "status": "new-value-preserving",
+   "source": "persona-composer.tsx:77"
+  },
+  {
+   "name": "--color-icon-on-active",
+   "tier": "fixed-literal",
+   "value": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "studio-workspace/index.tsx:175"
+  },
+  {
+   "name": "--color-overlay-chip",
+   "tier": "fixed-literal",
+   "value": "#111827",
+   "status": "new-value-preserving",
+   "source": "prism-canvas.tsx:95"
+  },
+  {
+   "name": "--color-on-overlay-chip",
+   "tier": "fixed-literal",
+   "value": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "prism-canvas.tsx:96"
+  },
+  {
+   "name": "--color-artboard-checker-a",
+   "tier": "fixed-literal",
+   "value": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "prism-canvas.tsx ARTBOARD_CHECKER.light"
+  },
+  {
+   "name": "--color-artboard-checker-b",
+   "tier": "fixed-literal",
+   "value": "#EDEFF3",
+   "status": "new-value-preserving",
+   "source": "prism-canvas.tsx ARTBOARD_CHECKER.dark"
+  },
+  {
+   "name": "--swatch-violet",
+   "tier": "document-colour",
+   "value": "#6950D1",
+   "status": "new-value-preserving",
+   "source": "prism-editor.tsx FILL_COLORS and forge-directions.ts prismFillSwatches (two copies)",
+   "overridable": false
+  },
+  {
+   "name": "--swatch-teal",
+   "tier": "document-colour",
+   "value": "#249184",
+   "status": "new-value-preserving",
+   "source": "prism-editor.tsx FILL_COLORS and forge-directions.ts prismFillSwatches (two copies)",
+   "overridable": false
+  },
+  {
+   "name": "--swatch-amber",
+   "tier": "document-colour",
+   "value": "#E39B4C",
+   "status": "new-value-preserving",
+   "source": "prism-editor.tsx FILL_COLORS and forge-directions.ts prismFillSwatches (two copies)",
+   "overridable": false
+  },
+  {
+   "name": "--swatch-rose",
+   "tier": "document-colour",
+   "value": "#E26D92",
+   "status": "new-value-preserving",
+   "source": "prism-editor.tsx FILL_COLORS and forge-directions.ts prismFillSwatches (two copies)",
+   "overridable": false
+  },
+  {
+   "name": "--z-layer-row",
+   "tier": "layer",
+   "value": "10",
+   "status": "new-value-preserving",
+   "note": "role inferred from the element that carries it in prism-editor.tsx / index.tsx"
+  },
+  {
+   "name": "--z-chrome",
+   "tier": "layer",
+   "value": "20",
+   "status": "new-value-preserving",
+   "note": "role inferred from the element that carries it in prism-editor.tsx / index.tsx"
+  },
+  {
+   "name": "--z-fill-bar",
+   "tier": "layer",
+   "value": "25",
+   "status": "new-value-preserving",
+   "note": "role inferred from the element that carries it in prism-editor.tsx / index.tsx"
+  },
+  {
+   "name": "--z-toast",
+   "tier": "layer",
+   "value": "35",
+   "status": "new-value-preserving",
+   "note": "role inferred from the element that carries it in prism-editor.tsx / index.tsx"
+  },
+  {
+   "name": "--z-panel",
+   "tier": "layer",
+   "value": "60",
+   "status": "new-value-preserving",
+   "note": "role inferred from the element that carries it in prism-editor.tsx / index.tsx"
+  },
+  {
+   "name": "--z-overlay",
+   "tier": "layer",
+   "value": "70",
+   "status": "new-value-preserving",
+   "note": "role inferred from the element that carries it in prism-editor.tsx / index.tsx"
+  },
+  {
+   "name": "--border-width-hairline",
+   "tier": "border",
+   "value": "1px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--border-width-strong",
+   "tier": "border",
+   "value": "2px",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--color-stage-heading",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "light": "#202923",
+   "dark": "#EEF0E9"
+  },
+  {
+   "name": "--color-stage-track",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#222829"
+  },
+  {
+   "name": "--color-stage-paper-text",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#283329"
+  },
+  {
+   "name": "--color-stage-paper-title",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#354638"
+  },
+  {
+   "name": "--color-stage-caption",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "light": "#556359",
+   "dark": "#99A19D"
+  },
+  {
+   "name": "--color-stage-grid-head-text",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#637161"
+  },
+  {
+   "name": "--color-stage-clip-audio",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#637660"
+  },
+  {
+   "name": "--color-stage-empty-hint",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#798373"
+  },
+  {
+   "name": "--color-stage-paper",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#F7F5ED"
+  },
+  {
+   "name": "--color-stage-paper-text-muted",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#66735F"
+  },
+  {
+   "name": "--color-stage-grid-head",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#E5E9DD"
+  },
+  {
+   "name": "--color-stage-track-border",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#39423F"
+  },
+  {
+   "name": "--color-stage-slide-text",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#26372E"
+  },
+  {
+   "name": "--color-stage-on-clip",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#FFFFFF"
+  },
+  {
+   "name": "--color-stage-grid-line",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#DCE0D5"
+  },
+  {
+   "name": "--color-stage-fill-fallback",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#D9B47A"
+  },
+  {
+   "name": "--color-stage-track-label",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#B9C7BA"
+  },
+  {
+   "name": "--color-stage-quote-rule",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#AD8551"
+  },
+  {
+   "name": "--color-stage-clip-video",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#725D7C"
+  },
+  {
+   "name": "--color-stage-cell-text",
+   "tier": "stage-colour",
+   "status": "new-value-preserving",
+   "source": "packages/studio-workspace/src/stage.tsx",
+   "overridable": false,
+   "value": "#263B2B"
+  },
+  {
+   "name": "--color-chrome-body",
+   "tier": "chrome",
+   "dark": "#1E2024",
+   "light": "#ECEDEF",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.body"
+  },
+  {
+   "name": "--color-chrome-edge",
+   "tier": "chrome",
+   "dark": "#3A3D44",
+   "light": "#737882",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.edge"
+  },
+  {
+   "name": "--color-chrome-rule",
+   "tier": "chrome",
+   "dark": "#2E3036",
+   "light": "#CDD0D6",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.rule"
+  },
+  {
+   "name": "--color-chrome-well",
+   "tier": "chrome",
+   "dark": "#141518",
+   "light": "#DADCE1",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.well"
+  },
+  {
+   "name": "--color-chrome-selected",
+   "tier": "chrome",
+   "dark": "#2B3846",
+   "light": "#D3E4F4",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.selected"
+  },
+  {
+   "name": "--color-chrome-text",
+   "tier": "chrome",
+   "dark": "#F2F3F5",
+   "light": "#1F2228",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.text",
+   "note": "equals the prismThemes value of the same role"
+  },
+  {
+   "name": "--color-chrome-muted",
+   "tier": "chrome",
+   "dark": "#B8BBC4",
+   "light": "#555B66",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.muted",
+   "note": "equals the prismThemes value of the same role"
+  },
+  {
+   "name": "--color-chrome-selected-muted",
+   "tier": "chrome",
+   "dark": "#D5E3F0",
+   "light": "#2F4357",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.selectedMuted"
+  },
+  {
+   "name": "--color-chrome-disabled-ink",
+   "tier": "chrome",
+   "dark": "#858991",
+   "light": "#6B707A",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.disabledInk"
+  },
+  {
+   "name": "--color-chrome-accent",
+   "tier": "chrome",
+   "dark": "#66B9FF",
+   "light": "#086CB8",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.accent",
+   "note": "equals the prismThemes value of the same role"
+  },
+  {
+   "name": "--color-chrome-press",
+   "tier": "chrome",
+   "dark": "#FFFFFF14",
+   "light": "#1F222814",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.press"
+  },
+  {
+   "name": "--color-chrome-chip-edge",
+   "tier": "chrome",
+   "dark": "#FFFFFF59",
+   "light": "#1F222859",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.chipEdge"
+  },
+  {
+   "name": "--color-chrome-chip-ring",
+   "tier": "chrome",
+   "dark": "#F2F3F5",
+   "light": "#1F2228",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.chipRing"
+  },
+  {
+   "name": "--shadow-chrome-depth",
+   "tier": "chrome",
+   "dark": "0 1px 0 #FFFFFF0F inset, 0 6px 14px #00000059",
+   "light": "0 1px 0 #FFFFFF inset, 0 6px 14px #1B1D2124",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts workbenchChrome.depth"
+  },
+  {
+   "name": "--color-lab-mat",
+   "tier": "lab",
+   "dark": "#18191D",
+   "light": "#D9DBDF",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts labCanvas.mat"
+  },
+  {
+   "name": "--color-lab-paper",
+   "tier": "lab",
+   "dark": "#FFFEFC",
+   "light": "#FFFEFC",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts labCanvas.paper"
+  },
+  {
+   "name": "--color-lab-paper-ink",
+   "tier": "lab",
+   "dark": "#303440",
+   "light": "#303440",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts labCanvas.paperInk"
+  },
+  {
+   "name": "--color-lab-ground",
+   "tier": "lab",
+   "dark": "#121316",
+   "light": "#E4E6EA",
+   "status": "new-value-preserving",
+   "source": "forge-directions.ts labCanvas.ground"
+  },
+  {
+   "name": "--color-instrument-workbench-panel",
+   "tier": "instrument",
+   "dark": "#1E2024",
+   "light": "#ECEDEF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.panel"
+  },
+  {
+   "name": "--color-instrument-workbench-panel-edge",
+   "tier": "instrument",
+   "dark": "#3A3D44",
+   "light": "#C3C6CD",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.panelEdge"
+  },
+  {
+   "name": "--color-instrument-workbench-panel-solid",
+   "tier": "instrument",
+   "dark": "#1E2024",
+   "light": "#ECEDEF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.panelSolid"
+  },
+  {
+   "name": "--color-instrument-workbench-face-0",
+   "tier": "instrument",
+   "dark": "#3A3D45",
+   "light": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.face[0]"
+  },
+  {
+   "name": "--color-instrument-workbench-face-1",
+   "tier": "instrument",
+   "dark": "#191B1F",
+   "light": "#CDD0D7",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.face[1]"
+  },
+  {
+   "name": "--color-instrument-workbench-lathe",
+   "tier": "instrument",
+   "dark": "#FFFFFF",
+   "light": "#1F2228",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.lathe"
+  },
+  {
+   "name": "--color-instrument-workbench-bezel-0",
+   "tier": "instrument",
+   "dark": "#565A64",
+   "light": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.bezel[0]"
+  },
+  {
+   "name": "--color-instrument-workbench-bezel-1",
+   "tier": "instrument",
+   "dark": "#141518",
+   "light": "#9EA3AD",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.bezel[1]"
+  },
+  {
+   "name": "--color-instrument-workbench-knurl",
+   "tier": "instrument",
+   "dark": "#6A6F7A",
+   "light": "#7D828D",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.knurl"
+  },
+  {
+   "name": "--color-instrument-workbench-notch",
+   "tier": "instrument",
+   "dark": "#08090B",
+   "light": "#3E434C",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.notch"
+  },
+  {
+   "name": "--color-instrument-workbench-text",
+   "tier": "instrument",
+   "dark": "#F2F3F5",
+   "light": "#1F2228",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.text"
+  },
+  {
+   "name": "--color-instrument-workbench-muted",
+   "tier": "instrument",
+   "dark": "#B8BBC4",
+   "light": "#555B66",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.muted"
+  },
+  {
+   "name": "--color-instrument-workbench-face-text",
+   "tier": "instrument",
+   "dark": "#F2F3F5",
+   "light": "#1F2228",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.faceText"
+  },
+  {
+   "name": "--color-instrument-workbench-accent",
+   "tier": "instrument",
+   "dark": "#66B9FF",
+   "light": "#086CB8",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.accent"
+  },
+  {
+   "name": "--color-instrument-workbench-accent-halo",
+   "tier": "instrument",
+   "dark": "#08090B",
+   "light": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.workbench.materials.accentHalo"
+  },
+  {
+   "name": "--shadow-instrument-workbench-panel",
+   "tier": "instrument",
+   "dark": "0 1px 0 #FFFFFF0F inset, 0 6px 14px #00000059",
+   "light": "0 1px 0 #FFFFFF inset, 0 6px 14px #1B1D2124",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--shadow-instrument-workbench-dial",
+   "tier": "instrument",
+   "dark": "2px 3px 6px #00000073",
+   "light": "2px 3px 6px #1B1D2138",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--color-instrument-optics-panel",
+   "tier": "instrument",
+   "dark": "#1C1E25C7",
+   "light": "#FAFAFCDB",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.panel"
+  },
+  {
+   "name": "--color-instrument-optics-panel-edge",
+   "tier": "instrument",
+   "dark": "#FFFFFF24",
+   "light": "#FFFFFFCC",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.panelEdge"
+  },
+  {
+   "name": "--color-instrument-optics-panel-solid",
+   "tier": "instrument",
+   "dark": "#1C1E25",
+   "light": "#F4F5F8",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.panelSolid"
+  },
+  {
+   "name": "--color-instrument-optics-face-0",
+   "tier": "instrument",
+   "dark": "#17191E",
+   "light": "#20232A",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.face[0]"
+  },
+  {
+   "name": "--color-instrument-optics-face-1",
+   "tier": "instrument",
+   "dark": "#0C0D10",
+   "light": "#121418",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.face[1]"
+  },
+  {
+   "name": "--color-instrument-optics-lathe",
+   "tier": "instrument",
+   "dark": "#66B9FF",
+   "light": "#66B9FF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.lathe"
+  },
+  {
+   "name": "--color-instrument-optics-bezel-0",
+   "tier": "instrument",
+   "dark": "#66B9FF",
+   "light": "#086CB8",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.bezel[0]"
+  },
+  {
+   "name": "--color-instrument-optics-bezel-1",
+   "tier": "instrument",
+   "dark": "#7CDCCF",
+   "light": "#0F8C80",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.bezel[1]"
+  },
+  {
+   "name": "--color-instrument-optics-bezel-2",
+   "tier": "instrument",
+   "dark": "#B7A5FF",
+   "light": "#6950D1",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.bezel[2]"
+  },
+  {
+   "name": "--color-instrument-optics-bezel-3",
+   "tier": "instrument",
+   "dark": "#66B9FF",
+   "light": "#086CB8",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.bezel[3]"
+  },
+  {
+   "name": "--color-instrument-optics-knurl",
+   "tier": "instrument",
+   "dark": "#8FA4BC",
+   "light": "#5D6E82",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.knurl"
+  },
+  {
+   "name": "--color-instrument-optics-notch",
+   "tier": "instrument",
+   "dark": "#050607",
+   "light": "#050607",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.notch"
+  },
+  {
+   "name": "--color-instrument-optics-text",
+   "tier": "instrument",
+   "dark": "#F2F3F5",
+   "light": "#1F2228",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.text"
+  },
+  {
+   "name": "--color-instrument-optics-muted",
+   "tier": "instrument",
+   "dark": "#C2C6D0",
+   "light": "#4F5562",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.muted"
+  },
+  {
+   "name": "--color-instrument-optics-face-text",
+   "tier": "instrument",
+   "dark": "#F2F3F5",
+   "light": "#F2F3F5",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.faceText"
+  },
+  {
+   "name": "--color-instrument-optics-accent",
+   "tier": "instrument",
+   "dark": "#66B9FF",
+   "light": "#086CB8",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.accent"
+  },
+  {
+   "name": "--color-instrument-optics-accent-halo",
+   "tier": "instrument",
+   "dark": "#050607",
+   "light": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.optics.materials.accentHalo"
+  },
+  {
+   "name": "--shadow-instrument-optics-panel",
+   "tier": "instrument",
+   "dark": "0 1px 0 #FFFFFF24 inset, 0 10px 28px #0000004D",
+   "light": "0 1px 0 #FFFFFF inset, 0 10px 28px #1B1D211F",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--shadow-instrument-optics-dial",
+   "tier": "instrument",
+   "dark": "",
+   "light": "",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--color-instrument-atelier-panel",
+   "tier": "instrument",
+   "dark": "#2A2C31",
+   "light": "#FAFAF8",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.panel"
+  },
+  {
+   "name": "--color-instrument-atelier-panel-edge",
+   "tier": "instrument",
+   "dark": "#44474F",
+   "light": "#DCDDE1",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.panelEdge"
+  },
+  {
+   "name": "--color-instrument-atelier-panel-solid",
+   "tier": "instrument",
+   "dark": "#2A2C31",
+   "light": "#FAFAF8",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.panelSolid"
+  },
+  {
+   "name": "--color-instrument-atelier-face-0",
+   "tier": "instrument",
+   "dark": "#43464E",
+   "light": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.face[0]"
+  },
+  {
+   "name": "--color-instrument-atelier-face-1",
+   "tier": "instrument",
+   "dark": "#34373E",
+   "light": "#ECEDEF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.face[1]"
+  },
+  {
+   "name": "--color-instrument-atelier-lathe",
+   "tier": "instrument",
+   "dark": "#FFFFFF",
+   "light": "#1F2228",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.lathe"
+  },
+  {
+   "name": "--color-instrument-atelier-bezel-0",
+   "tier": "instrument",
+   "dark": "#4C4F58",
+   "light": "#F2F3F5",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.bezel[0]"
+  },
+  {
+   "name": "--color-instrument-atelier-bezel-1",
+   "tier": "instrument",
+   "dark": "#3A3D44",
+   "light": "#DADCE0",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.bezel[1]"
+  },
+  {
+   "name": "--color-instrument-atelier-knurl",
+   "tier": "instrument",
+   "dark": "#5D616B",
+   "light": "#A3A7AF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.knurl"
+  },
+  {
+   "name": "--color-instrument-atelier-notch",
+   "tier": "instrument",
+   "dark": "#1A1B1F",
+   "light": "#6B707A",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.notch"
+  },
+  {
+   "name": "--color-instrument-atelier-text",
+   "tier": "instrument",
+   "dark": "#F2F3F5",
+   "light": "#1F2228",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.text"
+  },
+  {
+   "name": "--color-instrument-atelier-muted",
+   "tier": "instrument",
+   "dark": "#BEC1CA",
+   "light": "#555B66",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.muted"
+  },
+  {
+   "name": "--color-instrument-atelier-face-text",
+   "tier": "instrument",
+   "dark": "#F2F3F5",
+   "light": "#1F2228",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.faceText"
+  },
+  {
+   "name": "--color-instrument-atelier-accent",
+   "tier": "instrument",
+   "dark": "#66B9FF",
+   "light": "#086CB8",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.accent"
+  },
+  {
+   "name": "--color-instrument-atelier-accent-halo",
+   "tier": "instrument",
+   "dark": "#1A1B1F",
+   "light": "#FFFFFF",
+   "status": "new-value-preserving",
+   "source": "forgeDirections.atelier.materials.accentHalo"
+  },
+  {
+   "name": "--shadow-instrument-atelier-panel",
+   "tier": "instrument",
+   "dark": "0 2px 4px #0000002E, 0 18px 40px #00000059",
+   "light": "0 2px 4px #1B1D2114, 0 18px 40px #1B1D2129",
+   "status": "new-value-preserving"
+  },
+  {
+   "name": "--shadow-instrument-atelier-dial",
+   "tier": "instrument",
+   "dark": "0 10px 22px #00000066",
+   "light": "0 10px 22px #1B1D2133",
+   "status": "new-value-preserving"
+  }
+ ],
+ "migrations": [
+  {
+   "file": "packages/icons/src/ForgeIcon.js",
+   "kind": "literal",
+   "property": "left",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/icons/src/ForgeIcon.js",
+   "kind": "literal",
+   "property": "top",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/icons/src/ForgeIcon.js",
+   "kind": "literal",
+   "property": "hitSlop",
+   "value": "4",
+   "count": 1,
+   "to": "--spacing-fixed-stack",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/icons/src/ForgeIcon.js",
+   "kind": "literal",
+   "property": "minWidth",
+   "value": "44",
+   "count": 1,
+   "to": "--spacing-fixed-target",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/icons/src/ForgeIcon.js",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "44",
+   "count": 1,
+   "to": "--spacing-fixed-target",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/media-ui/src/video/NativeVideoMonitor.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "8",
+   "count": 1,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/pitch/src/office-cluster.ts",
+   "kind": "literal",
+   "property": "width",
+   "value": "960",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-document-constant",
+   "why": "PITCH_SLIDE_SIZE 960x540, engine data not UI"
+  },
+  {
+   "file": "packages/pitch/src/office-cluster.ts",
+   "kind": "literal",
+   "property": "height",
+   "value": "540",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-document-constant",
+   "why": "PITCH_SLIDE_SIZE 960x540, engine data not UI"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "1200",
+   "count": 1,
+   "to": "--spacing-off-1200",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "800",
+   "count": 1,
+   "to": "--spacing-off-800",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "0",
+   "count": 8,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "12",
+   "count": 3,
+   "to": "--text-label",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "lineHeight",
+   "value": "19",
+   "count": 2,
+   "to": "--leading-off-19",
+   "cls": "off-scale-preserved",
+   "note": "no line-height scale exists"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "1",
+   "count": 6,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "10",
+   "count": 1,
+   "to": "--spacing-off-10",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "13",
+   "count": 1,
+   "to": "--text-off-13",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "8",
+   "count": 2,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "borderTopWidth",
+   "value": "1",
+   "count": 3,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "11",
+   "count": 6,
+   "to": "--text-off-11",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "letterSpacing",
+   "value": "1",
+   "count": 1,
+   "to": "--tracking-off-1",
+   "cls": "off-scale-preserved",
+   "note": "no tracking scale exists"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "borderBottomWidth",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "minWidth",
+   "value": "0",
+   "count": 2,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "borderRightWidth",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "4",
+   "count": 2,
+   "to": "--spacing-fixed-stack",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "9",
+   "count": 2,
+   "to": "--text-off-9",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "28",
+   "count": 1,
+   "to": "--spacing-fixed-status",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale",
+   "note": "divider thickness"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "marginBottom",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "minWidth",
+   "value": "40",
+   "count": 1,
+   "to": "--spacing-off-40",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "letterSpacing",
+   "value": ".4",
+   "count": 1,
+   "to": "--tracking-off-0-4",
+   "cls": "off-scale-preserved",
+   "note": "no tracking scale exists"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale",
+   "note": "divider thickness"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "22",
+   "count": 1,
+   "to": "--spacing-off-22",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "marginHorizontal",
+   "value": "8",
+   "count": 1,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "paddingHorizontal",
+   "value": "3",
+   "count": 1,
+   "to": "--spacing-off-3",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "paddingVertical",
+   "value": "4",
+   "count": 1,
+   "to": "--spacing-fixed-stack",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "2",
+   "count": 1,
+   "to": "--spacing-off-2",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "2",
+   "count": 1,
+   "to": "--border-width-strong",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "8",
+   "count": 1,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "paddingBottom",
+   "value": "6",
+   "count": 1,
+   "to": "--spacing-off-6",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "76",
+   "count": 1,
+   "to": "--spacing-off-76",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "right",
+   "value": "76",
+   "count": 1,
+   "to": "--spacing-off-76",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "bottom",
+   "value": "84",
+   "count": 1,
+   "to": "--spacing-off-84",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "zIndex",
+   "value": "20",
+   "count": 1,
+   "to": "--z-chrome",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "fontWeight",
+   "value": "500",
+   "count": 1,
+   "to": "--font-weight-medium",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "fontWeight",
+   "value": "600",
+   "count": 2,
+   "to": "--font-weight-semibold",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/interaction-policy.ts",
+   "kind": "literal",
+   "property": "top",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero inset default"
+  },
+  {
+   "file": "packages/studio-workspace/src/interaction-policy.ts",
+   "kind": "literal",
+   "property": "right",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero inset default"
+  },
+  {
+   "file": "packages/studio-workspace/src/interaction-policy.ts",
+   "kind": "literal",
+   "property": "bottom",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero inset default"
+  },
+  {
+   "file": "packages/studio-workspace/src/interaction-policy.ts",
+   "kind": "literal",
+   "property": "left",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero inset default"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "1",
+   "count": 7,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "18",
+   "count": 1,
+   "to": "--spacing-off-18",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "minWidth",
+   "value": "0",
+   "count": 4,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "2",
+   "count": 1,
+   "to": "--spacing-off-2",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "minWidth",
+   "value": "18",
+   "count": 1,
+   "to": "--spacing-off-18",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "borderTopWidth",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "28",
+   "count": 1,
+   "to": "--spacing-fixed-status",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "96",
+   "count": 1,
+   "to": "--spacing-off-96",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "72",
+   "count": 1,
+   "to": "--spacing-fixed-rail",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale",
+   "note": "divider thickness"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale",
+   "note": "divider thickness"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "opacity",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "fontWeight",
+   "value": "600",
+   "count": 3,
+   "to": "--font-weight-semibold",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "fontWeight",
+   "value": "700",
+   "count": 3,
+   "to": "--font-weight-bold",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale",
+   "note": "divider thickness"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale",
+   "note": "divider thickness"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "opacity",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "14",
+   "count": 1,
+   "to": "--spacing-off-14",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "6",
+   "count": 1,
+   "to": "--spacing-off-6",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "2",
+   "count": 1,
+   "to": "--spacing-off-2",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "borderRadius",
+   "value": "1",
+   "count": 1,
+   "to": "--radius-off-1",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "3",
+   "count": 1,
+   "to": "--spacing-off-3",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "10",
+   "count": 1,
+   "to": "--spacing-off-10",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "borderRadius",
+   "value": "1.5",
+   "count": 1,
+   "to": "--radius-off-1-5",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "2",
+   "count": 1,
+   "to": "--spacing-off-2",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "letterSpacing",
+   "value": "-0.2",
+   "count": 1,
+   "to": "--tracking-off-neg-0-2",
+   "cls": "off-scale-preserved",
+   "note": "no tracking scale exists"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "borderTopWidth",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "literal",
+   "property": "fontWeight",
+   "value": "700",
+   "count": 1,
+   "to": "--font-weight-bold",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "2",
+   "count": 1,
+   "to": "--border-width-strong",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "bottom",
+   "value": "4",
+   "count": 1,
+   "to": "--spacing-fixed-stack",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "4",
+   "count": 1,
+   "to": "--spacing-fixed-stack",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "4",
+   "count": 1,
+   "to": "--spacing-fixed-stack",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "11",
+   "count": 1,
+   "to": "--text-off-11",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "800",
+   "count": 1,
+   "to": "--spacing-off-800",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "600",
+   "count": 1,
+   "to": "--spacing-off-600",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "1",
+   "count": 5,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "zIndex",
+   "value": "60",
+   "count": 1,
+   "to": "--z-panel",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "right",
+   "value": "12",
+   "count": 1,
+   "to": "--spacing-fixed-inset",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "borderBottomWidth",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "13",
+   "count": 3,
+   "to": "--text-off-13",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "zIndex",
+   "value": "10",
+   "count": 1,
+   "to": "--z-layer-row",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "borderRadius",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "16",
+   "count": 1,
+   "to": "--spacing-off-16",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "16",
+   "count": 1,
+   "to": "--spacing-off-16",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "borderRadius",
+   "value": "8",
+   "count": 1,
+   "to": "--radius-off-8",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "1.5",
+   "count": 1,
+   "to": "--border-width-off-1-5",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "5.75",
+   "count": 1,
+   "to": "--spacing-off-5-75",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "1.5",
+   "count": 1,
+   "to": "--spacing-off-1-5",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "1.5",
+   "count": 1,
+   "to": "--spacing-off-1-5",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "5",
+   "count": 1,
+   "to": "--spacing-off-5",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "borderRadius",
+   "value": "0.75",
+   "count": 1,
+   "to": "--radius-off-0-75",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "44",
+   "count": 1,
+   "to": "--spacing-fixed-target",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "borderTopWidth",
+   "value": "1",
+   "count": 3,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "paddingTop",
+   "value": "4",
+   "count": 3,
+   "to": "--spacing-fixed-stack",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "zIndex",
+   "value": "70",
+   "count": 2,
+   "to": "--z-overlay",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "0",
+   "count": 3,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "0",
+   "count": 2,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "right",
+   "value": "0",
+   "count": 2,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "bottom",
+   "value": "0",
+   "count": 2,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "opacity",
+   "value": "0.45",
+   "count": 1,
+   "to": "--opacity-scrim",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "8",
+   "count": 2,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "borderLeftWidth",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "paddingBottom",
+   "value": "12",
+   "count": 1,
+   "to": "--spacing-fixed-inset",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "20",
+   "count": 1,
+   "to": "--spacing-off-20",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "12",
+   "count": 2,
+   "to": "--text-label",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "12",
+   "count": 1,
+   "to": "--spacing-fixed-inset",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "12",
+   "count": 2,
+   "to": "--spacing-fixed-inset",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "10",
+   "count": 1,
+   "to": "--spacing-off-10",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "minWidth",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "3",
+   "count": 2,
+   "to": "--spacing-off-3",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "11",
+   "count": 1,
+   "to": "--text-off-11",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "zIndex",
+   "value": "20",
+   "count": 1,
+   "to": "--z-chrome",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "3",
+   "count": 1,
+   "to": "--spacing-off-3",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "1",
+   "count": 2,
+   "to": "--border-width-hairline",
+   "cls": "on-scale",
+   "note": "divider thickness"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "26",
+   "count": 1,
+   "to": "--spacing-off-26",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "paddingVertical",
+   "value": "6",
+   "count": 1,
+   "to": "--spacing-off-6",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "zIndex",
+   "value": "25",
+   "count": 1,
+   "to": "--z-fill-bar",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "bottom",
+   "value": "20",
+   "count": 1,
+   "to": "--spacing-off-20",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "52",
+   "count": 1,
+   "to": "--spacing-fixed-toolbar",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "paddingHorizontal",
+   "value": "10",
+   "count": 1,
+   "to": "--spacing-off-10",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "2",
+   "count": 2,
+   "to": "--spacing-off-2",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "50",
+   "count": 1,
+   "to": "--spacing-off-50",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "marginRight",
+   "value": "8",
+   "count": 1,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "33",
+   "count": 1,
+   "to": "--spacing-off-33",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "33",
+   "count": 1,
+   "to": "--spacing-off-33",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "2",
+   "count": 1,
+   "to": "--border-width-strong",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "25",
+   "count": 1,
+   "to": "--spacing-off-25",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "25",
+   "count": 1,
+   "to": "--spacing-off-25",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "1",
+   "count": 2,
+   "to": "--border-width-hairline",
+   "cls": "on-scale",
+   "note": "divider thickness"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "height",
+   "value": "24",
+   "count": 1,
+   "to": "--spacing-off-24",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "marginHorizontal",
+   "value": "5",
+   "count": 1,
+   "to": "--spacing-off-5",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "zIndex",
+   "value": "35",
+   "count": 1,
+   "to": "--z-toast",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "opacity",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "fontWeight",
+   "value": "600",
+   "count": 4,
+   "to": "--font-weight-semibold",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "11",
+   "count": 3,
+   "to": "--text-off-11",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "lineHeight",
+   "value": "18",
+   "count": 1,
+   "to": "--leading-off-18",
+   "cls": "off-scale-preserved",
+   "note": "no line-height scale exists"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "4",
+   "count": 1,
+   "to": "--spacing-fixed-stack",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginBottom",
+   "value": "20",
+   "count": 1,
+   "to": "--spacing-off-20",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "22",
+   "count": 1,
+   "to": "--text-off-22",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "360",
+   "count": 1,
+   "to": "--spacing-off-360",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "28",
+   "count": 1,
+   "to": "--spacing-off-28",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "maxWidth",
+   "value": "680",
+   "count": 1,
+   "to": "--spacing-off-680",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "borderRadius",
+   "value": "2",
+   "count": 1,
+   "to": "--radius-paper",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginBottom",
+   "value": "14",
+   "count": 2,
+   "to": "--spacing-off-14",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "borderRadius",
+   "value": "3",
+   "count": 3,
+   "to": "--radius-off-3",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "12",
+   "count": 2,
+   "to": "--spacing-fixed-inset",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "12",
+   "count": 7,
+   "to": "--text-label",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "40",
+   "count": 1,
+   "to": "--spacing-off-40",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "104",
+   "count": 1,
+   "to": "--spacing-off-104",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "40",
+   "count": 1,
+   "to": "--spacing-off-40",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "borderTopWidth",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "borderRightWidth",
+   "value": "1",
+   "count": 1,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "10",
+   "count": 3,
+   "to": "--spacing-off-10",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginBottom",
+   "value": "24",
+   "count": 1,
+   "to": "--spacing-fixed-section",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginBottom",
+   "value": "8",
+   "count": 2,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "margin",
+   "value": "24",
+   "count": 1,
+   "to": "--spacing-fixed-section",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "maxWidth",
+   "value": "520",
+   "count": 1,
+   "to": "--spacing-off-520",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginTop",
+   "value": "14",
+   "count": 1,
+   "to": "--spacing-off-14",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "8",
+   "count": 1,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "1",
+   "count": 2,
+   "to": "--border-width-hairline",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "96",
+   "count": 1,
+   "to": "--spacing-off-96",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "paddingTop",
+   "value": "28",
+   "count": 1,
+   "to": "--spacing-off-28",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "8",
+   "count": 1,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "10",
+   "count": 1,
+   "to": "--spacing-off-10",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "32",
+   "count": 1,
+   "to": "--spacing-fixed-canvas",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "bottom",
+   "value": "8",
+   "count": 1,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "borderRadius",
+   "value": "4",
+   "count": 2,
+   "to": "--radius-control",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "7",
+   "count": 1,
+   "to": "--spacing-off-7",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "10",
+   "count": 1,
+   "to": "--text-micro",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "paddingVertical",
+   "value": "48",
+   "count": 1,
+   "to": "--spacing-off-48",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "15",
+   "count": 1,
+   "to": "--text-off-15",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "13",
+   "count": 5,
+   "to": "--text-off-13",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginTop",
+   "value": "6",
+   "count": 1,
+   "to": "--spacing-off-6",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginTop",
+   "value": "4",
+   "count": 1,
+   "to": "--spacing-fixed-stack",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "paddingVertical",
+   "value": "24",
+   "count": 2,
+   "to": "--spacing-fixed-section",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginBottom",
+   "value": "10",
+   "count": 1,
+   "to": "--spacing-off-10",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginTop",
+   "value": "2",
+   "count": 1,
+   "to": "--spacing-off-2",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "18",
+   "count": 1,
+   "to": "--spacing-off-18",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "14",
+   "count": 1,
+   "to": "--text-body",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginTop",
+   "value": "8",
+   "count": 2,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginBottom",
+   "value": "18",
+   "count": 1,
+   "to": "--spacing-off-18",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "28",
+   "count": 1,
+   "to": "--text-off-28",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "marginBottom",
+   "value": "12",
+   "count": 1,
+   "to": "--spacing-fixed-inset",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "24",
+   "count": 1,
+   "to": "--spacing-fixed-section",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "paddingTop",
+   "value": "12",
+   "count": 1,
+   "to": "--spacing-fixed-inset",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "paddingBottom",
+   "value": "40",
+   "count": 1,
+   "to": "--spacing-off-40",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "fontWeight",
+   "value": "500",
+   "count": 1,
+   "to": "--font-weight-medium",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "width",
+   "value": "800",
+   "count": 1,
+   "to": "--spacing-off-800",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "paddingBottom",
+   "value": "48",
+   "count": 1,
+   "to": "--spacing-off-48",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "maxWidth",
+   "value": "792",
+   "count": 3,
+   "to": "--spacing-off-792",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "12",
+   "count": 1,
+   "to": "--spacing-fixed-inset",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "gap",
+   "value": "8",
+   "count": 1,
+   "to": "--spacing-fixed-element",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "fontSize",
+   "value": "11",
+   "count": 1,
+   "to": "--text-off-11",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "760",
+   "count": 1,
+   "to": "--spacing-off-760",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "paddingBottom",
+   "value": "64",
+   "count": 1,
+   "to": "--spacing-fixed-page",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "minHeight",
+   "value": "480",
+   "count": 1,
+   "to": "--spacing-off-480",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "padding",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "0",
+   "count": 1,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/turret-motion.native.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "0",
+   "count": 2,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/turret-motion.native.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "0",
+   "count": 2,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/turret-motion.native.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "3",
+   "count": 1,
+   "to": "--border-width-off-3",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/turret-motion.tsx",
+   "kind": "literal",
+   "property": "left",
+   "value": "0",
+   "count": 2,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/turret-motion.tsx",
+   "kind": "literal",
+   "property": "top",
+   "value": "0",
+   "count": 2,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/turret-motion.tsx",
+   "kind": "literal",
+   "property": "opacity",
+   "value": "0",
+   "count": 3,
+   "to": null,
+   "cls": "exempt-zero",
+   "why": "zero is not a token"
+  },
+  {
+   "file": "packages/studio-workspace/src/turret-motion.tsx",
+   "kind": "literal",
+   "property": "borderWidth",
+   "value": "3",
+   "count": 1,
+   "to": "--border-width-off-3",
+   "cls": "off-scale-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.space.group + 2",
+   "to": "--spacing-group-plus-2",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.space.inset + 2",
+   "to": "--spacing-inset-plus-2",
+   "cls": "derived-from-scale",
+   "count": 2
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.space.element + 2",
+   "to": "--spacing-element-plus-2",
+   "cls": "derived-from-scale",
+   "count": 2
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.space.stack + 1",
+   "to": "--spacing-stack-plus-1",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.space.inset + 1",
+   "to": "--spacing-inset-plus-1",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.type.label + 1",
+   "to": "--text-label-plus-1",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.type.micro + 1",
+   "to": "--text-micro-plus-1",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.type.body + 2",
+   "to": "--text-body-plus-2",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-turret.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.type.micro + 3",
+   "to": "--text-micro-plus-3",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.size.target+4",
+   "to": "--spacing-target-plus-4",
+   "cls": "derived-from-scale",
+   "count": 2
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.type.micro + 1",
+   "to": "--text-micro-plus-1",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.space.inset+2",
+   "to": "--spacing-inset-plus-2",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.radius.control + 2",
+   "to": "--radius-control-plus-2",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.space.group + scale.space.stack",
+   "to": "--spacing-group-plus-stack",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "derived-expression",
+   "expression": "scale.space.element / 2 + 2",
+   "to": "--spacing-element-half-plus-2",
+   "cls": "derived-from-scale",
+   "count": 1
+  },
+  {
+   "file": "packages/icons/src/ForgeIcon.js",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#11131b",
+   "count": 1,
+   "to": "--color-icon-surface",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/icons/src/ForgeIcon.js",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#ffffff",
+   "count": 1,
+   "to": "--color-icon-surface",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#ffffff",
+   "count": 1,
+   "to": "--color-icon-on-active",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#00000020",
+   "count": 1,
+   "to": "--shadow-float-sm",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/index.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#00000030",
+   "count": 1,
+   "to": "--shadow-float-md",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/persona-composer.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#252a3a26",
+   "count": 1,
+   "to": "--shadow-segment-active",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#ffffff",
+   "count": 2,
+   "to": "--color-artboard-checker-a (checker square) and --color-on-overlay-chip (chip text)",
+   "cls": "document-colour"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#edeff3",
+   "count": 1,
+   "to": "--color-artboard-checker-b",
+   "cls": "document-colour"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#00000035",
+   "count": 1,
+   "to": "--shadow-artboard",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-canvas.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#111827",
+   "count": 1,
+   "to": "--color-overlay-chip",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#6950d1",
+   "count": 1,
+   "to": "--swatch-violet",
+   "cls": "document-colour"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#249184",
+   "count": 1,
+   "to": "--swatch-teal",
+   "cls": "document-colour"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#e39b4c",
+   "count": 1,
+   "to": "--swatch-amber",
+   "cls": "document-colour"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#e26d92",
+   "count": 1,
+   "to": "--swatch-rose",
+   "cls": "document-colour"
+  },
+  {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#000000",
+   "count": 1,
+   "to": "--color-scrim",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#d9b47a",
+   "count": 1,
+   "to": "--color-stage-fill-fallback",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#556359",
+   "count": 1,
+   "to": "--color-stage-caption",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#99a19d",
+   "count": 1,
+   "to": "--color-stage-caption",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#202923",
+   "count": 1,
+   "to": "--color-stage-heading",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#eef0e9",
+   "count": 2,
+   "to": "--color-stage-heading",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#f7f5ed",
+   "count": 6,
+   "to": "--color-stage-paper",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#283329",
+   "count": 4,
+   "to": "--color-stage-paper-text",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#ad8551",
+   "count": 1,
+   "to": "--color-stage-quote-rule",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#637161",
+   "count": 2,
+   "to": "--color-stage-grid-head-text",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#e5e9dd",
+   "count": 2,
+   "to": "--color-stage-grid-head",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#dce0d5",
+   "count": 1,
+   "to": "--color-stage-grid-line",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#263b2b",
+   "count": 1,
+   "to": "--color-stage-cell-text",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#26372e",
+   "count": 2,
+   "to": "--color-stage-slide-text",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#798373",
+   "count": 1,
+   "to": "--color-stage-empty-hint",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#222829",
+   "count": 2,
+   "to": "--color-stage-track",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#39423f",
+   "count": 2,
+   "to": "--color-stage-track-border",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#b9c7ba",
+   "count": 1,
+   "to": "--color-stage-track-label",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#637660",
+   "count": 1,
+   "to": "--color-stage-clip-audio",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#725d7c",
+   "count": 1,
+   "to": "--color-stage-clip-video",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#ffffff",
+   "count": 1,
+   "to": "--color-stage-on-clip",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#354638",
+   "count": 2,
+   "to": "--color-stage-paper-title",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/stage.tsx",
+   "kind": "literal",
+   "property": "colour",
+   "value": "#66735f",
+   "count": 6,
+   "to": "--color-stage-paper-text-muted",
+   "cls": "stage-palette (matches no theme.ts token)"
+  },
+  {
+   "file": "packages/studio-workspace/src/text-editor.tsx",
+   "kind": "literal",
+   "property": "boxShadow",
+   "value": "0 8px 40px rgba(0,0,0,0.12)",
+   "count": 1,
+   "to": "--shadow-page",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/icons/src/ForgeIcon.js",
+   "kind": "literal",
+   "property": "spring",
+   "value": "stiffness 260, damping 22, mass 0.8",
+   "count": 1,
+   "to": "--spring-icon-stiffness / -damping / -mass",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "file": "packages/icons/src/ForgeIcon.js",
+   "kind": "literal",
+   "property": "minWidth/minHeight",
+   "value": "44",
+   "count": 2,
+   "to": "--hit-target",
+   "cls": "on-scale"
+  },
+  {
+   "file": "packages/icons/src/state.js",
+   "kind": "literal",
+   "property": "opacity",
+   "value": "0.52",
+   "count": 1,
+   "to": "--opacity-disabled",
+   "cls": "fixed-literal-preserved"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-surface",
+   "to": "--color-surface-base",
+   "why": "new name for an existing value, no existing NYC-Tron counterpart",
+   "directRefs": 2,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-raised",
+   "to": "--color-surface-raised",
+   "why": "alias, identical value",
+   "directRefs": 1,
+   "utilityClassRefs": 1,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-mat",
+   "to": "--color-surface-sunken",
+   "why": "alias, identical value",
+   "directRefs": 0,
+   "utilityClassRefs": 1,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-border",
+   "to": "--color-border",
+   "why": "alias, identical value",
+   "directRefs": 1,
+   "utilityClassRefs": 2,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-text",
+   "to": "--color-text",
+   "why": "alias, identical value",
+   "directRefs": 1,
+   "utilityClassRefs": 1,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-muted",
+   "to": "--color-text-muted",
+   "why": "alias, identical value",
+   "directRefs": 1,
+   "utilityClassRefs": 1,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-accent",
+   "to": "--color-accent",
+   "why": "alias, identical value",
+   "directRefs": 1,
+   "utilityClassRefs": 1,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-on-accent",
+   "to": "--color-on-primary",
+   "why": "alias, identical value",
+   "directRefs": 0,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-tint",
+   "to": "--color-primary-tint",
+   "why": "new name, no NYC-Tron counterpart",
+   "directRefs": 0,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-paper",
+   "to": "--color-paper",
+   "why": "new name",
+   "directRefs": 0,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-paper-ink",
+   "to": "--color-paper-text",
+   "why": "new name",
+   "directRefs": 0,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-paper-muted",
+   "to": "--color-paper-text-muted",
+   "why": "new name",
+   "directRefs": 0,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--color-forge-error",
+   "to": "--color-danger",
+   "why": "alias, identical value",
+   "directRefs": 0,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--spacing-forge-target",
+   "to": "--spacing-target",
+   "why": "rename, same value 44px",
+   "directRefs": 0,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--radius-forge-control",
+   "to": "--radius-control",
+   "why": "alias, identical value",
+   "directRefs": 7,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "css-var",
+   "from": "--font-forge-editorial",
+   "to": "--font-editorial",
+   "why": "rename",
+   "directRefs": 0,
+   "utilityClassRefs": 0,
+   "cls": "rename-keep-deprecated-alias"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.base",
+   "to": "--color-surface-base",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.raised",
+   "to": "--color-surface-raised",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.deep",
+   "to": "--color-surface-sunken",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.line",
+   "to": "--color-border",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.text",
+   "to": "--color-text",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.muted",
+   "to": "--color-text-muted",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.accent",
+   "to": "--color-accent (and --color-primary, --color-focus)",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.ink",
+   "to": "--color-on-primary",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.soft",
+   "to": "--color-primary-tint",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.paper",
+   "to": "--color-paper",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.paperInk",
+   "to": "--color-paper-text",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.paperMuted",
+   "to": "--color-paper-text-muted",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceThemes.error",
+   "to": "--color-danger",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.space.stack",
+   "to": "--spacing-stack",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.space.element",
+   "to": "--spacing-element",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.space.inset",
+   "to": "--spacing-inset",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.space.group",
+   "to": "--spacing-group",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.space.section",
+   "to": "--spacing-section",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.space.canvas",
+   "to": "--spacing-canvas",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.space.page",
+   "to": "--spacing-page",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.size.target",
+   "to": "--spacing-target",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.size.rail",
+   "to": "--spacing-rail",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.size.header",
+   "to": "--spacing-header",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.size.toolbar",
+   "to": "--spacing-toolbar",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.size.status",
+   "to": "--spacing-status",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.radius.control",
+   "to": "--radius-control",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.radius.panel",
+   "to": "--radius-card",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.radius.paper",
+   "to": "--radius-paper",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.type.micro",
+   "to": "--text-micro",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.type.label",
+   "to": "--text-label",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.type.body",
+   "to": "--text-body",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.type.title",
+   "to": "--text-title",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.type.display",
+   "to": "--text-display",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "workspaceScale.type.manuscript",
+   "to": "--text-manuscript",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconColors.ink",
+   "to": "--color-icon (light)",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconColors.inkInverse",
+   "to": "--color-icon (dark)",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconColors.muted",
+   "to": "--color-icon-muted",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconColors.accent",
+   "to": "--color-icon-selected",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconColors.accentBright",
+   "to": "--color-icon-accent-bright",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconColors.cyan",
+   "to": "--color-icon-cyan",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconColors.positive",
+   "to": "--color-icon-success",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconColors.warning",
+   "to": "--color-icon-warning",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconColors.negative",
+   "to": "--color-icon-danger",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconSizes.xs",
+   "to": "--size-icon-xs",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconSizes.sm",
+   "to": "--size-icon-sm",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconSizes.toolbar",
+   "to": "--size-icon-toolbar",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconSizes.default",
+   "to": "--size-icon-default",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconSizes.touch",
+   "to": "--size-icon-touch",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconSizes.feature",
+   "to": "--size-icon-feature",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconSizes.hero",
+   "to": "--size-icon-hero",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconMotion.hoverMs",
+   "to": "--duration-icon-hover",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconMotion.pressMs",
+   "to": "--duration-icon-press",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconMotion.selectMs",
+   "to": "--duration-icon-select",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconMotion.deselectMs",
+   "to": "--duration-icon-deselect",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconMotion.successMs",
+   "to": "--duration-icon-success",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconMotion.errorMs",
+   "to": "--duration-icon-error",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconMotion.loadingMs",
+   "to": "--duration-icon-loading",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconMotion.pressScale",
+   "to": "--scale-icon-press",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "iconMotion.selectedScale",
+   "to": "--scale-icon-selected",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "interaction-policy presets.hover.durationMs",
+   "to": "--duration-hover",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "interaction-policy presets.press.durationMs",
+   "to": "--duration-press",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "interaction-policy presets.selection.durationMs",
+   "to": "--duration-selection",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "interaction-policy presets.popover.durationMs",
+   "to": "--duration-popover",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "interaction-policy presets.panel-dock.durationMs",
+   "to": "--duration-panel-dock",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "interaction-policy presets.detent.durationMs",
+   "to": "--duration-detent",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "interaction-policy presets.commit.durationMs",
+   "to": "--duration-commit",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "interaction-policy presets.cancel.durationMs",
+   "to": "--duration-cancel",
+   "cls": "rename-keep-ts-key"
+  },
+  {
+   "kind": "ts-key",
+   "from": "interaction-policy presets.error.durationMs",
+   "to": "--duration-error",
+   "cls": "rename-keep-ts-key"
+  }
+ ],
+ "stats": {
+  "sha": "ff3abae",
+  "filesInScope": 153,
+  "filesScanned": 148,
+  "numericOccurrences": 307,
+  "fontWeightQuoted": 15,
+  "numericByClass": {
+   "exempt-zero": 58,
+   "on-scale": 126,
+   "exempt-document-constant": 2,
+   "off-scale-preserved": 121
+  },
+  "numericDistinctByClass": {
+   "exempt-zero": 13,
+   "on-scale": 55,
+   "exempt-document-constant": 2,
+   "off-scale-preserved": 84
+  },
+  "numericByProp": {
+   "left": 17,
+   "top": 15,
+   "hitSlop": 1,
+   "minWidth": 10,
+   "minHeight": 22,
+   "gap": 20,
+   "width": 24,
+   "height": 17,
+   "fontSize": 40,
+   "lineHeight": 3,
+   "borderWidth*": 42,
+   "letterSpacing": 3,
+   "margin*": 20,
+   "padding*": 30,
+   "right": 5,
+   "bottom": 7,
+   "zIndex": 8,
+   "opacity": 7,
+   "borderRadius": 11,
+   "maxWidth": 5
+  },
+  "derivedTotal": 18,
+  "derivedDistinct": 15,
+  "hexTotals": {
+   "packages/icons/src/ForgeIcon.js": 2,
+   "packages/studio-workspace/src/index.tsx": 3,
+   "packages/studio-workspace/src/persona-composer.tsx": 1,
+   "packages/studio-workspace/src/prism-canvas.tsx": 5,
+   "packages/studio-workspace/src/prism-editor.tsx": 5,
+   "packages/studio-workspace/src/stage.tsx": 42
+  },
+  "hexTotalComponentsAndTokens": 58,
+  "tokenCount": 234,
+  "tokensByTier": {
+   "semantic-colour": 18,
+   "space": 14,
+   "size": 15,
+   "radius": 4,
+   "type": 12,
+   "icon-colour": 9,
+   "icon-size": 7,
+   "icon-stroke": 2,
+   "motion": 36,
+   "opacity": 2,
+   "fixed-literal": 7,
+   "shadow": 5,
+   "document-colour": 4,
+   "layer": 6,
+   "border": 2,
+   "stage-colour": 20,
+   "chrome": 14,
+   "lab": 4,
+   "instrument": 53
+  },
+  "migrationCount": 365,
+  "prismOverrideKeys": [
+   "base",
+   "raised",
+   "deep",
+   "line",
+   "text",
+   "muted",
+   "accent",
+   "ink",
+   "soft"
+  ]
+ }
+}
