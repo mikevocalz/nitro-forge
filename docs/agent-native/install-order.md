@@ -20,7 +20,7 @@ Each step needs the one above it. Step 7 fails at first render if step 6 is skip
 | 7 | `StudioUIProvider` and host | registry items `studio-ui-provider`, `nyc-tron-host` plus app code | Files yes, host wiring is app code |
 | 8 | Studio components | registry items from `03-design-handoff.md` | Yes |
 
-Registry mechanics (decision 28): the built `r/*.json` files are committed in each repo and served from `raw.githubusercontent.com/<owner>/<repo>/<tag>/r/{name}.json`, pinned to a release tag. A consumer adds an item with `npx shadcn@latest add @nitro-forge/<item>`. No `registry.json` or `r/` directory exists in this repo yet, so that command resolves nothing today. Decision 28 also asks for a check that the shadcn CLI accepts the content type raw.githubusercontent.com returns (Phase 2); it has not been run. UNVERIFIED.
+Registry mechanics (decision 28, corrected by decision 45): the built `r/*.json` files are committed in each repo and served from `raw.githubusercontent.com/<owner>/<repo>/<ref>/r/{name}.json`. `<ref>` is a moving branch (`master` for `@nitro-forge`, `main` for `@nyc-tron`) until the owner cuts release tags, then `node tooling/registry/set-ref.mjs <tag> [<tag>]` pins both. A consumer adds an item with `npx shadcn@latest add @nitro-forge/<item>`. The `@nyc-tron` items it depends on resolve only once NYC-Tron's `r/` is on its `main` branch. Pin the CLI version too (`npx shadcn@4.23.0`) if you need a reproducible install, because `@latest` moves. A live fetch from raw.githubusercontent.com has not been run. UNVERIFIED.
 
 ### Step 0. Toolchain
 

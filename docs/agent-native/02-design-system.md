@@ -512,6 +512,18 @@ Mechanism, three parts:
 
 A studio picks only its default density. Density stays a user preference at runtime, as `docs/ux/FORGE_2046_DESIGN_SYSTEM.md` requires. The per-studio launcher accents in `icon-family.mjs` are natural seeds for each studio's `accent`, but applying them changes in-app pixels (Prism's in-app accent is blue, its launcher accent purple), so they are a design call (owner decision 1), not part of this migration.
 
+### 5.1 Two channels, and which surfaces each reaches
+
+Added after the independent review (finding F5). The three keys travel through two channels, and the contract above only described the first.
+
+| Key | Channel 1: CSS variables (`brandCssVariables`) | Channel 2: JS overrides (`brandThemeOverrides`) |
+|---|---|---|
+| `accent` | `--color-primary`, `--color-accent`, `--color-focus` | `colors.accent` in `ForgeWorkspace` (14 reads: header, rail label, studio glyphs, selection), `PersonaTurret` `colors.accent` (focus ring, committed notch), `PersonaComposer` `colors.accent` (8 reads) |
+| `ink` | `--color-on-primary` | `colors.ink` in `ForgeWorkspace` (2 reads) |
+| `soft` | `--color-primary-tint` | `colors.soft` in `ForgeWorkspace` (4 reads), `PersonaComposer` (2 reads) |
+
+Channel 1 reaches every NYC-Tron control and any Tailwind utility that reads those variables. It never reaches a value Forge reads in JavaScript. Channel 2 reaches `ForgeWorkspace` through its `themeOverrides` prop. `PersonaTurret` and `PersonaComposer` take a `colors` prop that `ForgeWorkspace` does not fill, so the host passes the same override to them. Neither channel reaches `PrismEditor` (chrome and direction palettes), `QuillTextEditor` (`workspaceThemes` by scheme), `ForgeDocumentStage` or the default `ForgeIcon` palette. The read counts come from a grep of `packages/studio-workspace/src` at commit `ce4c41e`.
+
 ## 6. Migration
 
 All changes are additive first. Old names stay as deprecated aliases that resolve to the new variable, so no consumer breaks and no pixel moves. Counts are references outside the generated CSS and outside the definitions in `build-theme.mjs` (command Q in section 8, `apps/` included). "var" counts `--name` references; "utility" counts Tailwind classes such as `bg-forge-mat`.

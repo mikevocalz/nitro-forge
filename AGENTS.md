@@ -77,7 +77,7 @@ read `llms.txt`, `SKILL.md` and `docs/components/<item>.md` first.
   source, then rebuild:
   `node tooling/registry/build.mjs`, `node tooling/docs/build-docs.mjs`,
   `node tooling/docs/build-site.mjs`. CI regenerates them and fails on a diff.
-- Checks: `node tooling/registry/check-imports.mjs`, `node tooling/registry/validate-registry.mjs`,
+- Checks: `node tooling/registry/check-imports.mjs` (reads NYC-Tron's registry: `--nyc-tron-registry <path|url>`), `node tooling/registry/validate-registry.mjs`,
   `node tooling/docs/check-docs.mjs`.
 - Import specifiers are rewritten only in the generated `r/*.json` (decision 39). Source files
   keep `@nyc-tron/ui/components/...` and `@nitro-forge/...` imports. Never rewrite them in `packages/`.
@@ -87,6 +87,15 @@ read `llms.txt`, `SKILL.md` and `docs/components/<item>.md` first.
   The other keys, the 4 px radius and the status colours are locked.
 - `a11yStatus` is `reviewed-pass`, `reviewed-fail` or `unverified`. `verified` is reserved for a
   rendered check. Do not set it from a source read.
-- The tag in `tooling/registry/config.json` is a placeholder. Replace it with the real release
-  tag, rebuild, and commit the result.
+- The registry URLs use two moving refs in `tooling/registry/config.json`: `nitroForgeRef` (`master`)
+  and `nycTronRef` (`main`). They are branches, not release tags. When the owner cuts tags, run
+  `node tooling/registry/set-ref.mjs <nitroForgeRef> [nycTronRef]` and commit the regenerated files.
+- "No hard-coded values" means what `tooling/codemod/check-no-hardcoded.mjs` checks, listed in its
+  header: hex colours, numeric style properties, numeric JSX size props, Tailwind arbitrary values and
+  `fs(x + n)` offsets in `packages/*/src`. SVG geometry, data arrays, native code, `apps/` and tests are
+  outside it. The gate reports 76 findings, all allowlisted in `tooling/codemod/allowlist.json` with a
+  reason. Do not read that as "zero numbers remain".
+- Rebrand has two channels: `brandCssVariables` (CSS variables for the NYC-Tron controls) and
+  `brandThemeOverrides` (JS colours for `ForgeWorkspace`, `PersonaTurret`, `PersonaComposer`). See
+  `docs/components/brand-theme.md`.
 - Native code is out of scope for registry and docs work (decision 38).

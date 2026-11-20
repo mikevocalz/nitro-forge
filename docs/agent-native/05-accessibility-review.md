@@ -1,6 +1,6 @@
 # 05 Accessibility review (WCAG 2.1 AA), Nitro Forge
 
-Status: phase 1 step 5. Written against branch `agent-native-20261119`, `packages/studio-workspace` and `packages/icons`. Nothing under `packages/` or `apps/` changed.
+Status: phase 1 step 5. Written against branch `agent-native-20261119`, `packages/studio-workspace` and `packages/icons`. The review itself changed nothing under `packages/` or `apps/`. The later tokenization commit (3911299) did edit `packages/`, value-preservingly (`node tooling/codemod/prove-equivalence.mjs` shows zero diffs). The status-line citation in `a11y-status.json` was rechecked against the current tree: the `accessibilityLiveRegion` Text is at `index.tsx:273`.
 
 **Read from source only.** Nothing was rendered. No simulator, device, browser or screen reader was used, and no screenshot was taken. Every FAIL is arithmetic on values in the source or a fact visible in a file at the cited line. Anything that needs a render is UNVERIFIED and names the test that settles it. The one thing that ran is Node: `contrast.mjs` imports `theme.ts` and `forge-directions.ts` directly (Node 26 strips the types, no install), and the repo's own `forge-directions.test.ts` and `interaction-policy.test.ts` pass 17 of 17.
 

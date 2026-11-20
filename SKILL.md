@@ -56,11 +56,11 @@ npx shadcn@4.23.0 add @nitro-forge/persona-composer
 npx shadcn@4.23.0 mcp
 ```
 
-`npx shadcn@latest` was not run. `components.json` at the repo root points both namespaces at `https://raw.githubusercontent.com/mikevocalz/<repo>/<tag>/r/{name}.json`. The tag in `tooling/registry/config.json` is a placeholder, `v0.1.0-agent-native`. Until the owner publishes a release with that tag, those URLs return 404 and the commands above resolve nothing against GitHub. The local-server runs did not touch GitHub. The CLI accepted `text/plain` responses, which is what raw.githubusercontent.com serves. A live fetch from raw GitHub has not been done.
+`components.json` at the repo root points the two namespaces at `https://raw.githubusercontent.com/mikevocalz/<repo>/<ref>/r/{name}.json`. `<ref>` is `nitroForgeRef` (`master`) for `@nitro-forge` and `nycTronRef` (`main`) for `@nyc-tron`, both in `tooling/registry/config.json`. They are moving branches, not release tags, until the owner cuts tags: what an install fetches changes with each push, and the `@nyc-tron` items resolve only once NYC-Tron's `r/` is on its `main` branch. To pin, run `node tooling/registry/set-ref.mjs <nitroForgeRef> [nycTronRef]`; it rewrites the config and regenerates every generated file. The install proof against a local server accepted `text/plain` responses, which is what raw.githubusercontent.com serves. A live fetch from raw GitHub has not been done. `.mcp.json` runs `npx shadcn@latest mcp` because the mission specifies it. Pin it to `shadcn@4.23.0`, the version the registry is built with, if you want a reproducible tool version.
 
-Item names keep slashes: `@nyc-tron/forge/layers/LayerStack`. The `@nyc-tron` item names are the export keys after `./components/`. NYC-Tron had no built registry when this was written, so those names are assumed from its template rule and are not confirmed.
+Item names keep slashes: `@nyc-tron/forge/layers/LayerStack`. The `@nyc-tron` item names are the export keys after `./components/`. All 22 that Forge depends on exist in NYC-Tron's built `registry.json`; `check-imports` reads that registry on every run.
 
-Installed files land in `components/forge/` (icons in `components/forge/icons/`). Imports between them are relative. Imports of NYC-Tron files are written as `@/components/ui/<key>`, which is an assumption about where the `@nyc-tron` items install.
+Installed files land in `components/forge/` (icons in `components/forge/icons/`). Imports between them are relative. Imports of NYC-Tron files are written as `@/components/nyc-tron/ui/components/<key>`, which is where the `@nyc-tron` items install (their `files[].target` is `@components/nyc-tron/ui/components/<key>.tsx`, and `@components` expands to your `components` alias).
 
 ## Rebrand contract
 
@@ -74,7 +74,16 @@ A brand sets three keys per scheme in `brand.theme.json`: `accent`, `ink` and `s
 }
 ```
 
-Install `brand-theme` for the schema and the checker. `brandThemeProblems(file)` returns the locked keys it finds. `checkBrandTheme(file)` measures `ink` on `accent` (4.5:1), `accent` as a focus ring on the raised surface (3:1) and `text` on `soft` (4.5:1). The file is separate from `tooling/brand/brand.schema.json`, which stays closed and feeds the Expo plugin (decision 24).
+Install `brand-theme` for the schema and the checker. `brandThemeProblems(file)` returns the locked keys it finds, colours that are not six hex digits and a `defaultDensity` outside `compact`, `standard`, `comfortable`. `checkBrandTheme(file)` always returns six entries and never throws: it measures `ink` on `accent` (4.5:1), `accent` as a focus ring on the raised surface (3:1) and `text` on `soft` (4.5:1), and an incomplete file gives entries with `pass: false`, `ratio: null` and a `problem`.
+
+A brand reaches the UI through two channels. Apply both.
+
+| Channel | Call | Reaches | Does not reach |
+|---|---|---|---|
+| CSS variables | `brandCssVariables(theme, scheme)` on a `[data-brand]` block, `:root` or a `TokenScope` | NYC-Tron controls (Button, TabBar, SegmentedControl, Select, Banner) and Tailwind utilities reading `--color-primary`, `--color-accent`, `--color-focus`, `--color-on-primary`, `--color-primary-tint` | Colours Forge reads in JavaScript |
+| JS overrides | `brandThemeOverrides(theme, scheme)` as `themeOverrides` on `ForgeWorkspace` | Workspace header, rail label, studio glyphs and the soft chip behind them | The CSS variables |
+
+`PersonaTurret` (reads `colors.accent`) and `PersonaComposer` (reads `colors.accent` and `colors.soft`) take their own `colors` prop, which `ForgeWorkspace` does not fill, so pass the same overrides there. `PrismEditor`, `QuillTextEditor`, `ForgeDocumentStage` and the default `ForgeIcon` palette are reached by neither channel today. Installing `brand-theme` and applying only the CSS variables recolours the controls and leaves the workspace header, glyphs and turret on the old accent. The file is separate from `tooling/brand/brand.schema.json`, which stays closed and feeds the Expo plugin (decision 24).
 
 Deferred: the six neutral keys (`base`, `raised`, `deep`, `line`, `text`, `muted`) wait for an owner-supplied contrast check (decision 23). Struck: any radius override, because chrome keeps 4 px. Locked: status colours, `paper*`, every scale and hit target.
 
@@ -83,7 +92,7 @@ Deferred: the six neutral keys (`base`, `raised`, `deep`, `line`, `text`, `muted
 - Use the CSS variables from `studio-theme`, for example `--color-surface-raised`, not a hex value. `docs/agent-native/tokens.map.json` lists 234 proposed tokens with their dark and light values.
 - Every token carries the exact value of the literal it replaces, so tokenizing changes no pixel. Spacing keys are unit multiples (`space.2`, `space.1.5`), the same numbering as Tailwind.
 - Colour drift stays as separate tokens: icon accent `#6859E8` against workspace accent `#6950D1`, Prism blue against the launcher purple, stage paper `#F7F5ED` against `#FFFEFC`. Unifying them changes pixels and is the owner's call (decisions 5, 20, 26, 27).
-- Do not add a hex literal or a numeric style literal to a file under `packages/`. A gate for this is `tooling/codemod/check-no-hardcoded.mjs` when it exists in the repo.
+- Do not add a hex literal, a numeric style literal, a numeric JSX size prop, a Tailwind arbitrary value or a `fs(x + n)` offset to a file under `packages/`. `tooling/codemod/check-no-hardcoded.mjs` enforces exactly that list (its header is the definition). It is not a claim that no number remains: SVG geometry, data arrays, native Kotlin and Swift, `apps/` and tests are out of its scope, and 76 findings in 53 lines are allowlisted in `tooling/codemod/allowlist.json`, each with the reason no existing same-valued token fits.
 - Registry files are generated. Import specifiers are rewritten only in `r/*.json` (decision 39). The repo source keeps `@nyc-tron/ui/components/...` imports.
 
 ## Accessibility status
