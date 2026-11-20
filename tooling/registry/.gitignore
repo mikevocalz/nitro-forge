@@ -1,0 +1,3 @@
+# Generated staging copy of each item's files with import specifiers rewritten.
+# build.mjs rewrites it on every run; shadcn build reads it. Not committed.
+stage/

@@ -1,0 +1,45 @@
+{
+  "_tag": "PLACEHOLDER. No release tag exists yet. The owner replaces this one value with the real tag, then runs `node tooling/registry/build.mjs`. It sets the tag in components.json for both namespaces. Split it in two if NYC-Tron tags its registry separately.",
+  "tag": "v0.1.0-agent-native",
+  "namespace": "@nitro-forge",
+  "shadcnVersion": "4.23.0",
+  "owner": "mikevocalz",
+  "registries": {
+    "@nitro-forge": { "repo": "nitro-forge", "defaultBranch": "master" },
+    "@nyc-tron": { "repo": "NYC-Tron-UI" }
+  },
+  "urlTemplate": "https://raw.githubusercontent.com/{owner}/{repo}/{tag}/r/{name}.json",
+  "homepage": "https://github.com/mikevocalz/nitro-forge",
+  "installDir": "@components/forge",
+  "iconsSubdir": "icons",
+  "nycTron": {
+    "_note": "ASSUMED, not verified: NYC-Tron had no built registry when this was written. Items are named by export key after ./components/ with slashes kept (template rule, decision 33). Installed files are assumed to resolve at <importPrefix><key>. Change importPrefix here if the NYC-Tron registry targets differ.",
+    "specifierPrefix": "@nyc-tron/ui/components/",
+    "importPrefix": "@/components/ui/",
+    "providedBy": {
+      "gestures/drag-transport": ["gestures/PanResponderDrag", "gestures/GestureHandlerDrag"],
+      "forge/layers/layer-model": ["forge/layers/LayerStack"]
+    }
+  },
+  "npmVersions": {
+    "zustand": "5.1.0",
+    "react-native-svg": "15.16.0",
+    "react-native-gesture-handler": "^3.5.0",
+    "react-native-reanimated": "^4.7.1"
+  },
+  "builtinPackages": ["react", "react-native"],
+  "prerequisites": {
+    "@nitro-forge/ignition": {
+      "step": 1,
+      "reason": "Native host. shadcn copies files and cannot run nitrogen, pod install or CMake (decision 4).",
+      "doc": "docs/agent-native/install-order.md#step-1-nitro-forgeignition-host-native-module-nitrogen-output"
+    },
+    "@nitro-forge/studio-layout": {
+      "step": 3,
+      "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).",
+      "doc": "docs/agent-native/install-order.md#step-3-nitro-forgestudio-layout"
+    }
+  },
+  "provider": "studio-ui-provider",
+  "a11yMap": { "PASS": "reviewed-pass", "FAIL": "reviewed-fail", "UNVERIFIED": "unverified" }
+}
