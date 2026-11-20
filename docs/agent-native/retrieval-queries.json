@@ -1,0 +1,31 @@
+{
+ "schema": 1,
+ "about": "Queries an agent might send to `shadcn search @nitro-forge <query>`. Written before copy.json and before the baseline run, and not edited afterwards to fit the copy. `relevant` lists registry item ids; an empty list means no admitted item fits and the query is expected to fail. Items admitted: 17 (decision 2). Deferred adapters, engine packages and ignition are not registry items.",
+ "queries": [
+  {"id": "q01", "query": "workspace shell with docks and panels for a design studio", "relevant": ["forge-workspace"]},
+  {"id": "q02", "query": "editor chrome with undo, redo toolbar and status line", "relevant": ["forge-workspace"]},
+  {"id": "q03", "query": "error: Studio requires StudioUIProvider", "relevant": ["studio-ui-provider"]},
+  {"id": "q04", "query": "wire nyc-tron controls into the studio UI slots", "relevant": ["nyc-tron-host"]},
+  {"id": "q05", "query": "dark and light theme tokens for tailwind v4", "relevant": ["studio-theme"]},
+  {"id": "q06", "query": "uniwind native theme variables css", "relevant": ["studio-theme"]},
+  {"id": "q07", "query": "persona switcher dial", "relevant": ["persona-turret"]},
+  {"id": "q08", "query": "let users create a custom persona and export it", "relevant": ["persona-composer"]},
+  {"id": "q09", "query": "vector canvas editor with layers panel and shape tools", "relevant": ["prism-editor"]},
+  {"id": "q10", "query": "artboard with transparency checkerboard and drag to move", "relevant": ["prism-canvas"]},
+  {"id": "q11", "query": "pan gesture recognizer for web and native", "relevant": ["studio-gesture"]},
+  {"id": "q12", "query": "icon that fills in when selected", "relevant": ["forge-icon"]},
+  {"id": "q13", "query": "icon button with accessible label and 44 point touch target", "relevant": ["forge-icon-button"]},
+  {"id": "q14", "query": "rich text writing surface with draft and edit conflict", "relevant": ["quill-text-editor"]},
+  {"id": "q15", "query": "read-only preview of spreadsheet cells, slides and tracks", "relevant": ["forge-document-stage"]},
+  {"id": "q16", "query": "launcher list of studio apps with a task line each", "relevant": ["workspace-utilities"]},
+  {"id": "q17", "query": "turn a JSON parse error into a readable sentence", "relevant": ["workspace-utilities"]},
+  {"id": "q18", "query": "wcag contrast check for a palette", "relevant": ["forge-directions"]},
+  {"id": "q19", "query": "motion timing budget and precision scrubbing for instruments", "relevant": ["instrument-system"]},
+  {"id": "q20", "query": "list of personas, capabilities and surfaces", "relevant": ["persona-model"]},
+  {"id": "q21", "query": "spreadsheet grid with formulas", "relevant": [], "why": "tally-sheet-binding is deferred (decision 30); no admitted item."},
+  {"id": "q22", "query": "video timeline editor with clips", "relevant": [], "why": "splice-timeline-binding is deferred (decision 30); no admitted item."},
+  {"id": "q23", "query": "install the rust engine native module", "relevant": [], "why": "ignition is a prerequisite install, not a registry item (decision 4)."},
+  {"id": "q24", "query": "primary button with loading spinner", "relevant": [], "why": "Button lives in @nyc-tron (decision 1); search @nyc-tron instead."},
+  {"id": "q25", "query": "date picker", "relevant": [], "why": "No date picker exists in Forge or in the admitted set."}
+ ]
+}
