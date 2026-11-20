@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prism Editor | Nitro Forge</title>
+<meta name="description" content="Vector canvas editor: shape tools, layers panel, transforms, personas. Needs @nitro-forge/ignition first, StudioUIProvider, @nyc-tron.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html" aria-current="page">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>Prism Editor</h1>
+<p class="lead">Vector canvas editor: shape tools, layers panel, transforms, personas. Needs @nitro-forge/ignition first, StudioUIProvider, @nyc-tron.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>Needs StudioUIProvider. Install <code>studio-ui-provider</code> and <code>nyc-tron-host</code> first, then follow <a href="../install.html#step-7">install step 7</a>.</p><p>Needs <code>@nitro-forge/ignition</code> first (<a href="../install.html#step-1">step 1</a>). shadcn cannot install it.</p><p>Needs <code>@nitro-forge/studio-layout</code> first (<a href="../install.html#step-3">step 3</a>). shadcn cannot install it.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-prism-editor" hidden>Copy</button></header><pre id="cmd-prism-editor">npx shadcn@4.23.0 add @nitro-forge/prism-editor</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p>A Prism canvas editor over real engine commands: bounded PNG composite of the engine render, shape tools, four fill chips, transform actions, a layers panel (NYC-Tron <code>LayerStack</code> with a <code>PrecisionScrubber</code> for opacity) and a persona panel. Selection and panel state are local. Every edit is one engine op, so one undo step.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/prism-editor</code> (registry item)</li><li>Import: <code>import { PrismEditor } from '@/components/forge/prism-editor';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>react-native-svg</code> 15.16.0, <code>zustand</code> 5.1.0</li><li>Requires: <code>@nitro-forge/studio-ui-provider</code>; <code>@nitro-forge/studio-theme</code>; <code>@nitro-forge/forge-directions</code>; <code>@nitro-forge/forge-icon</code>; <code>@nitro-forge/persona-model</code>; <code>@nitro-forge/persona-turret</code>; <code>@nitro-forge/prism-canvas</code>; <code>@nitro-forge/studio-gesture</code>; <code>@nyc-tron/forge/inputs/PrecisionScrubber</code>; <code>@nyc-tron/forge/layers/LayerStack</code>; <code>@nitro-forge/ignition</code> (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); <code>@nitro-forge/studio-layout</code> (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports <code>base64ToBytes</code> and <code>bytesToBase64</code> from the package index; Prism engine document supplying <code>apply</code> and <code>reload</code> (engine facade, deferred); NYC-Tron <code>layer-model</code> type</li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/prism-editor</code></li><li>Installs: <code>zustand@5.1.0</code> (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/prism-editor.tsx</code>, <code>components/forge/prism-layers.ts</code>, <code>components/forge/prism-layer-label.ts</code>, <code>components/forge/prism-layout.ts</code>, <code>components/forge/prism-transform.ts</code>, <code>components/forge/rgba-png.ts</code></li></ul>
+<h2 id="props">Props</h2>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">state</td><td data-l="Type"><code>unknown</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Prism state <code>{width, height, layers}</code>.</td></tr><tr><td data-l="Name">apply</td><td data-l="Type"><code>(op, payload?) =&gt; Promise&lt;unknown&gt;</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Engine command port.</td></tr><tr><td data-l="Name">reload</td><td data-l="Type"><code>() =&gt; Promise&lt;void&gt;</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">documentIdentity</td><td data-l="Type"><code>unknown</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Rejects work finished after the document was replaced.</td></tr><tr><td data-l="Name">applyOwnsRefresh</td><td data-l="Type"><code>boolean</code></td><td data-l="Default">falsy</td><td data-l="Required">no</td><td data-l="Description">The apply owner already refreshes state.</td></tr><tr><td data-l="Name">renderCanvasOverlay</td><td data-l="Type"><code>(viewport) =&gt; ReactNode</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Host overlay on the exact measured artboard.</td></tr><tr><td data-l="Name">theme</td><td data-l="Type"><code>&quot;dark&quot; | &quot;light&quot;</code></td><td data-l="Default"><code>&quot;dark&quot;</code></td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">density</td><td data-l="Type"><code>WorkspaceDensity</code></td><td data-l="Default"><code>&quot;standard&quot;</code></td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">direction</td><td data-l="Type"><code>ForgeDirectionId</code></td><td data-l="Default"><code>&quot;workbench&quot;</code></td><td data-l="Required">no</td><td data-l="Description">Material comparison only.</td></tr><tr><td data-l="Name">busy</td><td data-l="Type"><code>boolean</code></td><td data-l="Default">falsy</td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">selectedLayerId, onSelectLayer</td><td data-l="Type"><code>number | null</code>, <code>(id) =&gt; void</code></td><td data-l="Default">local selection</td><td data-l="Required">no</td><td data-l="Description">Host-owned focus shared with inspectors.</td></tr><tr><td data-l="Name">personas</td><td data-l="Type"><code>PersonaStore</code></td><td data-l="Default">own store</td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">onPersonaEffect</td><td data-l="Type"><code>(effect: TurretEffect) =&gt; void</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Haptics hook.</td></tr><tr><td data-l="Name">onOpenPersonas, onComposePersona</td><td data-l="Type"><code>() =&gt; void</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Host-presented persona panel and composer.</td></tr></tbody></table>
+<h2 id="variants">Variants</h2>
+<h3 id="direction">direction</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value"><code>workbench</code></td><td data-l="Effect">Graphite or white ceramic chrome (default).</td></tr><tr><td data-l="Value"><code>optics</code></td><td data-l="Effect">Glass chrome; glass only if allowed by render prefs.</td></tr><tr><td data-l="Value"><code>atelier</code></td><td data-l="Effect">Ceramic with two shadow planes.</td></tr></tbody></table>
+<h3 id="width">width</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">under 600</td><td data-l="Effect">Persona panel is a bottom sheet over a scrim.</td></tr></tbody></table>
+<h2 id="states">States</h2>
+<table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Empty</td><td data-l="How it is set">no layers</td><td data-l="What the code does">EmptyState &quot;No layers&quot;, action &quot;Add rectangle&quot;.</td></tr><tr><td data-l="State">Rendering / busy</td><td data-l="How it is set">local store</td><td data-l="What the code does">Controls disabled.</td></tr><tr><td data-l="State">Error, preview error</td><td data-l="How it is set">engine rejects, preview over <code>MAX_PREVIEW_PIXELS</code> 1,048,576</td><td data-l="What the code does">Message shown.</td></tr><tr><td data-l="State">Layers open</td><td data-l="How it is set">Layers button</td><td data-l="What the code does">Panel width 280 (<code>PRISM_LAYERS_PANEL_WIDTH</code>); docking threshold 1100 (<code>PRISM_DOCKED_LAYERS_MIN_WIDTH</code>), side of the threshold not traced.</td></tr><tr><td data-l="State">Forced colors (web)</td><td data-l="How it is set">forced-colors media</td><td data-l="What the code does">Chips keep colour (<code>forcedColorAdjust: none</code>); accent becomes system Highlight.</td></tr></tbody></table>
+<h3 id="motion">Motion</h3>
+<p>No authored animation here; see persona-turret.</p>
+<h2 id="a11y">A11y</h2>
+<ul><li>Persona trigger: <code>accessibilityRole=&quot;button&quot;</code>, <code>accessibilityLabel=&quot;Persona: &lt;label&gt;&quot;</code>, <code>accessibilityHint=&quot;Opens the persona turret&quot;</code>, <code>aria-expanded</code>.</li><li>Persona panel: <code>role=&quot;dialog&quot;</code>, <code>aria-label=&quot;Personas&quot;</code>, modal on the sheet.</li><li>Fill chips: <code>accessibilityRole=&quot;button&quot;</code>, label &quot;Choose &lt;colour&gt; fill&quot;, <code>accessibilityState.selected</code>.</li><li>Composite <code>Image</code> label &quot;Prism canvas composite&quot;; tool rail &quot;Creation tools&quot;.</li><li>Icon buttons carry <code>aria-label</code>.</li><li>Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li><li>Failing: N05 1.4.11: light fill chips amber 1.98:1, rose 2.62:1, hairline 2.08:1 (prism-editor.tsx:444)</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { PrismEditor } from '@/components/forge/prism-editor';
+
+export const Demo = () =&gt; (
+  &lt;PrismEditor state={null} apply={async () =&gt; ({ data: null })} reload={async () =&gt; {}} /&gt;
+);</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Wire <code>apply</code> to the engine so each edit is one undo step.</li><li>Pass <code>selectedLayerId</code> and <code>onSelectLayer</code> when an inspector shares focus.</li><li>Use <code>renderCanvasOverlay</code> to draw on the measured artboard.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not change <code>direction</code> to change document content; it changes material only.</li><li>Do not feed previews above <code>MAX_PREVIEW_PIXELS</code>; validation rejects them.</li></ul>
+<h3 id="notes">Notes</h3>
+<ul><li>The Prism engine package is not imported here. <code>state</code> and <code>apply</code> are props, so any host can feed the editor. The only native-adjacent import is the ignition index.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
+npx shadcn@4.23.0 add @nitro-forge/prism-editor</pre>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>yes</dd>
+<dt>Needs ignition</dt><dd>yes, step 1</dd>
+<dt>Needs studio-layout</dt><dd>yes, step 3</dd>
+<dt>Accessibility</dt><dd>reviewed-fail: source read, failures found</dd>
+<dt>Peers</dt><dd><code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>react-native-svg</code> 15.16.0, <code>zustand</code> 5.1.0</dd>
+<dt>Installs</dt><dd><code>zustand@5.1.0</code></dd>
+<dt>Source files</dt><dd class="mono">studio-workspace/src/prism-editor.tsx<br>studio-workspace/src/prism-layers.ts<br>studio-workspace/src/prism-layer-label.ts<br>studio-workspace/src/prism-layout.ts<br>studio-workspace/src/prism-transform.ts<br>studio-workspace/src/rgba-png.ts</dd>
+<dt>Generated from</dt><dd class="mono">bf109fd5</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, tag <code>v0.1.0-agent-native</code> (placeholder)</span>
+<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
+<span>Generated from inputs <code>bf109fd5</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

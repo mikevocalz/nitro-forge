@@ -3,6 +3,7 @@
   "items": {
     "forge-workspace": {
       "addedByImports": [
+        "@nitro-forge/forge-directions",
         "@nitro-forge/forge-document-stage",
         "@nitro-forge/quill-text-editor",
         "@nitro-forge/studio-gesture"
@@ -13,13 +14,17 @@
       ]
     },
     "forge-document-stage": {
-      "addedByImports": [],
+      "addedByImports": [
+        "@nitro-forge/forge-directions"
+      ],
       "inHandoffOnly": [
         "@nitro-forge/studio-theme"
       ]
     },
     "quill-text-editor": {
-      "addedByImports": [],
+      "addedByImports": [
+        "@nitro-forge/forge-directions"
+      ],
       "inHandoffOnly": []
     },
     "prism-editor": {
@@ -29,7 +34,9 @@
       "inHandoffOnly": []
     },
     "prism-canvas": {
-      "addedByImports": [],
+      "addedByImports": [
+        "@nitro-forge/forge-directions"
+      ],
       "inHandoffOnly": []
     },
     "studio-gesture": {
@@ -45,6 +52,7 @@
     },
     "persona-composer": {
       "addedByImports": [
+        "@nitro-forge/forge-directions",
         "@nitro-forge/studio-gesture"
       ],
       "inHandoffOnly": []
@@ -76,7 +84,9 @@
       "inHandoffOnly": []
     },
     "forge-directions": {
-      "addedByImports": [],
+      "addedByImports": [
+        "@nitro-forge/instrument-system"
+      ],
       "inHandoffOnly": []
     },
     "forge-icon": {

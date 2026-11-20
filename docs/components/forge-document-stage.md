@@ -7,7 +7,7 @@ docs: "handwritten"
 platforms: []
 category: "display"
 tokens: ["--border-width-hairline", "--color-stage-caption", "--color-stage-cell-text", "--color-stage-clip-audio", "--color-stage-clip-video", "--color-stage-empty-hint", "--color-stage-fill-fallback", "--color-stage-grid-head", "--color-stage-grid-head-text", "--color-stage-grid-line", "--color-stage-heading", "--color-stage-on-clip", "--color-stage-paper", "--color-stage-paper-text", "--color-stage-paper-text-muted", "--color-stage-paper-title", "--color-stage-quote-rule", "--color-stage-slide-text", "--color-stage-track", "--color-stage-track-border", "--color-stage-track-label", "--font-weight-medium", "--radius-control", "--radius-paper", "--spacing-fixed-canvas", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-section", "--spacing-fixed-stack", "--text-body", "--text-label", "--text-micro"]
-registryDependencies: ["@nitro-forge/studio-ui-provider"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -26,8 +26,8 @@ Default read-only stage. It projects live engine state per studio: quill text an
 - Package: `@nitro-forge/forge-document-stage` (registry item)
 - Import: `import { ForgeDocumentStage } from '@/components/forge/index';`
 - Peers: `react` >=19, `react-native` >=0.81
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/forge-document-stage`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-document-stage`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/stage.tsx`
 

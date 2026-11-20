@@ -27,7 +27,7 @@ Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package wit
 - Import: `import { APP_MANIFESTS } from '@/components/forge/app-manifest';`
 - Peers: none
 - Requires: `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/workspace-utilities`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/workspace-utilities`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/app-manifest.ts`, `components/forge/json-problem.ts`
 

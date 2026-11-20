@@ -25,7 +25,7 @@ One-finger gesture recogniser with a shared contract. Web uses `PanResponder`; n
 - Import: `import { StudioGesture } from '@/components/forge/studio-gesture';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-gesture-handler` >=3.4 <4 (native file)
 - Requires: `@nyc-tron/gestures/GestureHandlerDrag`; `@nyc-tron/gestures/PanResponderDrag`
-- Command: `npx shadcn@latest add @nitro-forge/studio-gesture`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/studio-gesture`
 - Installs: `react-native-gesture-handler@^3.5.0` (the CLI adds them when they are absent)
 - Files: `components/forge/studio-gesture.tsx`, `components/forge/studio-gesture.native.tsx`, `components/forge/studio-gesture-types.ts`, `components/forge/keyboard-event.ts`, `components/forge/drag-transport.ts`, `components/forge/drag-transport.native.ts`
 

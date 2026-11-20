@@ -25,7 +25,7 @@ The token source and its two generated stylesheets. `theme.ts` defines `workspac
 - Import: `import { workspaceThemes, workspaceScale, resolveWorkspaceScale } from '@/components/forge/theme';`
 - Peers: none at runtime
 - Requires: Generator step: `pnpm --filter @nitro-forge/studio-workspace build:theme` (needs a Node with type stripping; root requires >=24.3.0)
-- Command: `npx shadcn@latest add @nitro-forge/studio-theme`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/studio-theme`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/theme.ts`, `components/forge/theme.css`, `components/forge/theme.native.css`
 

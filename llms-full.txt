@@ -90,7 +90,7 @@ The slot contract between Studio and the host UI. `StudioUIProvider` puts a `Stu
 - Import: `import { StudioUIProvider, View, Text, Button /* and the other wrappers */ } from '@/components/forge/ui';`
 - Peers: `react` >=19, `react-native` >=0.81
 - Requires: A `StudioUIComponents` implementation (registry item `nyc-tron-host` builds one from NYC-Tron)
-- Command: `npx shadcn@latest add @nitro-forge/studio-ui-provider`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/ui.tsx`
 
@@ -210,7 +210,7 @@ The token source and its two generated stylesheets. `theme.ts` defines `workspac
 - Import: `import { workspaceThemes, workspaceScale, resolveWorkspaceScale } from '@/components/forge/theme';`
 - Peers: none at runtime
 - Requires: Generator step: `pnpm --filter @nitro-forge/studio-workspace build:theme` (needs a Node with type stripping; root requires >=24.3.0)
-- Command: `npx shadcn@latest add @nitro-forge/studio-theme`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/studio-theme`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/theme.ts`, `components/forge/theme.css`, `components/forge/theme.native.css`
 
@@ -307,7 +307,7 @@ The rebrand contract as a file and a validator. A brand sets three keys per sche
 - Import: `import { brandThemeProblems, checkBrandTheme, brandCssVariables } from '@/components/forge/brand-theme';`
 - Peers: none
 - Requires: `@nitro-forge/studio-theme`
-- Command: `npx shadcn@latest add @nitro-forge/brand-theme`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/brand-theme`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/brand-theme.ts`, `components/forge/brand.theme.schema.json`, `components/forge/brand.theme.json`
 
@@ -383,7 +383,7 @@ docs: "handwritten"
 platforms: []
 category: "forge"
 tokens: ["--color-chrome-accent", "--color-chrome-body", "--color-chrome-chip-edge", "--color-chrome-chip-ring", "--color-chrome-disabled-ink", "--color-chrome-edge", "--color-chrome-muted", "--color-chrome-press", "--color-chrome-rule", "--color-chrome-selected", "--color-chrome-selected-muted", "--color-chrome-text", "--color-chrome-well", "--color-instrument-atelier-accent", "--color-instrument-atelier-accent-halo", "--color-instrument-atelier-bezel-0", "--color-instrument-atelier-bezel-1", "--color-instrument-atelier-face-0", "--color-instrument-atelier-face-1", "--color-instrument-atelier-face-text", "--color-instrument-atelier-knurl", "--color-instrument-atelier-lathe", "--color-instrument-atelier-muted", "--color-instrument-atelier-notch", "--color-instrument-atelier-panel", "--color-instrument-atelier-panel-edge", "--color-instrument-atelier-panel-solid", "--color-instrument-atelier-text", "--color-instrument-optics-accent", "--color-instrument-optics-accent-halo", "--color-instrument-optics-bezel-0", "--color-instrument-optics-bezel-1", "--color-instrument-optics-bezel-2", "--color-instrument-optics-bezel-3", "--color-instrument-optics-face-0", "--color-instrument-optics-face-1", "--color-instrument-optics-face-text", "--color-instrument-optics-knurl", "--color-instrument-optics-lathe", "--color-instrument-optics-muted", "--color-instrument-optics-notch", "--color-instrument-optics-panel", "--color-instrument-optics-panel-edge", "--color-instrument-optics-panel-solid", "--color-instrument-optics-text", "--color-instrument-workbench-accent", "--color-instrument-workbench-accent-halo", "--color-instrument-workbench-bezel-0", "--color-instrument-workbench-bezel-1", "--color-instrument-workbench-face-0", "--color-instrument-workbench-face-1", "--color-instrument-workbench-face-text", "--color-instrument-workbench-knurl", "--color-instrument-workbench-lathe", "--color-instrument-workbench-muted", "--color-instrument-workbench-notch", "--color-instrument-workbench-panel", "--color-instrument-workbench-panel-edge", "--color-instrument-workbench-panel-solid", "--color-instrument-workbench-text", "--color-lab-ground", "--color-lab-mat", "--color-lab-paper", "--color-lab-paper-ink", "--shadow-chrome-depth", "--shadow-instrument-atelier-dial", "--shadow-instrument-atelier-panel", "--shadow-instrument-optics-dial", "--shadow-instrument-optics-panel", "--shadow-instrument-workbench-dial", "--shadow-instrument-workbench-panel"]
-registryDependencies: ["@nitro-forge/studio-theme"]
+registryDependencies: ["@nitro-forge/instrument-system", "@nitro-forge/studio-theme"]
 a11yStatus: "reviewed-pass"
 ---
 
@@ -400,10 +400,10 @@ Three material directions for the Prism chrome and persona turret (workbench, op
 - Package: `@nitro-forge/forge-directions` (registry item)
 - Import: `import { forgeDirections, chromePalette, nycTronTokens } from '@/components/forge/forge-directions';`
 - Peers: none
-- Requires: `@nitro-forge/studio-theme`
-- Command: `npx shadcn@latest add @nitro-forge/forge-directions`
+- Requires: `@nitro-forge/studio-theme`; `@nitro-forge/instrument-system`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-directions`
 - Installs: none (the CLI adds them when they are absent)
-- Files: `components/forge/forge-directions.ts`
+- Files: `components/forge/forge-directions.ts`, `components/forge/tokens.ts`
 
 ## Props
 
@@ -476,7 +476,7 @@ docs: "handwritten"
 platforms: []
 category: "display"
 tokens: ["--border-width-hairline", "--color-stage-caption", "--color-stage-cell-text", "--color-stage-clip-audio", "--color-stage-clip-video", "--color-stage-empty-hint", "--color-stage-fill-fallback", "--color-stage-grid-head", "--color-stage-grid-head-text", "--color-stage-grid-line", "--color-stage-heading", "--color-stage-on-clip", "--color-stage-paper", "--color-stage-paper-text", "--color-stage-paper-text-muted", "--color-stage-paper-title", "--color-stage-quote-rule", "--color-stage-slide-text", "--color-stage-track", "--color-stage-track-border", "--color-stage-track-label", "--font-weight-medium", "--radius-control", "--radius-paper", "--spacing-fixed-canvas", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-section", "--spacing-fixed-stack", "--text-body", "--text-label", "--text-micro"]
-registryDependencies: ["@nitro-forge/studio-ui-provider"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -495,8 +495,8 @@ Default read-only stage. It projects live engine state per studio: quill text an
 - Package: `@nitro-forge/forge-document-stage` (registry item)
 - Import: `import { ForgeDocumentStage } from '@/components/forge/index';`
 - Peers: `react` >=19, `react-native` >=0.81
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/forge-document-stage`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-document-stage`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/stage.tsx`
 
@@ -586,7 +586,7 @@ Shared icon. Idle is a rounded outline, selected a filled silhouette, with a cro
 - Import: `import { ForgeIcon } from '@/components/forge/icons/ForgeIcon';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` >=15 (all optional peers; root patches 15.16.0)
 - Requires: none
-- Command: `npx shadcn@latest add @nitro-forge/forge-icon`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-icon`
 - Installs: `react-native-svg@15.16.0` (the CLI adds them when they are absent)
 - Files: `components/forge/icons/ForgeIcon.js`, `components/forge/icons/state.js`, `components/forge/icons/tokens.js`, `components/forge/icons/glyphs.js`, `components/forge/icons/catalog.js`, `components/forge/icons/ForgeIcon.d.ts`, `components/forge/icons/index.d.ts`, `components/forge/icons/index.js`
 
@@ -699,7 +699,7 @@ Pressable wrapper around `ForgeIcon` with a minimum 44 by 44 hit target and hit 
 - Import: `import { ForgeIconButton } from '@/components/forge/icons/ForgeIcon';`
 - Peers: same as forge-icon
 - Requires: `@nitro-forge/forge-icon`
-- Command: `npx shadcn@latest add @nitro-forge/forge-icon-button`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-icon-button`
 - Installs: none (the CLI adds them when they are absent)
 - Files: none; the item only depends on forge-icon
 
@@ -774,7 +774,7 @@ docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "shell"
 tokens: ["--border-width-hairline", "--border-width-strong", "--color-accent", "--color-border", "--color-icon-on-active", "--color-on-primary", "--color-primary-tint", "--color-surface-base", "--color-surface-raised", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-weight-medium", "--font-weight-semibold", "--radius-card", "--radius-control", "--shadow-float-md", "--shadow-float-sm", "--spacing-canvas-header", "--spacing-canvas-rail", "--spacing-canvas-toolbar", "--spacing-element", "--spacing-fixed-element", "--spacing-fixed-stack", "--spacing-fixed-status", "--spacing-group", "--spacing-header", "--spacing-inset", "--spacing-rail", "--spacing-stack", "--spacing-status", "--spacing-target", "--spacing-toolbar", "--text-body", "--text-label", "--text-micro", "--z-chrome"]
-registryDependencies: ["@nitro-forge/forge-document-stage", "@nitro-forge/forge-icon", "@nitro-forge/persona-turret", "@nitro-forge/quill-text-editor", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-document-stage", "@nitro-forge/forge-icon", "@nitro-forge/persona-turret", "@nitro-forge/quill-text-editor", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -793,8 +793,8 @@ Shared inner editor chrome for every studio: header with title and Save, a toolb
 - Package: `@nitro-forge/forge-workspace` (registry item)
 - Import: `import { ForgeWorkspace, createStudioWorkspaceStore, ForgeDocumentStage } from '@/components/forge/index';`
 - Peers: `react`, `react-native`, `react-native-gesture-handler` >=3.4 <4, `zustand` 5.1.0; `react-native-reanimated` >=4.7.1 <5 only through persona-turret on native
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-document-stage`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-turret`; `@nitro-forge/quill-text-editor`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); NYC-Tron parts reached through the provider: Menu, SegmentedControl, TabBar, Button, IconButton, KeyValueList, FieldGroup, ErrorMessage, Toolbar, List, ListItem
-- Command: `npx shadcn@latest add @nitro-forge/forge-workspace`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-document-stage`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-turret`; `@nitro-forge/quill-text-editor`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); NYC-Tron parts reached through the provider: Menu, SegmentedControl, TabBar, Button, IconButton, KeyValueList, FieldGroup, ErrorMessage, Toolbar, List, ListItem
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-workspace`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/index.tsx`, `components/forge/model.ts`
 
@@ -930,7 +930,7 @@ Non-visual policy: 18 instrument blueprints with input modalities and edit bound
 - Import: `import { forgeInstrumentBlueprints, forgeMotionProfile, planForgeOverlay } from '@/components/forge/instrument-system';`  (the original line carried a note; see Notes)
 - Peers: none
 - Requires: none
-- Command: `npx shadcn@latest add @nitro-forge/instrument-system`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/instrument-system`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/instrument-system.ts`, `components/forge/interaction-policy.ts`
 
@@ -1032,7 +1032,7 @@ a11yStatus: "unverified"
 - Import: `import { nycTronStudioUI } from '@/components/forge/nyc-tron-host';`
 - Peers: `react` >=19, `react-native` >=0.81
 - Requires: `@nitro-forge/studio-ui-provider`; `@nyc-tron/Button`; `@nyc-tron/Card`; `@nyc-tron/FieldGroup`; `@nyc-tron/IconButton`; `@nyc-tron/List`; `@nyc-tron/SegmentedControl`; `@nyc-tron/Select`; `@nyc-tron/TabBar`; `@nyc-tron/Toolbar`; `@nyc-tron/content/KeyValueList`; `@nyc-tron/feedback/Badge`; `@nyc-tron/feedback/Banner`; `@nyc-tron/feedback/EmptyState`; `@nyc-tron/feedback/ErrorMessage`; `@nyc-tron/files/DropZone`; `@nyc-tron/overlays/AnchoredPopover`; `@nyc-tron/theme/NightScope`
-- Command: `npx shadcn@latest add @nitro-forge/nyc-tron-host`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/nyc-tron-host`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/nyc-tron-host.tsx`, `components/forge/nyc-tron-options.ts`
 
@@ -1112,7 +1112,7 @@ docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "forge"
 tokens: ["--border-width-hairline", "--font-mono-plain", "--font-weight-bold", "--font-weight-semibold", "--radius-card", "--radius-control", "--shadow-segment-active", "--spacing-element", "--spacing-fixed-rail", "--spacing-fixed-status", "--spacing-group", "--spacing-inset", "--spacing-section", "--spacing-stack", "--spacing-target", "--text-body", "--text-label", "--text-title"]
-registryDependencies: ["@nitro-forge/forge-icon", "@nitro-forge/instrument-system", "@nitro-forge/persona-model", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/instrument-system", "@nitro-forge/persona-model", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -1131,8 +1131,8 @@ A form for naming a persona, ordering its instrument rail, choosing capabilities
 - Package: `@nitro-forge/persona-composer` (registry item)
 - Import: `import { PersonaComposer } from '@/components/forge/persona-composer';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-icon`; `@nitro-forge/instrument-system`; `@nitro-forge/persona-model`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/persona-composer`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/instrument-system`; `@nitro-forge/persona-model`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/persona-composer`
 - Installs: `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/persona-composer.tsx`, `components/forge/persona-composer-model.ts`
 
@@ -1240,7 +1240,7 @@ Non-visual persona model: 4 built-in personas (vector, pixel, layout, sketch), 1
 - Import: `import { createPersonaStore } from '@/components/forge/persona-store';`
 - Peers: `zustand` 5.1.0
 - Requires: `@nitro-forge/instrument-system`; `@nitro-forge/workspace-utilities`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/persona-model`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/persona-model`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/persona.ts`, `components/forge/persona-store.ts`
 
@@ -1323,7 +1323,7 @@ The design studio persona switcher: a four-stop machined dial with a detent per 
 - Import: `import { PersonaTurret, useStudioTextScale } from '@/components/forge/persona-turret';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0, `react-native-reanimated` >=4.7.1 <5 (native motion file)
 - Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/persona-model`; `@nitro-forge/studio-gesture`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/persona-turret`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/persona-turret`
 - Installs: `react-native-reanimated@^4.7.1`, `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/persona-turret.tsx`, `components/forge/turret.ts`, `components/forge/turret-motion.tsx`, `components/forge/turret-motion.native.tsx`, `components/forge/turret-motion-types.ts`
 
@@ -1413,7 +1413,7 @@ docs: "handwritten"
 platforms: []
 category: "forge"
 tokens: ["--border-width-strong", "--color-artboard-checker-a", "--color-artboard-checker-b", "--color-on-overlay-chip", "--color-overlay-chip", "--shadow-artboard", "--spacing-fixed-stack"]
-registryDependencies: ["@nitro-forge/studio-gesture", "@nitro-forge/studio-ui-provider"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-gesture", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -1430,8 +1430,8 @@ The Prism artboard: a transparency checker, the engine composite as children, an
 - Package: `@nitro-forge/prism-canvas` (registry item)
 - Import: `import { PrismCanvas, ARTBOARD_CHECKER } from '@/components/forge/prism-canvas';`  (the original line carried a note; see Notes)
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-gesture`
-- Command: `npx shadcn@latest add @nitro-forge/prism-canvas`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-gesture`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/prism-canvas`
 - Installs: `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/prism-canvas.tsx`, `components/forge/prism-canvas-model.ts`
 
@@ -1537,7 +1537,7 @@ A Prism canvas editor over real engine commands: bounded PNG composite of the en
 - Import: `import { PrismEditor } from '@/components/forge/prism-editor';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
 - Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-model`; `@nitro-forge/persona-turret`; `@nitro-forge/prism-canvas`; `@nitro-forge/studio-gesture`; `@nyc-tron/forge/inputs/PrecisionScrubber`; `@nyc-tron/forge/layers/LayerStack`; `@nitro-forge/ignition` (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports `base64ToBytes` and `bytesToBase64` from the package index; Prism engine document supplying `apply` and `reload` (engine facade, deferred); NYC-Tron `layer-model` type
-- Command: `npx shadcn@latest add @nitro-forge/prism-editor`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/prism-editor`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/prism-editor.tsx`, `components/forge/prism-layers.ts`, `components/forge/prism-layer-label.ts`, `components/forge/prism-layout.ts`, `components/forge/prism-transform.ts`, `components/forge/rgba-png.ts`
 
@@ -1638,7 +1638,7 @@ docs: "handwritten"
 platforms: []
 category: "input"
 tokens: ["--color-accent", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-text-muted", "--font-editorial", "--radius-control", "--radius-paper", "--shadow-page", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-page", "--spacing-group", "--spacing-target"]
-registryDependencies: ["@nitro-forge/forge-icon", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -1655,8 +1655,8 @@ A writing surface for Quill documents, supplied through the stage slot. It keeps
 - Package: `@nitro-forge/quill-text-editor` (registry item)
 - Import: `import { QuillTextEditor, type QuillTextEditorHandle } from '@/components/forge/index';`
 - Peers: `react` >=19, `react-native` >=0.81, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-icon`; Quill engine document supplying `apply` and `reload` (engine facade, deferred)
-- Command: `npx shadcn@latest add @nitro-forge/quill-text-editor`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; Quill engine document supplying `apply` and `reload` (engine facade, deferred)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/quill-text-editor`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/text-editor.tsx`, `components/forge/text-diff.ts`
 
@@ -1770,7 +1770,7 @@ One-finger gesture recogniser with a shared contract. Web uses `PanResponder`; n
 - Import: `import { StudioGesture } from '@/components/forge/studio-gesture';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-gesture-handler` >=3.4 <4 (native file)
 - Requires: `@nyc-tron/gestures/GestureHandlerDrag`; `@nyc-tron/gestures/PanResponderDrag`
-- Command: `npx shadcn@latest add @nitro-forge/studio-gesture`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/studio-gesture`
 - Installs: `react-native-gesture-handler@^3.5.0` (the CLI adds them when they are absent)
 - Files: `components/forge/studio-gesture.tsx`, `components/forge/studio-gesture.native.tsx`, `components/forge/studio-gesture-types.ts`, `components/forge/keyboard-event.ts`, `components/forge/drag-transport.ts`, `components/forge/drag-transport.native.ts`
 
@@ -1865,7 +1865,7 @@ Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package wit
 - Import: `import { APP_MANIFESTS } from '@/components/forge/app-manifest';`
 - Peers: none
 - Requires: `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/workspace-utilities`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/workspace-utilities`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/app-manifest.ts`, `components/forge/json-problem.ts`
 

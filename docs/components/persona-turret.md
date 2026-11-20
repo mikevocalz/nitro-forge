@@ -27,7 +27,7 @@ The design studio persona switcher: a four-stop machined dial with a detent per 
 - Import: `import { PersonaTurret, useStudioTextScale } from '@/components/forge/persona-turret';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0, `react-native-reanimated` >=4.7.1 <5 (native motion file)
 - Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/persona-model`; `@nitro-forge/studio-gesture`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/persona-turret`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/persona-turret`
 - Installs: `react-native-reanimated@^4.7.1`, `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/persona-turret.tsx`, `components/forge/turret.ts`, `components/forge/turret-motion.tsx`, `components/forge/turret-motion.native.tsx`, `components/forge/turret-motion-types.ts`
 

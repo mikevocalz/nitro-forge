@@ -27,7 +27,7 @@ Non-visual persona model: 4 built-in personas (vector, pixel, layout, sketch), 1
 - Import: `import { createPersonaStore } from '@/components/forge/persona-store';`
 - Peers: `zustand` 5.1.0
 - Requires: `@nitro-forge/instrument-system`; `@nitro-forge/workspace-utilities`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/persona-model`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/persona-model`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/persona.ts`, `components/forge/persona-store.ts`
 

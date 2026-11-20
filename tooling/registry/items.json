@@ -18,6 +18,12 @@
    "from": "forge-workspace",
    "to": "studio-gesture",
    "reason": "persona-composer imports it; leaving it in forge-workspace pulled the whole chrome into the composer."
+  },
+  {
+   "file": "tokens.ts",
+   "from": null,
+   "to": "forge-directions",
+   "reason": "Added after the handoff by the tokenization pass (72506ec). Nine components import it. It reads theme.ts, forge-directions.ts and interaction-policy.ts, so it cannot live in studio-theme without a cycle (forge-directions already depends on studio-theme). forge-directions now depends on instrument-system for interaction-policy."
   }
  ],
  "items": [
@@ -704,6 +710,10 @@
     {
      "from": "packages/studio-workspace/src/forge-directions.ts",
      "target": "forge-directions.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/tokens.ts",
+     "target": "tokens.ts"
     }
    ]
   },

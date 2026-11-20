@@ -25,7 +25,7 @@ Non-visual policy: 18 instrument blueprints with input modalities and edit bound
 - Import: `import { forgeInstrumentBlueprints, forgeMotionProfile, planForgeOverlay } from '@/components/forge/instrument-system';`  (the original line carried a note; see Notes)
 - Peers: none
 - Requires: none
-- Command: `npx shadcn@latest add @nitro-forge/instrument-system`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/instrument-system`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/instrument-system.ts`, `components/forge/interaction-policy.ts`
 

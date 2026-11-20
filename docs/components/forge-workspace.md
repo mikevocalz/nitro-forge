@@ -7,7 +7,7 @@ docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "shell"
 tokens: ["--border-width-hairline", "--border-width-strong", "--color-accent", "--color-border", "--color-icon-on-active", "--color-on-primary", "--color-primary-tint", "--color-surface-base", "--color-surface-raised", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-weight-medium", "--font-weight-semibold", "--radius-card", "--radius-control", "--shadow-float-md", "--shadow-float-sm", "--spacing-canvas-header", "--spacing-canvas-rail", "--spacing-canvas-toolbar", "--spacing-element", "--spacing-fixed-element", "--spacing-fixed-stack", "--spacing-fixed-status", "--spacing-group", "--spacing-header", "--spacing-inset", "--spacing-rail", "--spacing-stack", "--spacing-status", "--spacing-target", "--spacing-toolbar", "--text-body", "--text-label", "--text-micro", "--z-chrome"]
-registryDependencies: ["@nitro-forge/forge-document-stage", "@nitro-forge/forge-icon", "@nitro-forge/persona-turret", "@nitro-forge/quill-text-editor", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-document-stage", "@nitro-forge/forge-icon", "@nitro-forge/persona-turret", "@nitro-forge/quill-text-editor", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -26,8 +26,8 @@ Shared inner editor chrome for every studio: header with title and Save, a toolb
 - Package: `@nitro-forge/forge-workspace` (registry item)
 - Import: `import { ForgeWorkspace, createStudioWorkspaceStore, ForgeDocumentStage } from '@/components/forge/index';`
 - Peers: `react`, `react-native`, `react-native-gesture-handler` >=3.4 <4, `zustand` 5.1.0; `react-native-reanimated` >=4.7.1 <5 only through persona-turret on native
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-document-stage`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-turret`; `@nitro-forge/quill-text-editor`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); NYC-Tron parts reached through the provider: Menu, SegmentedControl, TabBar, Button, IconButton, KeyValueList, FieldGroup, ErrorMessage, Toolbar, List, ListItem
-- Command: `npx shadcn@latest add @nitro-forge/forge-workspace`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-document-stage`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-turret`; `@nitro-forge/quill-text-editor`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); NYC-Tron parts reached through the provider: Menu, SegmentedControl, TabBar, Button, IconButton, KeyValueList, FieldGroup, ErrorMessage, Toolbar, List, ListItem
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-workspace`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/index.tsx`, `components/forge/model.ts`
 

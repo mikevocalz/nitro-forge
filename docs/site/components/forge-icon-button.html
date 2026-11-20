@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forge Icon Button | Nitro Forge</title>
+<meta name="description" content="Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html" aria-current="page">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>Forge Icon Button</h1>
+<p class="lead">Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>No provider needed.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-forge-icon-button" hidden>Copy</button></header><pre id="cmd-forge-icon-button">npx shadcn@4.23.0 add @nitro-forge/forge-icon-button</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p>Pressable wrapper around <code>ForgeIcon</code> with a minimum 44 by 44 hit target and hit slop 4. It throws a <code>TypeError</code> when <code>label</code> is blank, so an unnamed icon button cannot ship. Same source file as <code>forge-icon</code>; the split is an authoring choice.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/forge-icon-button</code> (registry item)</li><li>Import: <code>import { ForgeIconButton } from '@/components/forge/icons/ForgeIcon';</code></li><li>Peers: same as forge-icon</li><li>Requires: <code>@nitro-forge/forge-icon</code></li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/forge-icon-button</code></li><li>Installs: none (the CLI adds them when they are absent)</li><li>Files: none; the item only depends on forge-icon</li></ul>
+<h2 id="props">Props</h2>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">name</td><td data-l="Type"><code>string</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Icon id.</td></tr><tr><td data-l="Name">label</td><td data-l="Type"><code>string</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Non-blank; becomes <code>accessibilityLabel</code>.</td></tr><tr><td data-l="Name">onPress</td><td data-l="Type"><code>() =&gt; void</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">selected, disabled, loading</td><td data-l="Type"><code>boolean</code></td><td data-l="Default">false</td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">size</td><td data-l="Type">as <code>ForgeIcon</code></td><td data-l="Default"><code>&quot;default&quot;</code></td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">testID</td><td data-l="Type"><code>string</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">rest</td><td data-l="Type">any other <code>ForgeIcon</code> prop</td><td data-l="Default"></td><td data-l="Required">no</td><td data-l="Description">Forwarded.</td></tr></tbody></table>
+<h2 id="variants">Variants</h2>
+<h3 id="inherits">inherits</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">forge-icon</td><td data-l="Effect">Same outline, filled and size variants.</td></tr></tbody></table>
+<h2 id="states">States</h2>
+<table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Disabled or loading</td><td data-l="How it is set"><code>disabled</code> or <code>loading</code></td><td data-l="What the code does">Pressable disabled; loading shows the spin.</td></tr><tr><td data-l="State">Pressed</td><td data-l="How it is set">Pressable state</td><td data-l="What the code does">Fed to the icon as <code>pressed</code>.</td></tr><tr><td data-l="State">Selected</td><td data-l="How it is set"><code>selected</code></td><td data-l="What the code does"><code>accessibilityState.selected</code>.</td></tr></tbody></table>
+<h3 id="motion">Motion</h3>
+<p>Inherits <code>forge-icon</code>.</p>
+<h2 id="a11y">A11y</h2>
+<ul><li><code>accessibilityRole=&quot;button&quot;</code>, <code>accessibilityLabel={label}</code>, <code>accessibilityState {selected, disabled, busy}</code>.</li><li>Target <code>minWidth: 44</code>, <code>minHeight: 44</code>, <code>hitSlop: 4</code>.</li><li>A blank label throws.</li><li>Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li><li>Failing: N08 1.4.1, 4.1.2: status is not in accessibilityState or accessibilityValue (ForgeIcon.js:91-93)</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { ForgeIconButton } from '@/components/forge/icons/ForgeIcon';
+
+export const Demo = () =&gt; &lt;ForgeIconButton name=&quot;save&quot; label=&quot;Save&quot; onPress={() =&gt; {}} /&gt;;</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Pass a visible-meaning <code>label</code> (<code>label</code>).</li><li>Set <code>loading</code> from real work so the button blocks double presses.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not pass an empty <code>label</code>; it throws.</li><li>Do not use an id outside <code>glyphIds</code>; the icon renders nothing but the 44 pt target remains.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>npx shadcn@4.23.0 add @nitro-forge/forge-icon-button</pre>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>no</dd>
+<dt>Needs ignition</dt><dd>no</dd>
+<dt>Needs studio-layout</dt><dd>no</dd>
+<dt>Accessibility</dt><dd>reviewed-fail: source read, failures found</dd>
+<dt>Peers</dt><dd>same as forge-icon</dd>
+<dt>Installs</dt><dd>none</dd>
+<dt>Source files</dt><dd class="mono">none</dd>
+<dt>Generated from</dt><dd class="mono">bf109fd5</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, tag <code>v0.1.0-agent-native</code> (placeholder)</span>
+<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
+<span>Generated from inputs <code>bf109fd5</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

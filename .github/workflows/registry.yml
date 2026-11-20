@@ -1,0 +1,57 @@
+# Rebuild the @nitro-forge registry and fail on drift, unresolved imports or a broken contract.
+# Pins: actions/checkout v7.0.1 and actions/setup-node v7.1.0, resolved to commit SHAs with `gh api` on 2026-11-20.
+name: registry
+
+on:
+  pull_request:
+    paths:
+      - 'packages/studio-workspace/**'
+      - 'packages/icons/**'
+      - 'tooling/registry/**'
+      - 'docs/agent-native/copy.json'
+      - 'docs/agent-native/a11y-status.json'
+      - 'registry.json'
+      - 'registry-excluded.json'
+      - 'components.json'
+      - 'r/**'
+      - '.github/workflows/registry.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'packages/studio-workspace/**'
+      - 'packages/icons/**'
+      - 'tooling/registry/**'
+      - 'r/**'
+      - 'registry.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: registry-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Rebuild registry.json and r/ (shadcn 4.23.0 through npx)
+        run: node tooling/registry/build.mjs
+      - name: Generated files match the commit
+        run: git diff --exit-code -- r registry.json components.json registry-excluded.json
+      - name: Unresolved imports
+        run: node tooling/registry/check-imports.mjs
+      - name: Schema and structure validation
+        run: node tooling/registry/validate-registry.mjs
+      - name: No hardcoded values in packages
+        run: |
+          if [ -f tooling/codemod/check-no-hardcoded.mjs ]; then
+            node tooling/codemod/check-no-hardcoded.mjs
+          else
+            echo "::notice title=check-no-hardcoded skipped::tooling/codemod/check-no-hardcoded.mjs is not in this checkout, so the literal gate did not run."
+          fi

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prism Canvas | Nitro Forge</title>
+<meta name="description" content="Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html" aria-current="page">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>Prism Canvas</h1>
+<p class="lead">Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>Needs StudioUIProvider. Install <code>studio-ui-provider</code> and <code>nyc-tron-host</code> first, then follow <a href="../install.html#step-7">install step 7</a>.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-prism-canvas" hidden>Copy</button></header><pre id="cmd-prism-canvas">npx shadcn@4.23.0 add @nitro-forge/prism-canvas</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p>The Prism artboard: a transparency checker, the engine composite as children, an optional overlay, a selection outline, and one-finger move gestures that preview bounds and commit once on release.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/prism-canvas</code> (registry item)</li><li>Import: <code>import { PrismCanvas, ARTBOARD_CHECKER } from '@/components/forge/prism-canvas';</code>  (the original line carried a note; see Notes)</li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>react-native-svg</code> 15.16.0, <code>zustand</code> 5.1.0</li><li>Requires: <code>@nitro-forge/studio-ui-provider</code>; <code>@nitro-forge/forge-directions</code>; <code>@nitro-forge/studio-gesture</code></li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/prism-canvas</code></li><li>Installs: <code>react-native-svg@15.16.0</code>, <code>zustand@5.1.0</code> (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/prism-canvas.tsx</code>, <code>components/forge/prism-canvas-model.ts</code></li></ul>
+<h2 id="props">Props</h2>
+<p>Extends: Exports <code>ARTBOARD_CHECKER</code> = <code>{size: 8, light: &quot;#FFFFFF&quot;, dark: &quot;#EDEFF3&quot;}</code>.</p>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">document</td><td data-l="Type"><code>CanvasDocument</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"><code>{width, height, layers}</code>.</td></tr><tr><td data-l="Name">width, height</td><td data-l="Type"><code>number</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Artboard size in points.</td></tr><tr><td data-l="Name">selectedId</td><td data-l="Type"><code>number | null</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">disabled</td><td data-l="Type"><code>boolean</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Cancels any gesture.</td></tr><tr><td data-l="Name">color</td><td data-l="Type"><code>string</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Selection outline colour.</td></tr><tr><td data-l="Name">children</td><td data-l="Type"><code>ReactNode</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">The engine composite.</td></tr><tr><td data-l="Name">overlay</td><td data-l="Type"><code>ReactNode</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Replaces the built-in outline.</td></tr><tr><td data-l="Name">onSelect</td><td data-l="Type"><code>(id: number | null) =&gt; void</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">onMoveShape</td><td data-l="Type"><code>(id, dx, dy) =&gt; void</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Called once on release.</td></tr></tbody></table>
+<h2 id="variants">Variants</h2>
+<p>none</p>
+<h2 id="states">States</h2>
+<table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Selected</td><td data-l="How it is set"><code>selectedId</code> matches a layer</td><td data-l="What the code does">Outline <code>prism-selection-bounds</code>.</td></tr><tr><td data-l="State">Moving</td><td data-l="How it is set">drag</td><td data-l="What the code does">Preview badge &quot;Move preview · release to apply&quot; and &quot;Cancel move&quot;.</td></tr><tr><td data-l="State">Disabled</td><td data-l="How it is set"><code>disabled</code></td><td data-l="What the code does">Gestures ignored.</td></tr><tr><td data-l="State">Reset</td><td data-l="How it is set">document, size or disabled changes</td><td data-l="What the code does">Any open gesture is cancelled.</td></tr></tbody></table>
+<h3 id="motion">Motion</h3>
+<p>None. The preview is a static outline offset.</p>
+<h2 id="a11y">A11y</h2>
+<ul><li>Artboard label: &quot;Prism artboard. Select layers or use Transform for accessible move actions.&quot;</li><li>Escape cancels a gesture.</li><li>Web: <code>touchAction: none</code>; scroll, resize and blur cancel the gesture because measured geometry goes stale.</li><li>The cancel button is a provider <code>Button</code> with <code>aria-label=&quot;Cancel shape move&quot;</code>.</li><li>Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li><li>Failing: N04 1.4.3: Cancel move ghost label on #111827 chip 1.11:1 (chrome light) and 1.24:1 (reference light) (prism-canvas.tsx:96-97)</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { PrismCanvas } from '@/components/forge/prism-canvas';
+import { View } from 'react-native';
+
+export const Demo = () =&gt; (
+  &lt;PrismCanvas document={{ width: 800, height: 600, layers: [] }} width={400} height={300}
+    selectedId={null} disabled={false} color=&quot;#086CB8&quot; onSelect={() =&gt; {}} onMoveShape={() =&gt; {}}&gt;
+    &lt;View /&gt;
+  &lt;/PrismCanvas&gt;
+);</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Commit on <code>onMoveShape</code> only; it fires once per release.</li><li>Pass <code>disabled</code> while the engine is busy.</li><li>Use <code>overlay</code> to draw your own selection UI.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not treat the move preview as document state.</li><li>Do not rely on <code>platforms: [&quot;web&quot;]</code> meaning web only: the file branches on <code>Platform.OS === &quot;web&quot;</code> for listeners and runs on native through <code>studio-gesture</code>.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
+npx shadcn@4.23.0 add @nitro-forge/prism-canvas</pre>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>yes</dd>
+<dt>Needs ignition</dt><dd>no</dd>
+<dt>Needs studio-layout</dt><dd>no</dd>
+<dt>Accessibility</dt><dd>reviewed-fail: source read, failures found</dd>
+<dt>Peers</dt><dd><code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>react-native-svg</code> 15.16.0, <code>zustand</code> 5.1.0</dd>
+<dt>Installs</dt><dd><code>react-native-svg@15.16.0</code>, <code>zustand@5.1.0</code></dd>
+<dt>Source files</dt><dd class="mono">studio-workspace/src/prism-canvas.tsx<br>studio-workspace/src/prism-canvas-model.ts</dd>
+<dt>Generated from</dt><dd class="mono">bf109fd5</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, tag <code>v0.1.0-agent-native</code> (placeholder)</span>
+<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
+<span>Generated from inputs <code>bf109fd5</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

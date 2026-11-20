@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quill Text Editor | Nitro Forge</title>
+<meta name="description" content="Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System scheme</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html" aria-current="page">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>Quill Text Editor</h1>
+<p class="lead">Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>Needs StudioUIProvider. Install <code>studio-ui-provider</code> and <code>nyc-tron-host</code> first, then follow <a href="../install.html#step-7">install step 7</a>.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-quill-text-editor" hidden>Copy</button></header><pre id="cmd-quill-text-editor">npx shadcn@4.23.0 add @nitro-forge/quill-text-editor</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p>A writing surface for Quill documents, supplied through the stage slot. It keeps a local draft in a Zustand store and writes one atomic <code>replaceRange</code> edit through <code>apply</code> on Apply text or <code>flush()</code>. An outside edit during a draft raises a conflict and keeps the draft.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/quill-text-editor</code> (registry item)</li><li>Import: <code>import { QuillTextEditor, type QuillTextEditorHandle } from '@/components/forge/index';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>zustand</code> 5.1.0</li><li>Requires: <code>@nitro-forge/studio-ui-provider</code>; <code>@nitro-forge/studio-theme</code>; <code>@nitro-forge/forge-directions</code>; <code>@nitro-forge/forge-icon</code>; Quill engine document supplying <code>apply</code> and <code>reload</code> (engine facade, deferred)</li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/quill-text-editor</code></li><li>Installs: <code>zustand@5.1.0</code> (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/text-editor.tsx</code>, <code>components/forge/text-diff.ts</code></li></ul>
+<h2 id="props">Props</h2>
+<p>Extends: Ref handle <code>QuillTextEditorHandle</code>: <code>flush(): Promise&lt;void&gt;</code>, <code>isDirty(): boolean</code>.</p>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">state</td><td data-l="Type"><code>unknown</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Quill <code>describe</code> data.</td></tr><tr><td data-l="Name">apply</td><td data-l="Type"><code>(op: string, payload?: unknown) =&gt; Promise&lt;unknown&gt;</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Engine command port.</td></tr><tr><td data-l="Name">reload</td><td data-l="Type"><code>() =&gt; Promise&lt;void&gt;</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Refresh host state after a write.</td></tr><tr><td data-l="Name">theme</td><td data-l="Type"><code>&quot;dark&quot; | &quot;light&quot;</code></td><td data-l="Default"><code>&quot;dark&quot;</code></td><td data-l="Required">no</td><td data-l="Description">Selects <code>workspaceThemes</code>.</td></tr><tr><td data-l="Name">density</td><td data-l="Type"><code>WorkspaceDensity</code></td><td data-l="Default"><code>&quot;standard&quot;</code></td><td data-l="Required">no</td><td data-l="Description">Chrome only; never manuscript type or page geometry.</td></tr><tr><td data-l="Name">documentTitle</td><td data-l="Type"><code>string</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Declared in the interface; the file does not read it.</td></tr></tbody></table>
+<h2 id="variants">Variants</h2>
+<h3 id="width">width</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">under 600</td><td data-l="Effect">Smaller padding; manuscript 17 pt on 29 line height.</td></tr><tr><td data-l="Value">600 and over</td><td data-l="Effect">Manuscript 19 pt on 34 line height, max width 792.</td></tr></tbody></table>
+<h3 id="density">density</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value"><code>comfortable</code></td><td data-l="Effect">Adds <code>min-h-12 min-w-12</code> to the button.</td></tr></tbody></table>
+<h2 id="states">States</h2>
+<table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Clean</td><td data-l="How it is set">draft equals base</td><td data-l="What the code does">&quot;Up to date&quot;; Apply disabled.</td></tr><tr><td data-l="State">Dirty</td><td data-l="How it is set">text differs</td><td data-l="What the code does">&quot;Draft changes&quot;; Apply primary.</td></tr><tr><td data-l="State">Busy</td><td data-l="How it is set"><code>flush</code> running</td><td data-l="What the code does">&quot;Applying…&quot;, button loading, input not editable.</td></tr><tr><td data-l="State">Conflict</td><td data-l="How it is set">engine changed under the draft</td><td data-l="What the code does">Danger Banner and &quot;Discard draft and load latest document&quot;; Apply disabled.</td></tr><tr><td data-l="State">Opening</td><td data-l="How it is set"><code>state</code> falsy</td><td data-l="What the code does">Input not editable; flush throws &quot;The document is still opening&quot;.</td></tr></tbody></table>
+<h3 id="motion">Motion</h3>
+<p>None authored; <code>ForgeIcon</code> always gets <code>reducedMotion</code>.</p>
+<h2 id="a11y">A11y</h2>
+<ul><li>TextInput <code>accessibilityLabel=&quot;Essay text&quot;</code>.</li><li>Apply button <code>aria-label=&quot;Apply essay text&quot;</code>; discard button <code>aria-label=&quot;Discard draft and load latest document&quot;</code>.</li><li>Button target <code>scale.size.target</code>.</li><li>Android uses the <code>serif</code> font; other platforms Georgia.</li><li>Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li><li>Failing: N02 1.4.3: placeholder paperMuted #797F8D on #FFFEFC 3.98:1 in both schemes (text-editor.tsx:151)</li><li>Failing: N01 1.4.3: word count muted on stage mat 4.01:1 in light (text-editor.tsx:140)</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { useRef } from 'react';
+import { QuillTextEditor, type QuillTextEditorHandle } from '@/components/forge/index';
+
+export function Demo() {
+  const ref = useRef&lt;QuillTextEditorHandle&gt;(null);
+  return &lt;QuillTextEditor ref={ref} state={null} apply={async () =&gt; ({ data: null })} reload={async () =&gt; {}} /&gt;;
+}</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Call <code>ref.current.flush()</code> before save or export so the draft reaches the engine.</li><li>Check <code>isDirty()</code> before opening another document over the draft.</li><li>Pass <code>apply</code> that supports <code>describe</code> and <code>replaceRange</code>.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not edit the engine behind the editor while a draft is open; it raises a conflict.</li><li>Do not expect <code>density</code> to change manuscript type.</li></ul>
+<h3 id="notes">Notes</h3>
+<ul><li><code>platforms</code> lists only <code>android</code> because that is the only platform the file names (<code>Platform.OS === &quot;android&quot;</code> font branch). The editor runs wherever React Native runs.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><pre>npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
+npx shadcn@4.23.0 add @nitro-forge/quill-text-editor</pre>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>yes</dd>
+<dt>Needs ignition</dt><dd>no</dd>
+<dt>Needs studio-layout</dt><dd>no</dd>
+<dt>Accessibility</dt><dd>reviewed-fail: source read, failures found</dd>
+<dt>Peers</dt><dd><code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>zustand</code> 5.1.0</dd>
+<dt>Installs</dt><dd><code>zustand@5.1.0</code></dd>
+<dt>Source files</dt><dd class="mono">studio-workspace/src/text-editor.tsx<br>studio-workspace/src/text-diff.ts</dd>
+<dt>Generated from</dt><dd class="mono">bf109fd5</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, tag <code>v0.1.0-agent-native</code> (placeholder)</span>
+<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
+<span>Generated from inputs <code>bf109fd5</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

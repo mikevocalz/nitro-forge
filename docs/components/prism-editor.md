@@ -29,7 +29,7 @@ A Prism canvas editor over real engine commands: bounded PNG composite of the en
 - Import: `import { PrismEditor } from '@/components/forge/prism-editor';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
 - Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-model`; `@nitro-forge/persona-turret`; `@nitro-forge/prism-canvas`; `@nitro-forge/studio-gesture`; `@nyc-tron/forge/inputs/PrecisionScrubber`; `@nyc-tron/forge/layers/LayerStack`; `@nitro-forge/ignition` (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports `base64ToBytes` and `bytesToBase64` from the package index; Prism engine document supplying `apply` and `reload` (engine facade, deferred); NYC-Tron `layer-model` type
-- Command: `npx shadcn@latest add @nitro-forge/prism-editor`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/prism-editor`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/prism-editor.tsx`, `components/forge/prism-layers.ts`, `components/forge/prism-layer-label.ts`, `components/forge/prism-layout.ts`, `components/forge/prism-transform.ts`, `components/forge/rgba-png.ts`
 

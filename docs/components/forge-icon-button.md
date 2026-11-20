@@ -25,7 +25,7 @@ Pressable wrapper around `ForgeIcon` with a minimum 44 by 44 hit target and hit 
 - Import: `import { ForgeIconButton } from '@/components/forge/icons/ForgeIcon';`
 - Peers: same as forge-icon
 - Requires: `@nitro-forge/forge-icon`
-- Command: `npx shadcn@latest add @nitro-forge/forge-icon-button`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-icon-button`
 - Installs: none (the CLI adds them when they are absent)
 - Files: none; the item only depends on forge-icon
 

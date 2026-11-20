@@ -7,7 +7,7 @@ docs: "handwritten"
 platforms: []
 category: "forge"
 tokens: ["--color-chrome-accent", "--color-chrome-body", "--color-chrome-chip-edge", "--color-chrome-chip-ring", "--color-chrome-disabled-ink", "--color-chrome-edge", "--color-chrome-muted", "--color-chrome-press", "--color-chrome-rule", "--color-chrome-selected", "--color-chrome-selected-muted", "--color-chrome-text", "--color-chrome-well", "--color-instrument-atelier-accent", "--color-instrument-atelier-accent-halo", "--color-instrument-atelier-bezel-0", "--color-instrument-atelier-bezel-1", "--color-instrument-atelier-face-0", "--color-instrument-atelier-face-1", "--color-instrument-atelier-face-text", "--color-instrument-atelier-knurl", "--color-instrument-atelier-lathe", "--color-instrument-atelier-muted", "--color-instrument-atelier-notch", "--color-instrument-atelier-panel", "--color-instrument-atelier-panel-edge", "--color-instrument-atelier-panel-solid", "--color-instrument-atelier-text", "--color-instrument-optics-accent", "--color-instrument-optics-accent-halo", "--color-instrument-optics-bezel-0", "--color-instrument-optics-bezel-1", "--color-instrument-optics-bezel-2", "--color-instrument-optics-bezel-3", "--color-instrument-optics-face-0", "--color-instrument-optics-face-1", "--color-instrument-optics-face-text", "--color-instrument-optics-knurl", "--color-instrument-optics-lathe", "--color-instrument-optics-muted", "--color-instrument-optics-notch", "--color-instrument-optics-panel", "--color-instrument-optics-panel-edge", "--color-instrument-optics-panel-solid", "--color-instrument-optics-text", "--color-instrument-workbench-accent", "--color-instrument-workbench-accent-halo", "--color-instrument-workbench-bezel-0", "--color-instrument-workbench-bezel-1", "--color-instrument-workbench-face-0", "--color-instrument-workbench-face-1", "--color-instrument-workbench-face-text", "--color-instrument-workbench-knurl", "--color-instrument-workbench-lathe", "--color-instrument-workbench-muted", "--color-instrument-workbench-notch", "--color-instrument-workbench-panel", "--color-instrument-workbench-panel-edge", "--color-instrument-workbench-panel-solid", "--color-instrument-workbench-text", "--color-lab-ground", "--color-lab-mat", "--color-lab-paper", "--color-lab-paper-ink", "--shadow-chrome-depth", "--shadow-instrument-atelier-dial", "--shadow-instrument-atelier-panel", "--shadow-instrument-optics-dial", "--shadow-instrument-optics-panel", "--shadow-instrument-workbench-dial", "--shadow-instrument-workbench-panel"]
-registryDependencies: ["@nitro-forge/studio-theme"]
+registryDependencies: ["@nitro-forge/instrument-system", "@nitro-forge/studio-theme"]
 a11yStatus: "reviewed-pass"
 ---
 
@@ -24,10 +24,10 @@ Three material directions for the Prism chrome and persona turret (workbench, op
 - Package: `@nitro-forge/forge-directions` (registry item)
 - Import: `import { forgeDirections, chromePalette, nycTronTokens } from '@/components/forge/forge-directions';`
 - Peers: none
-- Requires: `@nitro-forge/studio-theme`
-- Command: `npx shadcn@latest add @nitro-forge/forge-directions`
+- Requires: `@nitro-forge/studio-theme`; `@nitro-forge/instrument-system`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-directions`
 - Installs: none (the CLI adds them when they are absent)
-- Files: `components/forge/forge-directions.ts`
+- Files: `components/forge/forge-directions.ts`, `components/forge/tokens.ts`
 
 ## Props
 

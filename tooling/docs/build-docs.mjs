@@ -126,6 +126,7 @@ function componentPage(item) {
   }
   const files = item.files.map((f) => `\`${f.target.replace('@components/', 'components/')}\``).join(', ') || 'none; the item only depends on forge-icon';
   const installs = (item.dependencies ?? []).map((d) => `\`${d}\``).join(', ') || 'none';
+  install = install.replace('npx shadcn@latest add', `npx shadcn@${cfg.shadcnVersion} add`);
   install = install.replace(/(^- Command: .*$)/m, `$1\n- Installs: ${installs} (the CLI adds them when they are absent)\n- Files: ${files}`);
 
   // A11y: review status.

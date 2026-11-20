@@ -7,7 +7,7 @@ docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "forge"
 tokens: ["--border-width-hairline", "--font-mono-plain", "--font-weight-bold", "--font-weight-semibold", "--radius-card", "--radius-control", "--shadow-segment-active", "--spacing-element", "--spacing-fixed-rail", "--spacing-fixed-status", "--spacing-group", "--spacing-inset", "--spacing-section", "--spacing-stack", "--spacing-target", "--text-body", "--text-label", "--text-title"]
-registryDependencies: ["@nitro-forge/forge-icon", "@nitro-forge/instrument-system", "@nitro-forge/persona-model", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/instrument-system", "@nitro-forge/persona-model", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/DragGrabHandle"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -26,8 +26,8 @@ A form for naming a persona, ordering its instrument rail, choosing capabilities
 - Package: `@nitro-forge/persona-composer` (registry item)
 - Import: `import { PersonaComposer } from '@/components/forge/persona-composer';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-icon`; `@nitro-forge/instrument-system`; `@nitro-forge/persona-model`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
-- Command: `npx shadcn@latest add @nitro-forge/persona-composer`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/instrument-system`; `@nitro-forge/persona-model`; `@nitro-forge/studio-gesture`; `@nyc-tron/DragGrabHandle`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/persona-composer`
 - Installs: `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/persona-composer.tsx`, `components/forge/persona-composer-model.ts`
 

@@ -123,13 +123,19 @@
       "title": "Forge Directions",
       "description": "Theme: workbench, optics and atelier palettes for Prism chrome and the persona turret, plus WCAG contrast helpers. Needs studio-theme.",
       "registryDependencies": [
-        "@nitro-forge/studio-theme"
+        "@nitro-forge/studio-theme",
+        "@nitro-forge/instrument-system"
       ],
       "files": [
         {
           "path": "tooling/registry/stage/forge-directions/forge-directions.ts",
           "type": "registry:lib",
           "target": "@components/forge/forge-directions.ts"
+        },
+        {
+          "path": "tooling/registry/stage/forge-directions/tokens.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/tokens.ts"
         }
       ],
       "meta": {
@@ -140,7 +146,8 @@
         "a11yStatus": "reviewed-pass",
         "needsProvider": false,
         "sourceFiles": [
-          "packages/studio-workspace/src/forge-directions.ts"
+          "packages/studio-workspace/src/forge-directions.ts",
+          "packages/studio-workspace/src/tokens.ts"
         ]
       }
     },
@@ -150,7 +157,8 @@
       "title": "Forge Document Stage",
       "description": "Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout.",
       "registryDependencies": [
-        "@nitro-forge/studio-ui-provider"
+        "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/forge-directions"
       ],
       "files": [
         {
@@ -301,6 +309,7 @@
       "registryDependencies": [
         "@nitro-forge/studio-ui-provider",
         "@nitro-forge/studio-theme",
+        "@nitro-forge/forge-directions",
         "@nitro-forge/forge-document-stage",
         "@nitro-forge/forge-icon",
         "@nitro-forge/persona-turret",
@@ -445,6 +454,7 @@
       "registryDependencies": [
         "@nitro-forge/studio-ui-provider",
         "@nitro-forge/studio-theme",
+        "@nitro-forge/forge-directions",
         "@nitro-forge/forge-icon",
         "@nitro-forge/instrument-system",
         "@nitro-forge/persona-model",
@@ -630,6 +640,7 @@
       ],
       "registryDependencies": [
         "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/forge-directions",
         "@nitro-forge/studio-gesture"
       ],
       "files": [
@@ -766,6 +777,7 @@
       "registryDependencies": [
         "@nitro-forge/studio-ui-provider",
         "@nitro-forge/studio-theme",
+        "@nitro-forge/forge-directions",
         "@nitro-forge/forge-icon"
       ],
       "files": [

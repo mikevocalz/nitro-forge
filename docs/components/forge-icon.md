@@ -25,7 +25,7 @@ Shared icon. Idle is a rounded outline, selected a filled silhouette, with a cro
 - Import: `import { ForgeIcon } from '@/components/forge/icons/ForgeIcon';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` >=15 (all optional peers; root patches 15.16.0)
 - Requires: none
-- Command: `npx shadcn@latest add @nitro-forge/forge-icon`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/forge-icon`
 - Installs: `react-native-svg@15.16.0` (the CLI adds them when they are absent)
 - Files: `components/forge/icons/ForgeIcon.js`, `components/forge/icons/state.js`, `components/forge/icons/tokens.js`, `components/forge/icons/glyphs.js`, `components/forge/icons/catalog.js`, `components/forge/icons/ForgeIcon.d.ts`, `components/forge/icons/index.d.ts`, `components/forge/icons/index.js`
 

@@ -25,7 +25,7 @@ The rebrand contract as a file and a validator. A brand sets three keys per sche
 - Import: `import { brandThemeProblems, checkBrandTheme, brandCssVariables } from '@/components/forge/brand-theme';`
 - Peers: none
 - Requires: `@nitro-forge/studio-theme`
-- Command: `npx shadcn@latest add @nitro-forge/brand-theme`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/brand-theme`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/brand-theme.ts`, `components/forge/brand.theme.schema.json`, `components/forge/brand.theme.json`
 

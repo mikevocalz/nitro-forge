@@ -7,7 +7,7 @@ docs: "handwritten"
 platforms: []
 category: "input"
 tokens: ["--color-accent", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-text-muted", "--font-editorial", "--radius-control", "--radius-paper", "--shadow-page", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-page", "--spacing-group", "--spacing-target"]
-registryDependencies: ["@nitro-forge/forge-icon", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -24,8 +24,8 @@ A writing surface for Quill documents, supplied through the stage slot. It keeps
 - Package: `@nitro-forge/quill-text-editor` (registry item)
 - Import: `import { QuillTextEditor, type QuillTextEditorHandle } from '@/components/forge/index';`
 - Peers: `react` >=19, `react-native` >=0.81, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-icon`; Quill engine document supplying `apply` and `reload` (engine facade, deferred)
-- Command: `npx shadcn@latest add @nitro-forge/quill-text-editor`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; Quill engine document supplying `apply` and `reload` (engine facade, deferred)
+- Command: `npx shadcn@4.23.0 add @nitro-forge/quill-text-editor`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/text-editor.tsx`, `components/forge/text-diff.ts`
 

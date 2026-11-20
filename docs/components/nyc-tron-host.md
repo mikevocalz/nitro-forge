@@ -25,7 +25,7 @@ a11yStatus: "unverified"
 - Import: `import { nycTronStudioUI } from '@/components/forge/nyc-tron-host';`
 - Peers: `react` >=19, `react-native` >=0.81
 - Requires: `@nitro-forge/studio-ui-provider`; `@nyc-tron/Button`; `@nyc-tron/Card`; `@nyc-tron/FieldGroup`; `@nyc-tron/IconButton`; `@nyc-tron/List`; `@nyc-tron/SegmentedControl`; `@nyc-tron/Select`; `@nyc-tron/TabBar`; `@nyc-tron/Toolbar`; `@nyc-tron/content/KeyValueList`; `@nyc-tron/feedback/Badge`; `@nyc-tron/feedback/Banner`; `@nyc-tron/feedback/EmptyState`; `@nyc-tron/feedback/ErrorMessage`; `@nyc-tron/files/DropZone`; `@nyc-tron/overlays/AnchoredPopover`; `@nyc-tron/theme/NightScope`
-- Command: `npx shadcn@latest add @nitro-forge/nyc-tron-host`
+- Command: `npx shadcn@4.23.0 add @nitro-forge/nyc-tron-host`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/nyc-tron-host.tsx`, `components/forge/nyc-tron-options.ts`
 
