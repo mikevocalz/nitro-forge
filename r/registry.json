@@ -348,7 +348,7 @@
         ],
         "a11yFailures": [
           "N01 1.4.3: light muted #687287 on base 4.43:1 for 9 to 11 pt header, status and rail text (index.tsx:190,196)",
-          "N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:272)"
+          "N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:273)"
         ],
         "prerequisites": [
           {

@@ -99,7 +99,7 @@ No animation authored here. Reads `AccessibilityInfo` reduce motion (initial tru
 - Button target size is `scale.size.target` (44, 48 comfortable).
 - Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
 - Failing: N01 1.4.3: light muted #687287 on base 4.43:1 for 9 to 11 pt header, status and rail text (index.tsx:190,196)
-- Failing: N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:272)
+- Failing: N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:273)
 
 ## Example
 

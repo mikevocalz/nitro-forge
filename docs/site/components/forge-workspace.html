@@ -52,7 +52,7 @@
 <h3 id="motion">Motion</h3>
 <p>No animation authored here. Reads <code>AccessibilityInfo</code> reduce motion (initial true until the first read resolves) and passes it to <code>ForgeIcon</code>.</p>
 <h2 id="a11y">A11y</h2>
-<ul><li>Dock tabs: <code>TabBar</code> with <code>aria-label=&quot;&lt;dock&gt; dock panels&quot;</code>.</li><li>Dock position: <code>SegmentedControl</code> with <code>aria-label=&quot;Dock position for &lt;panel&gt;&quot;</code>.</li><li>Icon buttons carry <code>aria-label</code>; toggle buttons pass <code>accessibilityState.selected</code>.</li><li>Drag handle label: &quot;Drag &lt;panel&gt; to a dock edge&quot;. Escape cancels a drag.</li><li>Prism rail labelled &quot;Studio panels&quot;.</li><li>Button target size is <code>scale.size.target</code> (44, 48 comfortable).</li><li>Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li><li>Failing: N01 1.4.3: light muted #687287 on base 4.43:1 for 9 to 11 pt header, status and rail text (index.tsx:190,196)</li><li>Failing: N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:272)</li></ul>
+<ul><li>Dock tabs: <code>TabBar</code> with <code>aria-label=&quot;&lt;dock&gt; dock panels&quot;</code>.</li><li>Dock position: <code>SegmentedControl</code> with <code>aria-label=&quot;Dock position for &lt;panel&gt;&quot;</code>.</li><li>Icon buttons carry <code>aria-label</code>; toggle buttons pass <code>accessibilityState.selected</code>.</li><li>Drag handle label: &quot;Drag &lt;panel&gt; to a dock edge&quot;. Escape cancels a drag.</li><li>Prism rail labelled &quot;Studio panels&quot;.</li><li>Button target size is <code>scale.size.target</code> (44, 48 comfortable).</li><li>Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li><li>Failing: N01 1.4.3: light muted #687287 on base 4.43:1 for 9 to 11 pt header, status and rail text (index.tsx:190,196)</li><li>Failing: N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:273)</li></ul>
 <h2 id="example">Example</h2>
 <pre><code>import { ForgeWorkspace } from '@/components/forge/index';
 
@@ -79,15 +79,15 @@ npx shadcn@4.23.0 add @nitro-forge/forge-workspace</pre></div>
 <dt>Peers</dt><dd><code>react</code>, <code>react-native</code>, <code>react-native-gesture-handler</code> &gt;=3.4 &lt;4, <code>zustand</code> 5.1.0; <code>react-native-reanimated</code> &gt;=4.7.1 &lt;5 only through persona-turret on native</dd>
 <dt>Installs</dt><dd><code>zustand@5.1.0</code></dd>
 <dt>Source files</dt><dd class="mono">studio-workspace/src/index.tsx<br>studio-workspace/src/model.ts</dd>
-<dt>Generated from</dt><dd class="mono">bf109fd5</dd>
+<dt>Generated from</dt><dd class="mono">a38d6bc0</dd>
 </dl></aside>
 </div>
 </main>
 </div>
 <footer class="status" role="contentinfo">
-<span>Registry: r/ built, 18 items, tag <code>v0.1.0-agent-native</code> (placeholder)</span>
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
 <span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
-<span>Generated from inputs <code>bf109fd5</code></span>
+<span>Generated from inputs <code>a38d6bc0</code></span>
 <span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
 </footer>
 <script src="../site.js"></script>

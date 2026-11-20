@@ -37,6 +37,13 @@
 <p class="lead">A brand changes three keys per scheme: <code>accent</code>, <code>ink</code> and <code>soft</code>. Everything else is locked or deferred.</p>
 <h2 id="rebrand">Rebrand contract</h2>
 <p>The file is <code>brand.theme.json</code>, separate from <code>tooling/brand/brand.schema.json</code> (decision 24). Minimum override: 3 keys by 2 schemes, 6 values.</p><table><thead><tr><th scope="col">Key</th><th scope="col">Feeds</th><th scope="col">Suite dark</th><th scope="col">Suite light</th><th scope="col">Prism dark</th><th scope="col">Prism light</th></tr></thead><tbody><tr><th scope="row"><code>accent</code></th><td><code>--color-primary</code>, <code>--color-accent</code>, <code>--color-focus</code></td><td><span class="swatch" style="background:#B7A5FF"></span>#B7A5FF</td><td><span class="swatch" style="background:#6950D1"></span>#6950D1</td><td><span class="swatch" style="background:#66B9FF"></span>#66B9FF</td><td><span class="swatch" style="background:#086CB8"></span>#086CB8</td></tr><tr><th scope="row"><code>ink</code></th><td><code>--color-on-primary</code></td><td><span class="swatch" style="background:#211A3D"></span>#211A3D</td><td><span class="swatch" style="background:#FFFFFF"></span>#FFFFFF</td><td><span class="swatch" style="background:#081D2F"></span>#081D2F</td><td><span class="swatch" style="background:#FFFFFF"></span>#FFFFFF</td></tr><tr><th scope="row"><code>soft</code></th><td><code>--color-primary-tint</code></td><td><span class="swatch" style="background:#38304F"></span>#38304F</td><td><span class="swatch" style="background:#EEE9FF"></span>#EEE9FF</td><td><span class="swatch" style="background:#173C59"></span>#173C59</td><td><span class="swatch" style="background:#D6EAFB"></span>#D6EAFB</td></tr></tbody></table>
+<h3 id="channels">Two channels carry a brand</h3>
+<p>A rebrand needs both. The CSS variables reach the NYC-Tron controls. The JS overrides reach the Forge components that read colours in JavaScript.</p>
+<table><thead><tr><th scope="col">Channel</th><th scope="col">Call</th><th scope="col">Reaches</th><th scope="col">Does not reach</th></tr></thead><tbody>
+<tr><th scope="row">CSS variables</th><td><code>brandCssVariables(theme, scheme)</code> on a <code>[data-brand]</code> block, <code>:root</code> or a <code>TokenScope</code></td><td>Every NYC-Tron control (Button, TabBar, SegmentedControl, Select, Banner) and Tailwind utilities reading <code>--color-primary</code>, <code>--color-accent</code>, <code>--color-focus</code>, <code>--color-on-primary</code>, <code>--color-primary-tint</code></td><td>Colours Forge reads in JavaScript</td></tr>
+<tr><th scope="row">JS overrides</th><td><code>brandThemeOverrides(theme, scheme)</code> as <code>themeOverrides</code> on <code>ForgeWorkspace</code></td><td>Workspace header, rail label, studio glyphs and the soft chip behind them. <code>PersonaTurret</code> reads <code>colors.accent</code> and <code>PersonaComposer</code> reads <code>colors.accent</code> and <code>colors.soft</code> from their own <code>colors</code> prop, which <code>ForgeWorkspace</code> does not fill: pass the same overrides to them</td><td>The CSS variables</td></tr>
+</tbody></table>
+<p>Neither channel reaches <code>PrismEditor</code>, <code>QuillTextEditor</code>, <code>ForgeDocumentStage</code> or the default <code>ForgeIcon</code> palette. Applying only the CSS variables recolours the controls and leaves the workspace header, glyphs and persona turret on the old accent.</p>
 <div class="block"><header><span>brand.theme.json starter (Prism override)</span><button type="button" class="btn" hidden data-copy="starter" hidden>Copy</button></header><pre id="starter">{
   &quot;dark&quot;: {
     &quot;accent&quot;: &quot;#66B9FF&quot;,
@@ -71,9 +78,9 @@
 </main>
 </div>
 <footer class="status" role="contentinfo">
-<span>Registry: r/ built, 18 items, tag <code>v0.1.0-agent-native</code> (placeholder)</span>
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
 <span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
-<span>Generated from inputs <code>bf109fd5</code></span>
+<span>Generated from inputs <code>a38d6bc0</code></span>
 <span><a href="../../llms.txt">llms.txt</a> <a href="../../AGENTS.md">AGENTS.md</a></span>
 </footer>
 <script src="site.js"></script>

@@ -37,13 +37,13 @@
     },
     {
       "path": "tooling/registry/stage/studio-gesture/drag-transport.ts",
-      "content": "import { PanResponderDrag } from '@/components/ui/gestures/PanResponderDrag';\nimport type { DragTransport } from '@/components/ui/gestures/drag-transport';\n\n/** Pointer recogniser for NYC-Tron drag parts in Forge: the browser responder\n * here, Gesture Handler on native (drag-transport.native.ts), matching\n * StudioGesture so docking and reordering keep their platform recognisers. */\nexport const forgeDragTransport: DragTransport = PanResponderDrag;\n",
+      "content": "import { PanResponderDrag } from '@/components/nyc-tron/ui/components/gestures/PanResponderDrag';\nimport type { DragTransport } from '@/components/nyc-tron/ui/components/gestures/drag-transport';\n\n/** Pointer recogniser for NYC-Tron drag parts in Forge: the browser responder\n * here, Gesture Handler on native (drag-transport.native.ts), matching\n * StudioGesture so docking and reordering keep their platform recognisers. */\nexport const forgeDragTransport: DragTransport = PanResponderDrag;\n",
       "type": "registry:lib",
       "target": "@components/forge/drag-transport.ts"
     },
     {
       "path": "tooling/registry/stage/studio-gesture/drag-transport.native.ts",
-      "content": "import { GestureHandlerDrag } from '@/components/ui/gestures/GestureHandlerDrag';\nimport type { DragTransport } from '@/components/ui/gestures/drag-transport';\n\n/** Native drags run on Gesture Handler, as StudioGesture does. */\nexport const forgeDragTransport: DragTransport = GestureHandlerDrag;\n",
+      "content": "import { GestureHandlerDrag } from '@/components/nyc-tron/ui/components/gestures/GestureHandlerDrag';\nimport type { DragTransport } from '@/components/nyc-tron/ui/components/gestures/drag-transport';\n\n/** Native drags run on Gesture Handler, as StudioGesture does. */\nexport const forgeDragTransport: DragTransport = GestureHandlerDrag;\n",
       "type": "registry:lib",
       "target": "@components/forge/drag-transport.native.ts"
     }

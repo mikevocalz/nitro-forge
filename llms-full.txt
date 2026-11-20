@@ -1,62 +1,62 @@
 # Nitro Forge
 
-> Document studios on one Rust engine, with a shadcn registry (@nitro-forge) for the studio-workspace chrome, theme, provider and icons. Controls come from @nyc-tron. Nothing is on npm: the engines, ignition and studio-layout are monorepo packages at 0.0.0, and steps 1 to 3 of the install order cannot be reproduced outside this repo today. The `v0.1.0-agent-native` tag in these links is a placeholder until the owner publishes a release.
+> Document studios on one Rust engine, with a shadcn registry (@nitro-forge) for the studio-workspace chrome, theme, provider and icons. Controls come from @nyc-tron. Nothing is on npm: the engines, ignition and studio-layout are monorepo packages at 0.0.0, and steps 1 to 3 of the install order cannot be reproduced outside this repo today. The links use the moving branch `master`, not a release tag, until the owner cuts one.
 
 Start here: the provider prerequisite. Every studio component throws without StudioUIProvider (install studio-ui-provider and nyc-tron-host first). Install order has nine steps, numbered 0 to 8; a registry add covers steps 4 and 8 and the file parts of 5, 6 and 7.
 
 ## Install and rules
 
-- [Install order](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/agent-native/install-order.md): The nine-step chain, which steps `shadcn add` covers, and the commands for the rest.
-- [Agent skill](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/SKILL.md): Provider first, install order, rebrand contract, token rules, what is deferred and why.
-- [Agent guide](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/AGENTS.md): Contracts, commands and contributor rules, plus the agent-native section.
-- [Not in the registry](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/registry-excluded.json): Four deferred adapters, 12 engines, ignition and studio-layout, each with a reason.
+- [Install order](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/agent-native/install-order.md): The nine-step chain, which steps `shadcn add` covers, and the commands for the rest.
+- [Agent skill](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/SKILL.md): Provider first, install order, rebrand contract, token rules, what is deferred and why.
+- [Agent guide](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/AGENTS.md): Contracts, commands and contributor rules, plus the agent-native section.
+- [Not in the registry](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/registry-excluded.json): Four deferred adapters, 12 engines, ignition and studio-layout, each with a reason.
 
 ## Needs StudioUIProvider (8)
 
-- [Forge Document Stage](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/forge-document-stage.md): Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout.
-- [Forge Workspace](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/forge-workspace.md): Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout.
-- [NYC-Tron Host](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/nyc-tron-host.md): Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.
-- [Persona Composer](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/persona-composer.md): Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore.
-- [Persona Turret](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/persona-turret.md): Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions.
-- [Prism Canvas](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/prism-canvas.md): Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture.
-- [Prism Editor](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/prism-editor.md): Vector canvas editor: shape tools, layers panel, transforms, personas. Needs @nitro-forge/ignition first, StudioUIProvider, @nyc-tron.
-- [Quill Text Editor](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/quill-text-editor.md): Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload.
+- [Forge Document Stage](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-document-stage.md): Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout.
+- [Forge Workspace](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-workspace.md): Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout.
+- [NYC-Tron Host](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/nyc-tron-host.md): Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.
+- [Persona Composer](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/persona-composer.md): Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore.
+- [Persona Turret](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/persona-turret.md): Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions.
+- [Prism Canvas](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/prism-canvas.md): Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture.
+- [Prism Editor](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/prism-editor.md): Vector canvas editor: shape tools, layers panel, transforms, personas. Needs @nitro-forge/ignition first, StudioUIProvider, @nyc-tron.
+- [Quill Text Editor](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/quill-text-editor.md): Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload.
 
 ## No provider needed (10)
 
-- [Studio UI Provider](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/studio-ui-provider.md): Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.
-- [Studio Theme](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/studio-theme.md): Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both.
-- [Brand Theme](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/brand-theme.md): Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.
-- [Forge Directions](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/forge-directions.md): Theme: workbench, optics and atelier palettes for Prism chrome and the persona turret, plus WCAG contrast helpers. Needs studio-theme.
-- [Forge Icon](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/forge-icon.md): Icon: outline when idle, filled when selected. 47 glyphs drawn; 42 of 1,463 catalog ids resolve to one; 6 drawn glyphs are not catalog ids. A name with no glyph renders nothing. Needs react-native-svg.
-- [Forge Icon Button](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/forge-icon-button.md): Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.
-- [Instrument System](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/instrument-system.md): Instrument policy, not UI: 18 blueprints, precision scrubbing math, ruler ticks, motion budgets, overlay planner. No provider needed.
-- [Persona Model](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/persona-model.md): Persona data, not UI: 4 personas, 11 capabilities, 7 surfaces, compose, import, export, per-document store. No provider needed.
-- [Studio Gesture](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/studio-gesture.md): Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.
-- [Workspace Utilities](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/components/workspace-utilities.md): Helpers, not UI: APP_MANIFESTS (task line, glyph, category per studio), jsonProblem (JSON parse error as a sentence). Needs studio-layout.
+- [Studio UI Provider](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/studio-ui-provider.md): Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.
+- [Studio Theme](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/studio-theme.md): Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both.
+- [Brand Theme](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/brand-theme.md): Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.
+- [Forge Directions](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-directions.md): Theme: workbench, optics and atelier palettes for Prism chrome and the persona turret, plus WCAG contrast helpers. Needs studio-theme.
+- [Forge Icon](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-icon.md): Icon: outline when idle, filled when selected. 47 glyphs drawn; 42 of 1,463 catalog ids resolve to one; 6 drawn glyphs are not catalog ids. A name with no glyph renders nothing. Needs react-native-svg.
+- [Forge Icon Button](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-icon-button.md): Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.
+- [Instrument System](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/instrument-system.md): Instrument policy, not UI: 18 blueprints, precision scrubbing math, ruler ticks, motion budgets, overlay planner. No provider needed.
+- [Persona Model](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/persona-model.md): Persona data, not UI: 4 personas, 11 capabilities, 7 surfaces, compose, import, export, per-document store. No provider needed.
+- [Studio Gesture](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/studio-gesture.md): Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.
+- [Workspace Utilities](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/workspace-utilities.md): Helpers, not UI: APP_MANIFESTS (task line, glyph, category per studio), jsonProblem (JSON parse error as a sentence). Needs studio-layout.
 
 ## Engines and foundations (docs only, no registry item)
 
-- [@nitro-forge/prism](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/prism.md): Decision 3.
-- [@nitro-forge/cadence](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/cadence.md): Decision 3.
-- [@nitro-forge/splice](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/splice.md): Decision 3.
-- [@nitro-forge/folio](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/folio.md): Decision 3.
-- [@nitro-forge/pitch](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/pitch.md): Decision 3.
-- [@nitro-forge/tally](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/tally.md): Decision 3.
-- [@nitro-forge/quill](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/quill.md): Decision 3.
-- [@nitro-forge/photo](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/photo.md): Decision 3.
-- [@nitro-forge/motion](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/motion.md): Decision 3.
-- [@nitro-forge/design](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/design.md): Decision 3.
-- [@nitro-forge/draft](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/draft.md): Decision 3.
-- [@nitro-forge/scene](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/scene.md): Decision 3.
-- [@nitro-forge/ignition](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/ignition.md): Decision 4.
-- [@nitro-forge/studio-layout](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/engines/studio-layout.md): Decision 3.
+- [@nitro-forge/prism](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/prism.md): Decision 3.
+- [@nitro-forge/cadence](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/cadence.md): Decision 3.
+- [@nitro-forge/splice](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/splice.md): Decision 3.
+- [@nitro-forge/folio](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/folio.md): Decision 3.
+- [@nitro-forge/pitch](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/pitch.md): Decision 3.
+- [@nitro-forge/tally](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/tally.md): Decision 3.
+- [@nitro-forge/quill](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/quill.md): Decision 3.
+- [@nitro-forge/photo](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/photo.md): Decision 3.
+- [@nitro-forge/motion](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/motion.md): Decision 3.
+- [@nitro-forge/design](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/design.md): Decision 3.
+- [@nitro-forge/draft](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/draft.md): Decision 3.
+- [@nitro-forge/scene](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/scene.md): Decision 3.
+- [@nitro-forge/ignition](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/ignition.md): Decision 4.
+- [@nitro-forge/studio-layout](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/studio-layout.md): Decision 3.
 
 ## Optional
 
-- [Design system](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/agent-native/02-design-system.md): Token tiers, the rebrand contract and the five colour drift records.
-- [Accessibility review](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/docs/agent-native/05-accessibility-review.md): Source review of the 17 items; no item is verified.
-- [Full text](https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/llms-full.txt): Every page above in one file.
+- [Design system](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/agent-native/02-design-system.md): Token tiers, the rebrand contract and the five colour drift records.
+- [Accessibility review](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/agent-native/05-accessibility-review.md): Source review of the 17 items; no item is verified.
+- [Full text](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/llms-full.txt): Every page above in one file.
 
 
 ---
@@ -301,6 +301,15 @@ a11yStatus: "unverified"
 
 The rebrand contract as a file and a validator. A brand sets three keys per scheme, `accent`, `ink` and `soft`, and nothing else. `brand-theme.ts` maps them to CSS variables and checks the three contrast pairs the contract requires.
 
+A brand reaches the UI through two channels, and a rebrand needs both:
+
+| Channel | Call | Reaches | Does not reach |
+|---|---|---|---|
+| CSS variables | `brandCssVariables(theme, scheme)` on a `[data-brand]` block, `:root` or a `TokenScope` | Every NYC-Tron control (Button, TabBar, SegmentedControl, Select, Banner) and any Tailwind utility reading `--color-primary`, `--color-accent`, `--color-focus`, `--color-on-primary` or `--color-primary-tint` | Anything Forge paints from JavaScript colour values |
+| JS overrides | `brandThemeOverrides(theme, scheme)` as `themeOverrides` on `ForgeWorkspace` | Workspace header, rail label, studio glyphs and the soft chip behind them. `PersonaTurret` reads `colors.accent` and `PersonaComposer` reads `colors.accent` and `colors.soft` from their own `colors` prop, which `ForgeWorkspace` does not fill: pass the same overrides to them | The CSS variables above |
+
+Neither channel reaches `PrismEditor` (chrome and direction palettes), `QuillTextEditor` (`workspaceThemes` by scheme), `ForgeDocumentStage` (stage palette) or the default `ForgeIcon` palette. They keep their own colours until they take an override prop.
+
 ## Install
 
 - Package: `@nitro-forge/brand-theme` (registry item)
@@ -319,9 +328,10 @@ Not a component. Exports and what they take:
 |---|---|---|---|---|
 | BRAND_OVERRIDE_KEYS | `readonly ["accent", "ink", "soft"]` | none | no | The only overridable keys. |
 | BRAND_FAN_OUT | `Record<key, readonly string[]>` | none | no | CSS variables each key feeds: `accent` to `--color-primary`, `--color-accent`, `--color-focus`; `ink` to `--color-on-primary`; `soft` to `--color-primary-tint`. |
-| brandThemeProblems | `(value: unknown) => string[]` | none | no | Empty array when the value follows the contract. Names every locked key it finds. |
-| checkBrandTheme | `(theme: BrandTheme) => BrandCheck[]` | none | no | Three pairs per scheme: `ink` on `accent` at 4.5:1, `accent` as a focus ring on the raised surface at 3:1, `text` on `soft` at 4.5:1. |
-| brandCssVariables | `(theme, scheme) => Record<string, string>` | none | no | Variables for a `[data-brand]` block or a `TokenScope`. |
+| brandThemeProblems | `(value: unknown) => string[]` | none | no | Empty array when the value follows the contract. Names every locked key it finds, every colour that is not six hex digits and a `defaultDensity` outside `compact`, `standard`, `comfortable`. |
+| checkBrandTheme | `(theme: unknown) => BrandCheck[]` | none | no | Three pairs per scheme: `ink` on `accent` at 4.5:1, `accent` as a focus ring on the raised surface at 3:1, `text` on `soft` at 4.5:1. Always returns six entries and never throws: a missing or malformed colour gives an entry with `pass: false`, `ratio: null` and a `problem` that names it. |
+| brandCssVariables | `(theme, scheme) => Record<string, string>` | none | no | Channel 1. Variables for a `[data-brand]` block or a `TokenScope`. |
+| brandThemeOverrides | `(theme, scheme) => { accent, ink, soft }` | none | no | Channel 2. The partial colour object for `ForgeWorkspace` `themeOverrides`. |
 | contrastRatio, luminance | `(a: string, b: string) => number`, `(hex: string) => number` | none | no | WCAG 2.x. |
 
 The file `brand.theme.schema.json` is the JSON Schema for `brand.theme.json`. `brand.theme.json` is a starter written as today's Prism override.
@@ -336,7 +346,8 @@ none
 |---|---|---|
 | Valid | `brandThemeProblems` returns `[]` | The file follows the contract. Contrast is a separate check. |
 | Locked key | A key other than `accent`, `ink` or `soft`, or a key outside `dark`, `light`, `defaultDensity` | Reported as a problem. |
-| Low contrast | `checkBrandTheme` returns an entry with `pass: false` | The brand is readable only if every entry passes. |
+| Low contrast | `checkBrandTheme` returns an entry with `pass: false` and a numeric `ratio` | The brand is readable only if every entry passes. |
+| Incomplete input | `checkBrandTheme` returns an entry with `pass: false`, `ratio: null` and a `problem` | No throw. Run `brandThemeProblems` as well to see the structure problems. |
 
 ## A11y
 
@@ -348,7 +359,7 @@ none
 ## Example
 
 ```tsx example=brand-theme
-import { brandThemeProblems, checkBrandTheme, type BrandTheme } from '@/components/forge/brand-theme';
+import { brandCssVariables, brandThemeOverrides, brandThemeProblems, checkBrandTheme, type BrandTheme } from '@/components/forge/brand-theme';
 
 const theme: BrandTheme = {
   dark: { accent: '#66B9FF', ink: '#081D2F', soft: '#173C59' },
@@ -358,6 +369,11 @@ const theme: BrandTheme = {
 
 export const problems = brandThemeProblems(theme);
 export const failing = checkBrandTheme(theme).filter((check) => !check.pass);
+
+// Channel 1: CSS variables for the NYC-Tron controls. Apply on a [data-brand] block or a TokenScope.
+export const cssVariables = brandCssVariables(theme, 'dark');
+// Channel 2: JS colours. Pass as themeOverrides to ForgeWorkspace, and as colors to PersonaTurret and PersonaComposer.
+export const themeOverrides = brandThemeOverrides(theme, 'dark');
 ```
 
 ## Do/Don't
@@ -365,11 +381,13 @@ export const failing = checkBrandTheme(theme).filter((check) => !check.pass);
 ### Do
 
 - Override only `accent`, `ink` and `soft` in both `dark` and `light` (`BRAND_OVERRIDE_KEYS`).
-- Run `checkBrandTheme` before shipping a palette and read every entry with `pass: false`.
+- Run `brandThemeProblems` and `checkBrandTheme` before shipping a palette and read every entry with `pass: false`.
+- Apply both channels: `brandCssVariables` for the NYC-Tron controls and `brandThemeOverrides` for `ForgeWorkspace`, `PersonaTurret` and `PersonaComposer`.
 
 ### Don't
 
 - Do not add `base`, `raised`, `text` or any radius key; `brandThemeProblems` reports each as locked.
+- Do not expect `brandCssVariables` alone to recolour the workspace header, studio glyphs or persona turret. They read JavaScript colours.
 - Do not edit `tooling/brand/brand.schema.json` for colour; it stays closed and feeds the Expo plugin (decision 24).
 
 
@@ -866,7 +884,7 @@ No animation authored here. Reads `AccessibilityInfo` reduce motion (initial tru
 - Button target size is `scale.size.target` (44, 48 comfortable).
 - Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).
 - Failing: N01 1.4.3: light muted #687287 on base 4.43:1 for 9 to 11 pt header, status and rail text (index.tsx:190,196)
-- Failing: N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:272)
+- Failing: N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:273)
 
 ## Example
 
@@ -3044,7 +3062,7 @@ Each step needs the one above it. Step 7 fails at first render if step 6 is skip
 | 7 | `StudioUIProvider` and host | registry items `studio-ui-provider`, `nyc-tron-host` plus app code | Files yes, host wiring is app code |
 | 8 | Studio components | registry items from `03-design-handoff.md` | Yes |
 
-Registry mechanics (decision 28): the built `r/*.json` files are committed in each repo and served from `raw.githubusercontent.com/<owner>/<repo>/<tag>/r/{name}.json`, pinned to a release tag. A consumer adds an item with `npx shadcn@latest add @nitro-forge/<item>`. No `registry.json` or `r/` directory exists in this repo yet, so that command resolves nothing today. Decision 28 also asks for a check that the shadcn CLI accepts the content type raw.githubusercontent.com returns (Phase 2); it has not been run. UNVERIFIED.
+Registry mechanics (decision 28, corrected by decision 45): the built `r/*.json` files are committed in each repo and served from `raw.githubusercontent.com/<owner>/<repo>/<ref>/r/{name}.json`. `<ref>` is a moving branch (`master` for `@nitro-forge`, `main` for `@nyc-tron`) until the owner cuts release tags, then `node tooling/registry/set-ref.mjs <tag> [<tag>]` pins both. A consumer adds an item with `npx shadcn@latest add @nitro-forge/<item>`. The `@nyc-tron` items it depends on resolve only once NYC-Tron's `r/` is on its `main` branch. Pin the CLI version too (`npx shadcn@4.23.0`) if you need a reproducible install, because `@latest` moves. A live fetch from raw.githubusercontent.com has not been run. UNVERIFIED.
 
 ### Step 0. Toolchain
 
@@ -3255,11 +3273,11 @@ npx shadcn@4.23.0 add @nitro-forge/persona-composer
 npx shadcn@4.23.0 mcp
 ```
 
-`npx shadcn@latest` was not run. `components.json` at the repo root points both namespaces at `https://raw.githubusercontent.com/mikevocalz/<repo>/<tag>/r/{name}.json`. The tag in `tooling/registry/config.json` is a placeholder, `v0.1.0-agent-native`. Until the owner publishes a release with that tag, those URLs return 404 and the commands above resolve nothing against GitHub. The local-server runs did not touch GitHub. The CLI accepted `text/plain` responses, which is what raw.githubusercontent.com serves. A live fetch from raw GitHub has not been done.
+`components.json` at the repo root points the two namespaces at `https://raw.githubusercontent.com/mikevocalz/<repo>/<ref>/r/{name}.json`. `<ref>` is `nitroForgeRef` (`master`) for `@nitro-forge` and `nycTronRef` (`main`) for `@nyc-tron`, both in `tooling/registry/config.json`. They are moving branches, not release tags, until the owner cuts tags: what an install fetches changes with each push, and the `@nyc-tron` items resolve only once NYC-Tron's `r/` is on its `main` branch. To pin, run `node tooling/registry/set-ref.mjs <nitroForgeRef> [nycTronRef]`; it rewrites the config and regenerates every generated file. The install proof against a local server accepted `text/plain` responses, which is what raw.githubusercontent.com serves. A live fetch from raw GitHub has not been done. `.mcp.json` runs `npx shadcn@latest mcp` because the mission specifies it. Pin it to `shadcn@4.23.0`, the version the registry is built with, if you want a reproducible tool version.
 
-Item names keep slashes: `@nyc-tron/forge/layers/LayerStack`. The `@nyc-tron` item names are the export keys after `./components/`. NYC-Tron had no built registry when this was written, so those names are assumed from its template rule and are not confirmed.
+Item names keep slashes: `@nyc-tron/forge/layers/LayerStack`. The `@nyc-tron` item names are the export keys after `./components/`. All 22 that Forge depends on exist in NYC-Tron's built `registry.json`; `check-imports` reads that registry on every run.
 
-Installed files land in `components/forge/` (icons in `components/forge/icons/`). Imports between them are relative. Imports of NYC-Tron files are written as `@/components/ui/<key>`, which is an assumption about where the `@nyc-tron` items install.
+Installed files land in `components/forge/` (icons in `components/forge/icons/`). Imports between them are relative. Imports of NYC-Tron files are written as `@/components/nyc-tron/ui/components/<key>`, which is where the `@nyc-tron` items install (their `files[].target` is `@components/nyc-tron/ui/components/<key>.tsx`, and `@components` expands to your `components` alias).
 
 ## Rebrand contract
 
@@ -3273,7 +3291,16 @@ A brand sets three keys per scheme in `brand.theme.json`: `accent`, `ink` and `s
 }
 ```
 
-Install `brand-theme` for the schema and the checker. `brandThemeProblems(file)` returns the locked keys it finds. `checkBrandTheme(file)` measures `ink` on `accent` (4.5:1), `accent` as a focus ring on the raised surface (3:1) and `text` on `soft` (4.5:1). The file is separate from `tooling/brand/brand.schema.json`, which stays closed and feeds the Expo plugin (decision 24).
+Install `brand-theme` for the schema and the checker. `brandThemeProblems(file)` returns the locked keys it finds, colours that are not six hex digits and a `defaultDensity` outside `compact`, `standard`, `comfortable`. `checkBrandTheme(file)` always returns six entries and never throws: it measures `ink` on `accent` (4.5:1), `accent` as a focus ring on the raised surface (3:1) and `text` on `soft` (4.5:1), and an incomplete file gives entries with `pass: false`, `ratio: null` and a `problem`.
+
+A brand reaches the UI through two channels. Apply both.
+
+| Channel | Call | Reaches | Does not reach |
+|---|---|---|---|
+| CSS variables | `brandCssVariables(theme, scheme)` on a `[data-brand]` block, `:root` or a `TokenScope` | NYC-Tron controls (Button, TabBar, SegmentedControl, Select, Banner) and Tailwind utilities reading `--color-primary`, `--color-accent`, `--color-focus`, `--color-on-primary`, `--color-primary-tint` | Colours Forge reads in JavaScript |
+| JS overrides | `brandThemeOverrides(theme, scheme)` as `themeOverrides` on `ForgeWorkspace` | Workspace header, rail label, studio glyphs and the soft chip behind them | The CSS variables |
+
+`PersonaTurret` (reads `colors.accent`) and `PersonaComposer` (reads `colors.accent` and `colors.soft`) take their own `colors` prop, which `ForgeWorkspace` does not fill, so pass the same overrides there. `PrismEditor`, `QuillTextEditor`, `ForgeDocumentStage` and the default `ForgeIcon` palette are reached by neither channel today. Installing `brand-theme` and applying only the CSS variables recolours the controls and leaves the workspace header, glyphs and turret on the old accent. The file is separate from `tooling/brand/brand.schema.json`, which stays closed and feeds the Expo plugin (decision 24).
 
 Deferred: the six neutral keys (`base`, `raised`, `deep`, `line`, `text`, `muted`) wait for an owner-supplied contrast check (decision 23). Struck: any radius override, because chrome keeps 4 px. Locked: status colours, `paper*`, every scale and hit target.
 
@@ -3282,7 +3309,7 @@ Deferred: the six neutral keys (`base`, `raised`, `deep`, `line`, `text`, `muted
 - Use the CSS variables from `studio-theme`, for example `--color-surface-raised`, not a hex value. `docs/agent-native/tokens.map.json` lists 234 proposed tokens with their dark and light values.
 - Every token carries the exact value of the literal it replaces, so tokenizing changes no pixel. Spacing keys are unit multiples (`space.2`, `space.1.5`), the same numbering as Tailwind.
 - Colour drift stays as separate tokens: icon accent `#6859E8` against workspace accent `#6950D1`, Prism blue against the launcher purple, stage paper `#F7F5ED` against `#FFFEFC`. Unifying them changes pixels and is the owner's call (decisions 5, 20, 26, 27).
-- Do not add a hex literal or a numeric style literal to a file under `packages/`. A gate for this is `tooling/codemod/check-no-hardcoded.mjs` when it exists in the repo.
+- Do not add a hex literal, a numeric style literal, a numeric JSX size prop, a Tailwind arbitrary value or a `fs(x + n)` offset to a file under `packages/`. `tooling/codemod/check-no-hardcoded.mjs` enforces exactly that list (its header is the definition). It is not a claim that no number remains: SVG geometry, data arrays, native Kotlin and Swift, `apps/` and tests are out of its scope, and 76 findings in 53 lines are allowlisted in `tooling/codemod/allowlist.json`, each with the reason no existing same-valued token fits.
 - Registry files are generated. Import specifiers are rewritten only in `r/*.json` (decision 39). The repo source keeps `@nyc-tron/ui/components/...` imports.
 
 ## Accessibility status

@@ -15,7 +15,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@nitro-forge": "https://raw.githubusercontent.com/mikevocalz/nitro-forge/v0.1.0-agent-native/r/{name}.json",
-    "@nyc-tron": "https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI/v0.1.0-agent-native/r/{name}.json"
+    "@nitro-forge": "https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/r/{name}.json",
+    "@nyc-tron": "https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI/main/r/{name}.json"
   }
 }
