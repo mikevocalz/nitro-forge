@@ -3,6 +3,7 @@ import type { ViewStyle } from 'react-native';
 import { View, type StudioViewRef } from './ui';
 import { forgeFeedbackMotion as feedback } from './forge-directions';
 import type { TurretPointerProps, TurretRimProps } from './turret-motion-types';
+import { tokens } from './tokens';
 
 export type { TurretPulse, TurretPointerProps, TurretRimProps } from './turret-motion-types';
 
@@ -45,5 +46,5 @@ export function TurretRim(props: TurretRimProps) {
   }, [props.pulse?.seq]);
   const color = props.pulse?.kind === 'end-stop' ? props.limitColor : props.commitColor;
   return <View ref={ref} pointerEvents="none" testID="persona-turret-rim"
-    style={{ position: 'absolute', left: 0, top: 0, width: props.size, height: props.size, borderRadius: props.size / 2, borderWidth: 3, borderColor: color, opacity: 0 }} />;
+    style={{ position: 'absolute', left: 0, top: 0, width: props.size, height: props.size, borderRadius: props.size / 2, borderWidth: tokens.borderWidth.off3, borderColor: color, opacity: 0 }} />;
 }

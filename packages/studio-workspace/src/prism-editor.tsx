@@ -23,6 +23,7 @@ import { personasOn } from './persona';
 import { createPersonaStore, type PersonaStore } from './persona-store';
 import type { PersonaSurface } from './persona';
 import type { TurretEffect } from './turret';
+import { tokens } from './tokens';
 
 type PrismState = { width: number; height: number; layers: PrismLayer[] };
 type LocalState = { selectedId: number | null; uri: string | null; rendering: boolean; busy: boolean; error: string | null; previewError: string | null; notice: string; layersOpen: boolean; personaOpen: boolean; personaStatus: string; trigger: { x: number; width: number }; toolbarHeight: number; railWidth: number; fillHeight: number; feedbackHeight: number; popoverHeight: number; width: number; height: number; retry: number; color: number };
@@ -57,7 +58,7 @@ export interface PrismEditorProps {
 }
 const hostSurface = (): PersonaSurface => Platform.OS === 'web' ? 'web' : Platform.OS === 'ios' ? ((Platform as { isPad?: boolean }).isPad ? 'ipad' : 'iphone') : 'android-phone';
 const FILLS = [[105, 80, 209, 255], [36, 145, 132, 255], [227, 155, 76, 255], [226, 109, 146, 255]] as const;
-const FILL_COLORS = ['#6950D1', '#249184', '#E39B4C', '#E26D92'];
+const FILL_COLORS = [tokens.swatch.violet, tokens.swatch.teal, tokens.swatch.amber, tokens.swatch.rose];
 const FILL_NAMES = ['violet', 'teal', 'amber', 'rose'];
 /** A colour chip is the content, so forced colours must not repaint it (web). */
 const keepColour = Platform.OS === 'web' ? { forcedColorAdjust: 'none' } as object : {};
@@ -100,7 +101,7 @@ export function PrismEditor(props: PrismEditorProps) {
   const activePersona = persona.personas.find(p => p.id === persona.activeId);
   const activeCaps = new Set(activePersona?.capabilities ?? []);
   const localRef = useRef<StoreApi<LocalState> | null>(null);
-  if (!localRef.current) localRef.current = createStore<LocalState>(() => ({ selectedId: null, uri: null, rendering: false, busy: false, error: null, previewError: null, notice: '', layersOpen: false, personaOpen: false, personaStatus: '', trigger: { x: 0, width: 0 }, toolbarHeight: 48, railWidth: 52, fillHeight: 52, feedbackHeight: 0, popoverHeight: 0, width: 800, height: 600, retry: 0, color: 0 }));
+  if (!localRef.current) localRef.current = createStore<LocalState>(() => ({ selectedId: null, uri: null, rendering: false, busy: false, error: null, previewError: null, notice: '', layersOpen: false, personaOpen: false, personaStatus: '', trigger: { x: 0, width: 0 }, toolbarHeight: 48, railWidth: 52, fillHeight: 52, feedbackHeight: 0, popoverHeight: 0, width: tokens.spacing.off800, height: tokens.spacing.off600, retry: 0, color: 0 }));
   const store = localRef.current;
   const localSelectedId = useStore(store, s => s.selectedId);
   const selectedId = props.selectedLayerId === undefined ? localSelectedId : props.selectedLayerId;
@@ -218,17 +219,17 @@ export function PrismEditor(props: PrismEditorProps) {
     void run('addShape', { name: `${name} ${layers.length + 1}`, shape: { kind, x: Math.max(0, Math.round((doc.width - w) / 2)), y: Math.max(0, Math.round((doc.height - h) / 2)), w, h, fill: FILLS[store.getState().color] } }, `${name} added`);
   };
   /** One panel finish for every piece of chrome: the face, its chamfer and the lit top edge. */
-  const chromeSurface = { backgroundColor: chrome.body, borderWidth: 1, borderColor: chrome.edge, borderRadius: scale.radius.panel, boxShadow: chrome.depth };
-  const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: 60, top: panelTop, right: 12, ...chromeSurface, overflow: 'visible' }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: scale.space.group, paddingRight: scale.space.stack, minHeight: scale.size.target+4, borderBottomWidth: 1, borderBottomColor: chrome.rule }}>
-      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-[4px] overflow-hidden" />
+  const chromeSurface = { backgroundColor: chrome.body, borderWidth: tokens.borderWidth.hairline, borderColor: chrome.edge, borderRadius: scale.radius.panel, boxShadow: chrome.depth };
+  const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: tokens.z.panel, top: panelTop, right: tokens.spacing.fixedInset, ...chromeSurface, overflow: 'visible' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: scale.space.group, paddingRight: scale.space.stack, minHeight: scale.size.target+4, borderBottomWidth: tokens.borderWidth.hairline, borderBottomColor: chrome.rule }}>
+      <Text style={{ color: colors.text, fontSize: tokens.text.off13, fontWeight: tokens.fontWeight.semibold, flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-[4px] overflow-hidden" />
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
     </View>
     {/* NYC-Tron parts read semantic variables; these are cut from the same Workbench chrome. */}
     <TokenScope variables={controlTokens}>
     {/* Layer opacity uses the same precision instrument as every studio;
         only its released value becomes a Rust document operation. */}
-    {selected && <View style={{ paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element, zIndex: 10 }}>
+    {selected && <View style={{ paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element, zIndex: tokens.z.layerRow }}>
       <PrecisionScrubber
         {...{targetSize: scale.size.target}}
         label="Layer opacity"
@@ -331,23 +332,23 @@ export function PrismEditor(props: PrismEditorProps) {
       onPress={() => { if (props.onOpenPersonas) props.onOpenPersonas(); else if (personaOpen) closePersonas(); else { measureTrigger(); store.setState({ personaOpen: true }); } }}
       style={({ pressed }) => ({
         minHeight: scale.size.target, flexDirection: 'row', alignItems: 'center', gap: scale.space.element, paddingHorizontal: scale.space.element, borderRadius: scale.radius.control,
-        borderWidth: 1, borderColor: 'transparent',
+        borderWidth: tokens.borderWidth.hairline, borderColor: 'transparent',
         backgroundColor: personaOpen ? `${colors.accent}26` : pressed ? chrome.press : 'transparent',
         transform: [{ scale: pressed ? forgeFeedbackMotion.press.scale : 1 }],
       }) as never}>
       {/* A small dial: the ring and a pointer set to the active stop. */}
-      <View aria-hidden style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: personaOpen ? colors.accent : colors.muted, transform: [{ rotate: `${personaStops.length ? turretDisplayAngle(activeStop, personaStops.length, documentRtl()) : 0}deg` }] }}>
-        <View style={{ position: 'absolute', left: 5.75, top: 1.5, width: 1.5, height: 5, borderRadius: 0.75, backgroundColor: colors.accent }} />
+      <View aria-hidden style={{ width: tokens.spacing.off16, height: tokens.spacing.off16, borderRadius: tokens.radius.off8, borderWidth: tokens.borderWidth.off1_5, borderColor: personaOpen ? colors.accent : colors.muted, transform: [{ rotate: `${personaStops.length ? turretDisplayAngle(activeStop, personaStops.length, documentRtl()) : 0}deg` }] }}>
+        <View style={{ position: 'absolute', left: tokens.spacing.off5_75, top: tokens.spacing.off1_5, width: tokens.spacing.off1_5, height: tokens.spacing.off5, borderRadius: tokens.radius.off0_75, backgroundColor: colors.accent }} />
       </View>
-      <Text numberOfLines={1} style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>{personaLabel}</Text>
+      <Text numberOfLines={1} style={{ color: colors.text, fontSize: tokens.text.off13, fontWeight: tokens.fontWeight.semibold }}>{personaLabel}</Text>
       {shortcutKeys && activeStop < 9 && <Text style={{ color: colors.muted, fontSize: scale.type.micro + 1, fontVariant: ['tabular-nums'] }}>{shortcut.tag(activeStop + 1)}</Text>}
     </Pressable>
   </View>;
 
   const personaBody = <>
     {/* The close glyph's own inset is pulled into the gutter, so its edge lines up with the captions. */}
-    <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', minHeight: 44, marginRight: -scale.space.inset }}>
-      <Text accessibilityRole="header" {...{ 'aria-level': 2 }} style={{ color: pm.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Persona</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', minHeight: tokens.spacing.fixedTarget, marginRight: -scale.space.inset }}>
+      <Text accessibilityRole="header" {...{ 'aria-level': 2 }} style={{ color: pm.text, fontSize: tokens.text.off13, fontWeight: tokens.fontWeight.semibold, flex: 1 }}>Persona</Text>
       {control('Close personas', () => closePersonas(), false, false, 'close', undefined, true)}
     </View>
     <PersonaTurret handle={personaTurret} personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors} direction={directionId} scheme={scheme}
@@ -360,7 +361,7 @@ export function PrismEditor(props: PrismEditorProps) {
       {...(props.onPersonaEffect ? { onEffect: props.onPersonaEffect } : {})} />
     {persona.error && <Text accessibilityRole="alert" style={{ color: colors.error, fontSize: scale.type.label, alignSelf: 'stretch' }}>{persona.error}</Text>}
     {/* The ghost button's inset is pulled out, so its glyph sits on the gutter. */}
-    {props.onComposePersona && <View style={{ alignSelf: 'stretch', borderTopWidth: 1, borderTopColor: pm.panelEdge, paddingTop: 4, alignItems: 'flex-start' }}>
+    {props.onComposePersona && <View style={{ alignSelf: 'stretch', borderTopWidth: tokens.borderWidth.hairline, borderTopColor: pm.panelEdge, paddingTop: tokens.spacing.fixedStack, alignItems: 'flex-start' }}>
       <View style={{ marginLeft: -scale.space.inset }}>{control('Compose new persona', () => { closePersonas(false); props.onComposePersona?.(); }, false, false, 'plus', 'Compose new persona', false, 'Opens the Persona Composer')}</View>
     </View>}
   </>;
@@ -371,21 +372,21 @@ export function PrismEditor(props: PrismEditorProps) {
     closePersonas();
   } };
   const personaSurface = !personaOpen || props.onOpenPersonas ? null : sheet
-    ? <View key="persona-sheet" testID="persona-sheet-layer" style={{ position: 'absolute', zIndex: 70, left: 0, top: 0, width, height }}>
+    ? <View key="persona-sheet" testID="persona-sheet-layer" style={{ position: 'absolute', zIndex: tokens.z.overlay, left: 0, top: 0, width, height }}>
       <Pressable testID="persona-scrim" focusable={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden
-        onPress={() => closePersonas()} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, backgroundColor: '#000000', opacity: 0.45 }} />
+        onPress={() => closePersonas()} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, backgroundColor: tokens.color.scrim, opacity: tokens.opacity.scrim }} />
       <View testID="persona-panel" role="dialog" aria-modal aria-label="Personas" accessibilityViewIsModal {...personaKeys}
-        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: Math.min(560, Math.round(height * 0.6)), borderTopWidth: 1, borderTopLeftRadius: scale.radius.panel, borderTopRightRadius: scale.radius.panel, ...panelSurface } as never}>
-        <ScrollView contentContainerStyle={{ padding: PANEL_GUTTER, paddingTop: 4, gap: 8, alignItems: 'center' }}>{personaBody}</ScrollView>
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: Math.min(560, Math.round(height * 0.6)), borderTopWidth: tokens.borderWidth.hairline, borderTopLeftRadius: scale.radius.panel, borderTopRightRadius: scale.radius.panel, ...panelSurface } as never}>
+        <ScrollView contentContainerStyle={{ padding: PANEL_GUTTER, paddingTop: tokens.spacing.fixedStack, gap: tokens.spacing.fixedElement, alignItems: 'center' }}>{personaBody}</ScrollView>
       </View>
     </View>
     : <View key="persona-popover" testID="persona-panel" role="dialog" aria-label="Personas" {...personaKeys}
-      style={{ position: 'absolute', zIndex: 70, top: PRISM_TOOLBAR_TOP + 1 + popoverTop, left: PRISM_TOOLBAR_TOP + 1 + popoverLeft, width: popoverWidth, maxHeight: Math.max(160, height - PRISM_TOOLBAR_TOP - popoverTop - popoverFloor), borderWidth: 1, borderRadius: scale.radius.panel, ...panelSurface } as never}>
+      style={{ position: 'absolute', zIndex: tokens.z.overlay, top: PRISM_TOOLBAR_TOP + 1 + popoverTop, left: PRISM_TOOLBAR_TOP + 1 + popoverLeft, width: popoverWidth, maxHeight: Math.max(160, height - PRISM_TOOLBAR_TOP - popoverTop - popoverFloor), borderWidth: tokens.borderWidth.hairline, borderRadius: scale.radius.panel, ...panelSurface } as never}>
       {/* The notch: a square turned 45°, its top edges in the panel's edge colour. */}
-      <View aria-hidden pointerEvents="none" style={{ position: 'absolute', top: -PERSONA_ARROW / 2 - 1, left: arrowLeft, width: PERSONA_ARROW, height: PERSONA_ARROW, backgroundColor: chrome.body, borderLeftWidth: 1, borderTopWidth: 1, borderColor: chrome.edge, transform: [{ rotate: '45deg' }] }} />
+      <View aria-hidden pointerEvents="none" style={{ position: 'absolute', top: -PERSONA_ARROW / 2 - 1, left: arrowLeft, width: PERSONA_ARROW, height: PERSONA_ARROW, backgroundColor: chrome.body, borderLeftWidth: tokens.borderWidth.hairline, borderTopWidth: tokens.borderWidth.hairline, borderColor: chrome.edge, transform: [{ rotate: '45deg' }] }} />
       {/* The content's own height, not the capped panel's, decides whether the toast must move. */}
       <ScrollView onContentSizeChange={(_, h) => { const next = Math.round(h) + 2; if (next !== store.getState().popoverHeight) store.setState({ popoverHeight: next }); }}
-        contentContainerStyle={{ paddingHorizontal: PANEL_GUTTER, paddingTop: 4, paddingBottom: 12, gap: 8, alignItems: 'center' }}>{personaBody}</ScrollView>
+        contentContainerStyle={{ paddingHorizontal: PANEL_GUTTER, paddingTop: tokens.spacing.fixedStack, paddingBottom: tokens.spacing.fixedInset, gap: tokens.spacing.fixedElement, alignItems: 'center' }}>{personaBody}</ScrollView>
     </View>;
   const editor = <View className={scheme === 'dark' ? 'scheme-dark' : 'scheme-light'} testID="prism-editor" onLayout={event => {
     const { width, height } = event.nativeEvent.layout;
@@ -399,11 +400,11 @@ export function PrismEditor(props: PrismEditorProps) {
         overlay={props.renderCanvasOverlay?.({ width: canvasWidth, height: canvasHeight, color: colors.accent, disabled: busy || !!props.busy || rendering || !!previewError })}
         onSelect={id => selectPrimary(id)}
         onMoveShape={(id, dx, dy) => { void run('transformShape', { id, dx, dy, scale_x: 1, scale_y: 1 }, 'Shape moved'); }}>
-        {uri && !previewError ? <Image testID="prism-composite" accessible accessibilityLabel="Prism canvas composite" source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} onError={() => { if (store.getState().uri === uri) store.setState({ previewError: 'The canvas preview could not be displayed. Retry the preview.' }); }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}><Text style={{ color: colors.paperInk, fontSize: 12, textAlign: 'center' }}>{previewError ? 'Preview unavailable' : 'Rendering canvas…'}</Text></View>}
+        {uri && !previewError ? <Image testID="prism-composite" accessible accessibilityLabel="Prism canvas composite" source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} onError={() => { if (store.getState().uri === uri) store.setState({ previewError: 'The canvas preview could not be displayed. Retry the preview.' }); }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: tokens.spacing.off20 }}><Text style={{ color: colors.paperInk, fontSize: tokens.text.label, textAlign: 'center' }}>{previewError ? 'Preview unavailable' : 'Rendering canvas…'}</Text></View>}
       </PrismCanvas>}
     </View>
-    <View ref={personaToolbar} onLayout={event => store.setState({ toolbarHeight: event.nativeEvent.layout.height })} style={{ position: 'absolute', zIndex: personaOpen ? 70 : 20, top: 12, left: 12, width: toolbarWidth, minHeight: scale.size.target+4, paddingLeft: scale.space.inset+2, paddingRight: scale.space.stack, flexDirection: 'row', alignItems: 'center', gap: 10, ...chromeSurface }}>
-      <View style={{ flex: 1, minWidth: 0, gap: 3 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{selected?.name ?? 'Artboard'}</Text><Text numberOfLines={1} style={{ color: colors.muted, fontSize: scale.type.label }}>{selected ? `${prismLayerLabel(selected)} layer` : 'Prism document'}{doc ? ` · ${doc.width} × ${doc.height} px` : ''}</Text></View>
+    <View ref={personaToolbar} onLayout={event => store.setState({ toolbarHeight: event.nativeEvent.layout.height })} style={{ position: 'absolute', zIndex: personaOpen ? tokens.z.overlay : tokens.z.chrome, top: tokens.spacing.fixedInset, left: tokens.spacing.fixedInset, width: toolbarWidth, minHeight: scale.size.target+4, paddingLeft: scale.space.inset+2, paddingRight: scale.space.stack, flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.off10, ...chromeSurface }}>
+      <View style={{ flex: 1, minWidth: 0, gap: tokens.spacing.off3 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: tokens.text.label, fontWeight: tokens.fontWeight.semibold }}>{selected?.name ?? 'Artboard'}</Text><Text numberOfLines={1} style={{ color: colors.muted, fontSize: scale.type.label }}>{selected ? `${prismLayerLabel(selected)} layer` : 'Prism document'}{doc ? ` · ${doc.width} × ${doc.height} px` : ''}</Text></View>
       {selected?.content?.type === 'shape' && !props.busy && <Menu key={selected.id} title="Transform shape" triggerLabel="Transform shape"
         actions={SHAPE_TRANSFORMS.map(({ id, title }) => ({ id, title, disabled: busy || !!props.busy }))}
         onAction={action => {
@@ -415,7 +416,7 @@ export function PrismEditor(props: PrismEditorProps) {
           if (payload) void run('transformShape', payload, 'Shape transformed');
         }}>
         <View style={{ minHeight: scale.size.target, justifyContent: 'center', paddingHorizontal: scale.space.element, opacity: busy || props.busy ? .4 : 1 }}>
-          <Text style={{ color: colors.muted, fontSize: 11 }}>Transform</Text>
+          <Text style={{ color: colors.muted, fontSize: tokens.text.off11 }}>Transform</Text>
         </View>
       </Menu>}
       {personaTrigger}
@@ -426,36 +427,36 @@ export function PrismEditor(props: PrismEditorProps) {
         drawn past the toolbar row could be seen but not touched. */}
     {personaSurface}
     <View accessibilityLabel="Creation tools" onLayout={event => { const w = Math.round(event.nativeEvent.layout.width); if (w > 0 && w !== store.getState().railWidth) store.setState({ railWidth: w }); }}
-      style={{ position: 'absolute', zIndex: 20, left: 12, top: railTop, minWidth: scale.size.canvasRail, alignItems: 'center', padding: 3, gap: 3, ...chromeSurface }}>
+      style={{ position: 'absolute', zIndex: tokens.z.chrome, left: tokens.spacing.fixedInset, top: railTop, minWidth: scale.size.canvasRail, alignItems: 'center', padding: tokens.spacing.off3, gap: tokens.spacing.off3, ...chromeSurface }}>
       {activeCaps.has('shapes') && <>
         {control('Rectangle', () => addShape('rect'), !doc, false, 'rectangle', undefined, true, 'Adds a centered rectangle using the selected fill')}
         {control('Ellipse', () => addShape('ellipse'), !doc, false, 'ellipse', undefined, true, 'Adds a centered ellipse using the selected fill')}
       </>}
-      {activeCaps.has('shapes') && activeCaps.has('raster-layers') && <View style={{ height: 1, width: 26, backgroundColor: chrome.rule }} />}
+      {activeCaps.has('shapes') && activeCaps.has('raster-layers') && <View style={{ height: tokens.borderWidth.hairline, width: tokens.spacing.off26, backgroundColor: chrome.rule }} />}
       {activeCaps.has('raster-layers') && control('Raster layer', () => { void run('addRasterLayer', { name: `Raster ${layers.length + 1}` }, 'Raster layer added'); }, !doc, false, 'image', undefined, true, 'Adds an empty raster layer')}
-      {!activeCaps.has('shapes') && !activeCaps.has('raster-layers') && <Text accessibilityRole="text" style={{ color: colors.muted, fontSize: scale.type.label, textAlign: 'center', paddingVertical: 6 }}>No tools in this build</Text>}
+      {!activeCaps.has('shapes') && !activeCaps.has('raster-layers') && <Text accessibilityRole="text" style={{ color: colors.muted, fontSize: scale.type.label, textAlign: 'center', paddingVertical: tokens.spacing.off6 }}>No tools in this build</Text>}
     </View>
     {layersOpen && panel}
-    <View testID="prism-fill-bar" accessibilityLabel={selected ? 'Fill' : 'New shape fill'} onLayout={event => { const h = Math.round(event.nativeEvent.layout.height); if (h > 0 && h !== store.getState().fillHeight) store.setState({ fillHeight: h }); }} style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, ...chromeSurface }}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minHeight: 50, alignItems: 'center', flexDirection: 'row', gap: 2 }} style={{ flex: 1 }}>
-      {!narrow && <Text style={{ color: colors.muted, fontSize: scale.type.label, marginRight: 8 }}>{selected ? 'Fill' : 'New shape fill'}</Text>}
+    <View testID="prism-fill-bar" accessibilityLabel={selected ? 'Fill' : 'New shape fill'} onLayout={event => { const h = Math.round(event.nativeEvent.layout.height); if (h > 0 && h !== store.getState().fillHeight) store.setState({ fillHeight: h }); }} style={{ position: 'absolute', zIndex: tokens.z.fillBar, left: fillLeft, bottom: tokens.spacing.off20, width: fillWidth, minHeight: tokens.spacing.fixedToolbar, paddingHorizontal: tokens.spacing.off10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: tokens.spacing.off2, ...chromeSurface }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minHeight: tokens.spacing.off50, alignItems: 'center', flexDirection: 'row', gap: tokens.spacing.off2 }} style={{ flex: 1 }}>
+      {!narrow && <Text style={{ color: colors.muted, fontSize: scale.type.label, marginRight: tokens.spacing.fixedElement }}>{selected ? 'Fill' : 'New shape fill'}</Text>}
       {/* Each chip sits in a 44 pt target. The chosen one is ringed with a gap,
           in the engraving colour, or the system highlight under forced colours. */}
-      {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${FILL_NAMES[index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: scale.size.target, height: scale.size.target, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent', borderRadius: scale.radius.control }}>
-        <View style={{ width: 33, height: 33, alignItems: 'center', justifyContent: 'center', borderRadius: scale.radius.control + 2, borderWidth: 2, borderColor: color === index ? (forced ? systemColor('Highlight') : chrome.chipRing) : 'transparent', ...keepColour }}>
-          <View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: 1, borderColor: forced ? systemColor('CanvasText') : chrome.chipEdge, ...keepColour }} />
+      {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${FILL_NAMES[index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: scale.size.target, height: scale.size.target, alignItems: 'center', justifyContent: 'center', borderWidth: tokens.borderWidth.hairline, borderColor: 'transparent', borderRadius: scale.radius.control }}>
+        <View style={{ width: tokens.spacing.off33, height: tokens.spacing.off33, alignItems: 'center', justifyContent: 'center', borderRadius: scale.radius.control + 2, borderWidth: tokens.borderWidth.strong, borderColor: color === index ? (forced ? systemColor('Highlight') : chrome.chipRing) : 'transparent', ...keepColour }}>
+          <View style={{ width: tokens.spacing.off25, height: tokens.spacing.off25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: tokens.borderWidth.hairline, borderColor: forced ? systemColor('CanvasText') : chrome.chipEdge, ...keepColour }} />
         </View>
       </Pressable>)}
-      {selected && <><View style={{ width: 1, height: 24, backgroundColor: chrome.rule, marginHorizontal: 5 }} />{control('Fill layer', () => { void run(selected.content.type === 'shape' ? 'setShapeFill' : 'fillLayer', { id: selected.id, color: FILLS[color] }, selected.content.type === 'shape' ? 'Shape fill changed' : 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
+      {selected && <><View style={{ width: tokens.borderWidth.hairline, height: tokens.spacing.off24, backgroundColor: chrome.rule, marginHorizontal: tokens.spacing.off5 }} />{control('Fill layer', () => { void run(selected.content.type === 'shape' ? 'setShapeFill' : 'fillLayer', { id: selected.id, color: FILLS[color] }, selected.content.type === 'shape' ? 'Shape fill changed' : 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
       </ScrollView>
     </View>
     {!!feedback && <View onLayout={event => { const h = Math.round(event.nativeEvent.layout.height); if (h !== store.getState().feedbackHeight) store.setState({ feedbackHeight: h }); }}
-      style={{ position: 'absolute', zIndex: 35, bottom: toastBottom, left: toastLeft, width: toastWidth }}>
+      style={{ position: 'absolute', zIndex: tokens.z.toast, bottom: toastBottom, left: toastLeft, width: toastWidth }}>
       <Banner tone={error || previewError ? 'danger' : 'info'} title={feedback} live={error || previewError ? 'alert' : 'status'} className="rounded-[4px]"
         {...(previewError ? { action: <Button title="Retry preview" onPress={() => store.setState(s => ({ retry: s.retry + 1 }))} disabled={busy || !!props.busy} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /> } : {})} />
     </View>}
     {/* The one live region for persona changes. It stays mounted, so the commit is read after the panel closes. */}
-    <Text testID="persona-status" accessibilityLiveRegion="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}>{personaStatus}</Text>
+    <Text testID="persona-status" accessibilityLiveRegion="polite" style={{ position: 'absolute', width: tokens.borderWidth.hairline, height: tokens.borderWidth.hairline, overflow: 'hidden', opacity: 0 }}>{personaStatus}</Text>
   </View>;
   // Kit controls take the chrome's scheme: night on graphite, day on ceramic.
   const themed = <TokenScope variables={controlTokens}>{editor}</TokenScope>;
