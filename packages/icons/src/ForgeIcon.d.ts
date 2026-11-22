@@ -1,34 +1,28 @@
-import type { ReactNode } from 'react';
-import type { PressableProps } from 'react-native';
-import type { ForgeIconOptions } from './index.js';
+import type {ReactElement,ReactNode} from "react";
+import type {PressableProps} from "react-native";
+import type {ForgeIconOptions,ForgeIconSize} from "./index.js";
 
-/** Host-owned Rive adapter inputs. No Rive runtime is bundled by this package. */
-export interface ForgeIconRiveInputs {
-  name: string;
-  selected: boolean;
-  disabled: boolean;
-  loading: boolean;
-  pressed: boolean;
-  hovered: boolean;
-  status: NonNullable<ForgeIconOptions['status']>;
-  color: string;
-  size: number;
-  reducedMotion: boolean;
-  artboard: 'ForgeIcon';
-  stateMachine: 'ForgeIconStates';
+/** Props passed to a host-supplied Rive renderer by {@linkcode ForgeIcon}. */
+export interface ForgeIconRiveRequest {
+ readonly name:string;readonly selected:boolean;readonly disabled:boolean;
+ readonly loading:boolean;readonly pressed:boolean;readonly hovered:boolean;
+ readonly status:"idle"|"success"|"error"|"recording";readonly color:string;
+ readonly size:number;readonly reducedMotion:boolean;
+ readonly artboard:"ForgeIcon";readonly stateMachine:"ForgeIconStates";
 }
+/** Props for {@linkcode ForgeIcon}. `name` is a catalog ID such as `vector/pen`. */
 export interface ForgeIconProps extends ForgeIconOptions {
-  /** Authored glyph name or category/name. Unknown artwork renders nothing. */
-  name: string;
-  /** Color behind paths, used for knockout details. */
-  surfaceColor?: string;
-  testID?: string;
-  renderRive?: (inputs: ForgeIconRiveInputs) => ReactNode;
+ name:string;
+ /** Return a Rive view to replace the SVG fallback; return null to keep it. */
+ renderRive?:(request:ForgeIconRiveRequest)=>ReactNode;
+ testID?:string;
 }
-export interface ForgeIconButtonProps extends ForgeIconProps {
-  /** Required accessible button name; blank labels are rejected. */
-  label: string;
-  onPress?: PressableProps['onPress'];
+/** Outline when idle, filled when selected. Renders null when `name` has no finished artwork. */
+export function ForgeIcon(props:ForgeIconProps):ReactElement|null;
+/** Props for {@linkcode ForgeIconButton}. `label` is required and must not be blank. */
+export interface ForgeIconButtonProps extends Omit<ForgeIconProps,"pressed">,
+ Pick<PressableProps,"onPress"|"hitSlop"> {
+ label:string;size?:number|ForgeIconSize;
 }
-export function ForgeIcon(props: ForgeIconProps): ReactNode;
-export function ForgeIconButton(props: ForgeIconButtonProps): ReactNode;
+/** 44pt minimum icon button with button role, label and selected/disabled/busy state. */
+export function ForgeIconButton(props:ForgeIconButtonProps):ReactElement;

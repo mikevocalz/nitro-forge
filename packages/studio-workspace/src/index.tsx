@@ -108,7 +108,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     const toggled = Object.values(panelNames).includes(label) ? selected : undefined;
     const icon = glyph ? <ForgeIcon name={glyph} size={18} selected={selected} disabled={disabled}
       appearance={appearance} color={primary ? colors.ink : selected ? colors.accent : colors.muted}
-      selectedColor={primary ? colors.ink : colors.accent} surfaceColor={primary ? colors.accent : selected ? colors.soft : colors.base} reducedMotion={reducedMotion} /> : undefined;
+      selectedColor={primary ? colors.ink : colors.accent} reducedMotion={reducedMotion} /> : undefined;
     const shared = { onPress, disabled, targetSize: scale.size.target, ...(toggled === undefined ? {} : { selected: toggled }), cornerRadius: scale.radius.control,
       variant: primary ? 'primary' as const : 'ghost' as const, tone: 'carolina' as const,
       // A transparent edge keeps each button's shape under Windows High Contrast.
@@ -203,7 +203,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     <View style={{ paddingHorizontal: compact ? scale.space.inset : scale.space.group + scale.space.stack, borderBottomWidth: canvasStudio ? 0 : 1, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: compact ? scale.space.element : scale.space.group, minHeight: canvasStudio ? scale.size.canvasHeader : scale.size.header, ...(canvasStudio ? { backgroundColor: colors.base, margin: scale.space.element, marginBottom: 0, borderRadius: scale.radius.control, boxShadow: '0 3px 12px #00000020' } : {}) }}>
       {props.headerLeading}
       <View style={{ width: separateHostControls ? 32 : 38, height: separateHostControls ? 32 : 38, backgroundColor: colors.soft, borderRadius: scale.radius.panel, alignItems: 'center', justifyContent: 'center' }}>
-        <ForgeIcon name={appIcons[props.studioId]} size={separateHostControls ? 20 : 23} selected color={colors.accent} selectedColor={colors.accent} surfaceColor={colors.soft} reducedMotion={reducedMotion} />
+        <ForgeIcon name={appIcons[props.studioId]} size={separateHostControls ? 20 : 23} selected color={colors.accent} selectedColor={colors.accent} reducedMotion={reducedMotion} />
       </View>
       <View style={{ flex: 1, minWidth: 40, gap: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11, fontWeight: '600', letterSpacing: .4, flexShrink: 1 }}>{props.title}</Text>{!compact && <><Text style={{ color: colors.line, fontSize: 11 }}> / </Text><Text style={{ color: colors.muted, fontSize: 11 }}>{props.busy ? 'Working…' : 'Document'}</Text></>}</View>

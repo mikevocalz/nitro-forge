@@ -20,7 +20,7 @@ Office/Google Workspace/iWork classes of operations and pro tools found in
 Affinity/Adobe/Figma/Canva/DaVinci-style editors. These are **original** names and
 artwork, not copied proprietary icon files.
 
-Only icons listed in `glyphIds` have committed authored outline/filled vector
+Only the catalog IDs listed in `glyphIds` (48 today) have committed authored outline/filled vector
 paths. Names in `iconIds` are a **design backlog**, not finished SVGs or Rive assets.
 `getGlyph` returns undefined for unmatched artwork. Do not silently display
 the wrong glyph or imply the whole inventory is ready.
@@ -30,7 +30,7 @@ the wrong glyph or imply the whole inventory is ready.
 import {searchIcons,getGlyph,resolveIconState,riveIconInputs} from "@nitro-forge/icons";
 import {ForgeIcon} from "@nitro-forge/icons/native";
 const result=resolveIconState({selected:true,size:"toolbar",appearance:"dark"});
-const selectionArtwork=getGlyph("paint/pen",result.variant);
+const selectionArtwork=getGlyph("vector/pen",result.variant);
 ```
 
 **Native/web UI:** `ForgeIcon` uses one shared SVG path renderer with

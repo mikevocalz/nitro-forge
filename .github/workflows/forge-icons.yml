@@ -1,0 +1,22 @@
+name: Forge icon source and state contracts
+on:
+  pull_request:
+    paths:
+      - 'packages/icons/**'
+      - '.github/workflows/forge-icons.yml'
+  workflow_dispatch:
+jobs:
+  icons:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: JS parse check including React Native icon module
+        run: |
+          for file in packages/icons/src/*.js; do node --check "$file"; done
+      - name: Suite catalog and variant semantics
+        run: node --test packages/icons/tests/*.test.js

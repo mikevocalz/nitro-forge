@@ -18,6 +18,8 @@ test("native/web module exposes accessible UI and Rive renderer adapter",()=>{
  for(const marker of [
   "export function ForgeIcon(", "export function ForgeIconButton(",
   "renderRive","useNativeDriver:true","accessibilityLabel:label",
-  "reducedMotion","React.createElement(Pressable","getGlyph(name,\"outline\")"
+  "reducedMotion","React.createElement(Pressable","getGlyph(name,\"outline\")",
+  "React.createElement(Mask"
  ])assert.ok(body.includes(marker),marker);
+ assert.equal(body.includes("surfaceColor"),false,"knockouts must not paint a guessed surface color");
 });

@@ -29,6 +29,16 @@ test("first authored glyphs have explicit outline and filled variants",()=>{
  }
  assert.equal(getGlyph("charts/chart-funnel"),undefined);
 });
+test("artwork resolves only through catalog IDs, never by bare or borrowed slug",()=>{
+ for(const id of glyphIds)assert.equal(hasIconId(id),true,id);
+ assert.ok(getGlyph("vector/pen"));
+ assert.equal(getGlyph("pen"),undefined);
+ assert.equal(getGlyph("bogus/home"),undefined);
+ assert.equal(getGlyph("navigation/home","bogus"),undefined);
+ assert.equal(getGlyph(undefined),undefined);
+ for(const id of ["edit/cut","paint/paintbrush","ai/ai-sparkle","file/document-pdf","audio/note","spreadsheet/sheet"])
+   assert.ok(getGlyph(id,"filled"),id);
+});
 test("inactive always outline, selected always filled; reduced motion still filled",()=>{
  assert.equal(resolveIconState().variant,"outline");
  assert.equal(resolveIconState({selected:true}).variant,"filled");
