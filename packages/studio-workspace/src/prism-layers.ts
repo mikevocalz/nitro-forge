@@ -13,7 +13,7 @@ import type { CanvasShape } from './prism-canvas-model.ts';
  */
 
 /** A Prism layer as the editor reads it from the engine's `describe` state. */
-export type PrismLayer = CanvasLayer & { name: string };
+export type PrismLayer = CanvasLayer & { name: string; /** Engine blend mode name; absent reads as `normal`. */ blend?: string };
 
 /**
  * One engine operation produced from a {@linkcode LayerStack} callback. The
@@ -23,6 +23,7 @@ export type PrismLayer = CanvasLayer & { name: string };
 export type PrismLayerCommand =
   | { op: 'moveLayer'; payload: { id: number; to_index: number }; label: string }
   | { op: 'setLayerOpacity'; payload: { id: number; opacity: number }; label: string }
+  | { op: 'setLayerBlend'; payload: { id: number; blend: string }; label: string }
   | { op: 'setLayerVisible'; payload: { id: number; visible: boolean }; label: string }
   | { op: 'renameLayer'; payload: { id: number; name: string }; label: string }
   | { op: 'removeLayer'; payload: { id: number }; label: string };
