@@ -4,8 +4,18 @@ on:
     paths:
       - 'docs/completion/**'
       - 'tooling/verify-completion-plan*'
+      - 'tooling/verify-component-program.mjs'
+      - 'tooling/tests/component-program*.mjs'
       - '.github/workflows/completion-plan.yml'
   workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/completion/**'
+      - 'tooling/verify-completion-plan*'
+      - 'tooling/verify-component-program.mjs'
+      - 'tooling/tests/component-program*.mjs'
+      - '.github/workflows/completion-plan.yml'
 permissions:
   contents: read
 jobs:
@@ -18,3 +28,20 @@ jobs:
           node-version: '24.19.0'
       - run: node tooling/verify-completion-plan.mjs
       - run: node --test tooling/verify-completion-plan.test.mjs
+  tron-component-program:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: mikevocalz/NYC-Tron-UI
+          ref: 0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44
+          path: tron-program-source
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - run: node --test tooling/tests/component-program*.test.mjs
+      - run: node tooling/verify-component-program.mjs --tron-source tron-program-source

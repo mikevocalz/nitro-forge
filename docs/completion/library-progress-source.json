@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "repository": "mikevocalz/NYC-Tron-UI",
+  "revision": "0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44",
+  "release": "v1.0.0-rc.2",
+  "ledgerPath": "docs/completion/library-progress.json",
+  "ledgerSha256": "802713806e66e69e892560084397d06d8dc5f9318ae6706eef60ce13a9108bc3",
+  "validatorPath": "tooling/verify-component-program.mjs",
+  "validatorSha256": "7aab7a216cd742629d686b341966e4b32a14796ddb53e25c0c067c33c25ff5bd",
+  "testsPath": "tooling/tests/component-program.test.mjs",
+  "testsSha256": "e328e63006b0d2df7d73ca4d7fc37d06d6e71a0b872b7c96421492b4666e1e1c"
+}
