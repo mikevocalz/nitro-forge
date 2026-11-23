@@ -19,6 +19,10 @@ test("F7 owns the application program, keeps every ledger platform column, scope
   assert.deepEqual([...scope.platforms, ...scope.postV1Platforms].sort(), [...program.ledgerPlatforms].sort());
   assert.deepEqual(scope.platforms, ["ios", "android", "web"]);
   assert.ok(gate.acceptance.some(text => text.includes("Owner decision D2") && text.includes(scope.rows)));
+  const derived = json(scope.rows);
+  assert.ok(Array.isArray(derived.postV1.rows) && derived.postV1.rows.length > 0);
+  assert.deepEqual(derived.postV1.platforms, scope.postV1Platforms);
+  assert.ok(readFileSync(new URL("../../" + scope.derivation, import.meta.url)).length > 0);
   assert.equal(program.consumerReleasePin, "tooling/nyc-tron.json");
   assert.ok(json(program.consumerReleasePin).tag);
   assert.ok(gate.acceptance.some(text => text.includes("Forge owns") && text.includes("exact Tron release")));
