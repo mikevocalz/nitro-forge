@@ -27,7 +27,9 @@
     "test:check-radius": "node --test tooling/tests/check-radius.test.mjs",
     "validate:v1": "node tooling/check-radius.mjs && node tooling/validate-v1.mjs",
     "validate:v1:prerelease": "node tooling/check-radius.mjs --report && node tooling/validate-v1.mjs --version 1.0.0-rc.1",
-    "test:validate-v1": "node --test tooling/validate-v1.test.mjs"
+    "test:validate-v1": "node --test tooling/validate-v1.test.mjs",
+    "check:packages": "node tooling/release/pack-packages.mjs",
+    "test:packages": "node --test tooling/release/package-verify.test.mjs"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

@@ -21,5 +21,8 @@
     "typescript": "7.0.2",
     "vitest": "5.1.0",
     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz"
-  }
+  },
+  "files": [
+    "src"
+  ]
 }
