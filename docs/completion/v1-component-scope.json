@@ -66,14 +66,14 @@
       ]
     }
   ],
-  "reachableFiles": 211,
+  "reachableFiles": 212,
   "v1": {
     "platforms": [
       "ios",
       "android",
       "web"
     ],
-    "rowCount": 52,
+    "rowCount": 53,
     "rows": [
       {
         "id": "A-12",
@@ -87,7 +87,7 @@
             "mappedBy": "module"
           },
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:86",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:88",
             "kind": "jsx",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
@@ -177,11 +177,24 @@
         ]
       },
       {
+        "id": "B-11",
+        "name": "LayerBlendAndOpacity",
+        "renders": [
+          {
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:116",
+            "kind": "jsx",
+            "binding": "LayerBlendAndOpacity",
+            "module": "@nyc-tron/ui/components/forge/layers/LayerBlendAndOpacity",
+            "mappedBy": "name"
+          }
+        ]
+      },
+      {
         "id": "B-12",
         "name": "MaskThumbnailAndEditor",
         "renders": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:113",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:119",
             "kind": "jsx",
             "binding": "MaskThumbnailAndEditor",
             "module": "@nyc-tron/ui/components/forge/layers/MaskThumbnailAndEditor",
@@ -194,7 +207,7 @@
         "name": "ClippingMaskControls",
         "renders": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:109",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:111",
             "kind": "jsx",
             "binding": "ClipToggle",
             "module": "@nyc-tron/ui/components/forge/layers/ClippingMaskControls",
@@ -207,7 +220,7 @@
         "name": "ArtboardNavigator",
         "renders": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:137",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:143",
             "kind": "jsx",
             "binding": "ArtboardNavigator",
             "module": "@nyc-tron/ui/components/forge/layers/ArtboardNavigator",
@@ -220,7 +233,7 @@
         "name": "MagicSelectionControls",
         "renders": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:128",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:134",
             "kind": "jsx",
             "binding": "MagicSelectionControls",
             "module": "@nyc-tron/ui/components/forge/selection/MagicSelectionControls",
@@ -279,7 +292,7 @@
         "name": "AlignDistributePanel",
         "renders": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:132",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:138",
             "kind": "jsx",
             "binding": "AlignDistributePanel",
             "module": "@nyc-tron/ui/components/forge/canvas/AlignDistributePanel",
@@ -292,7 +305,7 @@
         "name": "ColorPickerDialog",
         "renders": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:158",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:164",
             "kind": "jsx",
             "binding": "ColorPickerDialog",
             "module": "@nyc-tron/ui/components/forge/color/ColorPickerDialog",
@@ -305,7 +318,7 @@
         "name": "EyedropperTool",
         "renders": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:152",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:158",
             "kind": "jsx",
             "binding": "EyedropperTool",
             "module": "@nyc-tron/ui/components/forge/color/EyedropperTool",
@@ -318,7 +331,7 @@
         "name": "ForegroundBackgroundChips",
         "renders": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:144",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:150",
             "kind": "jsx",
             "binding": "ForegroundBackgroundChips",
             "module": "@nyc-tron/ui/components/forge/color/ForegroundBackgroundChips",
@@ -331,7 +344,7 @@
         "name": "SwatchGrid",
         "renders": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:147",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:153",
             "kind": "jsx",
             "binding": "SwatchGrid",
             "module": "@nyc-tron/ui/components/forge/color/SwatchGrid",
@@ -800,7 +813,7 @@
             "mappedBy": "module"
           },
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:86",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:88",
             "kind": "jsx",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
@@ -1160,7 +1173,7 @@
       "pico"
     ],
     "platformsApplyTo": "every ledger row, including the v1 rows above",
-    "rowCount": 294,
+    "rowCount": 293,
     "rows": [
       "A-01",
       "A-02",
@@ -1198,7 +1211,6 @@
       "B-07",
       "B-08",
       "B-10",
-      "B-11",
       "B-15",
       "B-16",
       "B-17",
