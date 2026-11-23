@@ -13,6 +13,8 @@ export type WorkspaceColors = { [K in keyof typeof workspaceThemes.dark]: string
  * every control. They become Tailwind's `rounded-sm` and `rounded-md` through
  * build-theme.mjs; tooling/check-radius.mjs rejects any other radius value. */
 export const forgeRadius = { sm: 4, md: 6 } as const;
+/** One of the two view radii; the type of every radius prop Forge passes to a control. */
+export type ForgeRadiusValue = typeof forgeRadius[keyof typeof forgeRadius];
 /** Sub-4 px radii for hairline details only (ticks, needles, meter segments). */
 export const forgeHairlineRadius = { tick: 1, needle: 0.75 } as const;
 export const workspaceScale = {

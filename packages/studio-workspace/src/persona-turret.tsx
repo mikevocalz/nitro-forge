@@ -426,7 +426,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
               }}
               {...{ onFocus: () => store.setState({ focused: true }), onBlur: () => { store.setState({ focused: false }); dispatch({ type: 'cancel' }, null); } }}
               style={{
-                position: 'absolute', left: cx - R, top: frame.boxTop - R, width: ringSize, height: ringSize, borderRadius: R,
+                position: 'absolute', left: cx - R, top: frame.boxTop - R, width: ringSize, height: ringSize, borderRadius: R, // radius-exempt: knob
                 // The face colour under the drawing, so the readout has a real ground for contrast checks.
                 backgroundColor: m.face[1],
                 ...(depth.dial ? { boxShadow: depth.dial } : {}),

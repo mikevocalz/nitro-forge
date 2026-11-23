@@ -72,8 +72,8 @@ export function TurretLab() {
   };
 
   const artboard = <View testID="lab-artboard" accessibilityLabel={`Artboard 800 × 600 px, ${fill.name} rectangle and ellipse at ${s.opacity} % opacity`}
-    style={style({ width: phone ? s.width - 32 : 560, aspectRatio: 4 / 3, maxHeight: phone ? 240 : undefined, alignSelf: 'center', backgroundColor: canvas.paper, borderRadius: scale.radius.paper, overflow: 'hidden', boxShadow: '0 1px 2px #0000002E' })}>
-    <View style={{ position: 'absolute', left: '14%', top: '20%', width: '42%', height: '44%', backgroundColor: fill.hex, opacity: s.opacity / 100, borderRadius: scale.radius.paper }} />
+    style={style({ width: phone ? s.width - 32 : 560, aspectRatio: 4 / 3, maxHeight: phone ? 240 : undefined, alignSelf: 'center', backgroundColor: canvas.paper, borderRadius: scale.radius.control, overflow: 'hidden', boxShadow: '0 1px 2px #0000002E' })}>
+    <View style={{ position: 'absolute', left: '14%', top: '20%', width: '42%', height: '44%', backgroundColor: fill.hex, opacity: s.opacity / 100, borderRadius: 0 }} />
     <View style={{ position: 'absolute', left: '44%', top: '36%', width: '38%', height: '46%', backgroundColor: fill.hex, opacity: s.opacity / 100, borderRadius: '50%' /* radius-exempt: artwork */ }} />
     <Text style={{ position: 'absolute', right: 10, top: 8, color: canvas.paperInk, fontSize: scale.type.micro + 1, fontVariant: ['tabular-nums'] }}>800 × 600 px</Text>
   </View>;
