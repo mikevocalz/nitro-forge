@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "decision": "D2, 2026-11-23: F7 component acceptance for v1 covers iOS, Android and web for every ledger row a studio or lab renders. Every other row, and the macOS, Windows, visionOS, Quest and PICO columns of every row, stay in the ledger as NOT RUN, post-v1.",
+  "decision": "D2 and D4, docs/completion/DECISIONS-2026-11-23-v1-scope.md: F7 component acceptance for v1 covers iOS, Android and web for every ledger row a studio or lab renders or calls. Every other row, and the macOS, Windows, visionOS, Quest and PICO columns of every row, stay in the ledger as NOT RUN, post-v1.",
   "generator": "tooling/derive-v1-component-scope.mjs",
   "inputs": {
     "ledger": "docs/completion/library-progress.json",
@@ -14,8 +14,8 @@
     "studiosAndLabs": "Workspaces under apps/ and examples/ whose package.json lists react in dependencies.",
     "entries": "package.json main (expo-router/entry means every file under app/), index.html module scripts, and top-level scripts that call registerRootComponent.",
     "reachability": "Files imported from an entry through relative paths or scanned workspace packages (@nitro-forge/*), following static, dynamic, require and re-export edges and every .native/.ios/.android/.web variant.",
-    "usage": "A PascalCase binding that originates in an @nyc-tron/* module (alias, namespace or workspace re-export) and is rendered as JSX or passed as a component value in a reachable file; renders of a Studio UI slot (useComponents().Name) count for Name.",
-    "mapping": "Same-named ledger row first; otherwise the rows whose Tron source file is the imported module. Anything else is listed under unmapped."
+    "usage": "Renders or calls (D4): any non-type binding that originates in an @nyc-tron/* module (alias, namespace or workspace re-export), whatever its capitalisation. A JSX render, or a render of a Studio UI slot (useComponents().Name), is kind render. A function call or a value passed along is kind call. Type-only imports and typeof positions are not hits.",
+    "mapping": "Same-named ledger row first; otherwise every row that lists the imported Tron module as a source. A subpath resolves to packages/<package>/<root>/<subpath>, where root is src, or src/components for expo-controls (its pinned exports map). Anything else is listed under unmapped by module."
   },
   "studiosAndLabs": [
     {
@@ -73,50 +73,51 @@
       "android",
       "web"
     ],
-    "rowCount": 52,
+    "rowCount": 57,
     "rows": [
       {
         "id": "A-12",
         "name": "NumericScrubField",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:90",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:86",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "apps/studio-preview/src/turret-lab.tsx:91",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "examples/native-cadence/App.tsx:259",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "examples/native-cadence/App.tsx:263",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "packages/studio-workspace/src/prism-editor.tsx:232",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
@@ -126,17 +127,18 @@
       {
         "id": "A-14",
         "name": "SliderField",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:516",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "SliderField",
             "module": "@nyc-tron/ui/components/shell/SliderField",
             "mappedBy": "name"
           },
           {
             "at": "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:529",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "SliderField",
             "module": "@nyc-tron/ui/components/shell/SliderField",
             "mappedBy": "name"
@@ -146,17 +148,18 @@
       {
         "id": "A-20",
         "name": "NativePopover",
-        "renders": [
+        "basis": "D4: F8 item 5 requires native popovers in every studio.",
+        "hits": [
           {
             "at": "apps/example/src/studio-ui.tsx:17",
-            "kind": "value",
+            "kind": "call",
             "binding": "NativePopover",
             "module": "@nyc-tron/expo-controls/NativePopover",
             "mappedBy": "name"
           },
           {
             "at": "apps/studio-preview/src/studio-ui.tsx:23",
-            "kind": "value",
+            "kind": "call",
             "binding": "NativePopover",
             "module": "@nyc-tron/expo-controls/NativePopover",
             "mappedBy": "name"
@@ -166,10 +169,11 @@
       {
         "id": "B-09",
         "name": "LayerStack",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "packages/studio-workspace/src/prism-editor.tsx:247",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "LayerStack",
             "module": "@nyc-tron/ui/components/forge/layers/LayerStack",
             "mappedBy": "name"
@@ -179,10 +183,11 @@
       {
         "id": "B-12",
         "name": "MaskThumbnailAndEditor",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:113",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "MaskThumbnailAndEditor",
             "module": "@nyc-tron/ui/components/forge/layers/MaskThumbnailAndEditor",
             "mappedBy": "name"
@@ -192,10 +197,11 @@
       {
         "id": "B-13",
         "name": "ClippingMaskControls",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:109",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "ClipToggle",
             "module": "@nyc-tron/ui/components/forge/layers/ClippingMaskControls",
             "mappedBy": "module"
@@ -205,10 +211,11 @@
       {
         "id": "B-14",
         "name": "ArtboardNavigator",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:137",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "ArtboardNavigator",
             "module": "@nyc-tron/ui/components/forge/layers/ArtboardNavigator",
             "mappedBy": "name"
@@ -218,10 +225,11 @@
       {
         "id": "B-20",
         "name": "MagicSelectionControls",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:128",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "MagicSelectionControls",
             "module": "@nyc-tron/ui/components/forge/selection/MagicSelectionControls",
             "mappedBy": "name"
@@ -231,17 +239,25 @@
       {
         "id": "B-21",
         "name": "PenNodeEditor",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
+          {
+            "at": "apps/studio-preview/src/prism-node-overlay.tsx:15",
+            "kind": "call",
+            "binding": "PenNodeModule",
+            "module": "@nyc-tron/ui/components/forge/vector/PenNodeEditor",
+            "mappedBy": "module"
+          },
           {
             "at": "apps/studio-preview/src/prism-node-overlay.tsx:16",
-            "kind": "value",
+            "kind": "call",
             "binding": "PenNodeModule",
             "module": "@nyc-tron/ui/components/forge/vector/PenNodeEditor",
             "mappedBy": "name"
           },
           {
             "at": "apps/studio-preview/src/prism-node-overlay.tsx:38",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "ScopedPenNodeEditor",
             "module": "@nyc-tron/ui/components/forge/vector/PenNodeEditor",
             "mappedBy": "name"
@@ -251,10 +267,11 @@
       {
         "id": "B-22",
         "name": "ShapeBuilder",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-vector-controls.tsx:49",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "ShapeBuilder",
             "module": "@nyc-tron/ui/components/forge/vector/ShapeBuilder",
             "mappedBy": "name"
@@ -264,10 +281,11 @@
       {
         "id": "B-23",
         "name": "FillStrokeInspector",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-vector-controls.tsx:58",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "FillStrokeInspector",
             "module": "@nyc-tron/ui/components/forge/vector/FillStrokeInspector",
             "mappedBy": "name"
@@ -277,10 +295,11 @@
       {
         "id": "B-25",
         "name": "AlignDistributePanel",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:132",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "AlignDistributePanel",
             "module": "@nyc-tron/ui/components/forge/canvas/AlignDistributePanel",
             "mappedBy": "name"
@@ -290,10 +309,11 @@
       {
         "id": "C-01",
         "name": "ColorPickerDialog",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:158",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "ColorPickerDialog",
             "module": "@nyc-tron/ui/components/forge/color/ColorPickerDialog",
             "mappedBy": "name"
@@ -303,10 +323,11 @@
       {
         "id": "C-11",
         "name": "EyedropperTool",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:152",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "EyedropperTool",
             "module": "@nyc-tron/ui/components/forge/color/EyedropperTool",
             "mappedBy": "name"
@@ -316,10 +337,11 @@
       {
         "id": "C-12",
         "name": "ForegroundBackgroundChips",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:144",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "ForegroundBackgroundChips",
             "module": "@nyc-tron/ui/components/forge/color/ForegroundBackgroundChips",
             "mappedBy": "name"
@@ -329,10 +351,11 @@
       {
         "id": "C-13",
         "name": "SwatchGrid",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:147",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "SwatchGrid",
             "module": "@nyc-tron/ui/components/forge/color/SwatchGrid",
             "mappedBy": "name"
@@ -342,10 +365,11 @@
       {
         "id": "D-04",
         "name": "NativeSeekBar",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/forge-media-lab/App.tsx:30",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "NativeSeekBar",
             "module": "@nyc-tron/ui/components/forge/NativeSeekBar",
             "mappedBy": "name"
@@ -355,10 +379,11 @@
       {
         "id": "D-10",
         "name": "TimelineRuler",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:344",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "TimelineRuler",
             "module": "@nyc-tron/ui/components/forge/timeline/TimelineRuler",
             "mappedBy": "name"
@@ -368,10 +393,11 @@
       {
         "id": "D-11",
         "name": "TimelinePlayhead",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:346",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "TimelinePlayhead",
             "module": "@nyc-tron/ui/components/forge/timeline/TimelinePlayhead",
             "mappedBy": "name"
@@ -381,10 +407,11 @@
       {
         "id": "D-14",
         "name": "TimelineZoomAndScroll",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:343",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "TimelineZoomAndScroll",
             "module": "@nyc-tron/ui/components/forge/timeline/TimelineZoomAndScroll",
             "mappedBy": "name"
@@ -394,10 +421,11 @@
       {
         "id": "D-21",
         "name": "RollSlipSlideControls",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:134",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "RollSlipSlideControls",
             "module": "@nyc-tron/ui/components/forge/timeline/RollSlipSlideControls",
             "mappedBy": "name"
@@ -407,10 +435,11 @@
       {
         "id": "D-23",
         "name": "TransitionHandles",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:84",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "TransitionHandles",
             "module": "@nyc-tron/ui/components/forge/timeline/TransitionHandles",
             "mappedBy": "name"
@@ -420,10 +449,11 @@
       {
         "id": "D-24",
         "name": "TimelineMarkers",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:112",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "TimelineMarkers",
             "module": "@nyc-tron/ui/components/forge/timeline/TimelineMarkers",
             "mappedBy": "name"
@@ -433,10 +463,11 @@
       {
         "id": "D-31",
         "name": "OverlayAndEffectsTrackStack",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:349",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "OverlayAndEffectsTrackStack",
             "module": "@nyc-tron/ui/components/forge/timeline/OverlayAndEffectsTrackStack",
             "mappedBy": "name"
@@ -446,10 +477,11 @@
       {
         "id": "D-37",
         "name": "TransitionPresetBrowser",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:119",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "TransitionPresetBrowser",
             "module": "@nyc-tron/ui/components/forge/timeline/TransitionPresetBrowser",
             "mappedBy": "name"
@@ -459,10 +491,11 @@
       {
         "id": "D-41",
         "name": "BatchEditPanel",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:137",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "BatchEditPanel",
             "module": "@nyc-tron/ui/components/forge/timeline/BatchEditPanel",
             "mappedBy": "name"
@@ -472,10 +505,11 @@
       {
         "id": "E-02",
         "name": "WaveformLane",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/forge-media-lab/App.tsx:36",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "WaveformLane",
             "module": "@nyc-tron/ui/components/forge/WaveformLane",
             "mappedBy": "name"
@@ -485,10 +519,11 @@
       {
         "id": "E-05",
         "name": "SpectrogramView",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:153",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "SpectrogramView",
             "module": "@nyc-tron/ui/components/forge/audio/SpectrogramView",
             "mappedBy": "name"
@@ -498,10 +533,11 @@
       {
         "id": "E-11",
         "name": "AutomationLane",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:118",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "AutomationLane",
             "module": "@nyc-tron/ui/components/forge/audio/AutomationLane",
             "mappedBy": "name"
@@ -511,10 +547,11 @@
       {
         "id": "E-12",
         "name": "AutomationModePicker",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:116",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "AutomationModePicker",
             "module": "@nyc-tron/ui/components/forge/audio/AutomationModePicker",
             "mappedBy": "name"
@@ -524,10 +561,11 @@
       {
         "id": "E-13",
         "name": "MixingConsole",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:277",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "MixingConsole",
             "module": "@nyc-tron/ui/components/forge/audio/MixingConsole",
             "mappedBy": "name"
@@ -537,10 +575,11 @@
       {
         "id": "E-14",
         "name": "VerticalFader",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:104",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "VerticalFader",
             "module": "@nyc-tron/ui/components/forge/audio/VerticalFader",
             "mappedBy": "name"
@@ -550,10 +589,11 @@
       {
         "id": "E-17",
         "name": "LoudnessMeter",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:152",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "LoudnessMeter",
             "module": "@nyc-tron/ui/components/forge/audio/LoudnessMeter",
             "mappedBy": "name"
@@ -563,10 +603,11 @@
       {
         "id": "E-19",
         "name": "BusAndRoutingMatrix",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:96",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "BusAndRoutingMatrix",
             "module": "@nyc-tron/ui/components/forge/audio/BusAndRoutingMatrix",
             "mappedBy": "name"
@@ -576,10 +617,11 @@
       {
         "id": "E-20",
         "name": "InsertEffectRack",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:107",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "InsertEffectRack",
             "module": "@nyc-tron/ui/components/forge/audio/InsertEffectRack",
             "mappedBy": "name"
@@ -589,10 +631,11 @@
       {
         "id": "E-21",
         "name": "EQFrequencyGraph",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:135",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "EQFrequencyGraph",
             "module": "@nyc-tron/ui/components/forge/audio/EQFrequencyGraph",
             "mappedBy": "name"
@@ -602,10 +645,11 @@
       {
         "id": "E-22",
         "name": "DynamicsTransferGraph",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:138",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "DynamicsTransferGraph",
             "module": "@nyc-tron/ui/components/forge/audio/DynamicsTransferGraph",
             "mappedBy": "name"
@@ -615,10 +659,11 @@
       {
         "id": "E-23",
         "name": "PluginPresetBrowser",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:114",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PluginPresetBrowser",
             "module": "@nyc-tron/ui/components/forge/audio/PluginPresetBrowser",
             "mappedBy": "name"
@@ -628,30 +673,39 @@
       {
         "id": "E-24",
         "name": "MIDIPianoRoll",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:29",
-            "kind": "value",
+            "kind": "call",
             "binding": "MIDIPianoRoll",
             "module": "@nyc-tron/ui/components/forge/midi/MIDIPianoRoll",
             "mappedBy": "name"
           },
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:158",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "MIDIPianoRoll",
             "module": "@nyc-tron/ui/components/forge/midi/MIDIPianoRoll",
             "mappedBy": "name"
+          },
+          {
+            "at": "apps/studio-preview/src/cadence-detail-controls.tsx:161",
+            "kind": "call",
+            "binding": "PIANO_ROLL_KEY_COLUMN",
+            "module": "@nyc-tron/ui/components/forge/midi/MIDIPianoRoll",
+            "mappedBy": "module"
           }
         ]
       },
       {
         "id": "E-25",
         "name": "MIDIVelocityLane",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:161",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "MIDIVelocityLane",
             "module": "@nyc-tron/ui/components/forge/midi/MIDIVelocityLane",
             "mappedBy": "name"
@@ -661,10 +715,11 @@
       {
         "id": "E-27",
         "name": "TempoAndMetronome",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:268",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "TempoAndMetronome",
             "module": "@nyc-tron/ui/components/forge/audio/TempoAndMetronome",
             "mappedBy": "name"
@@ -674,10 +729,11 @@
       {
         "id": "E-35",
         "name": "BeatDetectionMarkerLane",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-beat-lane.tsx:77",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "BeatDetectionMarkerLane",
             "module": "@nyc-tron/ui/components/forge/audio/BeatDetectionMarkerLane",
             "mappedBy": "name"
@@ -687,10 +743,11 @@
       {
         "id": "I-01",
         "name": "VirtualSpreadsheetGrid",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:187",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "SpreadsheetGrid",
             "module": "@nyc-tron/ui/components/forge/SpreadsheetGrid",
             "mappedBy": "module"
@@ -700,10 +757,11 @@
       {
         "id": "I-04",
         "name": "NameBox",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:133",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "NameBox",
             "module": "@nyc-tron/ui/components/forge/spreadsheet/NameBox",
             "mappedBy": "name"
@@ -713,10 +771,11 @@
       {
         "id": "I-07",
         "name": "FillHandleAndAutoFill",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:153",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "AutoFillModePicker",
             "module": "@nyc-tron/ui/components/forge/spreadsheet/FillHandleAndAutoFill",
             "mappedBy": "module"
@@ -726,10 +785,11 @@
       {
         "id": "I-08",
         "name": "SheetTabs",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:179",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "SheetTabs",
             "module": "@nyc-tron/ui/components/forge/spreadsheet/SheetTabs",
             "mappedBy": "name"
@@ -739,10 +799,11 @@
       {
         "id": "I-11",
         "name": "ValidationDropdown",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:135",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "ValidationDropdown",
             "module": "@nyc-tron/ui/components/forge/spreadsheet/ValidationDropdown",
             "mappedBy": "name"
@@ -752,10 +813,11 @@
       {
         "id": "I-12",
         "name": "SortFilterHeader",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:145",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "SortFilterHeader",
             "module": "@nyc-tron/ui/components/forge/spreadsheet/SortFilterHeader",
             "mappedBy": "name"
@@ -765,10 +827,11 @@
       {
         "id": "I-15",
         "name": "PivotFieldList",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/tally-pivot-panel.tsx:80",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PivotFieldList",
             "module": "@nyc-tron/ui/components/forge/spreadsheet/PivotFieldList",
             "mappedBy": "name"
@@ -778,10 +841,11 @@
       {
         "id": "I-17",
         "name": "FreezeSplitControls",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:163",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "FreezeSplitControls",
             "module": "@nyc-tron/ui/components/forge/spreadsheet/FreezeSplitControls",
             "mappedBy": "name"
@@ -791,45 +855,46 @@
       {
         "id": "N-06",
         "name": "VoiceOverTalkBackSupport",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "hits": [
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:90",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:86",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "apps/studio-preview/src/turret-lab.tsx:91",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "examples/native-cadence/App.tsx:259",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "examples/native-cadence/App.tsx:263",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "packages/studio-workspace/src/prism-editor.tsx:232",
-            "kind": "jsx",
+            "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
@@ -837,12 +902,150 @@
         ]
       },
       {
+        "id": "N-07",
+        "name": "HardwareKeyboardMap",
+        "basis": "derived: renders or calls",
+        "hits": [
+          {
+            "at": "examples/native-cadence/App.tsx:84",
+            "kind": "call",
+            "binding": "createKeyboardMap",
+            "module": "@nyc-tron/ui/components/shell/keyboard-map",
+            "mappedBy": "module"
+          },
+          {
+            "at": "examples/native-cadence/App.tsx:91",
+            "kind": "call",
+            "binding": "useHardwareKeyboard",
+            "module": "@nyc-tron/hardware-keys",
+            "mappedBy": "module"
+          },
+          {
+            "at": "examples/native-cadence/App.tsx:206",
+            "kind": "call",
+            "binding": "isHardwareKeysAvailable",
+            "module": "@nyc-tron/hardware-keys",
+            "mappedBy": "module"
+          }
+        ]
+      },
+      {
+        "id": "N-08",
+        "name": "SafeAreaFoldableLayout",
+        "basis": "derived: renders or calls",
+        "hits": [
+          {
+            "at": "examples/native-cadence/App.tsx:74",
+            "kind": "call",
+            "binding": "resolveUsableRegions",
+            "module": "@nyc-tron/core/folds",
+            "mappedBy": "module"
+          },
+          {
+            "at": "examples/native-cadence/App.tsx:75",
+            "kind": "call",
+            "binding": "foldFeaturesFromRegions",
+            "module": "@nyc-tron/core/folds",
+            "mappedBy": "module"
+          }
+        ]
+      },
+      {
+        "id": "N-12",
+        "name": "NativeFileAndShareAdapter",
+        "basis": "derived: renders or calls",
+        "hits": [
+          {
+            "at": "examples/native-cadence/verify-documents.ts:6",
+            "kind": "call",
+            "binding": "createPlatformDocuments",
+            "module": "@nyc-tron/platform-services/documents",
+            "mappedBy": "module"
+          },
+          {
+            "at": "examples/native-cadence/verify-documents.ts:18",
+            "kind": "call",
+            "binding": "createPlatformDocuments",
+            "module": "@nyc-tron/platform-services/documents",
+            "mappedBy": "module"
+          },
+          {
+            "at": "examples/native-cadence/verify-documents.ts:40",
+            "kind": "call",
+            "binding": "createPlatformDocuments",
+            "module": "@nyc-tron/platform-services/documents",
+            "mappedBy": "module"
+          },
+          {
+            "at": "examples/native-cadence/verify-documents.ts:65",
+            "kind": "call",
+            "binding": "createPlatformDocuments",
+            "module": "@nyc-tron/platform-services/documents",
+            "mappedBy": "module"
+          },
+          {
+            "at": "examples/native-cadence/verify-documents.ts:87",
+            "kind": "call",
+            "binding": "createPlatformDocuments",
+            "module": "@nyc-tron/platform-services/documents",
+            "mappedBy": "module"
+          },
+          {
+            "at": "examples/native-cadence/verify-documents.ts:113",
+            "kind": "call",
+            "binding": "createPlatformDocuments",
+            "module": "@nyc-tron/platform-services/documents",
+            "mappedBy": "module"
+          },
+          {
+            "at": "examples/native-cadence/verify-documents.ts:124",
+            "kind": "call",
+            "binding": "createPlatformDocuments",
+            "module": "@nyc-tron/platform-services/documents",
+            "mappedBy": "module"
+          }
+        ]
+      },
+      {
+        "id": "N-17",
+        "name": "NativePlaybackLifecycle",
+        "basis": "derived: renders or calls",
+        "hits": [
+          {
+            "at": "packages/audio-ui/src/NativeAudioPreview.tsx:52",
+            "kind": "call",
+            "binding": "createPlatformPlaybackSession",
+            "module": "@nyc-tron/platform-services/playback",
+            "mappedBy": "module"
+          }
+        ]
+      },
+      {
+        "id": "N-19",
+        "name": "NativeMediaDecoderSurface",
+        "basis": "derived: renders or calls",
+        "hits": [
+          {
+            "at": "examples/native-cadence/verify-media.ts:10",
+            "kind": "call",
+            "binding": "createPlatformMediaDecoder",
+            "module": "@nyc-tron/platform-services/media",
+            "mappedBy": "module"
+          }
+        ]
+      },
+      {
         "id": "N-21",
         "name": "AccessiblePrecisionScrubControl",
-        "renders": [
+        "basis": "derived: renders or calls",
+        "notRun": {
+          "decision": "D4",
+          "web": "NOT RUN: the web drag transport PanResponderDrag maps to no ledger row."
+        },
+        "hits": [
           {
             "at": "packages/studio-workspace/src/drag-transport.native.ts:5",
-            "kind": "value",
+            "kind": "call",
             "binding": "GestureHandlerDrag",
             "module": "@nyc-tron/ui/components/gestures/GestureHandlerDrag",
             "mappedBy": "module"
@@ -853,32 +1056,63 @@
   },
   "unmapped": [
     {
-      "name": "NativeActionMenu",
       "module": "@nyc-tron/expo-controls/NativeActionMenu",
+      "names": [
+        "NativeActionMenu"
+      ],
       "uses": [
         "apps/example/src/studio-ui.tsx:17",
         "apps/studio-preview/src/studio-ui.tsx:23"
       ]
     },
     {
-      "name": "Select",
       "module": "@nyc-tron/expo-controls/Select",
+      "names": [
+        "Select"
+      ],
       "uses": [
         "apps/example/src/studio-ui.tsx:17",
         "apps/studio-preview/src/studio-ui.tsx:23"
       ]
     },
     {
-      "name": "ArcKnob",
       "module": "@nyc-tron/native-controls/ArcKnob",
+      "names": [
+        "ArcKnob"
+      ],
       "uses": [
         "examples/native-cadence/App.tsx:230",
         "examples/native-cadence/App.tsx:236"
       ]
     },
     {
-      "name": "Button",
+      "module": "@nyc-tron/platform-services/checkpoints",
+      "names": [
+        "createPlatformCheckpointStorage"
+      ],
+      "uses": [
+        "examples/native-cadence/verify-checkpoints.ts:9",
+        "examples/native-cadence/verify-checkpoints.ts:41",
+        "examples/native-cadence/verify-collaboration.ts:66"
+      ]
+    },
+    {
+      "module": "@nyc-tron/reserved-regions",
+      "names": [
+        "isReservedRegionsAvailable",
+        "useReservedRegions"
+      ],
+      "uses": [
+        "apps/example/src/persona/persona-placement-host.tsx:32",
+        "examples/native-cadence/App.tsx:72",
+        "examples/native-cadence/App.tsx:189"
+      ]
+    },
+    {
       "module": "@nyc-tron/ui/components/Button",
+      "names": [
+        "Button"
+      ],
       "uses": [
         "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:488",
         "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:499",
@@ -889,237 +1123,295 @@
       ]
     },
     {
-      "name": "Card",
       "module": "@nyc-tron/ui/components/Card",
+      "names": [
+        "Card"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:52"
       ]
     },
     {
-      "name": "KeyValueList",
       "module": "@nyc-tron/ui/components/content/KeyValueList",
+      "names": [
+        "KeyValueList"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
-      "name": "DragGrabHandle",
       "module": "@nyc-tron/ui/components/DragGrabHandle",
+      "names": [
+        "DragGrabHandle"
+      ],
       "uses": [
         "packages/studio-workspace/src/index.tsx:282",
         "packages/studio-workspace/src/persona-composer.tsx:290"
       ]
     },
     {
-      "name": "Badge",
       "module": "@nyc-tron/ui/components/feedback/Badge",
+      "names": [
+        "Badge"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
-      "name": "Banner",
       "module": "@nyc-tron/ui/components/feedback/Banner",
+      "names": [
+        "Banner"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
-      "name": "EmptyState",
       "module": "@nyc-tron/ui/components/feedback/EmptyState",
+      "names": [
+        "EmptyState"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
-      "name": "ErrorMessage",
       "module": "@nyc-tron/ui/components/feedback/ErrorMessage",
+      "names": [
+        "ErrorMessage"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
-      "name": "FieldGroup",
       "module": "@nyc-tron/ui/components/FieldGroup",
+      "names": [
+        "FieldGroup"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:75"
       ]
     },
     {
-      "name": "DropZone",
       "module": "@nyc-tron/ui/components/files/DropZone",
+      "names": [
+        "DropZone"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
-      "name": "FilePicker",
       "module": "@nyc-tron/ui/components/files/FilePicker",
+      "names": [
+        "FilePicker"
+      ],
       "uses": [
         "apps/studio-preview/src/main.tsx:82"
       ]
     },
     {
-      "name": "AudioPreview",
       "module": "@nyc-tron/ui/components/forge/audio/AudioPreview",
+      "names": [
+        "AudioPreview"
+      ],
       "uses": [
         "packages/audio-ui/src/NativeAudioPreview.tsx:152"
       ]
     },
     {
-      "name": "LevelFader",
       "module": "@nyc-tron/ui/components/forge/audio/LevelFader",
+      "names": [
+        "LevelFader"
+      ],
       "uses": [
         "apps/forge-media-lab/App.tsx:43"
       ]
     },
     {
-      "name": "RecordingTrack",
       "module": "@nyc-tron/ui/components/forge/audio/RecordingTrack",
+      "names": [
+        "RecordingTrack"
+      ],
       "uses": [
         "packages/audio-ui/src/NativeRecordingTrack.tsx:40",
         "packages/audio-ui/src/NativeSourceRecordingTrack.native.tsx:28"
       ]
     },
     {
-      "name": "InstrumentKnob",
+      "module": "@nyc-tron/ui/components/forge/color",
+      "names": [
+        "hsvToRgb",
+        "rgbToHsv"
+      ],
+      "uses": [
+        "apps/studio-preview/src/prism-detail-controls.tsx:90",
+        "apps/studio-preview/src/prism-detail-controls.tsx:160"
+      ]
+    },
+    {
       "module": "@nyc-tron/ui/components/forge/inputs/InstrumentKnob",
+      "names": [
+        "InstrumentKnob"
+      ],
       "uses": [
         "examples/native-cadence/App.tsx:246",
         "examples/native-cadence/App.tsx:251"
       ]
     },
     {
-      "name": "InstrumentXYPad",
       "module": "@nyc-tron/ui/components/forge/inputs/InstrumentXYPad",
+      "names": [
+        "InstrumentXYPad"
+      ],
       "uses": [
         "examples/native-cadence/App.tsx:268"
       ]
     },
     {
-      "name": "PanResponderDrag",
+      "module": "@nyc-tron/ui/components/forge/sheet-window",
+      "names": [
+        "rangeAddress",
+        "rangeCellCount",
+        "responsiveSheetMetrics",
+        "selectionRange"
+      ],
+      "uses": [
+        "apps/studio-preview/src/tally-detail-controls.tsx:66",
+        "apps/studio-preview/src/tally-detail-controls.tsx:83",
+        "apps/studio-preview/src/tally-detail-controls.tsx:130",
+        "apps/studio-preview/src/tally-pivot-panel.tsx:53",
+        "apps/studio-preview/src/tally-pivot-panel.tsx:72"
+      ]
+    },
+    {
+      "module": "@nyc-tron/ui/components/forge/timebase",
+      "names": [
+        "FRAME_RATES"
+      ],
+      "uses": [
+        "apps/forge-media-lab/App.tsx:31",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:20",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:45",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:47",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:83",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:88",
+        "apps/studio-preview/src/engine-studio-surfaces.tsx:293"
+      ]
+    },
+    {
+      "module": "@nyc-tron/ui/components/forge/timeline/track-stack",
+      "names": [
+        "stackOrder"
+      ],
+      "uses": [
+        "apps/studio-preview/src/splice-detail-controls.tsx:84"
+      ]
+    },
+    {
+      "module": "@nyc-tron/ui/components/forge/timeline/transitions",
+      "names": [
+        "clipsOfCut",
+        "cutsOf",
+        "maxTransitionFrames",
+        "transitionAt",
+        "transitionTarget"
+      ],
+      "uses": [
+        "apps/studio-preview/src/splice-detail-controls.tsx:62",
+        "apps/studio-preview/src/splice-detail-controls.tsx:104",
+        "apps/studio-preview/src/splice-detail-controls.tsx:105",
+        "apps/studio-preview/src/splice-detail-controls.tsx:106"
+      ]
+    },
+    {
+      "module": "@nyc-tron/ui/components/forge/timeline/viewport",
+      "names": [
+        "clampViewport",
+        "followPlayhead"
+      ],
+      "uses": [
+        "apps/studio-preview/src/engine-studio-surfaces.tsx:328",
+        "apps/studio-preview/src/engine-studio-surfaces.tsx:334"
+      ]
+    },
+    {
       "module": "@nyc-tron/ui/components/gestures/PanResponderDrag",
+      "names": [
+        "PanResponderDrag"
+      ],
       "uses": [
         "packages/studio-workspace/src/drag-transport.ts:7"
       ]
     },
     {
-      "name": "Footer",
       "module": "@nyc-tron/ui/components/html",
+      "names": [
+        "Footer",
+        "Header",
+        "Heading",
+        "Link",
+        "Main",
+        "Nav",
+        "Page",
+        "Paragraph",
+        "Section",
+        "Text"
+      ],
       "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:33"
-      ]
-    },
-    {
-      "name": "Header",
-      "module": "@nyc-tron/ui/components/html",
-      "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:11"
-      ]
-    },
-    {
-      "name": "Heading",
-      "module": "@nyc-tron/ui/components/html",
-      "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:14",
-        "apps/studio-preview/src/app-launcher.tsx:19",
-        "apps/studio-preview/src/app-launcher.tsx:27"
-      ]
-    },
-    {
-      "name": "Link",
-      "module": "@nyc-tron/ui/components/html",
-      "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:24",
-        "apps/studio-preview/src/main.tsx:130",
-        "apps/studio-preview/src/main.tsx:226"
-      ]
-    },
-    {
-      "name": "Main",
-      "module": "@nyc-tron/ui/components/html",
-      "uses": [
-        "apps/studio-preview/src/main.tsx:223"
-      ]
-    },
-    {
-      "name": "Nav",
-      "module": "@nyc-tron/ui/components/html",
-      "uses": [
-        "apps/studio-preview/src/main.tsx:225"
-      ]
-    },
-    {
-      "name": "Page",
-      "module": "@nyc-tron/ui/components/html",
-      "uses": [
+        "apps/studio-preview/src/app-launcher.tsx:10",
+        "apps/studio-preview/src/app-launcher.tsx:11",
         "apps/studio-preview/src/app-launcher.tsx:12",
+        "apps/studio-preview/src/app-launcher.tsx:13",
+        "apps/studio-preview/src/app-launcher.tsx:14",
+        "apps/studio-preview/src/app-launcher.tsx:15",
         "apps/studio-preview/src/app-launcher.tsx:17",
         "apps/studio-preview/src/app-launcher.tsx:19",
         "apps/studio-preview/src/app-launcher.tsx:20",
+        "apps/studio-preview/src/app-launcher.tsx:24",
+        "apps/studio-preview/src/app-launcher.tsx:25",
         "apps/studio-preview/src/app-launcher.tsx:26",
         "apps/studio-preview/src/app-launcher.tsx:27",
+        "apps/studio-preview/src/app-launcher.tsx:28",
         "apps/studio-preview/src/app-launcher.tsx:29",
+        "apps/studio-preview/src/app-launcher.tsx:33",
         "apps/studio-preview/src/main.tsx:76",
+        "apps/studio-preview/src/main.tsx:130",
         "apps/studio-preview/src/main.tsx:186",
         "apps/studio-preview/src/main.tsx:214",
+        "apps/studio-preview/src/main.tsx:223",
+        "apps/studio-preview/src/main.tsx:225",
+        "apps/studio-preview/src/main.tsx:226",
         "apps/studio-preview/src/main.tsx:229"
       ]
     },
     {
-      "name": "Paragraph",
-      "module": "@nyc-tron/ui/components/html",
-      "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:13",
-        "apps/studio-preview/src/app-launcher.tsx:15",
-        "apps/studio-preview/src/app-launcher.tsx:28"
-      ]
-    },
-    {
-      "name": "Section",
-      "module": "@nyc-tron/ui/components/html",
-      "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:10"
-      ]
-    },
-    {
-      "name": "Text",
-      "module": "@nyc-tron/ui/components/html",
-      "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:17",
-        "apps/studio-preview/src/app-launcher.tsx:19",
-        "apps/studio-preview/src/app-launcher.tsx:25",
-        "apps/studio-preview/src/app-launcher.tsx:27",
-        "apps/studio-preview/src/app-launcher.tsx:29",
-        "apps/studio-preview/src/app-launcher.tsx:33",
-        "apps/studio-preview/src/main.tsx:130",
-        "apps/studio-preview/src/main.tsx:226"
-      ]
-    },
-    {
-      "name": "IconButton",
       "module": "@nyc-tron/ui/components/IconButton",
+      "names": [
+        "IconButton"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:75"
       ]
     },
     {
-      "name": "List",
       "module": "@nyc-tron/ui/components/List",
+      "names": [
+        "List",
+        "ListItem"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:75"
       ]
     },
     {
-      "name": "ListItem",
-      "module": "@nyc-tron/ui/components/List",
-      "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:75"
-      ]
-    },
-    {
-      "name": "SegmentedControl",
       "module": "@nyc-tron/ui/components/SegmentedControl",
+      "names": [
+        "SegmentedControl"
+      ],
       "uses": [
         "examples/native-cadence/App.tsx:193",
         "examples/native-cadence/App.tsx:288",
@@ -1127,23 +1419,38 @@
       ]
     },
     {
-      "name": "TabBar",
+      "module": "@nyc-tron/ui/components/shell/screen-reader-focus",
+      "names": [
+        "focusForScreenReader"
+      ],
+      "uses": [
+        "examples/native-cadence/App.tsx:68"
+      ]
+    },
+    {
       "module": "@nyc-tron/ui/components/TabBar",
+      "names": [
+        "TabBar"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:75"
       ]
     },
     {
-      "name": "NightScope",
       "module": "@nyc-tron/ui/components/theme/NightScope",
+      "names": [
+        "NightScope"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:53",
         "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
-      "name": "Toolbar",
       "module": "@nyc-tron/ui/components/Toolbar",
+      "names": [
+        "Toolbar"
+      ],
       "uses": [
         "packages/studio-workspace/src/nyc-tron-host.tsx:75"
       ]
@@ -1160,7 +1467,7 @@
       "pico"
     ],
     "platformsApplyTo": "every ledger row, including the v1 rows above",
-    "rowCount": 294,
+    "rowCount": 289,
     "rows": [
       "A-01",
       "A-02",
@@ -1437,19 +1744,14 @@
       "N-03",
       "N-04",
       "N-05",
-      "N-07",
-      "N-08",
       "N-09",
       "N-10",
       "N-11",
-      "N-12",
       "N-13",
       "N-14",
       "N-15",
       "N-16",
-      "N-17",
       "N-18",
-      "N-19",
       "N-20",
       "W-01",
       "W-02",

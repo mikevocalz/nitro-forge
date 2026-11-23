@@ -1,5 +1,6 @@
-// Derives the v1 component-acceptance scope (owner decision D2, 2026-11-23)
-// from source: which component-ledger rows a studio or lab actually renders.
+// Derives the v1 component-acceptance scope (owner decisions D2 and D4,
+// docs/completion/DECISIONS-2026-11-23-v1-scope.md) from source: which
+// component-ledger rows a studio or lab renders or calls.
 //
 //   node tooling/derive-v1-component-scope.mjs          write the output
 //   node tooling/derive-v1-component-scope.mjs --check  fail if it is stale
@@ -16,14 +17,18 @@
 //    re-exports; every .native/.ios/.android/.web variant counts, since the
 //    v1 platforms are iOS, Android and web). Tests and node verify scripts
 //    are only in scope if an entry imports them.
-// 4. A PascalCase binding whose origin is an `@nyc-tron/*` module (directly,
-//    under an alias, through a namespace or through workspace re-exports) is
-//    used when a reachable file renders it as JSX or passes it as a component
-//    value (the Studio UI component table, host parts, props). Renders of a
-//    Studio UI slot (`useComponents().Name`) count for the row named Name.
-// 5. A used binding maps to the ledger row with the same name; failing that,
-//    to the rows whose Tron source file is the imported module. Bindings that
-//    match neither are listed under `unmapped`, never dropped.
+// 4. Renders or calls (D4). Any non-type binding whose origin is an
+//    `@nyc-tron/*` module (directly, under an alias, through a namespace or
+//    through workspace re-exports) is a hit wherever a reachable file uses it,
+//    whatever its capitalisation: a JSX render is kind "render"; a function
+//    call or a value passed along is kind "call". A render of a Studio UI
+//    slot (`useComponents().Name`) is a "render" of the row named Name.
+// 5. A hit maps to the ledger row with the binding's name; failing that, to
+//    the rows that list the imported Tron module as a source. Hits that match
+//    neither are listed under `unmapped` by module, never dropped.
+// 6. ROW_DECISIONS records owner rulings that the source cannot express (a
+//    basis other than the hits, or a v1 platform recorded NOT RUN). Each one
+//    is checked against the derived result, so a stale ruling fails the run.
 //
 // Source is scanned lexically (comments stripped, no type checker), so the
 // output is evidence for reviewers, not a proof of runtime rendering.
@@ -42,14 +47,31 @@ export const RULE = Object.freeze({
   studiosAndLabs: "Workspaces under apps/ and examples/ whose package.json lists react in dependencies.",
   entries: "package.json main (expo-router/entry means every file under app/), index.html module scripts, and top-level scripts that call registerRootComponent.",
   reachability: "Files imported from an entry through relative paths or scanned workspace packages (@nitro-forge/*), following static, dynamic, require and re-export edges and every .native/.ios/.android/.web variant.",
-  usage: "A PascalCase binding that originates in an @nyc-tron/* module (alias, namespace or workspace re-export) and is rendered as JSX or passed as a component value in a reachable file; renders of a Studio UI slot (useComponents().Name) count for Name.",
-  mapping: "Same-named ledger row first; otherwise the rows whose Tron source file is the imported module. Anything else is listed under unmapped.",
+  usage: "Renders or calls (D4): any non-type binding that originates in an @nyc-tron/* module (alias, namespace or workspace re-export), whatever its capitalisation. A JSX render, or a render of a Studio UI slot (useComponents().Name), is kind render. A function call or a value passed along is kind call. Type-only imports and typeof positions are not hits.",
+  mapping: "Same-named ledger row first; otherwise every row that lists the imported Tron module as a source. A subpath resolves to packages/<package>/<root>/<subpath>, where root is src, or src/components for expo-controls (its pinned exports map). Anything else is listed under unmapped by module.",
 });
+
+/**
+ * Owner rulings per row (D4). `basis` replaces the derived hits as the reason
+ * a row is in v1; `notRun` records a v1 platform that stays NOT RUN, and
+ * `requiresUnmapped` names the unmapped binding the ruling depends on.
+ * @type {Readonly<Record<string, { decision: string, basis?: string, notRun?: Record<string, string>, requiresUnmapped?: string }>>}
+ */
+export const ROW_DECISIONS = Object.freeze({
+  "A-20": { decision: "D4", basis: "F8 item 5 requires native popovers in every studio." },
+  "N-21": {
+    decision: "D4",
+    notRun: { web: "NOT RUN: the web drag transport PanResponderDrag maps to no ledger row." },
+    requiresUnmapped: "PanResponderDrag",
+  },
+});
+
+/** Where a package subpath lives under the Tron package root, from its pinned exports map. */
+const TRON_SUBPATH_ROOTS = Object.freeze({ "expo-controls": "src/components" });
 
 const SOURCE_EXTENSIONS = [".tsx", ".ts", ".jsx", ".js", ".mjs", ".cjs", ".mts"];
 const PLATFORM_INFIXES = ["", ".native", ".ios", ".android", ".web"];
 const JSX_EXTENSIONS = new Set([".tsx", ".jsx", ".js"]);
-const PASCAL = /^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*$/;
 const toPosix = path => path.split(sep).join("/");
 
 /**
@@ -209,9 +231,9 @@ function exportTargets(value) {
 
 /**
  * Discover workspaces, studios/labs, reachable files and Tron component use.
- * @param {{ rootDir?: string, ledger: { components: { id: string, name: string, sourceCandidates: string[] }[], additions: { id: string, name: string, sourceCandidates: string[] }[] } }} options
+ * @param {{ rootDir?: string, ledger: { components: { id: string, name: string, sourceCandidates: string[] }[], additions: { id: string, name: string, sourceCandidates: string[] }[] }, decisions?: typeof ROW_DECISIONS }} options
  */
-export function deriveScope({ rootDir = repoRoot, ledger }) {
+export function deriveScope({ rootDir = repoRoot, ledger, decisions = {} }) {
   /** @type {Map<string, { dir: string, manifest: Record<string, unknown> }>} */
   const workspaces = new Map();
   for (const scanRoot of SCANNED_ROOTS) {
@@ -327,26 +349,31 @@ export function deriveScope({ rootDir = repoRoot, ledger }) {
   }
   const specModule = spec => {
     const m = /^@nyc-tron\/([^/]+)(?:\/(.+))?$/.exec(spec);
-    return m ? moduleKey(`packages/${m[1]}/src${m[2] ? "/" + m[2] : ""}`) : "";
+    if (!m) return "";
+    const base = m[2] ? /** @type {Record<string, string>} */ (TRON_SUBPATH_ROOTS)[m[1]] ?? "src" : "src";
+    return moduleKey(`packages/${m[1]}/${base}${m[2] ? "/" + m[2] : ""}`);
   };
 
-  /** @type {Map<string, { id: string, name: string, uses: Map<string, { at: string, kind: string, binding: string, module: string, via: string }> }>} */
-  const inScope = new Map();
-  /** @type {Map<string, { name: string, module: string, uses: Set<string> }>} */
+  /** @typedef {{ at: string, kind: "render" | "call", binding: string, module: string, mappedBy: "name" | "module" | "slot" }} Hit */
+  /** @type {Map<string, Map<string, Hit>>} */
+  const hitsByRow = new Map();
+  /** @type {Map<string, { names: Set<string>, uses: Set<string> }>} */
   const unmapped = new Map();
-  const record = (name, spec, use) => {
-    const ids = byName.has(name) ? [/** @type {{ id: string }} */ (byName.get(name)).id] : [...(byModule.get(specModule(spec)) ?? [])].sort();
-    const via = byName.has(name) ? "name" : "module";
+  /** @param {string} name @param {string} spec @param {{ at: string, kind: "render" | "call", binding: string }} use @param {boolean} [slot] */
+  const record = (name, spec, use, slot = false) => {
+    const named = byName.get(name);
+    const ids = named ? [named.id] : [...(byModule.get(specModule(spec)) ?? [])].sort();
     if (!ids.length) {
-      const key = spec + "#" + name;
-      if (!unmapped.has(key)) unmapped.set(key, { name, module: spec, uses: new Set() });
-      unmapped.get(key)?.uses.add(use.at);
+      if (!unmapped.has(spec)) unmapped.set(spec, { names: new Set(), uses: new Set() });
+      unmapped.get(spec)?.names.add(name);
+      unmapped.get(spec)?.uses.add(use.at);
       return;
     }
+    /** @type {Hit["mappedBy"]} */
+    const mappedBy = slot ? "slot" : named ? "name" : "module";
     for (const id of ids) {
-      const row = /** @type {{ id: string, name: string }} */ (rows.find(item => item.id === id));
-      if (!inScope.has(id)) inScope.set(id, { id, name: row.name, uses: new Map() });
-      inScope.get(id)?.uses.set(use.at + " " + use.kind + " " + use.binding, { ...use, module: spec, via });
+      if (!hitsByRow.has(id)) hitsByRow.set(id, new Map());
+      hitsByRow.get(id)?.set(use.at + " " + use.kind + " " + use.binding, { ...use, module: spec, mappedBy });
     }
   };
 
@@ -362,22 +389,24 @@ export function deriveScope({ rootDir = repoRoot, ledger }) {
       if (!origin) continue;
       for (const use of usages(info, local, jsx)) {
         const at = `${rel(file)}:${use.line}`;
+        /** @type {"render" | "call"} */
+        const kind = use.kind === "jsx" ? "render" : "call";
         if ("slot" in origin) {
-          if (use.kind === "jsx" && byName.has(origin.slot)) record(origin.slot, "", { at, kind: "slot", binding: local });
+          // A slot wrapper renders only through JSX; other references are plumbing.
+          if (kind === "render" && byName.has(origin.slot)) record(origin.slot, "", { at, kind, binding: local }, true);
           continue;
         }
-        const name = origin.tron.name === "*" ? use.member : origin.tron.name === "default" ? local : origin.tron.name;
-        if (!PASCAL.test(name)) continue;
-        record(name, origin.tron.spec, { at, kind: use.kind, binding: local });
+        const name = origin.tron.name === "*" ? use.member || "*" : origin.tron.name === "default" ? local : origin.tron.name;
+        record(name, origin.tron.spec, { at, kind, binding: local });
       }
-      // Same-file aliases (`const Scoped = Tron.PenNodeEditor as ...`) render the same component.
+      // Same-file aliases (`const Scoped = Tron.PenNodeEditor as ...`) are the same binding.
       if ("slot" in origin) continue;
       const escaped = local.replace(/\$/g, "\\$");
       for (const m of info.text.matchAll(new RegExp(`\\b(?:const|let|var)\\s+([\\w$]+)\\s*(?::[^=\\n]+)?=\\s*${escaped}(?:\\.([\\w$]+))?(?![\\w$.(])`, "g"))) {
         if (seen.has(m[1])) continue;
         seen.add(m[1]);
-        const name = origin.tron.name === "*" ? m[2] ?? "*" : m[2] ? "" : origin.tron.name;
-        if (name) work.push({ local: m[1], origin: { tron: { spec: origin.tron.spec, name } } });
+        const name = origin.tron.name === "*" ? m[2] ?? "*" : origin.tron.name;
+        work.push({ local: m[1], origin: { tron: { spec: origin.tron.spec, name } } });
       }
     }
   }
@@ -386,30 +415,47 @@ export function deriveScope({ rootDir = repoRoot, ledger }) {
     const [fa, la] = a.split(/:(?=\d+$)/), [fb, lb] = b.split(/:(?=\d+$)/);
     return fa === fb ? Number(la) - Number(lb) : fa < fb ? -1 : 1;
   };
-  const scope = [...inScope.values()].sort((a, b) => a.id.localeCompare(b.id)).map(row => ({
-    id: row.id, name: row.name,
-    renders: [...row.uses.values()].sort((a, b) => sortAt(a.at, b.at) || a.kind.localeCompare(b.kind) || a.binding.localeCompare(b.binding))
-      .map(use => ({ at: use.at, kind: use.kind, binding: use.binding, ...(use.module ? { module: use.module } : {}), mappedBy: use.via })),
-  }));
-  const scopeIds = new Set(scope.map(row => row.id));
+  const unmappedList = [...unmapped].sort(([a], [b]) => a.localeCompare(b))
+    .map(([module, item]) => ({ module, names: [...item.names].sort(), uses: [...item.uses].sort(sortAt) }));
+
+  // Owner rulings: each must still match the derived result.
+  for (const [id, ruling] of Object.entries(decisions)) {
+    if (!rows.some(row => row.id === id)) throw new Error(`v1 scope: ruling ${ruling.decision} names unknown row ${id}`);
+    if (!ruling.basis && !hitsByRow.has(id)) throw new Error(`v1 scope: ruling ${ruling.decision} for ${id} is stale; the row has no hits`);
+    if (ruling.requiresUnmapped && !unmappedList.some(item => item.names.includes(/** @type {string} */ (ruling.requiresUnmapped)))) {
+      throw new Error(`v1 scope: ruling ${ruling.decision} for ${id} depends on unmapped ${ruling.requiresUnmapped}, which now maps or is unused`);
+    }
+  }
+  const scopeIds = [...new Set([...hitsByRow.keys(), ...Object.keys(decisions).filter(id => decisions[id].basis)])].sort();
+  const scope = scopeIds.map(id => {
+    const row = /** @type {{ id: string, name: string }} */ (rows.find(item => item.id === id));
+    const ruling = decisions[id];
+    const hits = [...(hitsByRow.get(id)?.values() ?? [])].sort((a, b) => sortAt(a.at, b.at) || a.kind.localeCompare(b.kind) || a.binding.localeCompare(b.binding))
+      .map(hit => ({ at: hit.at, kind: hit.kind, binding: hit.binding, ...(hit.module ? { module: hit.module } : {}), mappedBy: hit.mappedBy }));
+    return {
+      id, name: row.name,
+      basis: ruling?.basis ? `${ruling.decision}: ${ruling.basis}` : "derived: renders or calls",
+      ...(ruling?.notRun ? { notRun: { decision: ruling.decision, ...ruling.notRun } } : {}),
+      hits,
+    };
+  });
   return {
     studiosAndLabs: studios.sort((a, b) => a.name.localeCompare(b.name)).map(studio => ({ name: studio.name, dir: rel(studio.dir), entries: studio.entries.map(rel) })),
     reachableFiles: reachable.size,
     inScope: scope,
-    unmapped: [...unmapped.values()].sort((a, b) => a.module.localeCompare(b.module) || a.name.localeCompare(b.name))
-      .map(item => ({ name: item.name, module: item.module, uses: [...item.uses].sort(sortAt) })),
-    postV1Rows: rows.map(row => row.id).filter(id => !scopeIds.has(id)).sort(),
+    unmapped: unmappedList,
+    postV1Rows: rows.map(row => row.id).filter(id => !scopeIds.includes(id)).sort(),
     rowCount: rows.length,
   };
 }
 
 /** The committed document: inputs, rule, in-scope rows and post-v1 labels. */
-export function buildDocument({ rootDir = repoRoot, ledgerPath = LEDGER_PATH } = {}) {
+export function buildDocument({ rootDir = repoRoot, ledgerPath = LEDGER_PATH, decisions = ROW_DECISIONS } = {}) {
   const ledger = JSON.parse(readFileSync(join(rootDir, ledgerPath), "utf8"));
-  const derived = deriveScope({ rootDir, ledger });
+  const derived = deriveScope({ rootDir, ledger, decisions });
   return {
     schemaVersion: 1,
-    decision: "D2, 2026-11-23: F7 component acceptance for v1 covers iOS, Android and web for every ledger row a studio or lab renders. Every other row, and the macOS, Windows, visionOS, Quest and PICO columns of every row, stay in the ledger as NOT RUN, post-v1.",
+    decision: "D2 and D4, docs/completion/DECISIONS-2026-11-23-v1-scope.md: F7 component acceptance for v1 covers iOS, Android and web for every ledger row a studio or lab renders or calls. Every other row, and the macOS, Windows, visionOS, Quest and PICO columns of every row, stay in the ledger as NOT RUN, post-v1.",
     generator: "tooling/derive-v1-component-scope.mjs",
     inputs: { ledger: ledgerPath, scannedRoots: [...SCANNED_ROOTS] },
     rule: RULE,
@@ -429,12 +475,12 @@ export function buildDocument({ rootDir = repoRoot, ledgerPath = LEDGER_PATH } =
   };
 }
 
-/** @param {{ rootDir?: string, check?: boolean }} [options] @returns {{ ok: boolean, message: string }} */
-export function run({ rootDir = repoRoot, check = false } = {}) {
-  const document = buildDocument({ rootDir });
+/** @param {{ rootDir?: string, check?: boolean, decisions?: typeof ROW_DECISIONS }} [options] @returns {{ ok: boolean, message: string }} */
+export function run({ rootDir = repoRoot, check = false, decisions = ROW_DECISIONS } = {}) {
+  const document = buildDocument({ rootDir, decisions });
   const bytes = JSON.stringify(document, null, 2) + "\n";
   const target = join(rootDir, OUTPUT_PATH);
-  const summary = `${document.v1.rowCount} v1 rows from ${document.studiosAndLabs.length} studios/labs (${document.reachableFiles} reachable files); ${document.postV1.rowCount} post-v1 rows; ${document.unmapped.length} unmapped Tron names.`;
+  const summary = `${document.v1.rowCount} v1 rows from ${document.studiosAndLabs.length} studios/labs (${document.reachableFiles} reachable files); ${document.postV1.rowCount} post-v1 rows; ${document.unmapped.length} unmapped Tron modules.`;
   if (check) {
     const current = existsSync(target) ? readFileSync(target, "utf8") : "";
     return current === bytes ? { ok: true, message: `${OUTPUT_PATH} is current: ${summary}` }
