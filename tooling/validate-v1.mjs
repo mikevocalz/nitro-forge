@@ -1,7 +1,7 @@
 // Read-only v1 readiness check for Nitro Forge, modelled on NYC-Tron UI's
 // tooling/release-readiness.mjs. It never changes a gate status.
 //
-//   node tooling/validate-v1.mjs                        stable: fails unless every gate passed
+//   node tooling/validate-v1.mjs                        stable: fails unless every in-scope gate passed (a signed descoped gate is out of scope)
 //   node tooling/validate-v1.mjs --version 1.0.0-rc.1   prerelease: reports, fails only on a malformed record
 //   node tooling/validate-v1.mjs --output report.json   also writes the result as JSON
 import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
@@ -10,7 +10,9 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const GATE_IDS = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9"];
-export const GATE_STATUSES = ["not-started", "in-progress", "blocked", "not-run", "passed"];
+export const GATE_STATUSES = ["not-started", "in-progress", "blocked", "not-run", "passed", "descoped"];
+/** A descoped gate cites a dated owner decision kept here and is signed by its reviewer role. */
+const DECISION_DIR = "docs/completion/";
 export const COMPAT_STATUSES = ["passed", "build-passed", "partial", "not-verified", "NOT RUN"];
 const CLAIMS = new Set(["passed", "build-passed", "partial"]);
 const FULL_SHA = /^[0-9a-f]{40}$/;
@@ -83,9 +85,22 @@ export function validateGateFile(doc, { rootDir = root } = {}) {
     } else {
       problems.unshift("status " + (gate?.status ?? "missing"));
     }
+    const hasDecision = gate?.decision !== null && gate?.decision !== undefined;
+    const decisionOk = hasDecision && typeof gate.decision === "string" && gate.decision.startsWith(DECISION_DIR) &&
+      evidenceExists(gate.decision, rootDir);
+    if (gate?.status === "descoped") {
+      if (!decisionOk || !reviewerOk || !DATE.test(gate.reviewedAt ?? "")) {
+        errors.push(id + ": marked descoped without an existing decision under " + DECISION_DIR +
+          ", a reviewer other than the owner and a review date");
+      }
+    } else if (hasDecision) {
+      errors.push(id + ": decision is only recorded on a descoped gate");
+    }
+    const descoped = gate?.status === "descoped" && decisionOk && reviewerOk && DATE.test(gate.reviewedAt ?? "");
     const ready = gate?.status === "passed" && evidenceOk && commitOk && reviewerOk;
     return { id, title: gate?.title ?? "", status: gate?.status ?? "missing", evidence: gate?.evidence ?? null,
-      commit: gate?.commit ?? null, reviewer: gate?.reviewer ?? null, ready, problems: ready ? [] : problems,
+      decision: gate?.decision ?? null, commit: gate?.commit ?? null, reviewer: gate?.reviewer ?? null, ready, descoped,
+      problems: ready || descoped ? [] : problems,
       reason: gate?.statusReason ?? "" };
   });
   for (const id of GATE_IDS) if (!seen.has(id)) errors.push("missing gate " + id);
@@ -146,13 +161,14 @@ export function validateV1({ version, gates, compatibility }, { rootDir = root }
   const gateResult = validateGateFile(gates, { rootDir });
   const compat = validateCompatibility(compatibility, { rootDir });
   const errors = [...gateResult.errors, ...compat.errors];
-  const notReady = gateResult.gates.filter(gate => !gate.ready);
-  const passed = gateResult.gates.length - notReady.length;
+  const descoped = gateResult.gates.filter(gate => gate.descoped).length;
+  const notReady = gateResult.gates.filter(gate => !gate.ready && !gate.descoped);
+  const passed = gateResult.gates.filter(gate => gate.ready).length;
   let status;
   if (errors.length) status = "invalid";
   else if (channel === "prerelease") status = "candidate";
   else status = notReady.length ? "blocked" : "ready";
-  return { status, channel, version: version ?? null, passed, total: GATE_IDS.length, gates: gateResult.gates,
+  return { status, channel, version: version ?? null, passed, descoped, total: GATE_IDS.length - descoped, gates: gateResult.gates,
     compatibility: compat.entries, errors,
     blockers: channel === "stable" ? notReady.map(gate => gate.id + ": " + gate.problems.join(", ")) : [],
     note: channel === "prerelease" ? "Prerelease report only. It does not claim any v1 gate or owner approval." : undefined };
@@ -166,7 +182,7 @@ const cell = (value, width) => {
 /** Fixed-width per-gate table for the terminal. */
 export function formatTable(result) {
   const head = cell("Gate", 5) + cell("Status", 12) + cell("Evidence", 54) + cell("Commit", 10) + cell("Reviewer", 10) + "Title";
-  const rows = result.gates.map(gate => cell(gate.id, 5) + cell(gate.status, 12) + cell(gate.evidence, 54) +
+  const rows = result.gates.map(gate => cell(gate.id, 5) + cell(gate.status, 12) + cell(gate.evidence ?? gate.decision, 54) +
     cell(gate.commit ? gate.commit.slice(0, 7) : "-", 10) + cell(gate.reviewer, 10) + gate.title);
   return [head, "-".repeat(head.length + 12), ...rows].join("\n");
 }
@@ -194,7 +210,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     for (const error of result.errors) console.error("error: " + error);
     for (const blocker of result.blockers) console.log("blocked " + blocker);
     console.log("v1 readiness: " + result.status + " (" + result.channel + "); " + result.passed + "/" + result.total +
-      " gates passed; no gate status changed.");
+      " in-scope gates passed" +
+      (result.descoped ? "; " + result.descoped + " descoped by owner decision" : "") + "; no gate status changed.");
     if (result.status === "invalid" || result.status === "blocked") process.exitCode = 1;
   } catch (error) {
     result = { status: "invalid", version: options["--version"] ?? null, errors: [error.message] };

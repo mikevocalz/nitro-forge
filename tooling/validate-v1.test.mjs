@@ -15,6 +15,8 @@ const sha = "a".repeat(40);
 const sandbox = mkdtempSync(join(tmpdir(), "validate-v1-"));
 mkdirSync(join(sandbox, "docs/release/evidence"), { recursive: true });
 writeFileSync(join(sandbox, "docs/release/evidence/receipt.txt"), "receipt\n");
+mkdirSync(join(sandbox, "docs/completion"), { recursive: true });
+writeFileSync(join(sandbox, "docs/completion/decision.md"), "decision\n");
 after(() => rmSync(sandbox, { recursive: true, force: true }));
 
 const gate = (id, overrides = {}) => ({
@@ -23,6 +25,8 @@ const gate = (id, overrides = {}) => ({
 });
 const passedGate = id => gate(id, { status: "passed", statusReason: undefined, evidence: "docs/release/evidence/receipt.txt",
   commit: sha, reviewer: "R2", reviewedAt: "2026-11-11" });
+const descopedGate = id => gate(id, { status: "descoped", statusReason: "Out of v1 by owner decision.", reviewerRole: "R1",
+  decision: "docs/completion/decision.md", reviewer: "R1", reviewedAt: "2026-11-23" });
 const gateFile = gates => ({ schemaVersion: 1, gateSet: "v1", gates });
 const allPassed = () => gateFile(GATE_IDS.map(passedGate));
 const compat = (runtimes = {}) => ({ schemaVersion: 2, runtimes, hostServices: {} });
@@ -78,6 +82,46 @@ test("prerelease mode reports without failing", () => {
   assert.equal(result.status, "candidate");
   assert.equal(result.passed, 0);
   assert.deepEqual(result.blockers, []);
+});
+
+test("a signed descoped gate does not block stable and is counted apart from passed gates", () => {
+  const gates = allPassed();
+  gates.gates[4] = descopedGate("F5");
+  const result = validateV1({ version: "1.0.0", gates, compatibility: compat() }, { rootDir: sandbox });
+  assert.equal(result.status, "ready");
+  assert.equal(result.passed, 8);
+  assert.equal(result.descoped, 1);
+  assert.equal(result.total, 8);
+  assert.deepEqual(result.blockers, []);
+  assert.equal(result.gates[4].decision, "docs/completion/decision.md");
+});
+
+test("a descoped gate needs an existing decision under docs/completion, its reviewer role and a review date", () => {
+  for (const broken of [
+    { decision: null },
+    { decision: "docs/completion/missing.md" },
+    { decision: "docs/release/evidence/receipt.txt" },
+    { reviewer: null },
+    { reviewer: "R2" },
+    { reviewer: "F5", owner: "F5" },
+    { reviewedAt: null },
+    { statusReason: "" },
+  ]) {
+    const gates = allPassed();
+    gates.gates[4] = { ...descopedGate("F5"), ...broken };
+    for (const version of ["1.0.0", "1.0.0-rc.1"]) {
+      const result = validateV1({ version, gates, compatibility: compat() }, { rootDir: sandbox });
+      assert.equal(result.status, "invalid", JSON.stringify(broken) + " " + version);
+    }
+  }
+});
+
+test("only a descoped gate may carry a decision path", () => {
+  const gates = allPassed();
+  gates.gates[0] = { ...passedGate("F1"), decision: "docs/completion/decision.md" };
+  const result = validateV1({ version: "1.0.0", gates, compatibility: compat() }, { rootDir: sandbox });
+  assert.equal(result.status, "invalid");
+  assert.ok(result.errors.some(error => error.startsWith("F1: decision")));
 });
 
 test("the signing reviewer matches the gate's role after trimming and case folding", () => {
