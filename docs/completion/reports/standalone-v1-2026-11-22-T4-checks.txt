@@ -1,0 +1,153 @@
+T4 final checks after independent review entry-guard correction. Stable readiness exit 1 is expected unchanged policy.
+
+$ node --test tooling/tests/legacy-program-handoff.test.mjs tooling/tests/library-components.test.mjs tooling/tests/release-readiness.test.mjs tooling/tests/qt-component-coverage.test.mjs packages/ui/tests/contracts.test.mjs docs/completion/reports/2026-11-22-forge-program/tooling/tests/component-program.test.mjs
+✔ local and pinned external implementations count separately from pending external work (10.391917ms)
+✔ external completion requires revision, actual source paths, public exports and an existing report (18.760333ms)
+✔ external repositories, paths and immutable revisions cannot be unsafe or mutable references (41.031792ms)
+✔ external ownership cannot masquerade as local implementation or source (9.468791ms)
+✔ local implementations need existing owned source, evidence and a public export (12.306ms)
+✔ the exact 341 canonical IDs and names cannot be replaced while retaining the count (9.400084ms)
+✔ baseline contents and ledger baseline identity remain frozen (5.61025ms)
+✔ the required eight-platform scope cannot shrink, duplicate or substitute another platform (5.63325ms)
+✔ unknown implementation, acceptance and platform result statuses are rejected (9.023292ms)
+✔ accepted rows require completed implementation and eight passing, existing proofs (11.638542ms)
+✔ partial work must stay visible and cannot be labeled implemented (7.348917ms)
+✔ additions are counted apart from the frozen 341 and follow the same row rules (22.819292ms)
+✔ additions cannot replace, rename into or shadow canonical rows, and need a gate and decision record (38.900917ms)
+✔ recorded additions can grow but never be dropped, and the repository records the T2 rows (10.883666ms)
+✔ all direct component export targets are actual independent files (16.301791ms)
+✔ Forge controls never import engine packages or app-specific palettes (5.79575ms)
+✔ waveform preserves real signal extrema and bounds view work (0.787916ms)
+✔ frame math returns whole bounded frames and SMPTE display (0.23ms)
+✔ RGBA math is document-agnostic and validates channels (0.141542ms)
+✔ Spreadsheet window virtualizes both rows and columns without allocating full sheet (0.188125ms)
+✔ data tables switch to labeled record cards in portrait and narrow split panes (0.148458ms)
+✔ Tally mobile grid keeps all spreadsheet columns, touch targets and formula input (0.202916ms)
+✔ responsive implementation measures host panes, not window screen dimensions (0.653583ms)
+✔ portrait-landscape and foldable split resize retain selected sheet region (0.186167ms)
+✔ every semantic token a component uses is documented for consumers (182.725959ms)
+✔ interactive controls keep screen-reader semantics (0.30525ms)
+✔ components take colors from theme tokens, not hardcoded hex values (24.440375ms)
+✔ every adjustable control can be adjusted by a screen reader (33.41475ms)
+✔ accessibilityRole only uses values Android's enum accepts (19.858583ms)
+✔ data grids expose grid semantics instead of per-cell buttons (0.54775ms)
+✔ old ledger links resolve to a pinned Forge home while the historical record retains all row fields (772.094875ms)
+✔ lookup accepts the adopted ledger's pinned source links without inventing external imports (23.819417ms)
+✔ archive checkout attributes preserve frozen bytes and the bridge rejects changed historical values (63.593333ms)
+✔ bridge CLI validates through a symlink or Windows junction and rejects a tampered archive (672.740208ms)
+✔ every current component export is inventoried across workspace and desktop packages, without alias loss (1561.960125ms)
+✔ semantic classifier resolves compound and alias declarations and rejects unresolved component returns (131.108ms)
+✔ ambiguous graph imports fail rather than selecting the first declaration (0.145708ms)
+✔ export and condition drift fail before any manifest is accepted (1751.573916ms)
+✔ lookup accounts for baseline and added rows independently and never fabricates external imports (15.708916ms)
+✔ CRLF checkout text preserves complete inventory fingerprints and generated checks without hiding value drift (5008.030583ms)
+✔ CLI entry guards safely ignore stdin and non-entry imports (144.51375ms)
+✔ both CLIs run and reject drift when invoked through a symlink or Windows junction (4618.343458ms)
+✔ the checked-in map covers the exact frozen roster and matches current source resolution (1589.850125ms)
+✔ generated-report validation accepts Windows checkouts but rejects stale content and whitespace (48.068791ms)
+✔ row validation rejects scope loss, unsupported mappings and static-to-runtime promotion (34.672375ms)
+✔ runtime export selection respects condition order and excludes declarations (0.131083ms)
+✔ selected package paths follow actual target-relative imports without counting unused mobile providers (3.135458ms)
+✔ explicit relative filenames preserve the emitted file instead of selecting a platform variant (3.146834ms)
+✔ runtime imports expose missing APIs and native providers while type-only imports stay erased (2.781375ms)
+✔ computed imports, namespace APIs and unresolved local edges remain visible (3.448958ms)
+✔ mixed import and require edges select distinct internal package conditions (3.916958ms)
+✔ the cross-repository public API check rejects drift instead of assuming generic RN parity (2.768125ms)
+✔ release versions distinguish stable from actual prereleases and reject malformed semver (0.987541ms)
+✔ prerelease candidate packaging preserves pending acceptance and never fetches or invents owner approval (261.034625ms)
+✔ stable cannot publish with any of the 341 rows unverified or with invented platform acceptance (434.981ms)
+✔ rows added after the baseline block stable exactly like canonical rows and cannot be dropped to pass (822.214541ms)
+✔ stable cannot publish from pending, incomplete or locally forged distribution review (1805.376875ms)
+✔ stable owner approval must authenticate the exact author, repository, statement, version and bytes (2379.068042ms)
+✔ stable requires and verifies all sixteen archive hashes, including both isolated desktop packages (593.539459ms)
+✔ omitting the AppKit archive cannot silently restore the older fourteen-package inventory (209.227125ms)
+✔ an authenticated approval for prior checksums cannot authorize a later artifact inventory (403.586541ms)
+✔ only complete platform acceptance and a live exact owner approval can make stable ready without mutation (212.027833ms)
+✔ release retains candidate archives before readiness and requires both native desktop hosts plus reference evidence (1.811583ms)
+ℹ tests 63
+ℹ suites 0
+ℹ pass 63
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13546.80725
+Exit: 0 (expected 0)
+
+$ node tooling/library-components.mjs
+Library inventory: 16 packages; 478 public component exports; 456 declaration identities; 10 proposed stable / 468 proposed preview; owner confirmation pending.
+Exit: 0 (expected 0)
+
+$ node tooling/library-cross-reference.mjs
+Forge import lookup: 341 baseline rows and 5 added rows; no acceptance or library scope changes.
+Exit: 0 (expected 0)
+
+$ node tooling/qt-component-coverage.mjs
+{
+  "canonical": 341,
+  "local": 332,
+  "external": 9,
+  "conservativeSourceCandidates": {
+    "coreDependenciesOnly": 283,
+    "additionalDependencies": 49,
+    "unresolvedImports": 0
+  },
+  "targets": {
+    "qnx": {
+      "classifications": {
+        "pinned-external-provider": 9,
+        "requires-additional-provider": 50,
+        "shared-source-candidate": 282
+      },
+      "missingReactNativeExports": {},
+      "additionalDependencies": {
+        "@expo/ui": 7,
+        "@expo/ui/jetpack-compose": 2,
+        "@expo/ui/swift-ui": 2,
+        "@expo/ui/swift-ui/modifiers": 2,
+        "expo": 8,
+        "expo-linear-gradient": 1,
+        "react-native-gesture-handler": 38,
+        "react-native-skia": 5
+      },
+      "runtimeAccepted": 0
+    },
+    "marathon": {
+      "classifications": {
+        "pinned-external-provider": 9,
+        "requires-additional-provider": 50,
+        "shared-source-candidate": 282
+      },
+      "missingReactNativeExports": {},
+      "additionalDependencies": {
+        "@expo/ui": 7,
+        "@expo/ui/jetpack-compose": 2,
+        "@expo/ui/swift-ui": 2,
+        "@expo/ui/swift-ui/modifiers": 2,
+        "expo": 8,
+        "expo-linear-gradient": 1,
+        "react-native-gesture-handler": 38,
+        "react-native-skia": 5
+      },
+      "runtimeAccepted": 0
+    }
+  }
+}
+
+Exit: 0 (expected 0)
+
+$ node tooling/verify-component-program.mjs
+Historical program compatibility check: 341 rows and 5 additions; no acceptance status changed. Active ownership: Nitro Forge. Remove this release-policy bridge in T3.
+Exit: 0 (expected 0)
+
+$ node tooling/release-readiness.mjs --version 1.0.0-rc.3
+Release readiness: candidate (prerelease); 0/341 accepted; 0/5 added rows accepted; no acceptance or approval status changed.
+Exit: 0 (expected 0)
+
+$ node tooling/release-readiness.mjs --version 1.0.0
+Release readiness: stable publication blocked: 341 of 341 components lack accepted eight-platform proof; 5 of 5 added rows lack accepted eight-platform proof; owner distribution review is pending; the sixteen actual release archives and SHA256SUMS are required
+Exit: 1 (expected 1)
+
+$ git diff --check
+Exit: 0 (expected 0)
+

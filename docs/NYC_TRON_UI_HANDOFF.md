@@ -1,5 +1,28 @@
 # NYC-Tron UI and Nitro Forge: package handoff
 
+## Independent library and application acceptance, 2026-11-22
+
+NYC-Tron UI is an independently released UI library. Forge consumes it through
+`tooling/nyc-tron.json`; Tron never imports, waits on or is gated by Forge.
+General components and professional controls remain public library APIs.
+Forge owns its application component program and per-platform acceptance in F7.
+
+The adopted [library progress ledger](completion/library-progress.json) and
+[validator](../tooling/verify-component-program.mjs) preserve the original
+canonical rows and the separately counted five window-control additions.
+[Source provenance](completion/library-progress-source.json) pins the original
+Tron records. The [completion ledger](completion/components.json) retains its
+own `completion`, gate and platform fields; those values are distinct from
+`acceptance` in the adopted record. No status changes during the handoff.
+
+Forge retains all eight required platforms for its program: iOS, Android, web,
+macOS, Windows, visionOS, Quest and PICO. Acceptance must identify the exact
+consumer release selected by the pin, currently `v1.0.0-rc.2`; the adoption's
+historical source revision is provenance, not new release acceptance. Tron's
+library stability or platform tiers do not waive Forge's application evidence.
+The pin remains unchanged until a separately reviewed release-pin PR.
+
+
 ## Current release pin, 2026-11-13
 
 `tooling/nyc-tron.json` now selects NYC-Tron

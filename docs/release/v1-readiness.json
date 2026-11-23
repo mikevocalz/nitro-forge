@@ -4,7 +4,7 @@
   "gateSet": "v1",
   "updatedAt": "2026-11-13",
   "baseCommit": "b000c8ab9f8201bcba3c67163f6c8f700acf6453",
-  "source": "Track F gates F1 to F9 of the owner's NYC-Tron UI 1.0.0 and Nitro Forge v1 program (revision 3, 2026-11-11). Acceptance text is copied from it unchanged. References to §2.5, §3.3, §4 and §5 point at that program; F1 carries its §5 Forge rows below, and F8.1 moves §2.5 into design/DIRECTION.md.",
+  "source": "Track F gates F1 to F9 of the owner's NYC-Tron UI 1.0.0 and Nitro Forge v1 program (revision 3, 2026-11-11). Historical acceptance text is retained; F7 adds the owner’s 2026-11-22 application-program ownership direction. References to §2.5, §3.3, §4 and §5 point at that program; F1 carries its §5 Forge rows below, and F8.1 moves §2.5 into design/DIRECTION.md.",
   "evidenceRule": "Evidence rule for every gate: implement, capture evidence with date and commit in its path, have the reviewer inspect the actual result, and only then change status. A file existing does not prove the claim inside it.",
   "statusValues": ["not-started", "in-progress", "blocked", "not-run", "passed"],
   "passedRequires": "status passed needs an evidence path that exists in this repository, the full 40-character commit the evidence was captured at, the signing reviewer and the review date. tooling/validate-v1.mjs enforces this.",
@@ -133,14 +133,37 @@
       "owner": "F0",
       "reviewerRole": "R1",
       "acceptance": [
-        "Fresh receipts at the candidate commit for the Rust engines, the C ABI, iOS and Android native apps, and web. `ROSTER.md` and `compatibility.v1.json` agree with each other and with the receipts. Anything not run says NOT RUN."
+        "Fresh receipts at the candidate commit for the Rust engines, the C ABI, iOS and Android native apps, and web. `ROSTER.md` and `compatibility.v1.json` agree with each other and with the receipts. Anything not run says NOT RUN.",
+        "Forge owns the 341-row application acceptance program and its required ios, android, web, macos, windows, visionos, quest and pico evidence. docs/completion/components.json retains Forge completion gates; docs/completion/library-progress.json retains the adopted UI/source acceptance record and five separately counted window-control additions. Verify both ledgers with the completion-plan CI jobs. Acceptance must be measured against the exact Tron release selected by tooling/nyc-tron.json; source adoption or a Tron library release does not satisfy Forge platform acceptance."
       ],
       "status": "in-progress",
-      "statusReason": "Source-bound browser receipts now exist: PR #82 launcher/Prism shell at tested merge 370e10b6b2c95ddeeeb2ae0ad89815e5305c884f, and PR #81 Tally/Cadence real-engine interactions at 0c8ba55452fb7dd952d6c933dd56071862f350c3. compatibility.v1.json and ROSTER.md mark web partial. Active F2 PR #85 head f6b6e17e0600fcb1f8e14023a1692026738daaa7 has separate partial CI at tested merge 2463139896b61e8bfe49a2ad6dd2da50fb02043a; its two native workflows were still running at the captured snapshot. Fresh complete Rust/C ABI/native runtime/web receipts at one final candidate remain outstanding. Older simulator/emulator receipts are not relabeled; physical-device and wider platform work remain NOT RUN.",
+      "statusReason": "Source-bound browser receipts now exist: PR #82 launcher/Prism shell at tested merge 370e10b6b2c95ddeeeb2ae0ad89815e5305c884f, and PR #81 Tally/Cadence real-engine interactions at 0c8ba55452fb7dd952d6c933dd56071862f350c3. compatibility.v1.json and ROSTER.md mark web partial. Active F2 PR #85 head f6b6e17e0600fcb1f8e14023a1692026738daaa7 has separate partial CI at tested merge 2463139896b61e8bfe49a2ad6dd2da50fb02043a; its two native workflows were still running at the captured snapshot. Fresh complete Rust/C ABI/native runtime/web receipts at one final candidate remain outstanding. Older simulator/emulator receipts are not relabeled; physical-device and wider platform work remain NOT RUN. The application component program is now owned in Forge: the adopted ledger retains all original acceptance values and five additions, and the existing completion ledger retains its distinct values. The pin is still v1.0.0-rc.2. This ownership clarification supplies no new platform acceptance or reviewer signature.",
       "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
       "commit": null,
       "reviewer": null,
-      "reviewedAt": null
+      "reviewedAt": null,
+      "componentProgram": {
+        "owner": "Nitro Forge",
+        "baselineRows": 341,
+        "additionalRows": 5,
+        "requiredPlatforms": [
+          "ios",
+          "android",
+          "web",
+          "macos",
+          "windows",
+          "visionos",
+          "quest",
+          "pico"
+        ],
+        "completionLedger": "docs/completion/components.json",
+        "adoptedLedger": "docs/completion/library-progress.json",
+        "validator": "tooling/verify-component-program.mjs",
+        "workflow": ".github/workflows/completion-plan.yml",
+        "consumerReleasePin": "tooling/nyc-tron.json",
+        "adoptionSource": "docs/completion/library-progress-source.json",
+        "meaning": "The adoption source records historical provenance. New application acceptance must identify the pinned consumer release; neither source presence nor library stability changes a completion or acceptance status."
+      }
     },
     {
       "id": "F8",
