@@ -57,3 +57,20 @@ Keep each skill's platform/version guidance aligned with this repository's
 pinned runtime and preserve its state, window and ownership contracts.
 
 User requirement (2026-11-07): use subagents for scoped implementation and independent review. Apply relevant native, domain and project skills, and the no-ai-slop skill, to implementation and reports.
+
+## Library dependency and application acceptance ownership
+
+Owner direction (2026-11-22): NYC-Tron is an independent UI library; Forge
+consumes its public APIs and owns its own application acceptance program in F7.
+Tron never imports, waits on or is gated by Forge. Reusable control changes
+belong in Tron; document/engine behavior and application acceptance belong here.
+
+Use `docs/completion/library-progress.json` for the adopted source/acceptance
+record, `components.json` for Forge's separate completion gates, and the
+completion-plan CI validators for each. Preserve the canonical baseline and
+five separately counted window-control additions. Keep all eight required
+platforms unless the owner makes a separate Forge decision. A Tron library
+release does not promote Forge completion, acceptance or platform evidence.
+Measure new acceptance against the exact release in `tooling/nyc-tron.json`.
+The adoption source pin is historical provenance, and the consumer remains on
+rc.2 until the separate release-pin PR is verified. Preserve all dated proof.
