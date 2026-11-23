@@ -4,6 +4,7 @@ Status: Decided, STRIKE for desktop v1. No desktop implementation or spike resul
 Date: 2026-11-13
 Decider: the integrator (A0), on the owner's instruction to drop the F5 spike.
 Owner confirmation: pending.
+Superseded in part on 2026-11-23: the owner confirmed the strike as decision D1 in [`docs/completion/DECISIONS-2026-11-23-v1-scope.md`](../completion/DECISIONS-2026-11-23-v1-scope.md). F5 moves to `descoped` once R1 signs, and the validator then stops counting it as a stable blocker. The "pending", "recorded as `blocked`" and "no validator exception" statements below are kept as the 2026-11-13 record. The return condition below still applies.
 Baselines read: nitro-forge PR #80 at `f0634479a60f006fa0180eae6de8aea9cddfc8b8`; `master` at `93783680d7bf9a757170dc1cbec93c2c476c8e34`.
 
 This supersedes the conditional BUILD decision dated 2026-11-12. The owner

@@ -24,8 +24,8 @@ said owner confirmation was pending. The owner has now confirmed it.
 
 ## D2. F7 component acceptance for v1 is the rendered row set on iOS, Android and web
 
-The component program adopted from NYC-Tron UI (PRs #92 and #93) lists 341
-baseline rows and five additions, each with eight platform columns. v1 requires
+The component program adopted from NYC-Tron UI (Forge PRs #92 and #93, open on
+GitHub and merged on this branch at `67f497a`) lists 341 baseline rows and five additions, each with eight platform columns. v1 requires
 accepted iOS, Android and web proof for every ledger row that a studio or lab
 renders. That set is derived from source imports by a committed script; its
 committed output is the list R1 inspects.

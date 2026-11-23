@@ -6,6 +6,8 @@ on:
       - 'docs/release/**'
       - 'compatibility.v1.json'
       - 'tooling/validate-v1*'
+      - 'tooling/nyc-tron.json'
+      - 'docs/completion/DECISIONS-*.md'
       - '.github/workflows/v1-readiness.yml'
   workflow_dispatch:
 

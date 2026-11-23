@@ -39,6 +39,20 @@ export function evidenceExists(path, rootDir = root) {
   return real.startsWith(base + sep) && statSync(real).isFile();
 }
 
+/**
+ * True when `path` is a plain repository path under docs/completion/ (no "." or ".." segments)
+ * whose real location, after symlinks, is still a file inside the real docs/completion directory.
+ */
+export function decisionInside(path, rootDir = root) {
+  if (typeof path !== "string" || !path.startsWith(DECISION_DIR)) return false;
+  if (path.split("/").some(part => part === "." || part === ".." || part === "")) return false;
+  if (!evidenceExists(path, rootDir)) return false;
+  const base = realpathSync(rootDir);
+  const dir = join(base, DECISION_DIR);
+  if (!existsSync(dir)) return false;
+  return realpathSync(resolve(base, path)).startsWith(realpathSync(dir) + sep);
+}
+
 /** Independent reviewer roles from the v1 program; implementer and reviewer are always different subagents. */
 export const REVIEWER_ROLES = ["R1", "R2"];
 const signer = value => (typeof value === "string" ? value.trim().toUpperCase() : "");
@@ -86,8 +100,7 @@ export function validateGateFile(doc, { rootDir = root } = {}) {
       problems.unshift("status " + (gate?.status ?? "missing"));
     }
     const hasDecision = gate?.decision !== null && gate?.decision !== undefined;
-    const decisionOk = hasDecision && typeof gate.decision === "string" && gate.decision.startsWith(DECISION_DIR) &&
-      evidenceExists(gate.decision, rootDir);
+    const decisionOk = hasDecision && decisionInside(gate.decision, rootDir);
     if (gate?.status === "descoped") {
       if (!decisionOk || !reviewerOk || !DATE.test(gate.reviewedAt ?? "")) {
         errors.push(id + ": marked descoped without an existing decision under " + DECISION_DIR +
@@ -156,21 +169,29 @@ export function validateCompatibility(doc, { rootDir = root } = {}) {
 }
 
 /** Read-only gate: prerelease reports, stable fails unless every gate is ready. Nothing changes status. */
-export function validateV1({ version, gates, compatibility }, { rootDir = root } = {}) {
+export function validateV1({ version, gates, compatibility, tronPin }, { rootDir = root } = {}) {
   const channel = version === undefined ? "stable" : releaseChannel(version);
   const gateResult = validateGateFile(gates, { rootDir });
   const compat = validateCompatibility(compatibility, { rootDir });
   const errors = [...gateResult.errors, ...compat.errors];
+  // Owner decision D3: rc.1 may ship on a Tron prerelease, stable may not, whatever F2's recorded status says.
+  const pinBlockers = [];
+  if (tronPin !== undefined) {
+    if (typeof tronPin?.tag !== "string" || !/^v\d/.test(tronPin.tag)) errors.push("tooling/nyc-tron.json: tag is missing or malformed");
+    else if (releaseChannel(tronPin.tag.slice(1)) === "prerelease") {
+      pinBlockers.push("F2: Tron pin " + tronPin.tag + " is a prerelease; stable needs the Tron 1.0.0 repin");
+    }
+  }
   const descoped = gateResult.gates.filter(gate => gate.descoped).length;
   const notReady = gateResult.gates.filter(gate => !gate.ready && !gate.descoped);
   const passed = gateResult.gates.filter(gate => gate.ready).length;
   let status;
   if (errors.length) status = "invalid";
   else if (channel === "prerelease") status = "candidate";
-  else status = notReady.length ? "blocked" : "ready";
+  else status = notReady.length || pinBlockers.length ? "blocked" : "ready";
   return { status, channel, version: version ?? null, passed, descoped, total: GATE_IDS.length - descoped, gates: gateResult.gates,
     compatibility: compat.entries, errors,
-    blockers: channel === "stable" ? notReady.map(gate => gate.id + ": " + gate.problems.join(", ")) : [],
+    blockers: channel === "stable" ? [...notReady.map(gate => gate.id + ": " + gate.problems.join(", ")), ...pinBlockers] : [],
     note: channel === "prerelease" ? "Prerelease report only. It does not claim any v1 gate or owner approval." : undefined };
 }
 
@@ -204,6 +225,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       version: options["--version"],
       gates: json(join(root, "docs/release/v1-readiness.json")),
       compatibility: json(join(root, "compatibility.v1.json")),
+      tronPin: json(join(root, "tooling/nyc-tron.json")),
     });
     console.log(formatTable(result));
     console.log("");

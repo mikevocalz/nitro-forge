@@ -116,6 +116,29 @@ test("a descoped gate needs an existing decision under docs/completion, its revi
   }
 });
 
+test("stable is blocked while the Tron pin is a prerelease, even with every gate passed", () => {
+  const pre = validateV1({ version: "1.0.0", gates: allPassed(), compatibility: compat(), tronPin: { tag: "v1.0.0-rc.2" } }, { rootDir: sandbox });
+  assert.equal(pre.status, "blocked");
+  assert.ok(pre.blockers.some(blocker => blocker.startsWith("F2: Tron pin v1.0.0-rc.2 is a prerelease")));
+  const rc = validateV1({ version: "1.0.0-rc.1", gates: allPassed(), compatibility: compat(), tronPin: { tag: "v1.0.0-rc.2" } }, { rootDir: sandbox });
+  assert.equal(rc.status, "candidate");
+  const stable = validateV1({ version: "1.0.0", gates: allPassed(), compatibility: compat(), tronPin: { tag: "v1.0.0" } }, { rootDir: sandbox });
+  assert.equal(stable.status, "ready");
+  const bad = validateV1({ version: "1.0.0", gates: allPassed(), compatibility: compat(), tronPin: {} }, { rootDir: sandbox });
+  assert.equal(bad.status, "invalid");
+});
+
+test("a descoped decision must resolve inside docs/completion, not just start with it", () => {
+  writeFileSync(join(sandbox, "root-file.md"), "outside docs/completion\n");
+  symlinkSync(join(sandbox, "root-file.md"), join(sandbox, "docs/completion/link-in.md"));
+  for (const decision of ["docs/completion/../release/evidence/receipt.txt", "docs/completion/./decision.md", "docs/completion/link-in.md"]) {
+    const gates = allPassed();
+    gates.gates[4] = { ...descopedGate("F5"), decision };
+    const result = validateV1({ version: "1.0.0-rc.1", gates, compatibility: compat() }, { rootDir: sandbox });
+    assert.equal(result.status, "invalid", decision);
+  }
+});
+
 test("only a descoped gate may carry a decision path", () => {
   const gates = allPassed();
   gates.gates[0] = { ...passedGate("F1"), decision: "docs/completion/decision.md" };
