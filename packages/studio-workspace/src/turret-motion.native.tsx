@@ -43,5 +43,5 @@ export function TurretRim(props: TurretRimProps) {
   const fade = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   const color = props.pulse?.kind === 'end-stop' ? props.limitColor : props.commitColor;
   return <Animated.View pointerEvents="none" testID="persona-turret-rim"
-    style={[{ position: 'absolute', left: 0, top: 0, width: props.size, height: props.size, borderRadius: props.size / 2, borderWidth: 3, borderColor: color }, fade]} />;
+    style={[{ position: 'absolute', left: 0, top: 0, width: props.size, height: props.size, borderRadius: props.size / 2, /* radius-exempt: knob */ borderWidth: 3, borderColor: color }, fade]} />;
 }

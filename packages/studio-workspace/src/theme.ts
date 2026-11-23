@@ -7,9 +7,19 @@ export const workspaceThemes = {
   light: { base: '#F4F5F8', raised: '#FFFFFF', deep: '#E7EAF1', line: '#DDE1EB', text: '#252A3A', muted: '#687287', accent: '#6950D1', ink: '#FFFFFF', soft: '#EEE9FF', paper: '#FFFEFC', paperInk: '#303440', paperMuted: '#797F8D', error: '#B33E46' },
 } as const;
 export type WorkspaceColors = { [K in keyof typeof workspaceThemes.dark]: string };
+/** The only two Forge view radii (design/DIRECTION.md). `md` is for outer views:
+ * panels, cards, sheets, popovers, menus, dialogs, toasts, the studio switcher,
+ * document and canvas frames. `sm` is for views nested inside those and for
+ * every control. They become Tailwind's `rounded-sm` and `rounded-md` through
+ * build-theme.mjs; tooling/check-radius.mjs rejects any other radius value. */
+export const forgeRadius = { sm: 4, md: 6 } as const;
+/** Sub-4 px radii for hairline details only (ticks, needles, meter segments). */
+export const forgeHairlineRadius = { tick: 1, needle: 0.75 } as const;
 export const workspaceScale = {
   space: { stack: 4, element: 8, inset: 12, group: 16, section: 24, canvas: 32, page: 64 },
-  radius: { control: 4, panel: 4, paper: 2 },
+  /** Role names over the two radii: `control` and inner views take `sm`;
+   * `panel` (outer views) and `paper` (document frames) take `md`. */
+  radius: { control: forgeRadius.sm, panel: forgeRadius.md, paper: forgeRadius.md },
   type: { micro: 10, label: 12, body: 14, title: 20, display: 32, manuscript: 20 },
   font: { serif: 'Georgia', mono: 'monospace' },
   size: { target: 44, rail: 72, header: 60, toolbar: 52, status: 28 },

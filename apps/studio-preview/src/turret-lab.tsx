@@ -5,7 +5,7 @@ import { Button, NightScope, Pressable, SegmentedControl, Text, TokenScope, View
 
 import { BUILT_IN_PERSONAS, PersonaTurret, useForgeRenderPrefs, type PersonaSurface } from '@nitro-forge/studio-workspace/turret';
 import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
-import { workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
+import { forgeRadius, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
 import {
   FORGE_DIRECTION_IDS, directionPalette, forgeDirections, glassAllowed, isForgeDirection, labCanvas, nycTronTokensFor, prismFillSwatches,
   type ForgeDirectionId, type ForgeScheme,
@@ -81,7 +81,7 @@ export function TurretLab() {
   const turretPanel = <View testID="lab-turret-panel" style={style(chrome({ alignItems: 'center', width: phone ? s.width - 32 : 340 }))}>
     <View style={{ flexDirection: 'row', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'space-between' }}>
       <Text style={{ color: m.text, fontSize: scale.type.label + 1, fontWeight: '600' }}>Persona</Text>
-      <Button title="Close" aria-label="Close personas" variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px] border border-transparent" onPress={() => store.setState({ open: false })} />
+      <Button title="Close" aria-label="Close personas" variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm border border-transparent" onPress={() => store.setState({ open: false })} />
     </View>
     <PersonaTurret personas={BUILT_IN_PERSONAS} surface={s.surface} activeId={s.personaId} direction={s.direction} scheme={s.scheme}
       onSwitch={personaId => store.setState({ personaId })} />
@@ -104,7 +104,7 @@ export function TurretLab() {
   const trigger = <View style={style(chrome({ flexDirection: 'row', alignItems: 'center', gap: scale.space.element, paddingVertical: scale.space.stack, paddingHorizontal: scale.space.inset, alignSelf: 'flex-start' }))}>
     <Text style={{ color: m.muted, fontSize: scale.type.label }}>Persona</Text>
     <Button title={active?.label ?? 'Persona'} aria-label={`Persona: ${active?.label ?? 'none'}. Open the turret`} selected={s.open}
-      variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px] border border-transparent" onPress={() => store.setState({ open: !s.open })} />
+      variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm border border-transparent" onPress={() => store.setState({ open: !s.open })} />
   </View>;
 
   const page = <View testID="turret-lab" className={s.scheme === 'dark' ? 'scheme-dark' : 'scheme-light'} onLayout={e => store.setState({ width: e.nativeEvent.layout.width })}

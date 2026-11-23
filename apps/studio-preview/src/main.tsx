@@ -7,7 +7,7 @@ import { bytesToBase64, base64ToBytes, type DocumentHandle } from '@nitro-forge/
 import { STUDIOS, type Studio } from '@nitro-forge/studio-layout';
 import { getEditorConfig } from '../../example/src/editors';
 import { useEditorDoc } from './useDocument';
-import { WORKSPACE_DENSITIES, isWorkspaceDensity, workspaceThemes, type WorkspaceDensity } from '@nitro-forge/studio-workspace/theme';
+import { WORKSPACE_DENSITIES, forgeRadius, isWorkspaceDensity, workspaceThemes, type WorkspaceDensity } from '@nitro-forge/studio-workspace/theme';
 import { FORGE_DIRECTION_IDS, isForgeDirection, nycTronTokens, type ForgeDirectionId } from '@nitro-forge/studio-workspace/directions';
 import { EngineStudioSurface } from './engine-studio-surfaces';
 import { exportPrismPng } from './prism-png-export';
@@ -82,7 +82,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
     <FilePicker unstyled className="document-action min-h-11 px-3 flex-row items-center justify-center rounded-control hover:bg-surface-sunken" labelClassName="text-text text-sm font-semibold" label="Open" disabled={busy || !editor.doc}
       accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
       onFiles={files => { const file = files[0]; if (file) void openFile(file).catch(() => {}); }} /></DropZone>
-      {studio === 'cadence' && <Button aria-label="Export WAV, up to 60 seconds" title="Export WAV (≤60 s)" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {
+      {studio === 'cadence' && <Button aria-label="Export WAV, up to 60 seconds" title="Export WAV (≤60 s)" variant="ghost" tone="carolina" size="sm" cornerRadius={forgeRadius.sm} className="rounded-sm" disabled={busy || !editor.doc} onPress={() => {
         void run(async () => {
           const current = editor.doc as { handle: DocumentHandle } | null;
           const owner = exportOwner.current;
@@ -97,7 +97,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
           store.setState({ notice: 'WAV download requested from the rendered master' });
         }).catch(() => {});
       }} />}
-      {studio === 'prism' && <Button aria-label="Export PNG, up to one megapixel" title="Export PNG" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {
+      {studio === 'prism' && <Button aria-label="Export PNG, up to one megapixel" title="Export PNG" variant="ghost" tone="carolina" size="sm" cornerRadius={forgeRadius.sm} className="rounded-sm" disabled={busy || !editor.doc} onPress={() => {
         void run(async () => {
           const current = editor.doc as { handle: DocumentHandle } | null;
           if (!current) throw new Error('The document is still opening.');
@@ -113,7 +113,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
           store.setState({ notice: 'PNG download requested from the engine canvas' });
         }).catch(() => {});
       }} />}
-      {studio === 'quill' && <Button aria-label="Export Word document" title="Export Word" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {
+      {studio === 'quill' && <Button aria-label="Export Word document" title="Export Word" variant="ghost" tone="carolina" size="sm" cornerRadius={forgeRadius.sm} className="rounded-sm" disabled={busy || !editor.doc} onPress={() => {
         void run(async () => {
           await textEditor.current?.flush();
           const result = await editor.apply<{ bytes_b64: string }>('exportDocx');
@@ -136,7 +136,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
       busy={busy || !editor.doc} error={error ?? editor.error}>
       {studio === 'quill' ? <QuillTextEditor density={density} ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' || studio === 'tally' || studio === 'cadence' || studio === 'splice' ? <EngineStudioSurface disabled={busy || !editor.doc} perform={run} studio={studio} document={editor.doc} state={editor.state} reload={editor.reload} theme={theme} density={density} direction={direction} personas={studio === 'prism' ? prismPersonaStore() : undefined} onComposePersona={() => { window.location.hash = COMPOSER_LAB_HASH; }} /> : undefined}
     </ForgeWorkspace>
-    {notice && <Banner tone="info" title={notice} className="rounded-[4px]" />}
+    {notice && <Banner tone="info" title={notice} className="rounded-sm" />}
   </>;
 }
 
@@ -209,7 +209,7 @@ function App() {
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
   }, [store]);
-  const themeToggle = <Button aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={theme === 'dark' ? 'Light' : 'Dark'} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px] border border-transparent"
+  const themeToggle = <Button aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={theme === 'dark' ? 'Light' : 'Dark'} variant="ghost" tone="carolina" size="sm" cornerRadius={forgeRadius.sm} className="rounded-sm border border-transparent"
     onPress={() => store.setState({ theme: theme === 'dark' ? 'light' : 'dark' })} />;
   const editorControls = <Page className="editor-host-controls">
     <Menu title="Preview width" triggerLabel="Preview controls" actions={[

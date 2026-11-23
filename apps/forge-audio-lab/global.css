@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "uniwind";
+/* Forge radius tokens; the lab keeps its own palette below. */
+@import "../../packages/studio-workspace/src/radius.css";
 
 /* NYC-Tron components ship no colors; the app defines the tokens listed in
    NYC-Tron-UI docs/THEME_TOKENS.md. This lab is dark-only
@@ -16,8 +18,6 @@
   --color-on-danger: #101018;
   --color-accent: #a78bfa;
   --color-focus: #c4b5fd;
-  --radius-control: 8px;
-  --radius-card: 12px;
 }
 
 @source "./node_modules/@nyc-tron/ui/dist/components";

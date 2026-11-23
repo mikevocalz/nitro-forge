@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelRatio, StyleSheet, Text, View } from 'react-native';
+import { forgeRadius } from '@nitro-forge/studio-workspace/theme';
 import {
   Canvas,
   useCanvasRef,
@@ -587,7 +588,7 @@ const styles = StyleSheet.create({
   notice: { color: '#f88', fontSize: 12 },
   button: {
     backgroundColor: '#2a6df4',
-    borderRadius: 8,
+    borderRadius: forgeRadius.sm,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: 'center',

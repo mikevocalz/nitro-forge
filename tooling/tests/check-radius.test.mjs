@@ -1,0 +1,142 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { checkRadius, checkSource, classifyCssValue, classifyJsValue, inventory, stripComments } from "../check-radius.mjs";
+
+const fixtures = fileURLToPath(new URL("./fixtures/radius/", import.meta.url));
+const script = fileURLToPath(new URL("../check-radius.mjs", import.meta.url));
+const pass = join(fixtures, "pass");
+const fail = join(fixtures, "fail");
+const keys = result => result.violations.map(v => `${v.file}:${v.line}:${v.rule}`);
+
+test("token file, tokens, square corners and listed exemptions pass", () => {
+  const result = checkRadius(pass);
+  assert.deepEqual(keys(result), []);
+  assert.equal(result.files, 3, "token files are not scanned as call sites");
+});
+
+test("every rule fires on the failing fixture", () => {
+  const found = keys(checkRadius(fail));
+  assert.deepEqual(found.sort(), [
+    "apps/lab/global.css:2:radius-variable",
+    "apps/lab/global.css:3:radius-variable",
+    "apps/lab/global.css:5:raw-radius",
+    "apps/lab/global.css:6:radius-variable",
+    "apps/lab/global.css:7:radius-arithmetic",
+    "packages/ui/src/arbitrary.tsx:1:rounded-arbitrary",
+    "packages/ui/src/arbitrary.tsx:2:rounded-arbitrary",
+    "packages/ui/src/arithmetic.tsx:1:radius-arithmetic",
+    "packages/ui/src/arithmetic.tsx:2:radius-arithmetic",
+    "packages/ui/src/arithmetic.tsx:3:radius-arithmetic",
+    "packages/ui/src/full.tsx:1:rounded-full",
+    "packages/ui/src/full.tsx:3:exemption-kind",
+    "packages/ui/src/raw.tsx:1:raw-radius",
+    "packages/ui/src/raw.tsx:2:raw-radius",
+    "packages/ui/src/raw.tsx:3:raw-radius",
+    "packages/ui/src/raw.tsx:5:raw-radius",
+    "packages/ui/src/scale.tsx:1:rounded-scale",
+    "packages/ui/src/scale.tsx:2:rounded-scale",
+    "packages/ui/src/scale.tsx:3:rounded-scale",
+    "packages/ui/src/scale.tsx:4:rounded-scale",
+    "packages/ui/src/variables.tsx:1:radius-variable",
+  ]);
+});
+
+test("the token definition must be exactly sm 4 and md 6, and the sheets must carry it", () => {
+  const dir = mkdtempSync(join(tmpdir(), "radius-tokens-"));
+  try {
+    cpSync(pass, dir, { recursive: true });
+    const theme = join(dir, "packages/studio-workspace/src/theme.ts");
+    writeFileSync(theme, readFileSync(theme, "utf8").replace("md: 6", "md: 8"));
+    const sheet = join(dir, "packages/studio-workspace/src/radius.css");
+    writeFileSync(sheet, readFileSync(sheet, "utf8").replace("--radius-md: 6px;", ""));
+    assert.deepEqual(keys(checkRadius(dir)), [
+      "packages/studio-workspace/src/theme.ts:1:token-definition",
+      "packages/studio-workspace/src/radius.css:1:token-definition",
+    ]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("rounded-lg and larger, side and corner variants included", () => {
+  for (const cls of ["rounded-lg", "rounded-xl", "rounded-2xl", "rounded-3xl", "rounded-t-xl", "rounded-br-lg", "rounded-ss-2xl", "hover:rounded-lg"]) {
+    assert.deepEqual(checkSource("a.tsx", `<View className="${cls}" />`).map(v => v.rule), ["rounded-scale"], cls);
+  }
+  for (const cls of ["rounded-sm", "rounded-md", "rounded-none", "rounded-control", "rounded-card", "rounded-rectangle"]) {
+    assert.deepEqual(checkSource("a.tsx", `<View className="${cls}" />`), [], cls);
+  }
+});
+
+test("rounded-full needs a marker naming a DIRECTION.md exemption", () => {
+  assert.deepEqual(checkSource("a.tsx", '<View className="rounded-full" />').map(v => v.rule), ["rounded-full"]);
+  for (const kind of ["knob", "colour-well", "radio", "avatar", "record-button", "window", "system-sheet", "launcher-icon-mask"]) {
+    assert.deepEqual(checkSource("a.tsx", `// radius-exempt: ${kind}\n<View className="rounded-full" />`), [], kind);
+  }
+  assert.deepEqual(checkSource("a.tsx", '// radius-exempt: badge\n<View className="rounded-full" />').map(v => v.rule), ["exemption-kind"]);
+  // A marker two lines up does not reach.
+  assert.equal(checkSource("a.tsx", '// radius-exempt: knob\n\n<View className="rounded-full" />').length, 1);
+  // Markers never excuse lg-or-larger or arbitrary classes.
+  assert.equal(checkSource("a.tsx", '<View className="rounded-xl" /> {/* radius-exempt: knob */}').length, 1);
+});
+
+test("value classifiers", () => {
+  assert.equal(classifyJsValue("0"), null);
+  assert.equal(classifyJsValue("scale.radius.panel"), null);
+  assert.equal(classifyJsValue("forgeRadius.sm"), null);
+  assert.equal(classifyJsValue("R"), null);
+  assert.equal(classifyJsValue("8"), "raw-radius");
+  assert.equal(classifyJsValue("0.75"), "raw-radius");
+  assert.equal(classifyJsValue("'50%'"), "raw-radius");
+  assert.equal(classifyJsValue("scale.radius.control + 2"), "radius-arithmetic");
+  assert.equal(classifyJsValue("x2.radius"), null);
+  assert.equal(classifyCssValue("var(--radius-md)"), null);
+  assert.equal(classifyCssValue("0"), null);
+  assert.equal(classifyCssValue("4px"), "raw-radius");
+  assert.equal(classifyCssValue("calc(var(--radius-sm) * 2)"), "radius-arithmetic");
+});
+
+test("comments are ignored, strings are not", () => {
+  assert.equal(stripComments("a // rounded-lg\nb").includes("rounded-lg"), false);
+  assert.equal(stripComments("'https://x/rounded-lg'").includes("rounded-lg"), true);
+  assert.equal(stripComments("`a ${b /* c */} d` // e").trimEnd(), "`a ${b        } d`");
+});
+
+test("dependencies, build output and tests are not scanned", () => {
+  const dir = mkdtempSync(join(tmpdir(), "radius-skip-"));
+  try {
+    cpSync(pass, dir, { recursive: true });
+    for (const skipped of ["packages/ui/node_modules/kit", "packages/ui/dist", "packages/ui/tests", "apps/lab/ios"]) {
+      mkdirSync(join(dir, skipped), { recursive: true });
+      writeFileSync(join(dir, skipped, "x.tsx"), '<View className="rounded-3xl" />');
+    }
+    writeFileSync(join(dir, "packages/ui/src/views.test.tsx"), "const s = { borderRadius: 12 };");
+    assert.deepEqual(keys(checkRadius(dir)), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLI prints file:line:rule, exits 1, and --json gives per-package counts", () => {
+  const run = spawnSync(process.execPath, [script, "--root", fail], { encoding: "utf8" });
+  assert.equal(run.status, 1);
+  assert.match(run.stdout, /^packages\/ui\/src\/raw\.tsx:1:raw-radius {2}borderRadius: 8$/m);
+  assert.match(run.stdout, /check-radius: 21 violation\(s\) in 7 files/);
+
+  const report = spawnSync(process.execPath, [script, "--root", fail, "--report"], { encoding: "utf8" });
+  assert.equal(report.status, 0, "--report lists violations without failing");
+
+  const json = JSON.parse(spawnSync(process.execPath, [script, "--root", fail, "--json"], { encoding: "utf8" }).stdout);
+  assert.equal(json.total, 21);
+  assert.equal(json.packages["apps/lab"].count, 5);
+  assert.equal(json.packages["packages/ui"].count, 16);
+  assert.equal(json.packages["packages/ui"].rules["rounded-scale"], 4);
+  assert.ok(json.packages["packages/ui"].violations.includes("packages/ui/src/full.tsx:3:exemption-kind"));
+
+  assert.equal(execFileSync(process.execPath, [script, "--root", pass], { encoding: "utf8" }).trim(), "check-radius: 0 violation(s) in 3 files");
+  assert.deepEqual(inventory({ files: 0, violations: [] }), { filesChecked: 0, total: 0, packages: {} });
+});
