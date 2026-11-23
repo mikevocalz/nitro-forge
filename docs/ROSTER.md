@@ -2781,7 +2781,61 @@ Owner chose option B for both rows (`docs/proposals/F3-deferred-rows.md`).
 - Studio preview: `PivotFieldList` (Tally "Pivot" tab) and `BeatDetectionMarkerLane` (Cadence Analysis "Beat markers" tab) are wired. Node tests with recorded calls and `tests/f3-rows.e2e.test.ts` against nf-cli passed locally on macOS.
 - On-screen check in the browser harness: NOT RUN. At `c83c871` the harness page does not mount in Chromium (`react-native-reanimated` served from source; see the PR). Native iOS and Android: NOT RUN.
 
+## F3 B-11 split: Tron blend model, Forge opacity (2026-11-23, `f3-b11-split`)
+
+Decision D7. Recorded at `a5634ed`, run locally on Linux, node v22.23.5,
+pnpm 12.18.0. The Prism Layers panel no longer mounts `LayerBlendAndOpacity`.
+Blend mode is Tron's `MenuButton` (`@nyc-tron/ui/components/shell/MenuButton`)
+with items from the B-11 model catalogs; "Straight alpha" is text under the
+mode label; opacity is Forge's `PrecisionScrubber` with its pre-`80e5934`
+props (`forcedColors={forced}`, step 1, `targetSize={scale.size.target}`,
+label "Layer opacity"). `prismBlendCommand` takes `{ kind: 'mode' }` or
+`{ kind: 'opacity', percent }`, validates with Tron's `validateLayerBlend` /
+`layerOpacityFromPercent`, and returns one `setLayerBlend` or
+`setLayerOpacity`. `prism-layout.ts` budgets 320 px for the panel head
+(was 184) and keeps at least one 56 px layer row.
+
+- Failing first, against `4cc8796` with only the tests changed:
+  `verify-prism-blend.mjs` failed 4 of 5 scenarios. Forced colours: 0 ticks
+  in the opacity track painted through forced colours (computed styles, no
+  pixel probe). Nudge: after one "−" the track read `99.9999%`, not 99 %.
+  Six layers at 1280x1000 and at 1024x768: "Straight alpha" was clipped
+  under the blend ScrollView's fold. The Multiply + Undo scenario passed.
+  The new node tests failed on the missing `PRISM_OPACITY_SCRUBBER` and
+  `PRISM_LAYERS_HEAD_HEIGHT` exports and the split-panel structure test.
+- `verify-prism-blend.mjs` after the change, headless Chromium 1243, Vite dev
+  host, nf-cli bridge: 5 of 5 scenarios pass. Multiply commits and Undo
+  restores Normal; two "−" presses read 99 % then 98 %; with six layers the
+  mode menu, "Straight alpha", the scrubber label, track, "−" and "+" pass a
+  browser hit test at their corners and centre with nothing scrolled, at
+  1280x1000 and 1024x768; under emulated forced colours the track has scale
+  marks with `forced-color-adjust: none` and an opaque background. At
+  1024x768 the editor is 972x320, so the panel body scrolls head first; the
+  script checks that Lower scrolls into the panel.
+- Captures: `release/evidence/2026-11-23-a5634ed/` (six layers, 1280x1000
+  and 1024x768; how they were made is in its README). The `80e5934` and
+  `61ce1b2` captures are marked superseded; `docs/release/v1-readiness.json`
+  still cites the `61ce1b2` file and was not edited.
+- studio-workspace node tests 157 passed; studio-preview node tests 34
+  passed; `vitest run tests` (after `cargo build --locked -p nf-cli`) 2
+  files, 6 passed; `pnpm -r typecheck` 28 of 28 done; `check-radius.mjs` 0
+  violations; `node --test tooling/validate-v1.test.mjs tooling/tests/*.test.mjs
+  tooling/release/package-verify.test.mjs` 79 passed.
+- v1 scope: B-11's ledger row lists only `LayerBlendAndOpacity.tsx`, so the
+  model calls land under `unmapped` (with `MenuButton`) and B-11 dropped to
+  57 rows. A D7 ruling in `derive-v1-component-scope.mjs` keeps it, tied to
+  `validateLayerBlend` staying called; `--check` is current at 58 rows, none
+  added or removed.
+- NOT RUN: opacity drag in the browser (only "−" presses); a real Windows
+  High Contrast session (forced colours were emulated in Chromium); a screen
+  reader; 200 % text; light theme; native iOS and Android; `vite build` and
+  `verify-render.mjs`; `cargo test` (no Rust changed). No reviewer has
+  signed this row. Tron follow-ups are listed in `docs/NYC_TRON_UI_HANDOFF.md`
+  under "B-11 follow-ups for NYC-Tron".
+
 ## F3 B-11 LayerBlendAndOpacity (2026-11-23, `f3-b11-r2`)
+
+Superseded by the split above (decision D7); kept as the dated record.
 
 Owner chose option A (decision D5): Tron `v1.0.0-rc.2`'s `alphaModes`
 catalog with one entry, Straight alpha. The control sits in the Prism
