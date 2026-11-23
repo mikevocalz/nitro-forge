@@ -46,5 +46,13 @@ the F2 repin to Tron `1.0.0` passes. If Tron `1.0.0` does not exist when every
 other gate has passed, that is reported as the single stable blocker. Forge does
 not change Tron to get there.
 
+F2 therefore passes twice. For `1.0.0-rc.1` it passes on the rc.2 repin, verified
+at the candidate commit. Before stable it returns to in-progress and passes
+again on the Tron `1.0.0` repin. The integrator publishes `1.0.0-rc.1` when every
+other in-scope gate has passed. Stable also needs the owner's written approval
+of the exact version and checksum hash.
+
+## Other corrections
+
 F1 said "all 22 workflows". `.github/workflows` holds 25 files at the commit
 that adds this record, so its text now says 25.
