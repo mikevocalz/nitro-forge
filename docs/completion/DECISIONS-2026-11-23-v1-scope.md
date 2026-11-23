@@ -46,7 +46,5 @@ the F2 repin to Tron `1.0.0` passes. If Tron `1.0.0` does not exist when every
 other gate has passed, that is reported as the single stable blocker. Forge does
 not change Tron to get there.
 
-## Other gate text corrected with this record
-
-- F1 said "all 22 workflows". `.github/workflows` holds 25 files at the commit
-  that adds this record; the text now says 25.
+F1 said "all 22 workflows". `.github/workflows` holds 25 files at the commit
+that adds this record, so its text now says 25.

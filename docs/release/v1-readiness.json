@@ -8,7 +8,7 @@
   "evidenceRule": "Evidence rule for every gate: implement, capture evidence with date and commit in its path, have the reviewer inspect the actual result, and only then change status. A file existing does not prove the claim inside it.",
   "statusValues": ["not-started", "in-progress", "blocked", "not-run", "passed", "descoped"],
   "passedRequires": "status passed needs an evidence path that exists in this repository, the full 40-character commit the evidence was captured at, the signing reviewer and the review date. tooling/validate-v1.mjs enforces this.",
-  "descopedRequires": "status descoped needs a decision path under docs/completion/ that exists in this repository, the signing reviewer and the review date. A signed descoped gate does not block stable; it is reported apart from passed gates. tooling/validate-v1.mjs enforces this.",
+  "descopedRequires": "status descoped needs a decision path under docs/completion/ that exists in this repository, the gate's reviewerRole as signer (not its owner) and the review date. A signed descoped gate does not block stable and is reported separately from passed gates. tooling/validate-v1.mjs enforces this.",
   "ownerDecisions": "docs/completion/DECISIONS-2026-11-23-v1-scope.md",
   "gates": [
     {
@@ -51,7 +51,7 @@
       "reviewerRole": "R2",
       "acceptance": [
         "Repin to Tron `rc.2` when it exists and to `1.0.0` when it exists. Each repin updates `tooling/nyc-tron.json` and every `@nyc-tron` reference, regenerates lockfiles, runs `verify-nyc-tron-pin.mjs --download`, typechecks the wired rows and runs their tests. Forge v1 does not ship pinned to a prerelease.",
-        "Owner decision D3 (2026-11-23, docs/completion/DECISIONS-2026-11-23-v1-scope.md): `1.0.0-rc.1` may ship pinned to Tron `v1.0.0-rc.2`. Stable `1.0.0` ships only after the repin to Tron `1.0.0` passes the steps above."
+        "Owner decision D3 (2026-11-23, docs/completion/DECISIONS-2026-11-23-v1-scope.md) amends the last sentence above, which now applies to stable `1.0.0` only. For the `1.0.0-rc.1` prerelease, F2 passes on the Tron `v1.0.0-rc.2` repin once it has run the steps above at the candidate commit. Before stable `1.0.0`, F2 returns to in-progress and passes again only after the repin to Tron `1.0.0` runs the same steps."
       ],
       "status": "in-progress",
       "statusReason": "The published Tron v1.0.0-rc.2 cohort at 0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44 is pinned in tooling/nyc-tron.json and all consumer manifests; both locks were regenerated with pnpm 12.18.0. The repin is under independent R2 review and needs candidate-bound installed consumer/type/runtime CI. The later stable Tron 1.0.0 repin is still pending. Under D3 the rc.1 prerelease may ship on rc.2; stable 1.0.0 cannot.",
@@ -197,10 +197,10 @@
       "reviewerRole": "R2",
       "acceptance": [
         "Follow `RELEASE_TRAIN.md`: one tarball per package plus `SHA256SUMS`, attached to a GitHub Release. First a `1.0.0-rc.1` prerelease, then v1 after the owner approves the exact version and checksum hash, the same way Tron's stable gate works. Set real versions; the root is still `0.0.0`.",
-        "Owner decision D3 (2026-11-23): the `1.0.0-rc.1` prerelease may be published pinned to Tron `v1.0.0-rc.2` once every in-scope gate other than F9 passes for the prerelease. Stable `1.0.0` additionally needs F2's Tron `1.0.0` repin and the owner's written approval of the exact version and checksum hash."
+        "Owner decision D3 (2026-11-23): the `1.0.0-rc.1` prerelease may ship pinned to Tron `v1.0.0-rc.2`. The integrator publishes it when every other in-scope gate has passed, with F2 passed on its rc.2 repin. Stable `1.0.0` additionally needs F2 passed again on the Tron `1.0.0` repin and the owner's written approval of the exact version and checksum hash."
       ],
       "status": "blocked",
-      "statusReason": "Depends on F1 to F4 and F6 to F8 (F5 descoped by D1). Under D3 the rc.1 prerelease may ship on Tron rc.2; stable also depends on the Tron 1.0.0 repin (F2). The root version is 0.0.0, no tag or GitHub Release exists, and there is no owner approval to bind to a checksum.",
+      "statusReason": "Depends on F1 to F8. F5 leaves v1 under D1 once R1 signs the descoping. Under D3 the rc.1 prerelease may ship on Tron rc.2; stable also depends on the Tron 1.0.0 repin (F2). The root version is 0.0.0, no tag or GitHub Release exists, and there is no owner approval to bind to a checksum.",
       "evidence": null,
       "commit": null,
       "reviewer": null,
