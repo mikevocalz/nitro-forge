@@ -13,6 +13,7 @@
     "test": "node --test src/*.test.ts",
     "test:engine": "vitest run tests",
     "test:render": "node verify-render.mjs dev",
+    "test:prism-blend": "node verify-prism-blend.mjs",
     "test:render:build": "node verify-render.mjs preview"
   },
   "dependencies": {

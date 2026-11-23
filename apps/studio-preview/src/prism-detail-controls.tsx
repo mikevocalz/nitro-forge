@@ -14,14 +14,12 @@ import {SwatchGrid} from '@nyc-tron/ui/components/forge/color/SwatchGrid';
 import {ColorPickerDialog} from '@nyc-tron/ui/components/forge/color/ColorPickerDialog';
 import {EyedropperTool} from '@nyc-tron/ui/components/forge/color/EyedropperTool';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
-import {LayerBlendAndOpacity} from '@nyc-tron/ui/components/forge/layers/LayerBlendAndOpacity';
 import {rgbToHsv,hsvToRgb,type HsvColor} from '@nyc-tron/ui/components/forge/color';
 import type {AlignReferenceKind,DistributeMode} from '@nyc-tron/ui/components/forge/canvas/align-distribute-model';
 import type {PrismDocument} from '../../../packages/prism/src/index';
 import {PrismCanvasAdapter,canvasClippingRows,type PrismCanvasState} from '../../../packages/prism/src/canvas-cluster';
 import {bindPrismColors,readPrismColors,type PrismColorBinding,type ColorSlot,type ColorValue,toEngineColor,commitPrismFill} from '../../../packages/prism/src/color-cluster';
 import {prismSampledColorWrite,samplePrismColor,PRISM_SAMPLE_SOURCES} from './prism-eyedropper-wiring';
-import {PRISM_ALPHA_MODES,PRISM_BLEND_MODES,PRISM_BLEND_SPACES,prismLayerBlendValue,prismLayerBlendWrite} from './prism-blend-wiring';
 
 export interface PrismDetailControlsProps {
  document:PrismDocument;
@@ -112,10 +110,6 @@ export function PrismDetailControls(props:PrismDetailControlsProps){
     {numeric('Layer X',layer.transform.tx,-1000000,1000000,.1,' px',tx=>document.setLayerTransform(layer.id,{tx}))}
     {numeric('Layer Y',layer.transform.ty,-1000000,1000000,.1,' px',ty=>document.setLayerTransform(layer.id,{ty}))}
     {numeric('Layer rotation',layer.transform.rotation,-36000,36000,.1,'°',rotation=>document.setLayerTransform(layer.id,{rotation}))}
-    {/* B-11: one alpha entry (Straight), so Tron shows it as text; Prism has no op for Premultiplied. */}
-    <LayerBlendAndOpacity key={key+'blend'} scope={String(document.handle.id)} revision={generation} layerId={String(layer.id)} value={prismLayerBlendValue(layer)}
-     modes={PRISM_BLEND_MODES} spaces={PRISM_BLEND_SPACES} alphaModes={PRISM_ALPHA_MODES} disabled={disabled||layer.locked}
-     onCommit={(next,{kind})=>{try{return write(prismLayerBlendWrite(document,layer.id,next,kind));}catch(error){return Promise.reject(error);}}}/>
     {!disabled&&readReady&&<MaskThumbnailAndEditor key={key+'mask'} layerId={String(layer.id)} layerName={layer.name} locked={layer.locked}
      mask={layer.mask?{enabled:layer.mask.enabled,inverted:layer.mask.inverted,revision:generation}:null} hasSelection={readReady&&view.hasSelection}
      loadMaskThumbnail={(id,max)=>preview(id,max,'mask')} refineDraft={view.refine} onRefineDraftChange={refine=>{if(current())store.setState({refine});}}

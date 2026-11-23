@@ -88,7 +88,7 @@
             "mappedBy": "module"
           },
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:88",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:86",
             "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
@@ -110,13 +110,6 @@
           },
           {
             "at": "examples/native-cadence/App.tsx:266",
-            "kind": "render",
-            "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
-            "mappedBy": "module"
-          },
-          {
-            "at": "packages/studio-workspace/src/prism-editor.tsx:232",
             "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
@@ -172,7 +165,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "packages/studio-workspace/src/prism-editor.tsx:247",
+            "at": "packages/studio-workspace/src/prism-editor.tsx:250",
             "kind": "render",
             "binding": "LayerStack",
             "module": "@nyc-tron/ui/components/forge/layers/LayerStack",
@@ -186,7 +179,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:116",
+            "at": "packages/studio-workspace/src/prism-editor.tsx:237",
             "kind": "render",
             "binding": "LayerBlendAndOpacity",
             "module": "@nyc-tron/ui/components/forge/layers/LayerBlendAndOpacity",
@@ -200,7 +193,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:119",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:113",
             "kind": "render",
             "binding": "MaskThumbnailAndEditor",
             "module": "@nyc-tron/ui/components/forge/layers/MaskThumbnailAndEditor",
@@ -214,7 +207,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:111",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:109",
             "kind": "render",
             "binding": "ClipToggle",
             "module": "@nyc-tron/ui/components/forge/layers/ClippingMaskControls",
@@ -228,7 +221,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:143",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:137",
             "kind": "render",
             "binding": "ArtboardNavigator",
             "module": "@nyc-tron/ui/components/forge/layers/ArtboardNavigator",
@@ -242,7 +235,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:134",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:128",
             "kind": "render",
             "binding": "MagicSelectionControls",
             "module": "@nyc-tron/ui/components/forge/selection/MagicSelectionControls",
@@ -312,7 +305,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:138",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:132",
             "kind": "render",
             "binding": "AlignDistributePanel",
             "module": "@nyc-tron/ui/components/forge/canvas/AlignDistributePanel",
@@ -326,7 +319,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:164",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:158",
             "kind": "render",
             "binding": "ColorPickerDialog",
             "module": "@nyc-tron/ui/components/forge/color/ColorPickerDialog",
@@ -340,7 +333,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:158",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:152",
             "kind": "render",
             "binding": "EyedropperTool",
             "module": "@nyc-tron/ui/components/forge/color/EyedropperTool",
@@ -354,7 +347,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:150",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:144",
             "kind": "render",
             "binding": "ForegroundBackgroundChips",
             "module": "@nyc-tron/ui/components/forge/color/ForegroundBackgroundChips",
@@ -368,7 +361,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:153",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:147",
             "kind": "render",
             "binding": "SwatchGrid",
             "module": "@nyc-tron/ui/components/forge/color/SwatchGrid",
@@ -879,7 +872,7 @@
             "mappedBy": "module"
           },
           {
-            "at": "apps/studio-preview/src/prism-detail-controls.tsx:88",
+            "at": "apps/studio-preview/src/prism-detail-controls.tsx:86",
             "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
@@ -901,13 +894,6 @@
           },
           {
             "at": "examples/native-cadence/App.tsx:266",
-            "kind": "render",
-            "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
-            "mappedBy": "module"
-          },
-          {
-            "at": "packages/studio-workspace/src/prism-editor.tsx:232",
             "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
@@ -1262,8 +1248,8 @@
         "rgbToHsv"
       ],
       "uses": [
-        "apps/studio-preview/src/prism-detail-controls.tsx:92",
-        "apps/studio-preview/src/prism-detail-controls.tsx:166"
+        "apps/studio-preview/src/prism-detail-controls.tsx:90",
+        "apps/studio-preview/src/prism-detail-controls.tsx:160"
       ]
     },
     {

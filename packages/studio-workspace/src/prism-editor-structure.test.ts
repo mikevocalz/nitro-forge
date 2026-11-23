@@ -31,3 +31,16 @@ test('every accessibilityRole is one Android accepts', () => {
     for (const [, role] of text.matchAll(/accessibilityRole=\{?["']([a-z]+)["']/g)) assert.ok(ANDROID_ROLES.has(role!), `${name}: accessibilityRole "${role}" crashes on Android`);
   }
 });
+
+// B-11: the Layers panel has one opacity owner for the selected layer.
+// LayerBlendAndOpacity takes it, with Prism's straight-only alpha catalog, and
+// its commits go through the same layer-command path as LayerStack.
+test('the Layers panel owns blend and opacity through LayerBlendAndOpacity', () => {
+  const start = source.indexOf('const panel = <View testID="prism-layers"');
+  const panel = source.slice(start, source.indexOf('</TokenScope>', start));
+  assert.match(panel, /<LayerBlendAndOpacity[^]*?alphaModes=\{PRISM_ALPHA_MODES\}/);
+  assert.match(panel, /onCommit=\{\(next, \{ kind \}\) => runLayerCommand\(rows => prismBlendCommand\(rows, /);
+  assert.doesNotMatch(panel, /label="Layer opacity"/);
+  // Row opacity drags in LayerStack stay.
+  assert.match(panel, /onOpacityCommit=/);
+});
