@@ -49,7 +49,7 @@ jobs:
       - run: node tooling/derive-v1-component-scope.mjs --check
 
   # F8: outer views rounded-md, inner views rounded-sm, exemptions only as
-  # design/DIRECTION.md lists them. Red until every violation is resolved.
+  # design/DIRECTION.md lists them.
   radius:
     runs-on: ubuntu-latest
     timeout-minutes: 5
