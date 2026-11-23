@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { prismViewportLayout, PRISM_LAYERS_PANEL_WIDTH } from './prism-layout.ts';
+import { prismViewportLayout, PRISM_LAYER_LIST_MIN_HEIGHT, PRISM_LAYERS_HEAD_HEIGHT, PRISM_LAYERS_PANEL_WIDTH } from './prism-layout.ts';
 
 test('short landscape retains a useful artboard instead of the previous 26px result', () => {
   const layout = prismViewportLayout(844, 286, 1, true, false);
@@ -77,4 +77,16 @@ test('the compact Layers panel fits without the alpha.2 row-width workaround', (
   assert.equal(prismViewportLayout(1024, 768, 1, true, false).panelWidth, 280);
   assert.equal(prismViewportLayout(390, 844, 1, true, false).panelWidth, 280);
   assert.equal(prismViewportLayout(320, 600, 1, true, false).panelWidth, 280);
+});
+
+// B-11 (D7): the panel head holds the title row, the blend mode menu, the
+// Straight alpha line, the opacity scrubber and Raise/Lower. The layer list
+// gets what is left, so the head never goes under the panel's fold.
+// verify-prism-blend.mjs measures the drawn head against this budget.
+test('the layer list budget leaves the whole Layers panel head on screen', () => {
+  assert.ok(PRISM_LAYERS_HEAD_HEIGHT >= 300, 'the head holds the blend menu, alpha line and the two-row opacity scrubber');
+  for (const [width, height] of [[1024, 768], [1280, 1000], [1388, 896], [844, 286]]) {
+    const layout = prismViewportLayout(width!, height!, 1, true, true);
+    assert.equal(layout.layerListMaxHeight, Math.max(PRISM_LAYER_LIST_MIN_HEIGHT, Math.min(245, layout.panelMaxHeight - PRISM_LAYERS_HEAD_HEIGHT)));
+  }
 });

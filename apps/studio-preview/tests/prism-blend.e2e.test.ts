@@ -1,44 +1,41 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { LayerBlendAndOpacity, type LayerBlendAndOpacityProps } from '@nyc-tron/ui/components/forge/layers/LayerBlendAndOpacity';
+import { MenuButton } from '@nyc-tron/ui/components/shell/MenuButton';
+import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
 import { CliHost } from '@nitro-forge/ignition/cli';
-import { PRISM_ALPHA_MODES, PRISM_BLEND_MODE_IDS, PRISM_BLEND_MODES, PRISM_BLEND_SPACES, prismBlendCommand, prismLayerBlendValue, type PrismLayer } from '@nitro-forge/studio-workspace/prism-blend';
+import { PRISM_BLEND_MODE_IDS, PRISM_OPACITY_SCRUBBER, prismBlendCommand, prismBlendMenuItems, prismLayerBlendValue, type PrismBlendChange, type PrismLayer } from '@nitro-forge/studio-workspace/prism-blend';
 import { PrismDocument } from '../../../packages/prism/src/index';
 import { BLEND_MODES } from '../../../packages/prism/src/canvas-types';
 
-// F3 B-11 wiring. The markup checks render NYC-Tron's LayerBlendAndOpacity
-// with the catalogs the Prism Layers panel passes, through the same
-// react-native className binding the Vite host uses; the engine checks run
-// the panel's commands against the real Rust engine through nf-cli
-// (`cargo build --locked -p nf-cli` first).
+// F3 B-11 wiring (decision D7). The markup checks render the two NYC-Tron
+// controls the Prism Layers panel uses, with the props it passes, through
+// the same react-native className binding the Vite host uses; the engine
+// checks run the panel's commands against the real Rust engine through
+// nf-cli (`cargo build --locked -p nf-cli` first).
 
-const render = (props: Partial<LayerBlendAndOpacityProps>) => renderToStaticMarkup(createElement(LayerBlendAndOpacity, {
-  scope: 'prism-layers', layerId: '2', value: prismLayerBlendValue({ id: 2, name: 'Paint', visible: true, opacity: 1, content: { type: 'raster' } })!,
-  modes: PRISM_BLEND_MODES, spaces: PRISM_BLEND_SPACES, onCommit: () => {}, ...props,
-}));
-
-describe('B-11 LayerBlendAndOpacity alpha catalog', () => {
-  it('offers Straight alpha only, as text, with no alpha menu to open', () => {
-    const html = render({ alphaModes: PRISM_ALPHA_MODES });
-    expect(html).toContain('Straight alpha');
-    expect(html).not.toContain('Premultiplied');
-    expect(html).not.toMatch(/aria-label="Layer alpha representation"/);
+describe('B-11 Layers panel controls', () => {
+  it('the blend mode MenuButton carries its name and current mode', () => {
+    const html = renderToStaticMarkup(createElement(MenuButton, {
+      label: 'Layer blend mode', items: prismBlendMenuItems(), onSelect: () => {}, accessibilityValue: { text: 'Normal' },
+      children: 'Normal',
+    }));
     expect(html).toMatch(/aria-label="Layer blend mode"/);
-    expect(html).toMatch(/aria-label="Layer compositing space"/);
-  });
-
-  it('without the catalog Tron keeps its two-entry alpha menu, which Prism must not get', () => {
-    expect(render({})).toMatch(/aria-label="Layer alpha representation"/);
-  });
-
-  it('Tron class names reach the markup through the className binding', () => {
+    expect(html).toContain('Normal');
     // MenuButton's own classes; React Native Web drops them without the binding.
-    expect(render({ alphaModes: PRISM_ALPHA_MODES })).toMatch(/class="[^"]*\bmin-h-11\b/);
+    expect(html).toMatch(/class="[^"]*\bmin-h-11\b/);
+  });
+
+  it('the opacity scrubber steps 1 % and reports whole percent', () => {
+    const html = renderToStaticMarkup(createElement(PrecisionScrubber, { ...PRISM_OPACITY_SCRUBBER, value: 100, targetSize: 44, forcedColors: true, onCommit: () => {} }));
+    expect(html).toMatch(/aria-label="Layer opacity"/);
+    expect(html).toMatch(/aria-valuetext="100%"/);
+    expect(html).toMatch(/aria-label="Decrease Layer opacity"/);
   });
 
   it('the shared mode list is exactly the modes the Prism API accepts', () => {
     expect([...PRISM_BLEND_MODE_IDS]).toEqual([...BLEND_MODES]);
+    expect(prismBlendMenuItems().map(item => item.id)).toEqual([...BLEND_MODES]);
   });
 });
 
@@ -54,21 +51,23 @@ describe('B-11 Layers panel commands on Prism', () => {
       // The editor reads layers from `describe`, so the test does too.
       const layers = async () => (await doc.describe<{ layers: PrismLayer[] }>()).data.layers;
       const read = async () => prismLayerBlendValue((await layers()).find(layer => layer.id === id)!)!;
-      const commit = async (next: Parameters<typeof prismBlendCommand>[2], kind: 'mode' | 'opacity') => {
-        const command = prismBlendCommand(await layers(), id, next, kind)!;
+      const commit = async (change: PrismBlendChange) => {
+        const command = prismBlendCommand(await layers(), id, change)!;
         await doc.handle.apply(command.op, command.payload);
       };
       const start = await read();
       expect(start).toMatchObject({ mode: 'normal', opacity: 1, alphaMode: 'straight' });
 
-      await commit({ ...start, mode: 'multiply' }, 'mode');
-      const blended = await read();
-      expect(blended.mode).toBe('multiply');
-      await commit({ ...blended, opacity: 0.25 }, 'opacity');
-      expect(await read()).toMatchObject({ mode: 'multiply', opacity: 0.25 });
+      await commit({ kind: 'mode', mode: 'multiply' });
+      expect((await read()).mode).toBe('multiply');
+      // Two presses of "−" on the scrubber: 99 %, then 98 %.
+      await commit({ kind: 'opacity', percent: 99 });
+      await commit({ kind: 'opacity', percent: 98 });
+      expect(await read()).toMatchObject({ mode: 'multiply', opacity: 0.98 });
 
       expect(await doc.undo()).toBe(true);
-      expect(await read()).toMatchObject({ mode: 'multiply', opacity: 1 });
+      expect(await read()).toMatchObject({ mode: 'multiply', opacity: 0.99 });
+      expect(await doc.undo()).toBe(true);
       expect(await doc.undo()).toBe(true);
       expect(await read()).toEqual(start);
       expect(await doc.redo()).toBe(true);

@@ -65,6 +65,12 @@ export const ROW_DECISIONS = Object.freeze({
     notRun: { web: "NOT RUN: the web drag transport PanResponderDrag maps to no ledger row." },
     requiresUnmapped: "PanResponderDrag",
   },
+  // The ledger row lists LayerBlendAndOpacity.tsx only; its model module maps to no row.
+  "B-11": {
+    decision: "D7",
+    basis: "The Prism Layers panel takes blend mode and alpha from the B-11 layer blend model (validateLayerBlend) in Tron's MenuButton; opacity stays on Forge's PrecisionScrubber.",
+    requiresUnmapped: "validateLayerBlend",
+  },
 });
 
 /** Where a package subpath lives under the Tron package root, from its pinned exports map. */

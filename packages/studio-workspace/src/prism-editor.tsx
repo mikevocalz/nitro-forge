@@ -11,11 +11,12 @@ import { forgeHairlineRadius, forgeRadius, prismThemes, resolveWorkspaceScale, t
 import { prismViewportLayout, PRISM_DOCKED_LAYERS_MIN_WIDTH, PRISM_TOOLBAR_TOP } from './prism-layout';
 import { prismLayerLabel } from './prism-layer-label';
 import { PrismCanvas } from './prism-canvas';
-import { LayerBlendAndOpacity } from '@nyc-tron/ui/components/forge/layers/LayerBlendAndOpacity';
+import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
+import { MenuButton } from '@nyc-tron/ui/components/shell/MenuButton';
 import { LayerStack } from '@nyc-tron/ui/components/forge/layers/LayerStack';
 import { prismLayerRows, prismMoveCommand, prismOpacityCommand, prismRenameCommand, prismRemoveCommand, prismSelectedRowId, prismVisibilityCommand, type PrismLayer, type PrismLayerCommand } from './prism-layers';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
-import { PRISM_ALPHA_MODES, PRISM_BLEND_MODES, PRISM_BLEND_SPACES, prismBlendCommand, prismLayerBlendValue } from './prism-blend';
+import { PRISM_ALPHA_MODES, PRISM_BLEND_MODES, PRISM_OPACITY_SCRUBBER, prismBlendCommand, prismBlendMenuItems, prismLayerBlendValue } from './prism-blend';
 import { Platform } from 'react-native';
 import { PersonaTurret, documentRtl, turretBoxWidth, useForgeRenderPrefs, useStudioTextScale, useTurretShortcut, type PersonaTurretHandle } from './persona-turret';
 import { chromePalette, forgeDirections, forgeFeedbackMotion, nycTronTokens, nycTronTokensFor, directionPalette, systemColor, workbenchChrome, type ForgeDirectionId } from './forge-directions';
@@ -198,6 +199,7 @@ export function PrismEditor(props: PrismEditorProps) {
   };
   const selectedRow = prismSelectedRowId(selectedId);
   const selectedBlend = selected ? prismLayerBlendValue(selected) : undefined;
+  const selectedModeLabel = PRISM_BLEND_MODES.find(mode => mode.id === selectedBlend?.mode)?.label ?? '';
   const control = (label: string, onPress: () => void, disabled = false, selected = false, glyph?: string, visibleLabel?: string, iconOnly = false, hint?: string) => {
     const unavailable = disabled || busy || !!props.busy;
     const icon = glyph ? <ForgeIcon name={glyph} size={17} color={unavailable ? chrome.disabledInk : selected ? colors.accent : colors.muted} reducedMotion /> : undefined;
@@ -226,26 +228,50 @@ export function PrismEditor(props: PrismEditorProps) {
       <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-sm overflow-hidden" />
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
     </View>
+    {/* The body fits the panel wherever the editor is tall enough for the
+        head and one layer row (prism-layout.ts). In a shorter editor (1024x768
+        in Studio Preview leaves it 320 px) the body scrolls, head first, so the
+        blend menu and the opacity scrubber stay on screen and the layer rows
+        start below them. */}
+    <ScrollView testID="prism-layers-body" style={{ flexShrink: 1 }}>
     {/* NYC-Tron parts read semantic variables; these are cut from the same Workbench chrome. */}
     <TokenScope variables={controlTokens}>
-    {/* B-11: the selected layer's blend mode and opacity have one owner here.
-        Prism composites straight alpha only, so the alpha catalog has one
-        entry and Tron shows it as text. Each released value is one command.
-        It scrolls inside the panel so the layer rows below keep their space. */}
-    {selected && <ScrollView testID="prism-layer-blend" style={{ flexGrow: 0, flexShrink: 1, zIndex: 10 }} contentContainerStyle={{ paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element }}>
-      {selectedBlend
-        ? <LayerBlendAndOpacity
-          scope="prism-layers"
-          layerId={String(selected.id)}
-          value={selectedBlend}
-          modes={PRISM_BLEND_MODES}
-          spaces={PRISM_BLEND_SPACES}
-          alphaModes={PRISM_ALPHA_MODES}
+    {/* B-11 (decision D7): blend mode and the Straight alpha line come from
+        Tron's layer blend model, the mode in Tron's MenuButton; opacity keeps
+        Forge's configured scrubber (forced colours, 1 % step, density target).
+        Each choice or released value is one command. The layer list below
+        gets the height that is left. */}
+    {selected && <View testID="prism-layer-blend" style={{ paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element, gap: scale.space.element, zIndex: 10 }}>
+      {/* The alpha line sits under the menu's label: Prism offers one alpha
+          representation, so it is a fact, not a choice. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.element }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>Blend mode</Text>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>{PRISM_ALPHA_MODES[0].label}</Text>
+        </View>
+        <MenuButton
+          label="Layer blend mode"
+          editScope={JSON.stringify(['prism-layers', selected.id, 'mode'])}
+          accessibilityValue={{ text: selectedBlend ? selectedModeLabel : 'Not listed' }}
+          items={prismBlendMenuItems()}
           disabled={busy || !!props.busy}
-          onCommit={(next, { kind }) => runLayerCommand(rows => prismBlendCommand(rows, selected.id, next, kind))}
-        />
-        : <Text style={{ color: colors.muted, fontSize: 12 }}>This layer uses a blend mode the editor does not list.</Text>}
-    </ScrollView>}
+          className="border border-border px-3"
+          style={{ minHeight: scale.size.target, minWidth: 132 }}
+          onSelect={mode => runLayerCommand(rows => prismBlendCommand(rows, selected.id, { kind: 'mode', mode }))}
+        ><Text style={{ color: colors.text, fontSize: 13 }}>{selectedBlend ? selectedModeLabel : 'Not listed'}</Text></MenuButton>
+      </View>
+      {!selectedBlend && <Text style={{ color: colors.muted, fontSize: 12 }}>This layer uses a blend mode the editor does not list.</Text>}
+      {/* Layer opacity uses the same precision instrument as every studio;
+          only its released value becomes a Rust document operation. */}
+      <PrecisionScrubber
+        {...PRISM_OPACITY_SCRUBBER}
+        targetSize={scale.size.target}
+        value={selected.opacity * 100}
+        disabled={busy || !!props.busy}
+        forcedColors={forced}
+        onCommit={percent => runLayerCommand(rows => prismBlendCommand(rows, selected.id, { kind: 'opacity', percent }))}
+      />
+    </View>}
       {layers.length
         ? <LayerStack testID="prism-layer-stack" layers={prismLayerRows(layers)} {...(selectedRow === undefined ? {} : { selectedId: selectedRow })} accentColor={forced ? systemColor('Highlight') : chrome.accent}
           style={{ maxHeight: layerListMaxHeight, flexShrink: 0, borderRadius: 0 }}
@@ -264,6 +290,7 @@ export function PrismEditor(props: PrismEditorProps) {
       {selected && <View style={{ paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{control('Raise', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex + 1 }, 'Layer raised'); }, selectedIndex === layers.length - 1)}{control('Lower', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex - 1 }, 'Layer lowered'); }, selectedIndex <= 0)}</View>
       </View>}
+    </ScrollView>
   </View>;
 
   // Persona: a mode control in the toolbar. Its panel follows it in reading

@@ -32,15 +32,26 @@ test('every accessibilityRole is one Android accepts', () => {
   }
 });
 
-// B-11: the Layers panel has one opacity owner for the selected layer.
-// LayerBlendAndOpacity takes it, with Prism's straight-only alpha catalog, and
-// its commits go through the same layer-command path as LayerStack.
-test('the Layers panel owns blend and opacity through LayerBlendAndOpacity', () => {
+// B-11 (decision D7): the Layers panel keeps Forge's configured opacity
+// scrubber (forced colours, 1 % step, density target) and takes blend mode
+// from Tron's layer blend model through Tron's MenuButton. Both commit through
+// the same layer-command path as LayerStack.
+test('the Layers panel splits Tron blend mode from Forge opacity', () => {
   const start = source.indexOf('const panel = <View testID="prism-layers"');
   const panel = source.slice(start, source.indexOf('</TokenScope>', start));
-  assert.match(panel, /<LayerBlendAndOpacity[^]*?alphaModes=\{PRISM_ALPHA_MODES\}/);
-  assert.match(panel, /onCommit=\{\(next, \{ kind \}\) => runLayerCommand\(rows => prismBlendCommand\(rows, /);
-  assert.doesNotMatch(panel, /label="Layer opacity"/);
+  assert.doesNotMatch(source, /LayerBlendAndOpacity/);
+  assert.match(panel, /<MenuButton[^]*?label="Layer blend mode"[^]*?items=\{prismBlendMenuItems\(\)\}/);
+  assert.match(panel, /onSelect=\{mode => runLayerCommand\(rows => prismBlendCommand\(rows, selected\.id, \{ kind: 'mode', mode \}\)\)\}/);
+  assert.match(panel, />\{PRISM_ALPHA_MODES\[0\]\.label\}</);
+  const at = panel.indexOf('<PrecisionScrubber');
+  assert.ok(at > 0, 'the panel renders PrecisionScrubber');
+  const scrubber = panel.slice(at, panel.indexOf('/>', at));
+  assert.match(scrubber, /\{\.\.\.PRISM_OPACITY_SCRUBBER\}/);
+  assert.match(scrubber, /targetSize=\{scale\.size\.target\}/);
+  assert.match(scrubber, /forcedColors=\{forced\}/);
+  assert.match(scrubber, /onCommit=\{percent => runLayerCommand\(rows => prismBlendCommand\(rows, selected\.id, \{ kind: 'opacity', percent \}\)\)\}/);
+  // The head is not a scroll view, so nothing in it sits under a fold.
+  assert.doesNotMatch(panel, /<ScrollView testID="prism-layer-blend"/);
   // Row opacity drags in LayerStack stay.
   assert.match(panel, /onOpacityCommit=/);
 });

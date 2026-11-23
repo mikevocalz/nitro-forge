@@ -114,6 +114,13 @@
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
+          },
+          {
+            "at": "packages/studio-workspace/src/prism-editor.tsx:266",
+            "kind": "render",
+            "binding": "PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "mappedBy": "module"
           }
         ]
       },
@@ -165,7 +172,7 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "packages/studio-workspace/src/prism-editor.tsx:250",
+            "at": "packages/studio-workspace/src/prism-editor.tsx:276",
             "kind": "render",
             "binding": "LayerStack",
             "module": "@nyc-tron/ui/components/forge/layers/LayerStack",
@@ -176,16 +183,8 @@
       {
         "id": "B-11",
         "name": "LayerBlendAndOpacity",
-        "basis": "derived: renders or calls",
-        "hits": [
-          {
-            "at": "packages/studio-workspace/src/prism-editor.tsx:237",
-            "kind": "render",
-            "binding": "LayerBlendAndOpacity",
-            "module": "@nyc-tron/ui/components/forge/layers/LayerBlendAndOpacity",
-            "mappedBy": "name"
-          }
-        ]
+        "basis": "D7: The Prism Layers panel takes blend mode and alpha from the B-11 layer blend model (validateLayerBlend) in Tron's MenuButton; opacity stays on Forge's PrecisionScrubber.",
+        "hits": []
       },
       {
         "id": "B-12",
@@ -898,6 +897,13 @@
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
+          },
+          {
+            "at": "packages/studio-workspace/src/prism-editor.tsx:266",
+            "kind": "render",
+            "binding": "PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "mappedBy": "module"
           }
         ]
       },
@@ -1272,6 +1278,17 @@
       ]
     },
     {
+      "module": "@nyc-tron/ui/components/forge/layers/layer-blend-model",
+      "names": [
+        "layerOpacityFromPercent",
+        "validateLayerBlend"
+      ],
+      "uses": [
+        "packages/studio-workspace/src/prism-blend.ts:69",
+        "packages/studio-workspace/src/prism-blend.ts:127"
+      ]
+    },
+    {
       "module": "@nyc-tron/ui/components/forge/sheet-window",
       "names": [
         "rangeAddress",
@@ -1416,6 +1433,15 @@
         "examples/native-cadence/App.tsx:196",
         "examples/native-cadence/App.tsx:291",
         "packages/studio-workspace/src/nyc-tron-host.tsx:76"
+      ]
+    },
+    {
+      "module": "@nyc-tron/ui/components/shell/MenuButton",
+      "names": [
+        "MenuButton"
+      ],
+      "uses": [
+        "packages/studio-workspace/src/prism-editor.tsx:252"
       ]
     },
     {
