@@ -443,9 +443,9 @@ export function PrismEditor(props: PrismEditorProps) {
       {/* Each chip sits in a 44 pt target. The chosen one is ringed with a gap,
           in the engraving colour, or the system highlight under forced colours. */}
       {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${FILL_NAMES[index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: scale.size.target, height: scale.size.target, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent', borderRadius: scale.radius.control }}>
-        <View style={{ width: 33, height: 33, alignItems: 'center', justifyContent: 'center', borderRadius: scale.radius.control + 2, borderWidth: 2, borderColor: color === index ? (forced ? systemColor('Highlight') : chrome.chipRing) : 'transparent', ...keepColour }}>
-          <View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: 1, borderColor: forced ? systemColor('CanvasText') : chrome.chipEdge, ...keepColour }} />
-        </View>
+        {/* The ring is an outline offset from the chip, so it follows the chip's own corner and stays concentric without a third radius. */}
+        <View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: 1, borderColor: forced ? systemColor('CanvasText') : chrome.chipEdge,
+          outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 2, outlineColor: color === index ? (forced ? systemColor('Highlight') : chrome.chipRing) : 'transparent', ...keepColour }} />
       </Pressable>)}
       {selected && <><View style={{ width: 1, height: 24, backgroundColor: chrome.rule, marginHorizontal: 5 }} />{control('Fill layer', () => { void run(selected.content.type === 'shape' ? 'setShapeFill' : 'fillLayer', { id: selected.id, color: FILLS[color] }, selected.content.type === 'shape' ? 'Shape fill changed' : 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
       </ScrollView>

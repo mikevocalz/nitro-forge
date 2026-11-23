@@ -46,7 +46,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
       <View style={{ alignSelf: 'center', width: '100%', maxWidth: 520, aspectRatio: (doc.width || 1) / (doc.height || 1), backgroundColor: '#f7f5ed', overflow: 'hidden' }}>
         {array(doc.layers).filter(layer => layer.visible).map(layer => {
           const shape = layer.content?.shape;
-          return shape ? <View key={layer.id} style={{ position: 'absolute', left: `${shape.x / doc.width * 100}%`, top: `${shape.y / doc.height * 100}%`, width: `${shape.w / doc.width * 100}%`, height: `${shape.h / doc.height * 100}%`, borderRadius: shape.kind === 'ellipse' ? 9999 : 0, backgroundColor: rgba(shape.fill), opacity: layer.opacity }} /> : null;
+          return shape ? <View key={layer.id} style={{ position: 'absolute', left: `${shape.x / doc.width * 100}%`, top: `${shape.y / doc.height * 100}%`, width: `${shape.w / doc.width * 100}%`, height: `${shape.h / doc.height * 100}%`, borderRadius: shape.kind === 'ellipse' ? 9999 : 0, /* radius-exempt: artwork */ backgroundColor: rgba(shape.fill), opacity: layer.opacity }} /> : null;
         })}
       </View>
       <Text style={[caption, { marginTop: 14 }]}>Shape projection. Raster compositing is supplied by the host canvas adapter.</Text>

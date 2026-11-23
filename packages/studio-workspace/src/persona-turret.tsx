@@ -470,10 +470,10 @@ export function PersonaTurret(props: PersonaTurretProps) {
                 {[6, 13, 20, 27, 34].map(d => <Circle key={d} r={g.face - d * k} fill="none" stroke={m.lathe} strokeWidth={0.6} strokeOpacity={direction.light.model === 'refract' ? 0.14 : 0.07} />)}
               </Svg>
               <TurretRim pulse={state.pulse} reduceMotion={prefs.reduceMotion} size={ringSize} commitColor={m.accent} limitColor={m.muted} />
-              {/* The pointer: a slot milled from the face to the shown detent. */}
+              {/* The pointer: a square-ended slot milled from the face to the shown detent. */}
               <TurretPointer deg={indicatorDeg} durationMs={travel} easing={direction.motion.easing} bezier={direction.motion.bezier}
                 reduceMotion={prefs.reduceMotion} pulse={state.pulse} size={ringSize}>
-                <View style={{ position: 'absolute', left: R - 1.5 * k, top: R - g.face + 3 * k, width: 3 * k, height: 10 * k, borderRadius: 1.5 * k, backgroundColor: peeking ? m.faceText : m.accent }} />
+                <View style={{ position: 'absolute', left: R - 1.5 * k, top: R - g.face + 3 * k, width: 3 * k, height: 10 * k, backgroundColor: peeking ? m.faceText : m.accent }} />
               </TurretPointer>
               <View pointerEvents="none" style={{ position: 'absolute', left: R - g.face + 6 * k, width: (g.face - 6 * k) * 2, top: R - 22 * k, alignItems: 'center', gap: 2 * k }}>
                 <Text numberOfLines={1} style={{ color: m.faceText, fontSize: fs(scale.type.body + 2), fontWeight: '700', letterSpacing: -0.2 }}>{persona?.label ?? turretCopy.ringLabel}</Text>

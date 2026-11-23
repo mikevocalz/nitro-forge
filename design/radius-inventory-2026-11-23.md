@@ -13,11 +13,11 @@ review or critique. Native Swift, Kotlin and C++ sources are not scanned.
 | | Violations |
 | --- | --- |
 | Before (base commit, checker run against an export of `HEAD`) | 77 (73 call sites, 4 token-definition) |
-| After this change | 5 |
+| After the first migration | 5 |
+| After owner decision D6 (`docs/completion/DECISIONS-2026-11-23-v1-scope.md`) | 0 |
 
-`node tooling/check-radius.mjs` ends with `check-radius: 5 violation(s) in 222 files`
-and exits 1. `validate:v1` therefore fails at the radius step until the five
-items below are decided.
+`node tooling/check-radius.mjs` now ends with `check-radius: 0 violation(s) in 223 files`
+and exits 0.
 
 ## Tokens
 
@@ -69,7 +69,8 @@ borderRadius: props.size / 2, /* radius-exempt: knob */
 
 Allowed kinds, exactly DIRECTION.md's list: `knob`, `colour-well`, `radio`,
 `avatar`, `record-button` (circular by nature), and `window`, `system-sheet`,
-`launcher-icon-mask` (owned by the operating system). A marker excuses
+`launcher-icon-mask` (owned by the operating system), and `artwork` (document
+content, added by decision D6). A marker excuses
 `rounded-full`, `raw-radius` and `radius-arithmetic` on its line. It never
 excuses `rounded-lg` and larger, arbitrary classes or per-app variables.
 
@@ -154,17 +155,18 @@ These used `scale.radius.panel` but sit inside an outer view, so they move to
 - `prism-editor.tsx:339`: 16 px dial glyph on the persona button, a miniature of the turret knob. `knob`.
 - `apps/example/app/_layout.tsx:16`: `sheetCornerRadius` on the persona `formSheet`, a system sheet. `system-sheet`. The value stays 4.
 
-## Remaining (5)
+## Resolved by decision D6
 
-Current line numbers.
+The owner added the `artwork` exemption to DIRECTION.md and asked for token
+fixes for the rest. Line numbers are current.
 
-| Location | Rule | Studio | Why it was left |
-| --- | --- | --- | --- |
-| `packages/studio-workspace/src/persona-turret.tsx:476` | radius-arithmetic | Prism personas | Pointer on the dial face, `3k` wide with `1.5k` ends, scaled with the dial. It is a hairline but scales, and the hairline tokens are fixed values. Needs a decision on a scaled hairline token or a square pointer. |
-| `packages/studio-workspace/src/prism-editor.tsx:446` | radius-arithmetic | Prism | Selection ring round a fill swatch, `control + 2` (6 px) so it is concentric with the 4 px swatch. As a control it should be `sm`; DIRECTION also names colour wells as circular. Either the swatches become circular colour wells or the ring drops to `sm`. A design call, not a mechanical one. |
-| `packages/studio-workspace/src/stage.tsx:49` | radius-arithmetic | Prism | Ellipse layers drawn as `borderRadius: 9999` in the shape projection. This is document content, not chrome, and DIRECTION lists no exemption for artwork. Fix by drawing ellipses with SVG, or by adding an artwork exemption to DIRECTION. |
-| `apps/studio-preview/src/turret-lab.tsx:77` | raw-radius | Prism lab | Same case: a circle in the sample artboard, drawn with `'50%'`. |
-| `apps/studio-preview/src/style.css:48` | raw-radius | Launcher | 5 px "open" status dot, `50%`. A status dot is not in DIRECTION's circular list (knobs, colour wells, radio buttons, avatars, record buttons). |
+| Location | Was | Now |
+| --- | --- | --- |
+| `packages/studio-workspace/src/stage.tsx:49` | radius-arithmetic: ellipse layers as `borderRadius: 9999` | Marked `radius-exempt: artwork`. The shape projection draws the user's document content. |
+| `apps/studio-preview/src/turret-lab.tsx:77` | raw-radius: `'50%'` circle in the sample artboard | Marked `radius-exempt: artwork`. |
+| `apps/studio-preview/src/style.css:48` | raw-radius: 5 px status dot at `50%` | Square. The radius is removed rather than set to `var(--radius-sm)`: 4 px on a 5 px dot would still read as a circle. |
+| `packages/studio-workspace/src/persona-turret.tsx:476` | radius-arithmetic: dial pointer with `1.5k` ends | Square-ended (radius removed). The pointer is drawn as a slot milled into the face, and square ends match that. A scaled hairline token was not added. |
+| `packages/studio-workspace/src/prism-editor.tsx:446` | radius-arithmetic: selection ring at `control + 2` round a 4 px swatch | The wrapper view is gone. The swatch (`control`, 4 px) carries the ring as a 2 px outline offset 2 px. An outline follows the corner of the view it belongs to, so the ring stays concentric without a third radius value. Same ring colours, including `Highlight` under forced colours. Not checked visually on web or native. |
 
 ## Flagged by role, not by the checker
 

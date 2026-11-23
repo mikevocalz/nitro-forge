@@ -26,7 +26,8 @@
 // A literal 0 is square, not rounded, and always passes.
 //
 // Exemption marker. DIRECTION.md allows `rounded-full` only for shapes circular
-// by nature, and exempts shapes the operating system owns. A call site claims
+// by nature, and exempts shapes the operating system owns and shapes that are
+// document content (artwork a user draws, a sample artboard). A call site claims
 // one of those exemptions with a comment on the same line or the line above:
 //
 //   // radius-exempt: knob
@@ -46,6 +47,8 @@ export const EXEMPTION_KINDS = Object.freeze([
   "knob", "colour-well", "radio", "avatar", "record-button",
   // owned by the operating system
   "window", "system-sheet", "launcher-icon-mask",
+  // document content, not view chrome (owner decision D6)
+  "artwork",
 ]);
 
 /** The token definition and the files generated from it. Paths are repository-relative. */

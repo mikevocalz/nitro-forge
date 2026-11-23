@@ -32,6 +32,9 @@ test("every rule fires on the failing fixture", () => {
     "packages/ui/src/arithmetic.tsx:1:radius-arithmetic",
     "packages/ui/src/arithmetic.tsx:2:radius-arithmetic",
     "packages/ui/src/arithmetic.tsx:3:radius-arithmetic",
+    "packages/ui/src/artwork.tsx:2:rounded-scale",
+    "packages/ui/src/artwork.tsx:3:rounded-arbitrary",
+    "packages/ui/src/artwork.tsx:4:radius-variable",
     "packages/ui/src/full.tsx:1:rounded-full",
     "packages/ui/src/full.tsx:3:exemption-kind",
     "packages/ui/src/raw.tsx:1:raw-radius",
@@ -74,7 +77,7 @@ test("rounded-lg and larger, side and corner variants included", () => {
 
 test("rounded-full needs a marker naming a DIRECTION.md exemption", () => {
   assert.deepEqual(checkSource("a.tsx", '<View className="rounded-full" />').map(v => v.rule), ["rounded-full"]);
-  for (const kind of ["knob", "colour-well", "radio", "avatar", "record-button", "window", "system-sheet", "launcher-icon-mask"]) {
+  for (const kind of ["knob", "colour-well", "radio", "avatar", "record-button", "window", "system-sheet", "launcher-icon-mask", "artwork"]) {
     assert.deepEqual(checkSource("a.tsx", `// radius-exempt: ${kind}\n<View className="rounded-full" />`), [], kind);
   }
   assert.deepEqual(checkSource("a.tsx", '// radius-exempt: badge\n<View className="rounded-full" />').map(v => v.rule), ["exemption-kind"]);
@@ -82,6 +85,19 @@ test("rounded-full needs a marker naming a DIRECTION.md exemption", () => {
   assert.equal(checkSource("a.tsx", '// radius-exempt: knob\n\n<View className="rounded-full" />').length, 1);
   // Markers never excuse lg-or-larger or arbitrary classes.
   assert.equal(checkSource("a.tsx", '<View className="rounded-xl" /> {/* radius-exempt: knob */}').length, 1);
+});
+
+test("artwork excuses raw and computed radii but not lg classes, arbitrary classes or variables", () => {
+  for (const line of ["borderRadius: 13", "borderRadius: '50%'", "borderRadius: kind === 'ellipse' ? 9999 : 0"]) {
+    assert.deepEqual(checkSource("a.tsx", `// radius-exempt: artwork\nconst s = { ${line} };`), [], line);
+    assert.equal(checkSource("a.tsx", `const s = { ${line} };`).length, 1, `${line} fails unmarked`);
+  }
+  assert.deepEqual(checkSource("a.css", ".blob { border-radius: 50%; } /* radius-exempt: artwork */"), []);
+  for (const [source, rule] of [
+    ['<View className="rounded-xl" /> {/* radius-exempt: artwork */}', "rounded-scale"],
+    ['<View className="rounded-[50%]" /> {/* radius-exempt: artwork */}', "rounded-arbitrary"],
+    ["const v = { '--radius-art': '9px' }; // radius-exempt: artwork", "radius-variable"],
+  ]) assert.deepEqual(checkSource("a.tsx", source).map(v => v.rule), [rule], source);
 });
 
 test("value classifiers", () => {
@@ -125,16 +141,16 @@ test("CLI prints file:line:rule, exits 1, and --json gives per-package counts", 
   const run = spawnSync(process.execPath, [script, "--root", fail], { encoding: "utf8" });
   assert.equal(run.status, 1);
   assert.match(run.stdout, /^packages\/ui\/src\/raw\.tsx:1:raw-radius {2}borderRadius: 8$/m);
-  assert.match(run.stdout, /check-radius: 21 violation\(s\) in 7 files/);
+  assert.match(run.stdout, /check-radius: 24 violation\(s\) in 8 files/);
 
   const report = spawnSync(process.execPath, [script, "--root", fail, "--report"], { encoding: "utf8" });
   assert.equal(report.status, 0, "--report lists violations without failing");
 
   const json = JSON.parse(spawnSync(process.execPath, [script, "--root", fail, "--json"], { encoding: "utf8" }).stdout);
-  assert.equal(json.total, 21);
+  assert.equal(json.total, 24);
   assert.equal(json.packages["apps/lab"].count, 5);
-  assert.equal(json.packages["packages/ui"].count, 16);
-  assert.equal(json.packages["packages/ui"].rules["rounded-scale"], 4);
+  assert.equal(json.packages["packages/ui"].count, 19);
+  assert.equal(json.packages["packages/ui"].rules["rounded-scale"], 5);
   assert.ok(json.packages["packages/ui"].violations.includes("packages/ui/src/full.tsx:3:exemption-kind"));
 
   assert.equal(execFileSync(process.execPath, [script, "--root", pass], { encoding: "utf8" }).trim(), "check-radius: 0 violation(s) in 3 files");

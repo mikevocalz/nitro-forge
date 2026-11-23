@@ -45,7 +45,7 @@ button:disabled { opacity: .45; cursor: default; }
 .app-open-label { color: #b9a8ff; font-size: 11px; font-weight: 550; white-space: nowrap; }
 .app-open-label > span { display: inline-block; padding-left: 4px; }
 .open-indicator { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; line-height: 1.4; }
-.open-indicator::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: #a997f2; }
+.open-indicator::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; background: #a997f2; }
 .app-card-open { border-color: #8f7ec24d; }
 .launcher-footnote { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin: 24px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
 [data-theme="light"] .app-glyph { color: #6b51c2; background: #eeebfc; border-color: #c3b5e766; box-shadow: inset 0 1px 0 #fff; }

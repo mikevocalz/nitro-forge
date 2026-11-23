@@ -13,3 +13,7 @@ export const dial = <View className="rounded-full" style={{ borderRadius: size /
 export const well = <View className="rounded-full" />; {/* radius-exempt: colour-well */}
 export const sheet = { sheetCornerRadius: 10 /* radius-exempt: system-sheet */ };
 export const tokens = { '--radius-control': `${scale.radius.control}px` };
+// radius-exempt: artwork
+export const ellipse = { borderRadius: shape.kind === 'ellipse' ? 9999 : 0 };
+export const blob = { borderRadius: '50%' }; /* radius-exempt: artwork */
+export const drawn = { borderRadius: 13 }; // radius-exempt: artwork
