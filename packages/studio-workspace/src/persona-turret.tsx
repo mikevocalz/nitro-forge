@@ -12,7 +12,7 @@ import {
   scaleTurretGeometry, turretAnnouncement, turretArrowKey, turretDisplayAngle, turretFrame, turretLogicalAngle, turretReduce,
   turretShortcutDigit, turretShortcutFor, type TurretEffect, type TurretEvent, type TurretShortcut, type TurretState,
 } from './turret';
-import { workspaceScale as scale, type WorkspaceColors } from './theme';
+import { forgeHairlineRadius, workspaceScale as scale, type WorkspaceColors } from './theme';
 import {
   DEFAULT_TURRET_DIRECTION, detentDurationMs, forgeDirections, forgeFeedbackMotion, turretGeometry as geo,
   systemColor, type ForgeDirectionId, type ForgeRenderPrefs, type ForgeScheme,
@@ -362,7 +362,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
             }) as ViewStyle}>
             <Text numberOfLines={stacked ? undefined : 1} style={{ flexShrink: 1, color: lit ? m.text : m.muted, fontSize: fs(scale.type.label + 1), fontWeight: committed || lit ? '700' : '500' }}>{p.label}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.stack, minHeight: 14 }}>
-              {committed && <View style={{ width: 6, height: 2, borderRadius: 1, backgroundColor: m.accent }} />}
+              {committed && <View style={{ width: 6, height: 2, borderRadius: forgeHairlineRadius.tick, backgroundColor: m.accent }} />}
               {tag && <Text style={{ color: m.muted, fontSize: fs(scale.type.micro + 1), fontVariant: ['tabular-nums'] }}>{tag}</Text>}
             </View>
           </Pressable>
@@ -399,7 +399,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
         <View style={{ width: frame.boxWidth, height: frame.boxHeight, direction: 'ltr', transform: [{ scale: frame.scale }], transformOrigin: 'top left' } as ViewStyle}>
           {/* Focus ring sits outside the bezel so it never covers a detent. */}
           <View pointerEvents="none" style={{
-            position: 'absolute', left: cx - R - 5, top: frame.boxTop - R - 5, width: ringSize + 10, height: ringSize + 10, borderRadius: R + 5,
+            position: 'absolute', left: cx - R - 5, top: frame.boxTop - R - 5, width: ringSize + 10, height: ringSize + 10, borderRadius: R + 5, // radius-exempt: knob
             borderWidth: state.focused ? 2 : 0, borderColor: focusColor,
             ...(state.focused && Platform.OS === 'web' ? { outlineStyle: 'solid', outlineWidth: forced ? 2 : 0, outlineColor: focusColor, outlineOffset: 1 } : {}),
           } as ViewStyle} />

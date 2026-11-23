@@ -7,7 +7,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { base64ToBytes, bytesToBase64 } from '@nitro-forge/ignition';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { encodeRgbaPng, validatePreviewSize } from './rgba-png';
-import { prismThemes, resolveWorkspaceScale, type WorkspaceDensity } from './theme';
+import { forgeHairlineRadius, forgeRadius, prismThemes, resolveWorkspaceScale, type WorkspaceDensity } from './theme';
 import { prismViewportLayout, PRISM_DOCKED_LAYERS_MIN_WIDTH, PRISM_TOOLBAR_TOP } from './prism-layout';
 import { prismLayerLabel } from './prism-layer-label';
 import { PrismCanvas } from './prism-canvas';
@@ -202,7 +202,7 @@ export function PrismEditor(props: PrismEditorProps) {
     // `opacity-100` keeps a host's blanket disabled fade off the kit's own
     // disabled ink, which is drawn to be read at full strength.
     const shared = { onPress, disabled: unavailable, variant: 'ghost' as const, size: 'sm' as const, tone: 'carolina' as const,
-      cornerRadius: 4, className: `rounded-[4px] border border-transparent${props.density === 'comfortable' ? ' min-h-12 min-w-12' : ''}${selected ? ' bg-carolina-500/15' : ''}${unavailable ? ' opacity-100' : ''}`,
+      cornerRadius: forgeRadius.sm, className: `rounded-sm border border-transparent${props.density === 'comfortable' ? ' min-h-12 min-w-12' : ''}${selected ? ' bg-carolina-500/15' : ''}${unavailable ? ' opacity-100' : ''}`,
       ...(label === 'Layers' ? { selected } : {}), ...(hint ? { accessibilityHint: hint } : {}) };
     const button = iconOnly
       ? <IconButton key={label} {...shared} icon={icon} aria-label={label} />
@@ -221,7 +221,7 @@ export function PrismEditor(props: PrismEditorProps) {
   const chromeSurface = { backgroundColor: chrome.body, borderWidth: 1, borderColor: chrome.edge, borderRadius: scale.radius.panel, boxShadow: chrome.depth };
   const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: 60, top: panelTop, right: 12, ...chromeSurface, overflow: 'visible' }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: scale.space.group, paddingRight: scale.space.stack, minHeight: scale.size.target+4, borderBottomWidth: 1, borderBottomColor: chrome.rule }}>
-      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-[4px] overflow-hidden" />
+      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-sm overflow-hidden" />
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
     </View>
     {/* NYC-Tron parts read semantic variables; these are cut from the same Workbench chrome. */}
@@ -252,7 +252,7 @@ export function PrismEditor(props: PrismEditorProps) {
           onMove={(id, toIndex) => runLayerCommand(rows => prismMoveCommand(rows, id, toIndex))}
           onRename={(id, name) => runLayerCommand(rows => prismRenameCommand(rows, id, name))}
           onRemove={id => runLayerCommand(rows => prismRemoveCommand(rows, id))} />
-        : <EmptyState title="No layers" description="Add a shape or raster layer to begin." className="p-3" tone="carolina" action={<Button title="Add rectangle" onPress={() => addShape('rect')} disabled={busy || !!props.busy || !doc} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />} />}
+        : <EmptyState title="No layers" description="Add a shape or raster layer to begin." className="p-3" tone="carolina" action={<Button title="Add rectangle" onPress={() => addShape('rect')} disabled={busy || !!props.busy || !doc} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm" />} />}
     </TokenScope>
       {/* Each row removes its own layer (button, screen-reader action, Delete).
           LayerStack reorders only by drag and screen-reader actions, so Raise
@@ -336,8 +336,9 @@ export function PrismEditor(props: PrismEditorProps) {
         transform: [{ scale: pressed ? forgeFeedbackMotion.press.scale : 1 }],
       }) as never}>
       {/* A small dial: the ring and a pointer set to the active stop. */}
+      {/* radius-exempt: knob */}
       <View aria-hidden style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: personaOpen ? colors.accent : colors.muted, transform: [{ rotate: `${personaStops.length ? turretDisplayAngle(activeStop, personaStops.length, documentRtl()) : 0}deg` }] }}>
-        <View style={{ position: 'absolute', left: 5.75, top: 1.5, width: 1.5, height: 5, borderRadius: 0.75, backgroundColor: colors.accent }} />
+        <View style={{ position: 'absolute', left: 5.75, top: 1.5, width: 1.5, height: 5, borderRadius: forgeHairlineRadius.needle, backgroundColor: colors.accent }} />
       </View>
       <Text numberOfLines={1} style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>{personaLabel}</Text>
       {shortcutKeys && activeStop < 9 && <Text style={{ color: colors.muted, fontSize: scale.type.micro + 1, fontVariant: ['tabular-nums'] }}>{shortcut.tag(activeStop + 1)}</Text>}
@@ -451,8 +452,8 @@ export function PrismEditor(props: PrismEditorProps) {
     </View>
     {!!feedback && <View onLayout={event => { const h = Math.round(event.nativeEvent.layout.height); if (h !== store.getState().feedbackHeight) store.setState({ feedbackHeight: h }); }}
       style={{ position: 'absolute', zIndex: 35, bottom: toastBottom, left: toastLeft, width: toastWidth }}>
-      <Banner tone={error || previewError ? 'danger' : 'info'} title={feedback} live={error || previewError ? 'alert' : 'status'} className="rounded-[4px]"
-        {...(previewError ? { action: <Button title="Retry preview" onPress={() => store.setState(s => ({ retry: s.retry + 1 }))} disabled={busy || !!props.busy} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /> } : {})} />
+      <Banner tone={error || previewError ? 'danger' : 'info'} title={feedback} live={error || previewError ? 'alert' : 'status'} className="rounded-sm"
+        {...(previewError ? { action: <Button title="Retry preview" onPress={() => store.setState(s => ({ retry: s.retry + 1 }))} disabled={busy || !!props.busy} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm" /> } : {})} />
     </View>}
     {/* The one live region for persona changes. It stays mounted, so the commit is read after the panel closes. */}
     <Text testID="persona-status" accessibilityLiveRegion="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}>{personaStatus}</Text>

@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef } from 'react';
 import { useColorScheme } from 'react-native';
 import { Button } from '@nitro-forge/studio-workspace/ui';
+import { forgeRadius } from '@nitro-forge/studio-workspace/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ForgeWorkspace, QuillTextEditor, type QuillTextEditorHandle } from '@nitro-forge/studio-workspace';
 import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
@@ -41,7 +42,7 @@ function StudioEditor({ studioId }: { studioId: Studio }) {
   return <SafeAreaView edges={['top', 'bottom', 'left', 'right']} style={{ flex: 1 }}>
     <Stack.Screen options={{ headerShown: false }} />
     <ForgeWorkspace studioId={studioId} title={surfaces.workspaceTitle(config.title)} documentTitle={surfaces.documentTitle(config.title)}
-      headerLeading={<Button title={surfaces.leading.label} aria-label={surfaces.leading.label} onPress={() => surfaces.leading.href === '/' ? router.replace('/') : router.push('/about')} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" />}
+      headerLeading={<Button title={surfaces.leading.label} aria-label={surfaces.leading.label} onPress={() => surfaces.leading.href === '/' ? router.replace('/') : router.push('/about')} variant="ghost" tone="carolina" size="sm" cornerRadius={forgeRadius.sm} className="rounded-sm" />}
       theme={theme} state={doc.state} rows={doc.state ? config.rows(doc.state) : []}
       actions={config.actions.map(action => ({ title: action.title, run: () => action.run(doc) }))}
       onUndo={doc.undo} onRedo={doc.redo} onSave={save} onRefresh={doc.reload}
