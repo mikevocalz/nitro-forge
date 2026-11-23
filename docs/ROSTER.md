@@ -2815,7 +2815,11 @@ label "Layer opacity"). `prismBlendCommand` takes `{ kind: 'mode' }` or
 - Captures: `release/evidence/2026-11-23-a5634ed/` (six layers, 1280x1000
   and 1024x768; how they were made is in its README). The `80e5934` and
   `61ce1b2` captures are marked superseded; `docs/release/v1-readiness.json`
-  still cites the `61ce1b2` file and was not edited.
+  cites only `release/evidence/2026-11-23-a5634ed/` since `cc07f05`.
+- Known limit (R2, 2026-11-23): at 1024x768 the head leaves the layer list at
+  its 56 px floor inside the scrolling panel body, so the rows sit in a nested
+  scroller one row tall. Follow-up: drop the list cap when the head does not
+  fit, so the body is the only scroller.
 - studio-workspace node tests 157 passed; studio-preview node tests 34
   passed; `vitest run tests` (after `cargo build --locked -p nf-cli`) 2
   files, 6 passed; `pnpm -r typecheck` 28 of 28 done; `check-radius.mjs` 0
