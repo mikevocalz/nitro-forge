@@ -56,3 +56,32 @@ of the exact version and checksum hash.
 
 F1 said "all 22 workflows". `.github/workflows` holds 25 files at the commit
 that adds this record, so its text now says 25.
+
+## D4. "Rendered" in D2 means rendered or called
+
+Asked after R1 found that the first derivation depended on name casing: it
+counted non-rendered PascalCase values (N-21, A-20) and missed lab code that
+calls row source modules as functions (N-08, N-12, N-17, N-19). The owner chose
+"renders or calls": a row is in the v1 set when a studio or lab renders one of
+its components or calls into a Tron module listed as one of its sources.
+
+- N-21 stays in v1. Its web drag transport (`PanResponderDrag`) maps to no row,
+  so N-21 web is recorded NOT RUN.
+- A-20 stays in v1 because F8 item 5 requires native popovers in every studio,
+  not because of its component-table wiring.
+
+## D5. F3 Prism B-11: option A
+
+The owner chose option A from `docs/proposals/F3-deferred-rows.md`: the optional
+`alphaModes` catalog on Tron's `LayerBlendAndOpacity`. Tron `v1.0.0-rc.2`
+already ships it (`packages/ui/src/components/forge/layers/layer-blend-model.ts`
+at `0e09d3be`), so Forge wires it to the modes Prism supports and needs no Tron
+change.
+
+## D6. Radius exemption for document artwork
+
+The owner added one exemption to `design/DIRECTION.md`: shapes that are part of
+a document's content (artwork a user draws or a sample artboard) are not view
+chrome and may be any shape. The status dot in `apps/studio-preview` becomes a
+square at the control radius; the dial pointer and the swatch selection ring get
+token-based fixes. No other exemption is added.
