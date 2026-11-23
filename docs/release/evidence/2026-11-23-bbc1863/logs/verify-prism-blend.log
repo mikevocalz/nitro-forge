@@ -1,0 +1,51 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "../../packages/ignition/src/host-cli" without a file extension (vite.config.ts:6:25). Add the file extension
+  - import "./types" without a file extension (../../packages/ignition/src/host-cli.ts:11:29). Add the file extension
+  - import "./base64" without a file extension (../../packages/ignition/src/host-cli.ts:12:46). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+  VITE v8.3.8  ready in 308 ms
+
+  ➜  Local:   http://127.0.0.1:4189/
+
+Unable to interop `export * from "react-native-web"` in /home/user/nitro-forge/.claude/worktrees/agent-a33a7dfac60d303e5/apps/studio-preview/src/react-native-classname.tsx, this may lose module exports. Please export "react-native-web" as ESM or use named exports instead, e.g. `export { A, B } from "react-native-web"`
+5:37:52 PM [vite] (client) [optimizer] bundling dependencies...
+5:37:53 PM [vite] (client) [console.error] Received `false` for a non-boolean attribute `accessible`.
+
+If you want to write it to the DOM, pass a string instead: accessible="false" or accessible={value.toString()}.
+
+If you used to conditionally omit it with accessible={condition && value}, pass accessible={condition ? value : undefined} instead.
+5:37:53 PM [vite] (client) [console.warn] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md
+PASS 1280x1000: Straight alpha text, one opacity owner, Multiply commit and Undo
+5:37:55 PM [vite] (client) [console.error] Received `false` for a non-boolean attribute `accessible`.
+
+If you want to write it to the DOM, pass a string instead: accessible="false" or accessible={value.toString()}.
+
+If you used to conditionally omit it with accessible={condition && value}, pass accessible={condition ? value : undefined} instead.
+5:37:56 PM [vite] (client) [console.warn] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md
+PASS 1280x1000: two presses of "−" take opacity from 100 % to 98 %
+5:37:58 PM [vite] (client) [console.error] Received `false` for a non-boolean attribute `accessible`.
+
+If you want to write it to the DOM, pass a string instead: accessible="false" or accessible={value.toString()}.
+
+If you used to conditionally omit it with accessible={condition && value}, pass accessible={condition ? value : undefined} instead.
+5:37:59 PM [vite] (client) [console.warn] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md
+  1280x1000: editor [0,148,1228,552], fill bar [422,628,384,52], panel [936,160,280,524], list 208 px, head 316 px (budget 320)
+PASS 1280x1000, six layers: mode menu and the whole opacity scrubber reachable without scrolling
+5:38:03 PM [vite] (client) [console.error] Received `false` for a non-boolean attribute `accessible`.
+
+If you want to write it to the DOM, pass a string instead: accessible="false" or accessible={value.toString()}.
+
+If you used to conditionally omit it with accessible={condition && value}, pass accessible={condition ? value : undefined} instead.
+5:38:03 PM [vite] (client) [console.warn] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md
+  1024x768: editor [0,148,972,320], fill bar [294,396,384,52], panel [680,156,280,304], list 56 px, head 248 px (budget 320)
+  1024x768: the panel body scrolls (322 px in 254 px); rows and Raise/Lower are below the head
+PASS 1024x768, six layers: mode menu and the whole opacity scrubber reachable without scrolling
+5:38:08 PM [vite] (client) [console.error] Received `false` for a non-boolean attribute `accessible`.
+
+If you want to write it to the DOM, pass a string instead: accessible="false" or accessible={value.toString()}.
+
+If you used to conditionally omit it with accessible={condition && value}, pass accessible={condition ? value : undefined} instead.
+5:38:08 PM [vite] (client) [console.warn] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md
+PASS forced colours: the opacity track paints its scale in system colours
+Prism Layers panel: blend menu, Straight alpha text and opacity scrubber pass in Chromium

@@ -1,0 +1,18 @@
+
+ RUN  v5.1.0 /home/user/nitro-forge/.claude/worktrees/agent-a33a7dfac60d303e5/apps/studio-preview
+
+ ✓ tests/f3-rows.e2e.test.ts > I-15 PivotFieldList wiring on Tally > a filters assignment stores an "All" filter and refreshes to the unfiltered grid 11ms
+ ✓ tests/f3-rows.e2e.test.ts > E-35 BeatDetectionMarkerLane wiring on Cadence > detects at two sensitivities, stores beats as markers, and undoes each run as one step 140ms
+stderr | tests/prism-blend.e2e.test.ts > B-11 Layers panel controls > the blend mode MenuButton carries its name and current mode
+Unexpected text node: Normal. A text node cannot be a child of a <View>.
+
+ ✓ tests/prism-blend.e2e.test.ts > B-11 Layers panel controls > the blend mode MenuButton carries its name and current mode 11ms
+ ✓ tests/prism-blend.e2e.test.ts > B-11 Layers panel controls > the opacity scrubber steps 1 % and reports whole percent 13ms
+ ✓ tests/prism-blend.e2e.test.ts > B-11 Layers panel controls > the shared mode list is exactly the modes the Prism API accepts 1ms
+ ✓ tests/prism-blend.e2e.test.ts > B-11 Layers panel commands on Prism > maps mode to setLayerBlend and opacity to setLayerOpacity, each one undo step 8ms
+
+ Test Files  2 passed (2)
+      Tests  6 passed (6)
+   Start at  17:37:42
+   Duration  409ms (import 47%, tests 38%, transform 13%, worker 1%)
+
