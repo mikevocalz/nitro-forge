@@ -8,6 +8,13 @@ on:
       - 'tooling/validate-v1*'
       - 'tooling/nyc-tron.json'
       - 'docs/completion/DECISIONS-*.md'
+      - 'docs/completion/v1-component-scope.json'
+      - 'tooling/derive-v1-component-scope.mjs'
+      - 'tooling/check-radius.mjs'
+      - 'tooling/tests/**'
+      - 'packages/**'
+      - 'apps/**'
+      - 'examples/**'
       - '.github/workflows/v1-readiness.yml'
   workflow_dispatch:
 
@@ -28,3 +35,28 @@ jobs:
       # unbacked compatibility claim. The stable check (no --version) stays red
       # until every gate passes, so it is not run on pull requests.
       - run: node tooling/validate-v1.mjs --version 1.0.0-rc.1
+
+  # F7 / D2: the rendered row set must match the committed derivation.
+  v1-component-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
+      - run: node --test tooling/tests/v1-component-scope.test.mjs
+      - run: node tooling/derive-v1-component-scope.mjs --check
+
+  # F8: outer views rounded-md, inner views rounded-sm, exemptions only as
+  # design/DIRECTION.md lists them. Red until every violation is resolved.
+  radius:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
+      - run: node --test tooling/tests/check-radius.test.mjs
+      - run: node tooling/check-radius.mjs

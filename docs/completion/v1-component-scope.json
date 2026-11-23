@@ -66,7 +66,7 @@
       ]
     }
   ],
-  "reachableFiles": 210,
+  "reachableFiles": 211,
   "v1": {
     "platforms": [
       "ios",
@@ -128,14 +128,14 @@
         "name": "SliderField",
         "renders": [
           {
-            "at": "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:515",
+            "at": "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:516",
             "kind": "jsx",
             "binding": "SliderField",
             "module": "@nyc-tron/ui/components/shell/SliderField",
             "mappedBy": "name"
           },
           {
-            "at": "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:528",
+            "at": "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:529",
             "kind": "jsx",
             "binding": "SliderField",
             "module": "@nyc-tron/ui/components/shell/SliderField",
@@ -880,11 +880,11 @@
       "name": "Button",
       "module": "@nyc-tron/ui/components/Button",
       "uses": [
-        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:487",
-        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:498",
-        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:541",
-        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:553",
-        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:561",
+        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:488",
+        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:499",
+        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:542",
+        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:554",
+        "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:562",
         "packages/studio-workspace/src/nyc-tron-host.tsx:45"
       ]
     },
@@ -1007,30 +1007,30 @@
       "name": "Footer",
       "module": "@nyc-tron/ui/components/html",
       "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:32"
+        "apps/studio-preview/src/app-launcher.tsx:33"
       ]
     },
     {
       "name": "Header",
       "module": "@nyc-tron/ui/components/html",
       "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:10"
+        "apps/studio-preview/src/app-launcher.tsx:11"
       ]
     },
     {
       "name": "Heading",
       "module": "@nyc-tron/ui/components/html",
       "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:13",
-        "apps/studio-preview/src/app-launcher.tsx:18",
-        "apps/studio-preview/src/app-launcher.tsx:26"
+        "apps/studio-preview/src/app-launcher.tsx:14",
+        "apps/studio-preview/src/app-launcher.tsx:19",
+        "apps/studio-preview/src/app-launcher.tsx:27"
       ]
     },
     {
       "name": "Link",
       "module": "@nyc-tron/ui/components/html",
       "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:23",
+        "apps/studio-preview/src/app-launcher.tsx:24",
         "apps/studio-preview/src/main.tsx:130",
         "apps/studio-preview/src/main.tsx:226"
       ]
@@ -1053,13 +1053,13 @@
       "name": "Page",
       "module": "@nyc-tron/ui/components/html",
       "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:11",
-        "apps/studio-preview/src/app-launcher.tsx:16",
-        "apps/studio-preview/src/app-launcher.tsx:18",
+        "apps/studio-preview/src/app-launcher.tsx:12",
+        "apps/studio-preview/src/app-launcher.tsx:17",
         "apps/studio-preview/src/app-launcher.tsx:19",
-        "apps/studio-preview/src/app-launcher.tsx:25",
+        "apps/studio-preview/src/app-launcher.tsx:20",
         "apps/studio-preview/src/app-launcher.tsx:26",
-        "apps/studio-preview/src/app-launcher.tsx:28",
+        "apps/studio-preview/src/app-launcher.tsx:27",
+        "apps/studio-preview/src/app-launcher.tsx:29",
         "apps/studio-preview/src/main.tsx:76",
         "apps/studio-preview/src/main.tsx:186",
         "apps/studio-preview/src/main.tsx:214",
@@ -1070,28 +1070,28 @@
       "name": "Paragraph",
       "module": "@nyc-tron/ui/components/html",
       "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:12",
-        "apps/studio-preview/src/app-launcher.tsx:14",
-        "apps/studio-preview/src/app-launcher.tsx:27"
+        "apps/studio-preview/src/app-launcher.tsx:13",
+        "apps/studio-preview/src/app-launcher.tsx:15",
+        "apps/studio-preview/src/app-launcher.tsx:28"
       ]
     },
     {
       "name": "Section",
       "module": "@nyc-tron/ui/components/html",
       "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:9"
+        "apps/studio-preview/src/app-launcher.tsx:10"
       ]
     },
     {
       "name": "Text",
       "module": "@nyc-tron/ui/components/html",
       "uses": [
-        "apps/studio-preview/src/app-launcher.tsx:16",
-        "apps/studio-preview/src/app-launcher.tsx:18",
-        "apps/studio-preview/src/app-launcher.tsx:24",
-        "apps/studio-preview/src/app-launcher.tsx:26",
-        "apps/studio-preview/src/app-launcher.tsx:28",
-        "apps/studio-preview/src/app-launcher.tsx:32",
+        "apps/studio-preview/src/app-launcher.tsx:17",
+        "apps/studio-preview/src/app-launcher.tsx:19",
+        "apps/studio-preview/src/app-launcher.tsx:25",
+        "apps/studio-preview/src/app-launcher.tsx:27",
+        "apps/studio-preview/src/app-launcher.tsx:29",
+        "apps/studio-preview/src/app-launcher.tsx:33",
         "apps/studio-preview/src/main.tsx:130",
         "apps/studio-preview/src/main.tsx:226"
       ]
