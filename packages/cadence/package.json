@@ -1,6 +1,7 @@
 {
   "name": "@nitro-forge/cadence",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Nitro-Forge cadence document API.",
   "type": "module",
   "main": "./src/index.ts",

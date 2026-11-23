@@ -1,6 +1,7 @@
 {
   "name": "@nitro-forge/folio",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Nitro-Forge folio document API.",
   "type": "module",
   "main": "./src/index.ts",

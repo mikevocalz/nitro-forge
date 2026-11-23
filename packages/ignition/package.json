@@ -1,6 +1,7 @@
 {
   "name": "@nitro-forge/ignition",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Nitro-Forge native integration layer: engine session contracts, Nitro HybridObject spec, and host transports.",
   "type": "module",
   "main": "./src/index.ts",

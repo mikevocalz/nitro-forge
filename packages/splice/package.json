@@ -1,6 +1,7 @@
 {
   "name": "@nitro-forge/splice",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Nitro-Forge splice document API.",
   "type": "module",
   "main": "./src/index.ts",

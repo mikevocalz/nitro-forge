@@ -12,6 +12,7 @@ import {
 const SOURCE = {
   name: "@nitro-forge/prism",
   version: "0.1.0",
+  license: "MIT",
   type: "module",
   main: "./src/index.ts",
   types: "./src/index.ts",
@@ -33,6 +34,7 @@ function fixture(t, edit = () => {}) {
     "generated/Factory.cjs": "module.exports = {};\n",
     "NOTICES.md": "notices\n",
     "README.md": "readme\n",
+    "LICENSE": "MIT License\n",
   };
   edit(pkg, files);
   files["package.json"] = JSON.stringify(pkg, null, 2);
@@ -48,6 +50,15 @@ const verify = (dir, source = SOURCE) => verifyPackedPackage({ packedDir: dir, s
 
 test("a complete tarball tree passes", (t) => {
   assert.deepEqual(verify(fixture(t)), []);
+});
+
+test("requires the MIT license field and a LICENSE file in every tarball", (t) => {
+  const noField = verify(fixture(t, (pkg) => { delete pkg.license; }));
+  assert.ok(noField.some((e) => e.includes('license must be "MIT"')), noField.join("\n"));
+  const other = verify(fixture(t, (pkg) => { pkg.license = "UNLICENSED"; }));
+  assert.ok(other.some((e) => e.includes('license must be "MIT"')), other.join("\n"));
+  const noFile = verify(fixture(t, (_pkg, files) => { files.LICENSE = undefined; }));
+  assert.ok(noFile.some((e) => e.includes("no LICENSE file")), noFile.join("\n"));
 });
 
 test("rejects a workspace: specifier left in any dependency field", (t) => {

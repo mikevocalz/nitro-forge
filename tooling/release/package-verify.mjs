@@ -158,6 +158,9 @@ export function verifyPackedPackage({ packedDir, source, releaseVersions = {} })
   const label = pkg.name ?? "(unnamed)";
 
   if (pkg.name !== source.name) errors.push(`${label}: name ${pkg.name} differs from source ${source.name}`);
+  // Owner decision D8 (2026-11-23): every release package ships under MIT with its license text.
+  if (pkg.license !== "MIT") errors.push(`${label}: license must be "MIT", found ${JSON.stringify(pkg.license)}`);
+  if (!members.has("LICENSE")) errors.push(`${label}: no LICENSE file in the tarball`);
   if (pkg.version !== source.version) errors.push(`${label}: version ${pkg.version} differs from source ${source.version}`);
 
   // Contents match `files`.

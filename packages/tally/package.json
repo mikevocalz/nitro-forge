@@ -1,6 +1,7 @@
 {
   "name": "@nitro-forge/tally",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Nitro-Forge tally document API.",
   "type": "module",
   "main": "./src/index.ts",

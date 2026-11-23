@@ -87,3 +87,26 @@ square with no radius (4 px on a 5 px dot still reads as a circle). The dial
 pointer gets square ends. Prism's fill swatches become circular colour wells,
 an exemption DIRECTION.md already lists, so the selection ring needs no third
 radius value. No other exemption is added.
+
+## D7. B-11: Forge keeps its opacity scrubber; Tron's model drives blend and alpha
+
+Tron `v1.0.0-rc.2`'s `LayerBlendAndOpacity` gives a host no way to configure
+its opacity scrubber. Mounted in the Prism Layers panel it dropped the
+forced-colours rendering recorded as fixed in `design/DIRECTION.md`, moved
+opacity 0.0001% per −/+, arrow key or screen-reader step instead of 1%, and
+pushed opacity below the panel fold. R2 reproduced all three in Chromium.
+
+The owner chose to split the controls. The Layers panel keeps Forge's
+configured scrubber for opacity (forced colours, 1% step, density target). Blend
+mode and the Straight-only alpha row come from Tron's layer blend model
+(`layer-blend-model.ts`: the mode and alpha catalogs and `validateLayerBlend`)
+rendered with Tron's menu control. If rc.2 does not export what that needs, the
+fallback is to keep the whole Tron component, add a Forge forced-colours
+workaround and the layout fix, and record the step size as a known regression
+until Tron changes it.
+
+## D8. License: MIT
+
+The owner chose MIT for v1. The repository root and each of the eight release
+packages carry the MIT text as `LICENSE`, each package manifest says
+`"license": "MIT"`, and `check:packages` fails a tarball that lacks either.

@@ -1,6 +1,7 @@
 {
   "name": "@nitro-forge/pitch",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Nitro-Forge pitch document API.",
   "type": "module",
   "main": "./src/index.ts",
