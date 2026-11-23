@@ -36,9 +36,10 @@ import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REQUIRED_PLATFORMS, tronSourcePath } from "./verify-component-program.mjs";
+import { SCANNED_ROOTS } from "./source-roots.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-export const SCANNED_ROOTS = Object.freeze(["apps", "examples", "packages"]);
+export { SCANNED_ROOTS };
 export const LEDGER_PATH = "docs/completion/library-progress.json";
 export const OUTPUT_PATH = "docs/completion/v1-component-scope.json";
 export const V1_PLATFORMS = Object.freeze(["ios", "android", "web"]);

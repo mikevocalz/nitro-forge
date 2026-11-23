@@ -17,6 +17,8 @@ config.watchFolders = [
   path.join(forgeRoot, "packages/cadence"),
   path.join(forgeRoot, "packages/telemetry"),
   path.join(forgeRoot, "packages/media-ui"),
+  // theme.ts only: the radius tokens App.tsx imports. It has no imports of its own.
+  path.join(forgeRoot, "packages/studio-workspace"),
 ];
 
 // Explicit lab mode serves a separate acceptance entry. Normal consumers keep

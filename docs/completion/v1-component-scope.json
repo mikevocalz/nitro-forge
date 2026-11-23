@@ -102,14 +102,14 @@
             "mappedBy": "module"
           },
           {
-            "at": "examples/native-cadence/App.tsx:259",
+            "at": "examples/native-cadence/App.tsx:262",
             "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
-            "at": "examples/native-cadence/App.tsx:263",
+            "at": "examples/native-cadence/App.tsx:266",
             "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
@@ -893,14 +893,14 @@
             "mappedBy": "module"
           },
           {
-            "at": "examples/native-cadence/App.tsx:259",
+            "at": "examples/native-cadence/App.tsx:262",
             "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
-            "at": "examples/native-cadence/App.tsx:263",
+            "at": "examples/native-cadence/App.tsx:266",
             "kind": "render",
             "binding": "PrecisionScrubber",
             "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
@@ -921,21 +921,21 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "examples/native-cadence/App.tsx:84",
+            "at": "examples/native-cadence/App.tsx:87",
             "kind": "call",
             "binding": "createKeyboardMap",
             "module": "@nyc-tron/ui/components/shell/keyboard-map",
             "mappedBy": "module"
           },
           {
-            "at": "examples/native-cadence/App.tsx:91",
+            "at": "examples/native-cadence/App.tsx:94",
             "kind": "call",
             "binding": "useHardwareKeyboard",
             "module": "@nyc-tron/hardware-keys",
             "mappedBy": "module"
           },
           {
-            "at": "examples/native-cadence/App.tsx:206",
+            "at": "examples/native-cadence/App.tsx:209",
             "kind": "call",
             "binding": "isHardwareKeysAvailable",
             "module": "@nyc-tron/hardware-keys",
@@ -949,14 +949,14 @@
         "basis": "derived: renders or calls",
         "hits": [
           {
-            "at": "examples/native-cadence/App.tsx:74",
+            "at": "examples/native-cadence/App.tsx:77",
             "kind": "call",
             "binding": "resolveUsableRegions",
             "module": "@nyc-tron/core/folds",
             "mappedBy": "module"
           },
           {
-            "at": "examples/native-cadence/App.tsx:75",
+            "at": "examples/native-cadence/App.tsx:78",
             "kind": "call",
             "binding": "foldFeaturesFromRegions",
             "module": "@nyc-tron/core/folds",
@@ -1095,8 +1095,8 @@
         "ArcKnob"
       ],
       "uses": [
-        "examples/native-cadence/App.tsx:230",
-        "examples/native-cadence/App.tsx:236"
+        "examples/native-cadence/App.tsx:233",
+        "examples/native-cadence/App.tsx:239"
       ]
     },
     {
@@ -1118,8 +1118,8 @@
       ],
       "uses": [
         "apps/example/src/persona/persona-placement-host.tsx:32",
-        "examples/native-cadence/App.tsx:72",
-        "examples/native-cadence/App.tsx:189"
+        "examples/native-cadence/App.tsx:75",
+        "examples/native-cadence/App.tsx:192"
       ]
     },
     {
@@ -1133,7 +1133,7 @@
         "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:542",
         "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:554",
         "apps/example/src/persona-capture/PersonaCaptureScreen.tsx:562",
-        "packages/studio-workspace/src/nyc-tron-host.tsx:45"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:46"
       ]
     },
     {
@@ -1142,7 +1142,7 @@
         "Card"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:52"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:53"
       ]
     },
     {
@@ -1151,7 +1151,7 @@
         "KeyValueList"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:77"
       ]
     },
     {
@@ -1170,7 +1170,7 @@
         "Badge"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:77"
       ]
     },
     {
@@ -1179,7 +1179,7 @@
         "Banner"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:77"
       ]
     },
     {
@@ -1188,7 +1188,7 @@
         "EmptyState"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:77"
       ]
     },
     {
@@ -1197,7 +1197,7 @@
         "ErrorMessage"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:77"
       ]
     },
     {
@@ -1206,7 +1206,7 @@
         "FieldGroup"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:75"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
@@ -1215,7 +1215,7 @@
         "DropZone"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:77"
       ]
     },
     {
@@ -1272,8 +1272,8 @@
         "InstrumentKnob"
       ],
       "uses": [
-        "examples/native-cadence/App.tsx:246",
-        "examples/native-cadence/App.tsx:251"
+        "examples/native-cadence/App.tsx:249",
+        "examples/native-cadence/App.tsx:254"
       ]
     },
     {
@@ -1282,7 +1282,7 @@
         "InstrumentXYPad"
       ],
       "uses": [
-        "examples/native-cadence/App.tsx:268"
+        "examples/native-cadence/App.tsx:271"
       ]
     },
     {
@@ -1408,7 +1408,7 @@
         "IconButton"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:75"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
@@ -1418,7 +1418,7 @@
         "ListItem"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:75"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
@@ -1427,9 +1427,9 @@
         "SegmentedControl"
       ],
       "uses": [
-        "examples/native-cadence/App.tsx:193",
-        "examples/native-cadence/App.tsx:288",
-        "packages/studio-workspace/src/nyc-tron-host.tsx:75"
+        "examples/native-cadence/App.tsx:196",
+        "examples/native-cadence/App.tsx:291",
+        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
@@ -1438,7 +1438,7 @@
         "focusForScreenReader"
       ],
       "uses": [
-        "examples/native-cadence/App.tsx:68"
+        "examples/native-cadence/App.tsx:71"
       ]
     },
     {
@@ -1447,7 +1447,7 @@
         "TabBar"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:75"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     },
     {
@@ -1456,8 +1456,8 @@
         "NightScope"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:53",
-        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:54",
+        "packages/studio-workspace/src/nyc-tron-host.tsx:77"
       ]
     },
     {
@@ -1466,7 +1466,7 @@
         "Toolbar"
       ],
       "uses": [
-        "packages/studio-workspace/src/nyc-tron-host.tsx:75"
+        "packages/studio-workspace/src/nyc-tron-host.tsx:76"
       ]
     }
   ],

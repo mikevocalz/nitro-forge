@@ -1,12 +1,15 @@
 # Radius inventory, 2026-11-23
 
 Scope: the radius rule in [DIRECTION.md](DIRECTION.md) ("Owner brief and view
-radius rule"), checked by `tooling/check-radius.mjs` over the TS, TSX, JS and
-CSS sources of `packages/*` and `apps/*`. Base commit `dab27e1`.
+radius rule"), checked by `tooling/check-radius.mjs` over the TS, JS, CSS and
+HTML sources under `apps/`, `examples/` and `packages/` (the roots in
+`tooling/source-roots.mjs`, shared with the v1 component-scope derivation).
+Base commit `dab27e1`.
 
-This is a call-site inventory of radius values. It is not the view-by-view
-inventory per studio that F8 asks for, and it records no captures, rendered
-review or critique. Native Swift, Kotlin and C++ sources are not scanned.
+This document lists radius values at their call sites. The view-by-view
+inventory per studio, the captures, rendered review and critique that F8 also
+asks for are separate work and are not recorded here. The checker reads no
+Swift, Kotlin or C++ source.
 
 ## Result
 
@@ -14,9 +17,11 @@ review or critique. Native Swift, Kotlin and C++ sources are not scanned.
 | --- | --- |
 | Before (base commit, checker run against an export of `HEAD`) | 77 (73 call sites, 4 token-definition) |
 | After the first migration | 5 |
-| After owner decision D6 (`docs/completion/DECISIONS-2026-11-23-v1-scope.md`) | 0 |
+| After owner decision D6 (`docs/completion/DECISIONS-2026-11-23-v1-scope.md`) | 0 in 223 files |
+| R2 review: the checker also scans `examples/`, `.mjs`, `.cjs` and `.html`, and catches identifier values | 11 in 262 files (9 in `examples/native-cadence/App.tsx`, 2 identifiers) |
+| After the R2 fixes | 0 in 262 files |
 
-`node tooling/check-radius.mjs` now ends with `check-radius: 0 violation(s) in 223 files`
+`node tooling/check-radius.mjs` ends with `check-radius: 0 violation(s) in 262 files`
 and exits 0.
 
 ## Tokens
@@ -39,17 +44,26 @@ read; they now come from the same two values.
 
 | Rule | Fails on |
 | --- | --- |
-| `token-definition` | `theme.ts` lacks exactly one `forgeRadius = { sm: 4, md: 6 }`, or a generated sheet lacks `--radius-sm: 4px` / `--radius-md: 6px` |
+| `token-definition` | `theme.ts` lacks exactly one `forgeRadius = { sm: 4, md: 6 }`; a `workspaceScale.radius` entry is anything but `forgeRadius.sm` or `forgeRadius.md`; a `forgeHairlineRadius` value is 4 or more; a generated sheet holds any `--radius-*` set other than sm 4, md 6, forge-control 4, control 4, card 6; or a sheet differs from a fresh `build-theme.mjs` run in a temp directory |
 | `rounded-scale` | `rounded-xs`, `rounded-lg` and larger, with any side or corner prefix (`rounded-t-xl`, `rounded-br-2xl`) |
 | `rounded-arbitrary` | `rounded-[...]` |
+| `rounded-dynamic` | a class built at run time: `` `rounded-${size}` ``, `'rounded-' + size` |
 | `rounded-full` | `rounded-full` without an exemption marker |
 | `radius-variable` | a `--radius-*` definition with its own number outside the token files; `var(--radius-x)` naming a variable the token sheets do not define |
-| `raw-radius` | a literal radius: `borderRadius: 8`, `borderTopLeftRadius: '50%'`, `cornerRadius={4}`, `sheetCornerRadius: 4`, CSS `border-radius: 4px` |
-| `radius-arithmetic` | a radius computed with a number (`scale.radius.control + 2`, `size / 2`) |
+| `raw-radius` | a literal radius: `borderRadius: 8`, `'borderTopLeftRadius': '50%'`, `"border-radius": "8px"`, `el.style.borderRadius = '10px'`, `cornerRadius={4}`, `cornerRadius="8"`, a config object such as `borderRadius: { lg: '12px' }`, CSS or inline-style `border-radius: 4px` |
+| `radius-arithmetic` | a radius computed with a number (`scale.radius.control + 2`, `size / 2`), or CSS mixing a token with a number |
+| `radius-identifier` | a radius read from anything but `forgeRadius.*`, `forgeHairlineRadius.*`, `scale.radius.*` or `workspaceScale.radius.*` |
 | `exemption-kind` | a marker naming a kind DIRECTION.md does not list |
+| `exemption-unused` | a marker that excuses no violation |
 
-A literal `0` is square and passes. Comments are ignored; strings are checked,
-because class names live in strings.
+These pass: a literal `0`; a ternary whose branches all pass; the CSS-wide
+keywords (`inherit`, `initial`, `unset`, `revert`); CSS shorthand made only of
+`0` and token `var()` parts, such as `0 var(--radius-sm)`. Comments are
+ignored. Strings are checked, because class names live in strings.
+
+Out of scope: `native/persona/site`, a static page outside the three roots.
+Run through the same rules it has 39 findings in 5 files; they are not counted
+above.
 
 Skipped directories: `node_modules`, `dist`, `build`, `coverage`, `.expo`,
 `.turbo`, `target` (dependencies and build output); `ios`, `android`,
@@ -65,14 +79,21 @@ A comment on the same line or the line above:
 // radius-exempt: knob
 {/* radius-exempt: colour-well */}
 borderRadius: props.size / 2, /* radius-exempt: knob */
+<!-- radius-exempt: artwork -->
 ```
 
 Allowed kinds, exactly DIRECTION.md's list: `knob`, `colour-well`, `radio`,
-`avatar`, `record-button` (circular by nature), and `window`, `system-sheet`,
-`launcher-icon-mask` (owned by the operating system), and `artwork` (document
-content, added by decision D6). A marker excuses
-`rounded-full`, `raw-radius` and `radius-arithmetic` on its line. It never
-excuses `rounded-lg` and larger, arbitrary classes or per-app variables.
+`avatar`, `record-button` (circular by nature); `window`, `system-sheet`,
+`launcher-icon-mask` (owned by the operating system); and `artwork` (shapes
+drawn on a document or sample artboard, decision D6).
+
+The marker counts only in comment text; the same words inside a string do
+nothing. Each marker excuses one violation of `rounded-full`, `raw-radius`,
+`radius-arithmetic` or `radius-identifier`: first one on its own line, then
+one on the next line. Two rounded views on one line need two markers. A marker
+never excuses `rounded-lg` and larger, arbitrary or dynamic classes, or radius
+variables, and a marker left with nothing to excuse fails as
+`exemption-unused`.
 
 ## Before, by package
 
@@ -84,7 +105,8 @@ excuses `rounded-lg` and larger, arbitrary classes or per-app variables.
 | `apps/forge-audio-lab` | 2 | 2 radius-variable |
 | `apps/forge-media-lab` | 2 | 2 radius-variable |
 
-Line numbers below are at the base commit.
+Lines in the Migrated section are at the base commit `dab27e1`. Lines in the
+later sections are at this commit.
 
 ## Migrated
 
@@ -119,7 +141,7 @@ Apps:
   `:123`), example persona dock, About card and launcher card. All outer.
 - `workspaceScale.radius.paper` moved from 2 to 6 px, following the
   "document and canvas frames" row of the rule. This changes the Quill page
-  corner and the Prism turret-lab artboard.
+  corner. (The turret-lab artboard later moved to `sm`; see the R2 section.)
 - `src/stage.tsx:18` (Quill, Photo page), `:29` (Tally sheet), `:105` (Draft
   drawing): 2 or 3 px to `workspaceScale.radius.paper`.
 - `apps/studio-preview/src/app-launcher.tsx:23`: launcher app card, 4 px to `forgeRadius.md`; `style.css` `.app-card` at narrow widths to `var(--radius-md)`.
@@ -158,15 +180,43 @@ These used `scale.radius.panel` but sit inside an outer view, so they move to
 ## Resolved by decision D6
 
 The owner added the `artwork` exemption to DIRECTION.md and asked for token
-fixes for the rest. Line numbers are current.
+fixes for the rest.
 
 | Location | Was | Now |
 | --- | --- | --- |
-| `packages/studio-workspace/src/stage.tsx:49` | radius-arithmetic: ellipse layers as `borderRadius: 9999` | Marked `radius-exempt: artwork`. The shape projection draws the user's document content. |
-| `apps/studio-preview/src/turret-lab.tsx:77` | raw-radius: `'50%'` circle in the sample artboard | Marked `radius-exempt: artwork`. |
-| `apps/studio-preview/src/style.css:48` | raw-radius: 5 px status dot at `50%` | Square. The radius is removed rather than set to `var(--radius-sm)`: 4 px on a 5 px dot would still read as a circle. |
-| `packages/studio-workspace/src/persona-turret.tsx:476` | radius-arithmetic: dial pointer with `1.5k` ends | Square-ended (radius removed). The pointer is drawn as a slot milled into the face, and square ends match that. A scaled hairline token was not added. |
-| `packages/studio-workspace/src/prism-editor.tsx:446` | radius-arithmetic: selection ring at `control + 2` round a 4 px swatch | The wrapper view is gone. The swatch (`control`, 4 px) carries the ring as a 2 px outline offset 2 px. An outline follows the corner of the view it belongs to, so the ring stays concentric without a third radius value. Same ring colours, including `Highlight` under forced colours. Not checked visually on web or native. |
+| `packages/studio-workspace/src/stage.tsx:49` | ellipse layers as `borderRadius: 9999` | Marked `radius-exempt: artwork`. The shape projection draws the user's shapes. |
+| `apps/studio-preview/src/turret-lab.tsx:77` | `'50%'` ellipse on the sample artboard | Marked `radius-exempt: artwork`. |
+| `apps/studio-preview/src/style.css:48` | 5 px status dot at `50%` | Square. The radius is removed; 4 px on a 5 px dot would still read as a circle. |
+| `packages/studio-workspace/src/persona-turret.tsx:476` | dial pointer with `1.5k` ends | Square ends, radius removed. The pointer is drawn as a slot milled into the dial face. |
+| `packages/studio-workspace/src/prism-editor.tsx:446` | selection ring at `control + 2` round a 4 px swatch | Prism's fill swatches are circular colour wells: the 25 px swatch and its 33 px ring are both `rounded-full`, each with `radius-exempt: colour-well` (lines 447 and 449). An earlier attempt drew the ring as an outline offset 2 px from a 4 px swatch; an outline's corner grows by its offset, so that ring rendered at about 8 px, above `md`. |
+
+## R2 review fixes
+
+- `examples/native-cadence/App.tsx`: the lab is its own pnpm workspace and
+  does not depend on `@nitro-forge/studio-workspace`, so it imports
+  `forgeRadius` from `../../packages/studio-workspace/src/theme.ts` (line 28),
+  and `metro.config.js` adds `packages/studio-workspace` to `watchFolders`.
+  `theme.ts` has no imports of its own. By role: the segment style (`:199`) and
+  the two segment views (`:299`, `:377`) were 4 px and 9 px and are now `sm`;
+  the six 12 px cards (`:217`, `:251`, `:256`, `:261`, `:274`, `:280`) are now
+  `md`.
+- `packages/studio-workspace/src/nyc-tron-host.tsx:48`: the Button adapter
+  forwarded `cornerRadius` unchanged. `cornerRadius` is now typed
+  `ForgeRadiusValue` (4 or 6, from `theme.ts`), and the adapter maps it to
+  `forgeRadius.md` or `forgeRadius.sm`, so only a token reaches the style.
+- `packages/studio-workspace/src/persona-turret.tsx:429`: the dial face,
+  `borderRadius: R`, is the turret knob. Marked `radius-exempt: knob`.
+- `apps/studio-preview/src/turret-lab.tsx:76`: the sample rectangle on the
+  artboard is artwork and is now square (`0`).
+- Turret-lab nesting: the artboard (`:75`) sat at `md` inside the `md` lab
+  stage (`:123`). The lab stage keeps `md` because it is the outer view on the
+  lab page, and the artboard moves to `sm` (`scale.radius.control`). The
+  nesting rule fixes the order: a view inside a `rounded-md` view is
+  `rounded-sm` or square. The document-frame row still applies to frames that
+  are outer views, such as the Quill page.
+- Tailwind's default radius scale is not reset. The `@nyc-tron/ui` dist
+  recipes use bare `rounded` and `rounded-full`, which come from Tailwind's
+  defaults, so a reset would change Tron components.
 
 ## Flagged by role, not by the checker
 
