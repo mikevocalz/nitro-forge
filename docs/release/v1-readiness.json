@@ -108,12 +108,13 @@
         "4. On iPad, verify every studio's top toolbar clears the system window controls when the app is windowed.",
         "5. Note the runtime mismatch: Forge is on React Native 0.88.1 and Nitro v1 alpha, while the Spark lane is on 0.83.10 with Nitro 0.37. State what that means for loading the Rust engines on desktop before promising a desktop studio, and stop to report if it blocks."
       ],
-      "status": "blocked",
-      "statusReason": "Awaiting the R1 signature to move to descoped. Descoped from v1 by owner decision D1 (2026-11-23), which confirms the 2026-11-13 strike. No desktop spike or desktop target ran. Item 4 (iPad windowed-mode toolbar clearance) moved to F8 item 6 and stays in v1. docs/proposals/F5-desktop-scope.md holds the return condition. The acceptance text above is kept as the scope a future desktop release would take on.",
+      "status": "descoped",
+      "statusReason": "Descoped from v1 by owner decision D1 (2026-11-23), which confirms the 2026-11-13 strike. No desktop spike or desktop target ran. Item 4 (iPad windowed-mode toolbar clearance) moved to F8 item 6 and stays in v1. docs/proposals/F5-desktop-scope.md holds the return condition. The acceptance text above is kept as the scope a future desktop release would take on.",
       "evidence": null,
+      "decision": "docs/completion/DECISIONS-2026-11-23-v1-scope.md",
       "commit": null,
-      "reviewer": null,
-      "reviewedAt": null
+      "reviewer": "R1",
+      "reviewedAt": "2026-11-23"
     },
     {
       "id": "F6",
@@ -201,7 +202,7 @@
         "Owner decision D3 (2026-11-23): the `1.0.0-rc.1` prerelease may ship pinned to Tron `v1.0.0-rc.2`. The integrator publishes it when every other in-scope gate has passed, with F2 passed on its rc.2 repin. Stable `1.0.0` additionally needs F2 passed again on the Tron `1.0.0` repin and the owner's written approval of the exact version and checksum hash."
       ],
       "status": "blocked",
-      "statusReason": "Depends on F1 to F8. F5 leaves v1 under D1 once R1 signs the descoping. Under D3 the rc.1 prerelease may ship on Tron rc.2; stable also depends on the Tron 1.0.0 repin (F2). The root version is 0.0.0, no tag or GitHub Release exists, and there is no owner approval to bind to a checksum.",
+      "statusReason": "Depends on F1 to F4 and F6 to F8; F5 is descoped under D1, signed by R1 on 2026-11-23. Under D3 the rc.1 prerelease may ship on Tron rc.2; stable also depends on the Tron 1.0.0 repin (F2). The root version is 0.0.0, no tag or GitHub Release exists, and there is no owner approval to bind to a checksum.",
       "evidence": null,
       "commit": null,
       "reviewer": null,

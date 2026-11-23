@@ -40,12 +40,14 @@ export function evidenceExists(path, rootDir = root) {
 }
 
 /**
- * True when `path` is a plain repository path under docs/completion/ (no "." or ".." segments)
+ * True when `path` is a plain repository path to a DECISIONS-*.md file under docs/completion/ (no "." or ".." segments)
  * whose real location, after symlinks, is still a file inside the real docs/completion directory.
  */
 export function decisionInside(path, rootDir = root) {
   if (typeof path !== "string" || !path.startsWith(DECISION_DIR)) return false;
-  if (path.split("/").some(part => part === "." || part === ".." || part === "")) return false;
+  const parts = path.split("/");
+  if (parts.some(part => part === "." || part === ".." || part === "")) return false;
+  if (!/^DECISIONS-[A-Za-z0-9.-]+\.md$/.test(parts[parts.length - 1])) return false;
   if (!evidenceExists(path, rootDir)) return false;
   const base = realpathSync(rootDir);
   const dir = join(base, DECISION_DIR);
@@ -177,8 +179,10 @@ export function validateV1({ version, gates, compatibility, tronPin }, { rootDir
   // Owner decision D3: rc.1 may ship on a Tron prerelease, stable may not, whatever F2's recorded status says.
   const pinBlockers = [];
   if (tronPin !== undefined) {
-    if (typeof tronPin?.tag !== "string" || !/^v\d/.test(tronPin.tag)) errors.push("tooling/nyc-tron.json: tag is missing or malformed");
-    else if (releaseChannel(tronPin.tag.slice(1)) === "prerelease") {
+    let channel = null;
+    try { channel = typeof tronPin?.tag === "string" && tronPin.tag.startsWith("v") ? releaseChannel(tronPin.tag.slice(1)) : null; } catch { channel = null; }
+    if (channel === null) errors.push("tooling/nyc-tron.json: tag is missing or malformed");
+    else if (channel === "prerelease") {
       pinBlockers.push("F2: Tron pin " + tronPin.tag + " is a prerelease; stable needs the Tron 1.0.0 repin");
     }
   }

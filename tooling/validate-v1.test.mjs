@@ -16,7 +16,7 @@ const sandbox = mkdtempSync(join(tmpdir(), "validate-v1-"));
 mkdirSync(join(sandbox, "docs/release/evidence"), { recursive: true });
 writeFileSync(join(sandbox, "docs/release/evidence/receipt.txt"), "receipt\n");
 mkdirSync(join(sandbox, "docs/completion"), { recursive: true });
-writeFileSync(join(sandbox, "docs/completion/decision.md"), "decision\n");
+writeFileSync(join(sandbox, "docs/completion/DECISIONS-test.md"), "decision\n");
 after(() => rmSync(sandbox, { recursive: true, force: true }));
 
 const gate = (id, overrides = {}) => ({
@@ -26,7 +26,7 @@ const gate = (id, overrides = {}) => ({
 const passedGate = id => gate(id, { status: "passed", statusReason: undefined, evidence: "docs/release/evidence/receipt.txt",
   commit: sha, reviewer: "R2", reviewedAt: "2026-11-11" });
 const descopedGate = id => gate(id, { status: "descoped", statusReason: "Out of v1 by owner decision.", reviewerRole: "R1",
-  decision: "docs/completion/decision.md", reviewer: "R1", reviewedAt: "2026-11-23" });
+  decision: "docs/completion/DECISIONS-test.md", reviewer: "R1", reviewedAt: "2026-11-23" });
 const gateFile = gates => ({ schemaVersion: 1, gateSet: "v1", gates });
 const allPassed = () => gateFile(GATE_IDS.map(passedGate));
 const compat = (runtimes = {}) => ({ schemaVersion: 2, runtimes, hostServices: {} });
@@ -93,7 +93,7 @@ test("a signed descoped gate does not block stable and is counted apart from pas
   assert.equal(result.descoped, 1);
   assert.equal(result.total, 8);
   assert.deepEqual(result.blockers, []);
-  assert.equal(result.gates[4].decision, "docs/completion/decision.md");
+  assert.equal(result.gates[4].decision, "docs/completion/DECISIONS-test.md");
 });
 
 test("a descoped gate needs an existing decision under docs/completion, its reviewer role and a review date", () => {
@@ -124,14 +124,17 @@ test("stable is blocked while the Tron pin is a prerelease, even with every gate
   assert.equal(rc.status, "candidate");
   const stable = validateV1({ version: "1.0.0", gates: allPassed(), compatibility: compat(), tronPin: { tag: "v1.0.0" } }, { rootDir: sandbox });
   assert.equal(stable.status, "ready");
-  const bad = validateV1({ version: "1.0.0", gates: allPassed(), compatibility: compat(), tronPin: {} }, { rootDir: sandbox });
-  assert.equal(bad.status, "invalid");
+  for (const tronPin of [{}, { tag: "v1.0" }, { tag: "1.0.0" }]) {
+    const bad = validateV1({ version: "1.0.0", gates: allPassed(), compatibility: compat(), tronPin }, { rootDir: sandbox });
+    assert.equal(bad.status, "invalid", JSON.stringify(tronPin));
+  }
 });
 
 test("a descoped decision must resolve inside docs/completion, not just start with it", () => {
   writeFileSync(join(sandbox, "root-file.md"), "outside docs/completion\n");
   symlinkSync(join(sandbox, "root-file.md"), join(sandbox, "docs/completion/link-in.md"));
-  for (const decision of ["docs/completion/../release/evidence/receipt.txt", "docs/completion/./decision.md", "docs/completion/link-in.md"]) {
+  writeFileSync(join(sandbox, "docs/completion/components.json"), "{}\n");
+  for (const decision of ["docs/completion/components.json", "docs/completion/../release/evidence/receipt.txt", "docs/completion/./decision.md", "docs/completion/link-in.md"]) {
     const gates = allPassed();
     gates.gates[4] = { ...descopedGate("F5"), decision };
     const result = validateV1({ version: "1.0.0-rc.1", gates, compatibility: compat() }, { rootDir: sandbox });
@@ -141,7 +144,7 @@ test("a descoped decision must resolve inside docs/completion, not just start wi
 
 test("only a descoped gate may carry a decision path", () => {
   const gates = allPassed();
-  gates.gates[0] = { ...passedGate("F1"), decision: "docs/completion/decision.md" };
+  gates.gates[0] = { ...passedGate("F1"), decision: "docs/completion/DECISIONS-test.md" };
   const result = validateV1({ version: "1.0.0", gates, compatibility: compat() }, { rootDir: sandbox });
   assert.equal(result.status, "invalid");
   assert.ok(result.errors.some(error => error.startsWith("F1: decision")));
