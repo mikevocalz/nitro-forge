@@ -43,14 +43,24 @@ async function openApp(app) {
   const page = await context.newPage();
   const pageErrors = [], ops = [];
   page.on('pageerror', error => pageErrors.push(error.stack ?? String(error)));
-  page.on('response', async response => {
-    const request = response.request();
+  // Record each op when its request is sent, so `ops` keeps request order;
+  // the parsed response is filled in later. Recording on response completion
+  // let a slower, older listMarkers land after a newer one.
+  const pending = new Map();
+  page.on('request', request => {
     if (!request.url().endsWith('/api/engine') || request.method() !== 'POST') return;
     let body; try { body = JSON.parse(request.postData() ?? 'null'); } catch { return; }
     if (body?.op !== 'apply') return;
     const op = body.args?.[1];
-    let result = null; try { result = JSON.parse(await response.text()); } catch { /* closed page */ }
-    ops.push({ op: op?.op, payload: op?.payload, result });
+    const entry = { op: op?.op, payload: op?.payload, result: null };
+    ops.push(entry);
+    pending.set(request, entry);
+  });
+  page.on('response', async response => {
+    const entry = pending.get(response.request());
+    if (!entry) return;
+    pending.delete(response.request());
+    try { entry.result = JSON.parse(await response.text()); } catch { /* closed page */ }
   });
   await page.goto(base, { waitUntil: 'load' });
   await page.getByRole('heading', { name: 'All applications' }).waitFor({ timeout: 90_000 });
@@ -199,7 +209,11 @@ try {
       assert.ok(addCalls.length >= 1 && addCalls.every(entry => entry.op === 'addMarkers'), 'markers are written with addMarkers');
 
       // Rename the first marker through the lane's name field, then blur.
-      const listed = opsNamed(ops, 'listMarkers').at(-1).result.data.data.markers;
+      const latestList = opsNamed(ops, 'listMarkers').at(-1);
+      for (let i = 0; i < 50 && latestList.result === null; i++) await page.waitForTimeout(100);
+      const listed = latestList.result.data.data.markers;
+      // A stale list from before the Redo would hold fewer markers than the lane shows.
+      assert.equal(listed.length, low.added + high.added, `the latest listMarkers reflects the Redo, saw ${listed.length}`);
       const first = listed[0];
       // Each run numbers its markers from "Beat 1", so pick the earliest marker by position.
       const firstSlider = markerSliders.first();
@@ -216,7 +230,9 @@ try {
       const patch = { ...updates[0].payload }; delete patch.id;
       const patchFields = patch.patch ? Object.keys(patch.patch) : Object.keys(patch);
       assert.deepEqual(patchFields, ['name'], 'the rename sends the name only');
-      const after = opsNamed(ops, 'listMarkers').at(-1).result.data.data.markers.find(marker => marker.id === first.id);
+      const latestAfter = opsNamed(ops, 'listMarkers').at(-1);
+      for (let i = 0; i < 50 && latestAfter.result === null; i++) await page.waitForTimeout(100);
+      const after = latestAfter.result.data.data.markers.find(marker => marker.id === first.id);
       console.log(`  before: ${JSON.stringify(first)}; after: ${JSON.stringify(after)}`);
       assert.deepEqual(after, { ...first, name: 'Reviewed beat' }, 'the marker keeps its id, ticks, length and note');
       await page.mouse.move(0, 0);

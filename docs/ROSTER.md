@@ -2816,6 +2816,10 @@ label "Layer opacity"). `prismBlendCommand` takes `{ kind: 'mode' }` or
   and 1024x768; how they were made is in its README). The `80e5934` and
   `61ce1b2` captures are marked superseded; `docs/release/v1-readiness.json`
   cites only `release/evidence/2026-11-23-a5634ed/` since `cc07f05`.
+- F3 gate evidence at `bbc1863` (`release/evidence/2026-11-23-bbc1863/`):
+  all three rows re-run at one commit and signed by R2 on 2026-11-23. The new
+  `verify-f3-rows.mjs` had an op-ordering race (1 of 3 runs failed E-35 under
+  load); after the fix it passed 3 of 3, one under load.
 - Known limit (R2, 2026-11-23): at 1024x768 the head leaves the layer list at
   its 56 px floor inside the scrolling panel body, so the rows sit in a nested
   scroller one row tall. Follow-up: drop the list cap when the head does not

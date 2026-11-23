@@ -223,3 +223,26 @@ was re-reading after Undo. Each was fixed in the script before the passing run.
   tests, `derive-v1-component-scope.mjs --check`.
 - Node 24.3 or later: every run used Node 22.23.5.
 - No reviewer has signed these results.
+
+## Review and script fix (2026-11-23)
+
+R2 signed gate F3 against this folder and commit
+`bbc18637e59244bdc3c94634ca8d927280f22ec2`. In 1 of R2's 3 runs, made while
+cargo tests ran alongside, `verify-f3-rows.mjs` failed E-35. The product
+behaved correctly in that run. The cause was in the script: it recorded each
+engine op when its response finished, so an older `listMarkers` could land
+after a newer one, and the rename check compared the wrong marker. A later
+commit records ops in request order, fills in each response afterwards, and
+asserts that the latest marker list holds every marker the lane shows. With
+that fix the script passed 3 of 3 runs, the second with cargo tests running
+alongside.
+
+Follow-ups outside F3, from the same review:
+- `apps/studio-preview/src/tally-detail-controls.tsx:128` renders `''` inside a
+  View while there is no error (`{state.error&&<Banner …/>}`), which is the
+  source of the "Unexpected text node" warnings. It dates from `f327ba7`,
+  before F3.
+- `apps/studio-preview/tests/prism-blend.e2e.test.ts` renders `MenuButton` with
+  a bare string child; the editor passes `Text`.
+- The Tally pivot output header reads `sum:0` (a field offset) while the panel
+  says "Column A".
