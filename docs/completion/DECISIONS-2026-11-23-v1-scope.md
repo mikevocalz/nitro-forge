@@ -105,6 +105,14 @@ fallback is to keep the whole Tron component, add a Forge forced-colours
 workaround and the layout fix, and record the step size as a known regression
 until Tron changes it.
 
+Scope consequence, recorded by the integrator on 2026-11-23 and inspected by R1:
+B-11 stays in the v1 row set. Its only ledger source is `LayerBlendAndOpacity.tsx`,
+which Forge no longer renders, so the renders-or-calls rule alone would drop it;
+a `ROW_DECISIONS` entry in `tooling/derive-v1-component-scope.mjs` keeps it while
+Forge calls `validateLayerBlend`. B-11's v1 acceptance measures Forge's
+composition (Tron's blend model and `MenuButton` with Forge's opacity scrubber),
+not Tron's `LayerBlendAndOpacity` component.
+
 ## D8. License: MIT
 
 The owner chose MIT for v1. The repository root and each of the eight release
