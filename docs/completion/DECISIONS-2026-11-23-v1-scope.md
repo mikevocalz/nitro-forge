@@ -83,5 +83,7 @@ change.
 The owner added one exemption to `design/DIRECTION.md`: shapes that are part of
 a document's content (artwork a user draws or a sample artboard) are not view
 chrome and may be any shape. The status dot in `apps/studio-preview` becomes a
-square at the control radius; the dial pointer and the swatch selection ring get
-token-based fixes. No other exemption is added.
+square with no radius (4 px on a 5 px dot still reads as a circle). The dial
+pointer gets square ends. Prism's fill swatches become circular colour wells,
+an exemption DIRECTION.md already lists, so the selection ring needs no third
+radius value. No other exemption is added.
