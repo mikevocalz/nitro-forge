@@ -2781,6 +2781,39 @@ Owner chose option B for both rows (`docs/proposals/F3-deferred-rows.md`).
 - Studio preview: `PivotFieldList` (Tally "Pivot" tab) and `BeatDetectionMarkerLane` (Cadence Analysis "Beat markers" tab) are wired. Node tests with recorded calls and `tests/f3-rows.e2e.test.ts` against nf-cli passed locally on macOS.
 - On-screen check in the browser harness: NOT RUN. At `c83c871` the harness page does not mount in Chromium (`react-native-reanimated` served from source; see the PR). Native iOS and Android: NOT RUN.
 
+## F3 B-11 LayerBlendAndOpacity (2026-11-23, `f3-b11-r2`)
+
+Owner chose option A (decision D5): Tron `v1.0.0-rc.2`'s `alphaModes`
+catalog with one entry, Straight alpha. The control sits in the Prism
+editor's Layers panel (`packages/studio-workspace/src/prism-editor.tsx`) in
+place of the panel's opacity scrubber; the Objects-tab mount from `61ce1b2`
+is removed. Catalogs and commands: `packages/studio-workspace/src/prism-blend.ts`.
+Recorded at `80e5934`, run locally on Linux, node v22.23.5, pnpm 12.18.0.
+
+- studio-workspace node tests: 154 passed, 0 failed, including
+  `prism-blend.test.ts` (catalog checked by Tron's `validateLayerBlend`;
+  commands; refusal before any engine call) and the Layers panel structure test.
+- studio-preview node tests: 34 passed. `vitest run tests` (nf-cli built with
+  `cargo build --locked -p nf-cli`): 2 files, 7 passed. `prism-blend.e2e.test.ts`
+  renders the Tron component to markup through the className binding and runs
+  `setLayerBlend` and `setLayerOpacity` from the shared commands against the
+  real engine, with undo and redo.
+- `verify-prism-blend.mjs` in headless Chromium 1243 against the Vite dev host
+  and the nf-cli bridge: the Layers panel has one "Layer opacity" control, no
+  alpha menu, "Straight alpha" as text, the layer row inside the panel; choosing
+  Multiply in the panel's blend menu commits to the engine, and Undo restores
+  Normal. Capture: `release/evidence/2026-11-23-80e5934/f3-b11-layers-panel.png`.
+- `pnpm -r typecheck` passed; `node tooling/check-radius.mjs` 0 violations;
+  `derive-v1-component-scope.mjs --check` current at 58 rows; tooling tests
+  40 passed.
+- Failing first: the new node, structure and markup tests, and the browser
+  script, failed before the change they cover. The browser script's
+  row-inside-panel check was added after the first capture showed the rows
+  pushed out of the panel, then failed against the unscrolled layout.
+- NOT RUN: opacity drag in the browser (only the blend menu was driven);
+  native iOS and Android; `vite build` and `verify-render.mjs`; `cargo test`
+  (no Rust changed). No reviewer has signed this row.
+
 ## Dependency baseline F1 (2026-11-11, `deps/f1-baseline-20261111`)
 
 Bump list and holds: `docs/release/RELEASE_TRAIN.md`, "Dependency baseline, 2026-11-11".
