@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 /*
@@ -244,7 +245,7 @@ function LoudnessMeterBody({actionError,disabledReason,rmsDbfs,onReset,
               style={{ position: "absolute", left: 0, right: 0, top: y(g), height: 1 }} />)}
             {bars.map((b, i) => b.fraction > 0 ? <View key={i} {...{ className: joinClasses(!unstyled && "bg-accent") }}
               style={{ position: "absolute", left: i * slot, width: barW, bottom: 0, height: b.fraction * historyHeight,
-                borderTopLeftRadius: 1, borderTopRightRadius: 1 }} /> : null)}
+                borderTopLeftRadius: forgeHairlineRadius.tick, borderTopRightRadius: forgeHairlineRadius.tick }} /> : null)}
             <View {...{ className: joinClasses(!unstyled && "bg-text") }}
               style={{ position: "absolute", left: 0, right: 0, top: y(target) - 1, height: 2 }} />
           </View>

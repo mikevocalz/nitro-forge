@@ -230,9 +230,9 @@ function DynamicsTransferGraphBody({actionError,disabledReason,
           {segments.map((s, i) => <View key={i} {...{ className: joinClasses(styled && "bg-primary") }}
             style={{ position: "absolute", left: s.centerX - s.length / 2 - 0.5, top: s.centerY - 1, width: s.length + 1,
               height: 2, transform: [{ rotate: `${s.angleDeg}deg` }] }} />)}
-          {thrDot ? line("thrDot", thrDot.x - 4, thrDot.y - 4, 8, 8, "bg-accent rounded-full") : null}
+          {thrDot ? line("thrDot", thrDot.x - 4, thrDot.y - 4, 8, 8, "bg-accent") : null}
         </View>
-        {levelDot ? line("lvl", levelDot.x - 5, levelDot.y - 5, 10, 10, "bg-success rounded-full border-2 border-surface-raised") : null}
+        {levelDot ? line("lvl", levelDot.x - 5, levelDot.y - 5, 10, 10, "bg-success rounded-sm border-2 border-surface-raised") : null}
         <Text aria-hidden {...{ className: muted }} style={{ position: "absolute", left: 6, top: 4, fontSize: 11, lineHeight: 14 }}>Out</Text>
         <Text aria-hidden {...{ className: muted }} style={{ position: "absolute", right: 6, bottom: 4, fontSize: 11, lineHeight: 14 }}>In</Text>
         {curve.length === 0
@@ -251,7 +251,7 @@ function DynamicsTransferGraphBody({actionError,disabledReason,
         onKeyDown={onKeyDown}
         {...{ className: joinClasses(styled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus") }}
         style={{ width: size, height: HIT, ...webTrack }}>
-        {line("track", 0, HIT / 2 - 2, size, 4, "bg-border rounded-full")}
+        {line("track", 0, HIT / 2 - 2, size, 4, "bg-border")}
         {line("thumb", Math.min(size - THUMB, Math.max(0, thrX - THUMB / 2)), (HIT - 26) / 2, THUMB, 26,
           active ? "bg-accent border-accent rounded-control" : "bg-surface-raised border-2 border-accent rounded-control")}
       </View>

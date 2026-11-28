@@ -222,7 +222,7 @@ function SwatchRow({label,swatches,current,styled,onPick,onCustom}:{
             styled&&"border-2",styled&&(on?"border-primary":"border-transparent"))}}
           style={{width:VECTOR_TOUCH_TARGET,height:VECTOR_TOUCH_TARGET,alignItems:"center",justifyContent:"center"}}>
           <View pointerEvents="none" {...{className:joinClasses(styled&&"border border-border")}}
-            style={{width:28,height:28,borderRadius:14,backgroundColor:rgbaToCss(s.color)}}/>
+            style={{width:28,height:28,borderRadius:14, /* radius-exempt: colour-well */backgroundColor:rgbaToCss(s.color)}}/>
         </Pressable>;
       })}
       {onCustom?<Pressable role="button" aria-label={"Custom "+label.toLowerCase()} onPress={onCustom}

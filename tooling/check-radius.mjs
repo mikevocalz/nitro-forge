@@ -1,7 +1,8 @@
 // Radius check for Forge UI sources (design/DIRECTION.md, "Owner brief and
 // view radius rule"). Every rounded view is `rounded-sm` (4 px, inner views and
 // controls) or `rounded-md` (6 px, outer views), taken from the one token
-// definition in packages/studio-workspace/src/theme.ts.
+// definition in packages/studio-workspace/src/theme.ts (mirrored, and checked
+// against it, in packages/editor-controls/src/radius.ts).
 //
 //   node tooling/check-radius.mjs            prints file:line:rule, exits 1 on any violation
 //   node tooling/check-radius.mjs --json     prints a per-package inventory as JSON (same exit code)
@@ -14,7 +15,8 @@
 // Rules
 //   token-definition   theme.ts must define `forgeRadius = { sm: 4, md: 6 }` once,
 //                      `workspaceScale.radius.*` must each be `forgeRadius.sm` or `.md`,
-//                      every `forgeHairlineRadius` value must be below 4, and each
+//                      every `forgeHairlineRadius` value must be below 4, each
+//                      mirror in TOKEN_MIRRORS must hold the same values, and each
 //                      generated sheet must match a fresh build-theme.mjs run and hold
 //                      exactly the expected `--radius-*` names and values
 //   rounded-scale      a `rounded-xs`, `rounded-lg` or larger class, any side or corner
@@ -81,6 +83,11 @@ export const TOKEN_FILES = Object.freeze([
   "packages/studio-workspace/src/radius.css",
 ]);
 const [THEME_FILE, BUILD_FILE] = TOKEN_FILES;
+/** Copies of the token values in packages that cannot import theme.ts. Each must match it. */
+export const TOKEN_MIRRORS = Object.freeze([
+  // studio-workspace depends on editor-controls, so editor-controls keeps its own copy.
+  "packages/editor-controls/src/radius.ts",
+]);
 const GENERATED_SHEETS = TOKEN_FILES.filter(file => file.endsWith(".css"));
 
 const SOURCE_EXTENSIONS = /\.(?:tsx?|mts|cts|jsx?|mjs|cjs|css|html)$/;
@@ -369,6 +376,21 @@ export function checkTokens(rootDir) {
   if (!roles || !roles.length) fail(THEME_FILE, "workspaceScale.radius is missing");
   for (const [name, value] of roles ?? []) {
     if (!/^forgeRadius\.(?:sm|md)$/.test(value)) fail(THEME_FILE, `workspaceScale.radius.${name} is ${value}; it must reference forgeRadius.sm or forgeRadius.md`);
+  }
+
+  // Mirrors must hold the same two radii and the same hairline radii as theme.ts.
+  const hairlineText = entries => JSON.stringify((entries ?? []).map(([name, value]) => [name, Number(value)]));
+  for (const mirror of TOKEN_MIRRORS) {
+    const path = join(rootDir, mirror);
+    if (!existsSync(path)) continue;
+    const text = readFileSync(path, "utf8");
+    const copies = [...text.matchAll(/export const forgeRadius\s*=\s*\{([^}]*)\}/g)];
+    if (copies.length !== 1 || !/^\s*sm:\s*4,\s*md:\s*6\s*$/.test(copies[0][1])) {
+      fail(mirror, "expected exactly one `export const forgeRadius = { sm: 4, md: 6 }`, matching theme.ts");
+    }
+    if (hairlineText(objectEntries(text, "export const forgeHairlineRadius")) !== hairlineText(hairlines)) {
+      fail(mirror, "forgeHairlineRadius differs from theme.ts");
+    }
   }
 
   // The sheets must hold exactly the expected radii and match a fresh generator run.

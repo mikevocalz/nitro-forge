@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useScopedControl,controlIdentity,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import type {ReactNode} from "react";
@@ -184,6 +185,6 @@ function Glyph({shapes,styled}:{shapes:readonly Shape[];styled:boolean}){
   return <View pointerEvents="none" style={{width:20,height:20}}>
     {shapes.map(([x,y,w,h,fill],i)=><View key={i}
       {...{className:joinClasses(styled&&(fill?"bg-text":"border-2 border-text-muted bg-surface-raised"))}}
-      style={{position:"absolute",left:x,top:y,width:w,height:h,borderRadius:fill?0:2}}/>)}
+      style={{position:"absolute",left:x,top:y,width:w,height:h,borderRadius:fill?0:forgeHairlineRadius.tick}}/>)}
   </View>;
 }

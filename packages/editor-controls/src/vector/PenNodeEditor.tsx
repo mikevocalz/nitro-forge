@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useScopedControl,controlIdentity,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useLayoutEffect,useRef,type ReactNode} from "react";
@@ -405,6 +406,6 @@ function KnobGlyph({shape,selected,styled,accentColor}:{shape:NodeKind|"handle";
   return <View pointerEvents="none" {...{className:joinClasses(fill,styled&&!accentColor&&"border-accent")}}
     style={{width:size,height:size,borderWidth:2,...(accentColor?{borderColor:accentColor}:null),
       ...(selected&&accentColor?{backgroundColor:accentColor}:null),
-      borderRadius:shape==="smooth"||shape==="handle"?size/2:shape==="corner"?1:0,
+      borderRadius:shape==="smooth"||shape==="handle"?forgeRadius.sm:shape==="corner"?forgeHairlineRadius.tick:0,
       transform:shape==="symmetric"?[{rotate:"45deg"}]:undefined}}/>;
 }

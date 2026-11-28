@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {validateSlideSummary} from './slide-model.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
@@ -152,7 +153,7 @@ function FilmstripRow(props:RowProps){
         style={{fontVariant:["tabular-nums"],fontSize:12,fontWeight:selected?"700":"400"}}>{index+1}</Text>
       {props.onMove?<View {...pan.current.panHandlers} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
         style={{width:OFFICE_TOUCH_TARGET,height:OFFICE_TOUCH_TARGET,alignItems:"center",justifyContent:"center",gap:3}}>
-        {[0,1,2].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}} style={{width:12,height:2,borderRadius:1}}/>)}
+        {[0,1,2].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}} style={{width:12,height:2,borderRadius:forgeHairlineRadius.tick}}/>)}
       </View>:null}
     </View>
     <Pressable disabled={disabled} accessibilityRole="button" accessibilityLabel={slideLabel(slide,index,count)} accessibilityState={{selected,disabled}}

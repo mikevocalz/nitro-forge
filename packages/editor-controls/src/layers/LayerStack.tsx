@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {useEffect,useLayoutEffect,useRef,type ReactNode} from "react";
 import {I18nManager,Platform,PanResponder,Pressable,ScrollView,Text,TextInput,View,type PressableProps,type ViewProps} from "react-native";
 import {createStore,type StoreApi} from "zustand/vanilla";
@@ -299,7 +300,7 @@ function LayerStackRow(props:RowProps){
   <View testID={"layer-reorder-"+layer.id} {...dragPan.current.panHandlers} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
    style={{width:LAYER_TOUCH_TARGET,height:LAYER_TOUCH_TARGET,alignItems:"center",justifyContent:"center",gap:3,...dimmed}}>
    {[0,1,2].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}}
-    style={{width:16,height:2,borderRadius:1}}/>)}
+    style={{width:16,height:2,borderRadius:forgeHairlineRadius.tick}}/>)}
   </View>
   <Pressable accessibilityRole="switch" accessibilityLabel={"Show "+layer.name}
    accessibilityState={{checked:layer.visible,disabled:props.disabled}} disabled={props.disabled} onPress={()=>latest.current.onToggleVisible(layer.id)}
@@ -356,7 +357,7 @@ function LayerStackRow(props:RowProps){
     paddingEnd:props.onRemove?4:12,...dimmed}}>
    <View onLayout={e=>{trackWidth.current=e.nativeEvent.layout.width;}}
     {...{className:joinClasses(styled&&"bg-surface-raised")}}
-    style={{flex:1,height:4,borderRadius:2,overflow:"hidden"}}>
+    style={{flex:1,height:4,borderRadius:forgeHairlineRadius.tick,overflow:"hidden"}}>
     <View {...{className:joinClasses(styled&&!accentColor&&"bg-accent")}}
      style={{width:percent+"%",height:4,...accent}}/>
    </View>
@@ -436,8 +437,8 @@ function Thumbnail({thumbnail,styled,dimmed}:{thumbnail:LayerThumbnail;styled:bo
 function RemoveGlyph({styled}:{styled:boolean}){
  const bar=joinClasses(styled&&"bg-text-muted");
  return <View pointerEvents="none" style={{width:14,height:14,alignItems:"center",justifyContent:"center"}}>
-  <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:1,transform:[{rotate:"45deg"}]}}/>
-  <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:1,transform:[{rotate:"-45deg"}]}}/>
+  <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"45deg"}]}}/>
+  <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"-45deg"}]}}/>
  </View>;
 }
 
@@ -445,8 +446,8 @@ function RemoveGlyph({styled}:{styled:boolean}){
 function VisibilityGlyph({visible,styled}:{visible:boolean;styled:boolean}){
  return <View pointerEvents="none" style={{width:20,height:12,alignItems:"center",justifyContent:"center"}}>
   <View {...{className:joinClasses(styled&&(visible?"border-text":"border-text-muted"))}}
-   style={{width:20,height:12,borderRadius:6,borderWidth:1.5,alignItems:"center",justifyContent:"center"}}>
-   {visible?<View {...{className:joinClasses(styled&&"bg-text")}} style={{width:5,height:5,borderRadius:2.5}}/>:null}
+   style={{width:20,height:12,borderRadius:forgeRadius.sm,borderWidth:1.5,alignItems:"center",justifyContent:"center"}}>
+   {visible?<View {...{className:joinClasses(styled&&"bg-text")}} style={{width:5,height:5,borderRadius:forgeHairlineRadius.tick}}/>:null}
   </View>
   {visible?null:<View {...{className:joinClasses(styled&&"bg-text-muted")}}
    style={{position:"absolute",width:24,height:1.5,transform:[{rotate:"-30deg"}]}}/>}

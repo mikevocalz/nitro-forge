@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 /**
@@ -243,7 +244,7 @@ function SlotRow({ slot, index, count, selected, disabled, styled, onSelect, onR
   </View>;
 }
 
-const bar = { position: "absolute" as const, height: 2, borderRadius: 1 };
+const bar = { position: "absolute" as const, height: 2, borderRadius: forgeHairlineRadius.tick };
 
 /** Chevron drawn with two rotated bars. */
 function ChevronGlyph({ styled, up }: { styled: boolean; up: boolean }) {
@@ -267,11 +268,11 @@ function CloseGlyph({ styled }: { styled: boolean }) {
 /** Power mark: an open ring with a stem; filled accent when the effect runs. */
 function PowerGlyph({ styled, on }: { styled: boolean; on: boolean }) {
   return <View pointerEvents="none" style={{ width: 16, height: 16, alignItems: "center" }}>
-    <View style={{ position: "absolute", top: 2, width: 14, height: 14, borderRadius: 7, borderWidth: 2 }}
+    <View style={{ position: "absolute", top: 2, width: 14, height: 14, borderRadius: forgeRadius.sm, borderWidth: 2 }}
       {...{ className: joinClasses(styled && (on ? "border-accent" : "border-text-muted")) }} />
     <View style={{ position: "absolute", top: -1, width: 6, height: 6 }}
       {...{ className: joinClasses(styled && (on ? "bg-surface-raised" : "bg-surface-sunken")) }} />
-    <View style={{ position: "absolute", top: 0, width: 2, height: 8, borderRadius: 1 }}
+    <View style={{ position: "absolute", top: 0, width: 2, height: 8, borderRadius: forgeHairlineRadius.tick }}
       {...{ className: joinClasses(styled && (on ? "bg-accent" : "bg-text-muted")) }} />
   </View>;
 }

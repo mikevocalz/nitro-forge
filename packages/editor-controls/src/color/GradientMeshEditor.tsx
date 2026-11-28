@@ -51,7 +51,7 @@ export function GradientMeshEditor({scope,value,selectedId,onSelect,onPreview,on
    <View ref={root} collapsable={false} onLayout={e=>store.setState({width:e.nativeEvent.layout.width})} accessibilityLabel="Gradient mesh topology" style={{height,overflow:'hidden'}}>
     <View pointerEvents="none" importantForAccessibility="no-hide-descendants" aria-hidden style={{position:'absolute',inset:0}}>{children??(previewImage?<Image accessible={false} source={{uri:previewImage.uri}} resizeMode="stretch" style={{position:'absolute',left:22,top:22,width:w,height:h}}/>:null)}
      {edges.map(([a,b],i)=><LinePiece key={i} from={{x:22+a!.x*w,y:22+a!.y*h}} to={{x:22+b!.x*w,y:22+b!.y*h}} className={joinClasses(!unstyled&&'bg-border')}/>)}
-     {shown.points.map(p=><View key={p.id} {...{className:joinClasses(!unstyled&&(p.id===selectedId?'border-primary':'border-text'))}} style={{position:'absolute',left:22+p.x*w-8,top:22+p.y*h-8,width:16,height:16,borderRadius:8,borderWidth:2,backgroundColor:rgbaToHex(p.color,true)}}/>)}
+     {shown.points.map(p=><View key={p.id} {...{className:joinClasses(!unstyled&&(p.id===selectedId?'border-primary':'border-text'))}} style={{position:'absolute',left:22+p.x*w-8,top:22+p.y*h-8,width:16,height:16,borderRadius:8, /* radius-exempt: colour-well */borderWidth:2,backgroundColor:rgbaToHex(p.color,true)}}/>)}
     </View>
    </View>
   </Transport>

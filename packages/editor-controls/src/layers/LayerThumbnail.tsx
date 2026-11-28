@@ -15,6 +15,7 @@
  * Native component; colors come from theme tokens, and loading, empty,
  * couldn't-render and stale-while-revalidate states were added.
  */
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {useEffect,useLayoutEffect,useMemo,useRef,useSyncExternalStore} from "react";
 import {Image,PixelRatio,Platform,Pressable,Text,View,type ViewProps} from "react-native";
 import {webKey,isModified} from "@nyc-tron/ui/components/forms/choice-keys";
@@ -129,8 +130,8 @@ function Checker({box,styled}:{box:{x:number;y:number;width:number;height:number
 function Skeleton({width,height,styled}:{width:number;height:number;styled:boolean}){
   const bar=Math.max(4,Math.round(Math.min(width,height)/6));
   return <View pointerEvents="none" style={{width:"70%",gap:bar/2,alignItems:"flex-start"}}>
-    <View {...{className:joinClasses(styled&&"bg-border")}} style={{width:"100%",height:bar,borderRadius:bar/2,opacity:0.7}}/>
-    {height>=40?<View {...{className:joinClasses(styled&&"bg-border")}} style={{width:"60%",height:bar,borderRadius:bar/2,opacity:0.7}}/>:null}
+    <View {...{className:joinClasses(styled&&"bg-border")}} style={{width:"100%",height:bar,borderRadius:forgeHairlineRadius.tick,opacity:0.7}}/>
+    {height>=40?<View {...{className:joinClasses(styled&&"bg-border")}} style={{width:"60%",height:bar,borderRadius:forgeHairlineRadius.tick,opacity:0.7}}/>:null}
   </View>;
 }
 
@@ -138,9 +139,9 @@ function Skeleton({width,height,styled}:{width:number;height:number;styled:boole
 function Failure({width,height,styled,onRetry}:{width:number;height:number;styled:boolean;onRetry:(()=>void)|undefined}){
   const roomy=width>=96&&height>=84;
   const mark=<View pointerEvents="none" {...{className:joinClasses(styled&&"border-danger")}}
-    style={{width:16,height:16,borderRadius:8,borderWidth:1.5,alignItems:"center",justifyContent:"center",gap:1.5}}>
-    <View {...{className:joinClasses(styled&&"bg-danger")}} style={{width:2,height:6,borderRadius:1}}/>
-    <View {...{className:joinClasses(styled&&"bg-danger")}} style={{width:2,height:2,borderRadius:1}}/>
+    style={{width:16,height:16,borderRadius:forgeRadius.sm,borderWidth:1.5,alignItems:"center",justifyContent:"center",gap:1.5}}>
+    <View {...{className:joinClasses(styled&&"bg-danger")}} style={{width:2,height:6,borderRadius:forgeHairlineRadius.tick}}/>
+    <View {...{className:joinClasses(styled&&"bg-danger")}} style={{width:2,height:2,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
   if(!roomy)return mark;
   return <View style={{alignItems:"center",gap:4,paddingHorizontal:6}}>
@@ -157,5 +158,5 @@ function Failure({width,height,styled,onRetry}:{width:number;height:number;style
 /** Corner dot on a stale preview whose newer revision failed, so the old picture is not mistaken for current. */
 function StaleMark({styled}:{styled:boolean}){
   return <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-danger")}}
-    style={{position:"absolute",top:2,end:2,width:7,height:7,borderRadius:3.5}}/>;
+    style={{position:"absolute",top:2,end:2,width:7,height:7,borderRadius:forgeHairlineRadius.tick}}/>;
 }

@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useScopedControl,controlIdentity,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {Platform,Text,View,type ViewProps} from "react-native";
@@ -84,7 +85,7 @@ function TimelinePlayheadBody({
       onAccessibilityAction={e=>{if(e.nativeEvent.actionName==="increment")step(1);if(e.nativeEvent.actionName==="decrement")step(-1);}}
       style={{position:"absolute",left:scrub.active?shownHead:headLeft,top:0,width:HIT,height:HIT,alignItems:"center",opacity:inView?1:0.6,...NO_SELECT}}>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}}
-        style={{marginTop:4,width:14,height:18,borderBottomLeftRadius:7,borderBottomRightRadius:7,borderTopLeftRadius:3,borderTopRightRadius:3}}/>
+        style={{marginTop:4,width:14,height:18,borderRadius:forgeRadius.sm}}/>
     </View>
   </View>;
 }

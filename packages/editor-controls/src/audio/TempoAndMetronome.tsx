@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {audioTargetSize,audioCopy} from './audio-chrome.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -186,7 +187,7 @@ function TempoAndMetronomeBody({actionError,disabledReason,
         {Array.from({ length: Math.min(numerator, 16) }, (_, i) => {
           const on = i === beat % numerator;
           return <View key={i} {...{ className: joinClasses(styled && (on ? (i === 0 ? "bg-primary" : "bg-accent") : "bg-surface-sunken border border-border")) }}
-            style={{ width: i === 0 ? 14 : 10, height: i === 0 ? 14 : 10, borderRadius: 7 }} />;
+            style={{ width: i === 0 ? 14 : 10, height: i === 0 ? 14 : 10, borderRadius: forgeRadius.sm }} />;
         })}
       </View> : null}
     </View> : null}

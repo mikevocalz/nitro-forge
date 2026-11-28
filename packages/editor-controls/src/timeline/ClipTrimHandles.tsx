@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {useContext,useMemo as useIdentityMemo} from 'react';
 import {EditorInteractionScope,useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -118,8 +119,8 @@ function Handle({edge,...p}:ClipTrimHandlesProps&{edge:"head"|"tail"}){
     style={{position:"absolute",top:0,height:Math.max(HIT,height),width:HIT,
       ...(edge==="head"?{left:-HIT/2}:{right:-HIT/2}),alignItems:"center",justifyContent:"center",zIndex:2,...NO_SELECT}}>
     <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-focus")}}
-      style={{width:8,height:Math.max(20,height-12),borderRadius:4,alignItems:"center",justifyContent:"center"}}>
-      <View {...{className:joinClasses(styled&&"bg-surface-raised")}} style={{width:2,height:12,borderRadius:1}}/>
+      style={{width:8,height:Math.max(20,height-12),borderRadius:forgeHairlineRadius.tick,alignItems:"center",justifyContent:"center"}}>
+      <View {...{className:joinClasses(styled&&"bg-surface-raised")}} style={{width:2,height:12,borderRadius:forgeHairlineRadius.tick}}/>
     </View>
   </View>;
 }

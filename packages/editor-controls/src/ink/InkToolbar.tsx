@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {useRef,type ReactNode} from "react";
 import {Pressable,ScrollView,Text,View,type ViewProps} from "react-native";
 import {createStore,type StoreApi} from "zustand/vanilla";
@@ -144,7 +145,7 @@ export function InkToolbar({
     hint="Shortcuts [ and ]"
     onStep={direction=>run(planInkCommand({type:"size",direction},state))}>
     <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-text")}}
-     style={{width:inkSizePreviewDiameter(size,tool),height:inkSizePreviewDiameter(size,tool),borderRadius:14}}/>
+     style={{width:inkSizePreviewDiameter(size,tool),height:inkSizePreviewDiameter(size,tool),borderRadius:14 /* radius-exempt: artwork */}}/>
    </Stepper>
    {opacity!==undefined&&onOpacityChange?<Stepper styled={styled} vertical={vertical} label="Opacity"
      valueText={formatInkOpacity(opacity)} valueNow={Math.round(opacity*100)}
@@ -216,7 +217,7 @@ function ToolbarButton({label,shortLabel,hint,icon,onPress,disabled=false,role="
    style={{fontSize:13,fontWeight:on?"700":"500"}}>{vertical&&shortLabel?shortLabel:label}</Text>}
   {role==="switch"?<View pointerEvents="none"
    {...{className:joinClasses(styled&&(on?"bg-primary":"bg-border"))}}
-   style={vertical?{width:20,height:3,borderRadius:2}:{width:8,height:8,borderRadius:4}}/>:null}
+   style={vertical?{width:20,height:3,borderRadius:forgeHairlineRadius.tick}:{width:8,height:8,borderRadius:forgeHairlineRadius.tick}}/>:null}
  </Pressable>;
 }
 
@@ -253,12 +254,12 @@ function Swatch({swatch,selected,onPress,reason,styled}:{
  return <Pressable role="radio" aria-label={reason===undefined?swatch.label:swatch.label+", unavailable"}
   aria-checked={selected} accessibilityState={{disabled:reason!==undefined}}
   accessibilityHint={reason} onPress={onPress}
-  {...{className:joinClasses(styled&&"rounded-full focus-visible:ring-2 focus-visible:ring-focus")}}
+  {...{className:joinClasses(styled&&"rounded-full focus-visible:ring-2 focus-visible:ring-focus" /* radius-exempt: colour-well */)}}
   style={{width:INK_TOUCH_TARGET,height:INK_TOUCH_TARGET,alignItems:"center",justifyContent:"center"}}>
   <View pointerEvents="none" {...{className:joinClasses(styled&&(selected?"border-text":"border-border"))}}
-   style={{width:34,height:34,borderRadius:17,borderWidth:selected?2:1,alignItems:"center",justifyContent:"center",
+   style={{width:34,height:34,borderRadius:17, /* radius-exempt: colour-well */borderWidth:selected?2:1,alignItems:"center",justifyContent:"center",
     borderColor:styled?undefined:selected?swatch.value:undefined}}>
-   <View style={{width:selected?24:30,height:selected?24:30,borderRadius:15,backgroundColor:swatch.value}}/>
+   <View style={{width:selected?24:30,height:selected?24:30,borderRadius:15, /* radius-exempt: colour-well */backgroundColor:swatch.value}}/>
   </View>
  </Pressable>;
 }

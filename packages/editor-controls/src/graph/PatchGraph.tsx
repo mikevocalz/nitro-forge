@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useMemo,useRef,useLayoutEffect} from "react";
 import {PanResponder,Pressable,ScrollView,Text,View,type ViewProps} from "react-native";
 import {createStore,type StoreApi} from "zustand/vanilla";
@@ -131,7 +132,7 @@ function PatchNode({node,boundary,interactionScale,disabled,selected,accentColor
  });
  const w=node.width??200;
  const height=GRAPH_HEADER_HEIGHT+14+Math.max(node.inputs.length,node.outputs.length)*GRAPH_PORT_ROW_HEIGHT;
- const portRing=<View style={{width:12,height:12,borderRadius:6,borderWidth:2,...(accentColor?{borderColor:accentColor}:null)}}
+ const portRing=<View style={{width:12,height:12,borderRadius:forgeRadius.sm,borderWidth:2,...(accentColor?{borderColor:accentColor}:null)}}
    {...{className:joinClasses(styled&&!accentColor&&"border-accent")}}/>;
  const portLabel=joinClasses(styled&&"text-text-muted");
  // A View with pan handlers has no onPress, so the screen-reader activate

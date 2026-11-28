@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {useContext,useMemo as useIdentityMemo} from 'react';
 import {EditorInteractionScope,useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -63,15 +64,15 @@ export const trackFlags=(kind:TrackKind):readonly TrackFlag[]=>kind==="audio"?["
 function LockGlyph({open,styled}:{open:boolean;styled:boolean}){
   const ink=styled?"border-text":"";
   return <View style={{alignItems:"center",width:16,height:18}}>
-    <View {...{className:ink}} style={{width:10,height:8,borderWidth:2,borderBottomWidth:0,borderTopLeftRadius:5,borderTopRightRadius:5,
+    <View {...{className:ink}} style={{width:10,height:8,borderWidth:2,borderBottomWidth:0,borderTopLeftRadius:forgeRadius.sm,borderTopRightRadius:forgeRadius.sm,
       marginLeft:open?8:0}}/>
-    <View {...{className:styled?"bg-text":""}} style={{width:14,height:9,borderRadius:2}}/>
+    <View {...{className:styled?"bg-text":""}} style={{width:14,height:9,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
 }
 function EyeGlyph({off,styled}:{off:boolean;styled:boolean}){
   return <View style={{width:20,height:16,alignItems:"center",justifyContent:"center"}}>
-    <View {...{className:styled?"border-text":""}} style={{width:18,height:11,borderWidth:2,borderRadius:9,alignItems:"center",justifyContent:"center"}}>
-      <View {...{className:styled?"bg-text":""}} style={{width:5,height:5,borderRadius:3}}/>
+    <View {...{className:styled?"border-text":""}} style={{width:18,height:11,borderWidth:2,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center"}}>
+      <View {...{className:styled?"bg-text":""}} style={{width:5,height:5,borderRadius:forgeHairlineRadius.tick}}/>
     </View>
     {off?<View {...{className:styled?"bg-text":""}} style={{position:"absolute",width:22,height:2,transform:[{rotate:"-35deg"}]}}/>:null}
   </View>;

@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {useEffect,useLayoutEffect,useRef,type ComponentRef} from "react";
 import {I18nManager,Platform,Pressable,ScrollView,Text,TextInput,View,type ViewProps} from "react-native";
 import {createStore,type StoreApi} from "zustand/vanilla";
@@ -281,15 +282,15 @@ function ArtboardNavigatorBody({
 function Cross({styled}:{styled:boolean}){
   const bar=joinClasses(styled&&"bg-text-muted");
   return <View pointerEvents="none" style={{width:14,height:14,alignItems:"center",justifyContent:"center"}}>
-    <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:1,transform:[{rotate:"45deg"}]}}/>
-    <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:1,transform:[{rotate:"-45deg"}]}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"45deg"}]}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"-45deg"}]}}/>
   </View>;
 }
 
 function Plus({styled}:{styled:boolean}){
   const bar=joinClasses(styled&&"bg-text");
   return <View pointerEvents="none" style={{width:12,height:12,alignItems:"center",justifyContent:"center"}}>
-    <View {...{className:bar}} style={{position:"absolute",width:12,height:1.5,borderRadius:1}}/>
-    <View {...{className:bar}} style={{position:"absolute",width:1.5,height:12,borderRadius:1}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:12,height:1.5,borderRadius:forgeHairlineRadius.tick}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:1.5,height:12,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
 }

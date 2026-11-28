@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useEffect,useLayoutEffect,useRef,type ComponentRef} from "react";
 import {Platform,Text,View,type ViewProps} from "react-native";
 import {createStore,type StoreApi} from "zustand/vanilla";
@@ -85,7 +86,7 @@ export function CurvesEditor({scope,value,selectedId,onSelect,onPreview,onCommit
    <View pointerEvents="none" importantForAccessibility="no-hide-descendants" aria-hidden style={{position:'absolute',inset:0}}>
     <LinePiece from={{x:22,y:height-22}} to={{x:width-22,y:22}} className={joinClasses(!unstyled&&'bg-border')}/>
     {samples.slice(1).map((point,i)=><LinePiece key={i} from={samples[i]!} to={point} className={joinClasses(!unstyled&&'bg-primary')}/>)}
-    {shown.points.map(p=><View key={p.id} {...{className:joinClasses(!unstyled&&(p.id===selectedId?'bg-primary border-text':'bg-surface-raised border-primary'))}} style={{position:'absolute',left:22+p.x*w-6,top:22+(1-p.y)*h-6,width:12,height:12,borderRadius:6,borderWidth:2}}/>)}
+    {shown.points.map(p=><View key={p.id} {...{className:joinClasses(!unstyled&&(p.id===selectedId?'bg-primary border-text':'bg-surface-raised border-primary'))}} style={{position:'absolute',left:22+p.x*w-6,top:22+(1-p.y)*h-6,width:12,height:12,borderRadius:forgeRadius.sm,borderWidth:2}}/>)}
    </View>
   </View></Transport>
   <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}><UnitInput label="Curve input" value={selected.x} min={0} max={1} step={.01} precision={6} disabled={disabled||!canRemove} unstyled={unstyled} onCommit={x=>commitPoint(x,selected.y)}/><UnitInput label="Curve output" value={selected.y} min={0} max={1} step={.01} precision={6} disabled={disabled} unstyled={unstyled} onCommit={y=>commitPoint(selected.x,y)}/></View>

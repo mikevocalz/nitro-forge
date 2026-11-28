@@ -241,3 +241,27 @@ test("CSS shorthand of 0 and token parts, and CSS-wide keywords, pass", () => {
   assert.equal(classifyCssValue("4px 0"), "raw-radius");
   assert.equal(classifyCssValue("var(--radius-sm) 8px"), "radius-arithmetic");
 });
+
+test("a token mirror must match theme.ts, and an absent mirror is not required", () => {
+  assert.deepEqual(checkTokens(pass), [], "a tree without the mirror passes");
+  const mirror = "packages/editor-controls/src/radius.ts";
+  const good = "export const forgeRadius = { sm: 4, md: 6 } as const;\nexport const forgeHairlineRadius = { tick: 1, needle: 0.75 } as const;\n";
+  const cases = [
+    ["matching", good, []],
+    ["a different md", good.replace("md: 6", "md: 8"), ["token-definition"]],
+    ["a different hairline", good.replace("needle: 0.75", "needle: 0.5"), ["token-definition"]],
+    ["a missing hairline", good.replace(", needle: 0.75", ""), ["token-definition"]],
+    ["no forgeRadius", good.split("\n")[1] + "\n", ["token-definition"]],
+  ];
+  for (const [name, text, expected] of cases) {
+    const dir = mkdtempSync(join(tmpdir(), "radius-token-mirror-"));
+    try {
+      cpSync(pass, dir, { recursive: true });
+      mkdirSync(join(dir, "packages/editor-controls/src"), { recursive: true });
+      writeFileSync(join(dir, mirror), text);
+      assert.deepEqual(checkTokens(dir).map(v => v.rule), expected, name);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
