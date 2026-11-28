@@ -66,7 +66,7 @@
       ]
     }
   ],
-  "reachableFiles": 212,
+  "reachableFiles": 214,
   "v1": {
     "platforms": [
       "ios",
@@ -1288,7 +1288,7 @@
         "DragGrabHandle"
       ],
       "uses": [
-        "packages/studio-workspace/src/index.tsx:282",
+        "packages/studio-workspace/src/index.tsx:359",
         "packages/studio-workspace/src/persona-composer.tsx:290"
       ]
     },
@@ -1352,7 +1352,7 @@
         "FilePicker"
       ],
       "uses": [
-        "apps/studio-preview/src/main.tsx:82"
+        "apps/studio-preview/src/main.tsx:93"
       ]
     },
     {
@@ -1395,14 +1395,14 @@
         "apps/studio-preview/src/app-launcher.tsx:28",
         "apps/studio-preview/src/app-launcher.tsx:29",
         "apps/studio-preview/src/app-launcher.tsx:33",
-        "apps/studio-preview/src/main.tsx:76",
-        "apps/studio-preview/src/main.tsx:130",
-        "apps/studio-preview/src/main.tsx:186",
-        "apps/studio-preview/src/main.tsx:214",
-        "apps/studio-preview/src/main.tsx:223",
+        "apps/studio-preview/src/main.tsx:87",
+        "apps/studio-preview/src/main.tsx:141",
+        "apps/studio-preview/src/main.tsx:197",
         "apps/studio-preview/src/main.tsx:225",
-        "apps/studio-preview/src/main.tsx:226",
-        "apps/studio-preview/src/main.tsx:229"
+        "apps/studio-preview/src/main.tsx:234",
+        "apps/studio-preview/src/main.tsx:236",
+        "apps/studio-preview/src/main.tsx:237",
+        "apps/studio-preview/src/main.tsx:240"
       ]
     },
     {
