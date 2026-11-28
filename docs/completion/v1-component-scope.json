@@ -13,9 +13,9 @@
   "rule": {
     "studiosAndLabs": "Workspaces under apps/ and examples/ whose package.json lists react in dependencies.",
     "entries": "package.json main (expo-router/entry means every file under app/), index.html module scripts, and top-level scripts that call registerRootComponent.",
-    "reachability": "Files imported from an entry through relative paths or scanned workspace packages (@nitro-forge/*), following static, dynamic, require and re-export edges and every .native/.ios/.android/.web variant.",
-    "usage": "Renders or calls (D4): any non-type binding that originates in an @nyc-tron/* module (alias, namespace or workspace re-export), whatever its capitalisation. A JSX render, or a render of a Studio UI slot (useComponents().Name), is kind render. A function call or a value passed along is kind call. Type-only imports and typeof positions are not hits.",
-    "mapping": "Same-named ledger row first; otherwise every row that lists the imported Tron module as a source. A subpath resolves to packages/<package>/<root>/<subpath>, where root is src, or src/components for expo-controls (its pinned exports map). Anything else is listed under unmapped by module."
+    "reachability": "Files imported from an entry through relative paths or scanned workspace packages (@nitro-forge/*, except @nitro-forge/editor-controls, which is a component source), following static, dynamic, require and re-export edges and every .native/.ios/.android/.web variant.",
+    "usage": "Renders or calls (D4): any non-type binding that originates in an @nyc-tron/* module or an @nitro-forge/editor-controls subpath (alias, namespace or workspace re-export), whatever its capitalisation. A JSX render, or a render of a Studio UI slot (useComponents().Name), is kind render. A function call or a value passed along is kind call. Type-only imports and typeof positions are not hits.",
+    "mapping": "Same-named ledger row first; otherwise every row that lists the imported Tron module as a source. @nitro-forge/editor-controls/<path> is the Tron module @nyc-tron/ui/components/forge/<path> it moved from, and Tron's shell/precision, shell/precision-scrubber-model and shell/PrecisionScrubber are their old forge/inputs paths. A subpath resolves to packages/<package>/<root>/<subpath>, where root is src, or src/components for expo-controls (its pinned exports map). Anything else is listed under unmapped by module."
   },
   "studiosAndLabs": [
     {
@@ -84,42 +84,42 @@
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:90",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:86",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "apps/studio-preview/src/turret-lab.tsx:91",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "examples/native-cadence/App.tsx:262",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "examples/native-cadence/App.tsx:266",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "packages/studio-workspace/src/prism-editor.tsx:266",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           }
         ]
@@ -175,7 +175,7 @@
             "at": "packages/studio-workspace/src/prism-editor.tsx:276",
             "kind": "render",
             "binding": "LayerStack",
-            "module": "@nyc-tron/ui/components/forge/layers/LayerStack",
+            "module": "@nitro-forge/editor-controls/layers/LayerStack",
             "mappedBy": "name"
           }
         ]
@@ -195,7 +195,7 @@
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:113",
             "kind": "render",
             "binding": "MaskThumbnailAndEditor",
-            "module": "@nyc-tron/ui/components/forge/layers/MaskThumbnailAndEditor",
+            "module": "@nitro-forge/editor-controls/layers/MaskThumbnailAndEditor",
             "mappedBy": "name"
           }
         ]
@@ -209,7 +209,7 @@
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:109",
             "kind": "render",
             "binding": "ClipToggle",
-            "module": "@nyc-tron/ui/components/forge/layers/ClippingMaskControls",
+            "module": "@nitro-forge/editor-controls/layers/ClippingMaskControls",
             "mappedBy": "module"
           }
         ]
@@ -223,7 +223,7 @@
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:137",
             "kind": "render",
             "binding": "ArtboardNavigator",
-            "module": "@nyc-tron/ui/components/forge/layers/ArtboardNavigator",
+            "module": "@nitro-forge/editor-controls/layers/ArtboardNavigator",
             "mappedBy": "name"
           }
         ]
@@ -237,7 +237,7 @@
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:128",
             "kind": "render",
             "binding": "MagicSelectionControls",
-            "module": "@nyc-tron/ui/components/forge/selection/MagicSelectionControls",
+            "module": "@nitro-forge/editor-controls/selection/MagicSelectionControls",
             "mappedBy": "name"
           }
         ]
@@ -251,21 +251,21 @@
             "at": "apps/studio-preview/src/prism-node-overlay.tsx:15",
             "kind": "call",
             "binding": "PenNodeModule",
-            "module": "@nyc-tron/ui/components/forge/vector/PenNodeEditor",
+            "module": "@nitro-forge/editor-controls/vector/PenNodeEditor",
             "mappedBy": "module"
           },
           {
             "at": "apps/studio-preview/src/prism-node-overlay.tsx:16",
             "kind": "call",
             "binding": "PenNodeModule",
-            "module": "@nyc-tron/ui/components/forge/vector/PenNodeEditor",
+            "module": "@nitro-forge/editor-controls/vector/PenNodeEditor",
             "mappedBy": "name"
           },
           {
             "at": "apps/studio-preview/src/prism-node-overlay.tsx:38",
             "kind": "render",
             "binding": "ScopedPenNodeEditor",
-            "module": "@nyc-tron/ui/components/forge/vector/PenNodeEditor",
+            "module": "@nitro-forge/editor-controls/vector/PenNodeEditor",
             "mappedBy": "name"
           }
         ]
@@ -279,7 +279,7 @@
             "at": "apps/studio-preview/src/prism-vector-controls.tsx:49",
             "kind": "render",
             "binding": "ShapeBuilder",
-            "module": "@nyc-tron/ui/components/forge/vector/ShapeBuilder",
+            "module": "@nitro-forge/editor-controls/vector/ShapeBuilder",
             "mappedBy": "name"
           }
         ]
@@ -293,7 +293,7 @@
             "at": "apps/studio-preview/src/prism-vector-controls.tsx:58",
             "kind": "render",
             "binding": "FillStrokeInspector",
-            "module": "@nyc-tron/ui/components/forge/vector/FillStrokeInspector",
+            "module": "@nitro-forge/editor-controls/vector/FillStrokeInspector",
             "mappedBy": "name"
           }
         ]
@@ -307,7 +307,7 @@
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:132",
             "kind": "render",
             "binding": "AlignDistributePanel",
-            "module": "@nyc-tron/ui/components/forge/canvas/AlignDistributePanel",
+            "module": "@nitro-forge/editor-controls/canvas/AlignDistributePanel",
             "mappedBy": "name"
           }
         ]
@@ -321,7 +321,7 @@
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:158",
             "kind": "render",
             "binding": "ColorPickerDialog",
-            "module": "@nyc-tron/ui/components/forge/color/ColorPickerDialog",
+            "module": "@nitro-forge/editor-controls/color/ColorPickerDialog",
             "mappedBy": "name"
           }
         ]
@@ -335,7 +335,7 @@
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:152",
             "kind": "render",
             "binding": "EyedropperTool",
-            "module": "@nyc-tron/ui/components/forge/color/EyedropperTool",
+            "module": "@nitro-forge/editor-controls/color/EyedropperTool",
             "mappedBy": "name"
           }
         ]
@@ -349,7 +349,7 @@
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:144",
             "kind": "render",
             "binding": "ForegroundBackgroundChips",
-            "module": "@nyc-tron/ui/components/forge/color/ForegroundBackgroundChips",
+            "module": "@nitro-forge/editor-controls/color/ForegroundBackgroundChips",
             "mappedBy": "name"
           }
         ]
@@ -363,7 +363,7 @@
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:147",
             "kind": "render",
             "binding": "SwatchGrid",
-            "module": "@nyc-tron/ui/components/forge/color/SwatchGrid",
+            "module": "@nitro-forge/editor-controls/color/SwatchGrid",
             "mappedBy": "name"
           }
         ]
@@ -377,7 +377,7 @@
             "at": "apps/forge-media-lab/App.tsx:30",
             "kind": "render",
             "binding": "NativeSeekBar",
-            "module": "@nyc-tron/ui/components/forge/NativeSeekBar",
+            "module": "@nitro-forge/editor-controls/NativeSeekBar",
             "mappedBy": "name"
           }
         ]
@@ -391,7 +391,7 @@
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:344",
             "kind": "render",
             "binding": "TimelineRuler",
-            "module": "@nyc-tron/ui/components/forge/timeline/TimelineRuler",
+            "module": "@nitro-forge/editor-controls/timeline/TimelineRuler",
             "mappedBy": "name"
           }
         ]
@@ -405,7 +405,7 @@
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:346",
             "kind": "render",
             "binding": "TimelinePlayhead",
-            "module": "@nyc-tron/ui/components/forge/timeline/TimelinePlayhead",
+            "module": "@nitro-forge/editor-controls/timeline/TimelinePlayhead",
             "mappedBy": "name"
           }
         ]
@@ -419,7 +419,7 @@
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:343",
             "kind": "render",
             "binding": "TimelineZoomAndScroll",
-            "module": "@nyc-tron/ui/components/forge/timeline/TimelineZoomAndScroll",
+            "module": "@nitro-forge/editor-controls/timeline/TimelineZoomAndScroll",
             "mappedBy": "name"
           }
         ]
@@ -433,7 +433,7 @@
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:134",
             "kind": "render",
             "binding": "RollSlipSlideControls",
-            "module": "@nyc-tron/ui/components/forge/timeline/RollSlipSlideControls",
+            "module": "@nitro-forge/editor-controls/timeline/RollSlipSlideControls",
             "mappedBy": "name"
           }
         ]
@@ -447,7 +447,7 @@
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:84",
             "kind": "render",
             "binding": "TransitionHandles",
-            "module": "@nyc-tron/ui/components/forge/timeline/TransitionHandles",
+            "module": "@nitro-forge/editor-controls/timeline/TransitionHandles",
             "mappedBy": "name"
           }
         ]
@@ -461,7 +461,7 @@
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:112",
             "kind": "render",
             "binding": "TimelineMarkers",
-            "module": "@nyc-tron/ui/components/forge/timeline/TimelineMarkers",
+            "module": "@nitro-forge/editor-controls/timeline/TimelineMarkers",
             "mappedBy": "name"
           }
         ]
@@ -475,7 +475,7 @@
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:349",
             "kind": "render",
             "binding": "OverlayAndEffectsTrackStack",
-            "module": "@nyc-tron/ui/components/forge/timeline/OverlayAndEffectsTrackStack",
+            "module": "@nitro-forge/editor-controls/timeline/OverlayAndEffectsTrackStack",
             "mappedBy": "name"
           }
         ]
@@ -489,7 +489,7 @@
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:119",
             "kind": "render",
             "binding": "TransitionPresetBrowser",
-            "module": "@nyc-tron/ui/components/forge/timeline/TransitionPresetBrowser",
+            "module": "@nitro-forge/editor-controls/timeline/TransitionPresetBrowser",
             "mappedBy": "name"
           }
         ]
@@ -503,7 +503,7 @@
             "at": "apps/studio-preview/src/splice-detail-controls.tsx:137",
             "kind": "render",
             "binding": "BatchEditPanel",
-            "module": "@nyc-tron/ui/components/forge/timeline/BatchEditPanel",
+            "module": "@nitro-forge/editor-controls/timeline/BatchEditPanel",
             "mappedBy": "name"
           }
         ]
@@ -517,7 +517,7 @@
             "at": "apps/forge-media-lab/App.tsx:36",
             "kind": "render",
             "binding": "WaveformLane",
-            "module": "@nyc-tron/ui/components/forge/WaveformLane",
+            "module": "@nitro-forge/editor-controls/WaveformLane",
             "mappedBy": "name"
           }
         ]
@@ -531,7 +531,7 @@
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:153",
             "kind": "render",
             "binding": "SpectrogramView",
-            "module": "@nyc-tron/ui/components/forge/audio/SpectrogramView",
+            "module": "@nitro-forge/editor-controls/audio/SpectrogramView",
             "mappedBy": "name"
           }
         ]
@@ -545,7 +545,7 @@
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:118",
             "kind": "render",
             "binding": "AutomationLane",
-            "module": "@nyc-tron/ui/components/forge/audio/AutomationLane",
+            "module": "@nitro-forge/editor-controls/audio/AutomationLane",
             "mappedBy": "name"
           }
         ]
@@ -559,7 +559,7 @@
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:116",
             "kind": "render",
             "binding": "AutomationModePicker",
-            "module": "@nyc-tron/ui/components/forge/audio/AutomationModePicker",
+            "module": "@nitro-forge/editor-controls/audio/AutomationModePicker",
             "mappedBy": "name"
           }
         ]
@@ -573,7 +573,7 @@
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:277",
             "kind": "render",
             "binding": "MixingConsole",
-            "module": "@nyc-tron/ui/components/forge/audio/MixingConsole",
+            "module": "@nitro-forge/editor-controls/audio/MixingConsole",
             "mappedBy": "name"
           }
         ]
@@ -587,7 +587,7 @@
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:104",
             "kind": "render",
             "binding": "VerticalFader",
-            "module": "@nyc-tron/ui/components/forge/audio/VerticalFader",
+            "module": "@nitro-forge/editor-controls/audio/VerticalFader",
             "mappedBy": "name"
           }
         ]
@@ -601,7 +601,7 @@
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:152",
             "kind": "render",
             "binding": "LoudnessMeter",
-            "module": "@nyc-tron/ui/components/forge/audio/LoudnessMeter",
+            "module": "@nitro-forge/editor-controls/audio/LoudnessMeter",
             "mappedBy": "name"
           }
         ]
@@ -615,7 +615,7 @@
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:96",
             "kind": "render",
             "binding": "BusAndRoutingMatrix",
-            "module": "@nyc-tron/ui/components/forge/audio/BusAndRoutingMatrix",
+            "module": "@nitro-forge/editor-controls/audio/BusAndRoutingMatrix",
             "mappedBy": "name"
           }
         ]
@@ -629,7 +629,7 @@
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:107",
             "kind": "render",
             "binding": "InsertEffectRack",
-            "module": "@nyc-tron/ui/components/forge/audio/InsertEffectRack",
+            "module": "@nitro-forge/editor-controls/audio/InsertEffectRack",
             "mappedBy": "name"
           }
         ]
@@ -643,7 +643,7 @@
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:135",
             "kind": "render",
             "binding": "EQFrequencyGraph",
-            "module": "@nyc-tron/ui/components/forge/audio/EQFrequencyGraph",
+            "module": "@nitro-forge/editor-controls/audio/EQFrequencyGraph",
             "mappedBy": "name"
           }
         ]
@@ -657,7 +657,7 @@
             "at": "apps/studio-preview/src/cadence-analysis-controls.tsx:138",
             "kind": "render",
             "binding": "DynamicsTransferGraph",
-            "module": "@nyc-tron/ui/components/forge/audio/DynamicsTransferGraph",
+            "module": "@nitro-forge/editor-controls/audio/DynamicsTransferGraph",
             "mappedBy": "name"
           }
         ]
@@ -671,7 +671,7 @@
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:114",
             "kind": "render",
             "binding": "PluginPresetBrowser",
-            "module": "@nyc-tron/ui/components/forge/audio/PluginPresetBrowser",
+            "module": "@nitro-forge/editor-controls/audio/PluginPresetBrowser",
             "mappedBy": "name"
           }
         ]
@@ -685,21 +685,21 @@
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:29",
             "kind": "call",
             "binding": "MIDIPianoRoll",
-            "module": "@nyc-tron/ui/components/forge/midi/MIDIPianoRoll",
+            "module": "@nitro-forge/editor-controls/midi/MIDIPianoRoll",
             "mappedBy": "name"
           },
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:158",
             "kind": "render",
             "binding": "MIDIPianoRoll",
-            "module": "@nyc-tron/ui/components/forge/midi/MIDIPianoRoll",
+            "module": "@nitro-forge/editor-controls/midi/MIDIPianoRoll",
             "mappedBy": "name"
           },
           {
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:161",
             "kind": "call",
             "binding": "PIANO_ROLL_KEY_COLUMN",
-            "module": "@nyc-tron/ui/components/forge/midi/MIDIPianoRoll",
+            "module": "@nitro-forge/editor-controls/midi/MIDIPianoRoll",
             "mappedBy": "module"
           }
         ]
@@ -713,7 +713,7 @@
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:161",
             "kind": "render",
             "binding": "MIDIVelocityLane",
-            "module": "@nyc-tron/ui/components/forge/midi/MIDIVelocityLane",
+            "module": "@nitro-forge/editor-controls/midi/MIDIVelocityLane",
             "mappedBy": "name"
           }
         ]
@@ -727,7 +727,7 @@
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:268",
             "kind": "render",
             "binding": "TempoAndMetronome",
-            "module": "@nyc-tron/ui/components/forge/audio/TempoAndMetronome",
+            "module": "@nitro-forge/editor-controls/audio/TempoAndMetronome",
             "mappedBy": "name"
           }
         ]
@@ -741,7 +741,7 @@
             "at": "apps/studio-preview/src/cadence-beat-lane.tsx:77",
             "kind": "render",
             "binding": "BeatDetectionMarkerLane",
-            "module": "@nyc-tron/ui/components/forge/audio/BeatDetectionMarkerLane",
+            "module": "@nitro-forge/editor-controls/audio/BeatDetectionMarkerLane",
             "mappedBy": "name"
           }
         ]
@@ -755,7 +755,7 @@
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:187",
             "kind": "render",
             "binding": "SpreadsheetGrid",
-            "module": "@nyc-tron/ui/components/forge/SpreadsheetGrid",
+            "module": "@nitro-forge/editor-controls/SpreadsheetGrid",
             "mappedBy": "module"
           }
         ]
@@ -769,7 +769,7 @@
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:133",
             "kind": "render",
             "binding": "NameBox",
-            "module": "@nyc-tron/ui/components/forge/spreadsheet/NameBox",
+            "module": "@nitro-forge/editor-controls/spreadsheet/NameBox",
             "mappedBy": "name"
           }
         ]
@@ -783,7 +783,7 @@
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:153",
             "kind": "render",
             "binding": "AutoFillModePicker",
-            "module": "@nyc-tron/ui/components/forge/spreadsheet/FillHandleAndAutoFill",
+            "module": "@nitro-forge/editor-controls/spreadsheet/FillHandleAndAutoFill",
             "mappedBy": "module"
           }
         ]
@@ -797,7 +797,7 @@
             "at": "apps/studio-preview/src/engine-studio-surfaces.tsx:179",
             "kind": "render",
             "binding": "SheetTabs",
-            "module": "@nyc-tron/ui/components/forge/spreadsheet/SheetTabs",
+            "module": "@nitro-forge/editor-controls/spreadsheet/SheetTabs",
             "mappedBy": "name"
           }
         ]
@@ -811,7 +811,7 @@
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:135",
             "kind": "render",
             "binding": "ValidationDropdown",
-            "module": "@nyc-tron/ui/components/forge/spreadsheet/ValidationDropdown",
+            "module": "@nitro-forge/editor-controls/spreadsheet/ValidationDropdown",
             "mappedBy": "name"
           }
         ]
@@ -825,7 +825,7 @@
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:145",
             "kind": "render",
             "binding": "SortFilterHeader",
-            "module": "@nyc-tron/ui/components/forge/spreadsheet/SortFilterHeader",
+            "module": "@nitro-forge/editor-controls/spreadsheet/SortFilterHeader",
             "mappedBy": "name"
           }
         ]
@@ -839,7 +839,7 @@
             "at": "apps/studio-preview/src/tally-pivot-panel.tsx:80",
             "kind": "render",
             "binding": "PivotFieldList",
-            "module": "@nyc-tron/ui/components/forge/spreadsheet/PivotFieldList",
+            "module": "@nitro-forge/editor-controls/spreadsheet/PivotFieldList",
             "mappedBy": "name"
           }
         ]
@@ -853,7 +853,7 @@
             "at": "apps/studio-preview/src/tally-detail-controls.tsx:163",
             "kind": "render",
             "binding": "FreezeSplitControls",
-            "module": "@nyc-tron/ui/components/forge/spreadsheet/FreezeSplitControls",
+            "module": "@nitro-forge/editor-controls/spreadsheet/FreezeSplitControls",
             "mappedBy": "name"
           }
         ]
@@ -867,42 +867,42 @@
             "at": "apps/studio-preview/src/cadence-detail-controls.tsx:90",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "apps/studio-preview/src/prism-detail-controls.tsx:86",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "apps/studio-preview/src/turret-lab.tsx:91",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "examples/native-cadence/App.tsx:262",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "examples/native-cadence/App.tsx:266",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           },
           {
             "at": "packages/studio-workspace/src/prism-editor.tsx:266",
             "kind": "render",
             "binding": "PrecisionScrubber",
-            "module": "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber",
+            "module": "@nyc-tron/ui/components/shell/PrecisionScrubber",
             "mappedBy": "module"
           }
         ]
@@ -1062,6 +1062,142 @@
   },
   "unmapped": [
     {
+      "module": "@nitro-forge/editor-controls/audio/AudioPreview",
+      "names": [
+        "AudioPreview"
+      ],
+      "uses": [
+        "packages/audio-ui/src/NativeAudioPreview.tsx:152"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/audio/LevelFader",
+      "names": [
+        "LevelFader"
+      ],
+      "uses": [
+        "apps/forge-media-lab/App.tsx:43"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/audio/RecordingTrack",
+      "names": [
+        "RecordingTrack"
+      ],
+      "uses": [
+        "packages/audio-ui/src/NativeRecordingTrack.tsx:40",
+        "packages/audio-ui/src/NativeSourceRecordingTrack.native.tsx:28"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/color",
+      "names": [
+        "hsvToRgb",
+        "rgbToHsv"
+      ],
+      "uses": [
+        "apps/studio-preview/src/prism-detail-controls.tsx:90",
+        "apps/studio-preview/src/prism-detail-controls.tsx:160"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/inputs/InstrumentKnob",
+      "names": [
+        "InstrumentKnob"
+      ],
+      "uses": [
+        "examples/native-cadence/App.tsx:249",
+        "examples/native-cadence/App.tsx:254"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/inputs/InstrumentXYPad",
+      "names": [
+        "InstrumentXYPad"
+      ],
+      "uses": [
+        "examples/native-cadence/App.tsx:271"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/layers/layer-blend-model",
+      "names": [
+        "layerOpacityFromPercent",
+        "validateLayerBlend"
+      ],
+      "uses": [
+        "packages/studio-workspace/src/prism-blend.ts:69",
+        "packages/studio-workspace/src/prism-blend.ts:127"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/sheet-window",
+      "names": [
+        "rangeAddress",
+        "rangeCellCount",
+        "responsiveSheetMetrics",
+        "selectionRange"
+      ],
+      "uses": [
+        "apps/studio-preview/src/tally-detail-controls.tsx:66",
+        "apps/studio-preview/src/tally-detail-controls.tsx:83",
+        "apps/studio-preview/src/tally-detail-controls.tsx:130",
+        "apps/studio-preview/src/tally-pivot-panel.tsx:53",
+        "apps/studio-preview/src/tally-pivot-panel.tsx:72"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/timebase",
+      "names": [
+        "FRAME_RATES"
+      ],
+      "uses": [
+        "apps/forge-media-lab/App.tsx:31",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:20",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:45",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:47",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:83",
+        "apps/studio-preview/src/cadence-beat-lane.tsx:88",
+        "apps/studio-preview/src/engine-studio-surfaces.tsx:293"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/timeline/track-stack",
+      "names": [
+        "stackOrder"
+      ],
+      "uses": [
+        "apps/studio-preview/src/splice-detail-controls.tsx:84"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/timeline/transitions",
+      "names": [
+        "clipsOfCut",
+        "cutsOf",
+        "maxTransitionFrames",
+        "transitionAt",
+        "transitionTarget"
+      ],
+      "uses": [
+        "apps/studio-preview/src/splice-detail-controls.tsx:62",
+        "apps/studio-preview/src/splice-detail-controls.tsx:104",
+        "apps/studio-preview/src/splice-detail-controls.tsx:105",
+        "apps/studio-preview/src/splice-detail-controls.tsx:106"
+      ]
+    },
+    {
+      "module": "@nitro-forge/editor-controls/timeline/viewport",
+      "names": [
+        "clampViewport",
+        "followPlayhead"
+      ],
+      "uses": [
+        "apps/studio-preview/src/engine-studio-surfaces.tsx:328",
+        "apps/studio-preview/src/engine-studio-surfaces.tsx:334"
+      ]
+    },
+    {
       "module": "@nyc-tron/expo-controls/NativeActionMenu",
       "names": [
         "NativeActionMenu"
@@ -1217,142 +1353,6 @@
       ],
       "uses": [
         "apps/studio-preview/src/main.tsx:82"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/audio/AudioPreview",
-      "names": [
-        "AudioPreview"
-      ],
-      "uses": [
-        "packages/audio-ui/src/NativeAudioPreview.tsx:152"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/audio/LevelFader",
-      "names": [
-        "LevelFader"
-      ],
-      "uses": [
-        "apps/forge-media-lab/App.tsx:43"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/audio/RecordingTrack",
-      "names": [
-        "RecordingTrack"
-      ],
-      "uses": [
-        "packages/audio-ui/src/NativeRecordingTrack.tsx:40",
-        "packages/audio-ui/src/NativeSourceRecordingTrack.native.tsx:28"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/color",
-      "names": [
-        "hsvToRgb",
-        "rgbToHsv"
-      ],
-      "uses": [
-        "apps/studio-preview/src/prism-detail-controls.tsx:90",
-        "apps/studio-preview/src/prism-detail-controls.tsx:160"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/inputs/InstrumentKnob",
-      "names": [
-        "InstrumentKnob"
-      ],
-      "uses": [
-        "examples/native-cadence/App.tsx:249",
-        "examples/native-cadence/App.tsx:254"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/inputs/InstrumentXYPad",
-      "names": [
-        "InstrumentXYPad"
-      ],
-      "uses": [
-        "examples/native-cadence/App.tsx:271"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/layers/layer-blend-model",
-      "names": [
-        "layerOpacityFromPercent",
-        "validateLayerBlend"
-      ],
-      "uses": [
-        "packages/studio-workspace/src/prism-blend.ts:69",
-        "packages/studio-workspace/src/prism-blend.ts:127"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/sheet-window",
-      "names": [
-        "rangeAddress",
-        "rangeCellCount",
-        "responsiveSheetMetrics",
-        "selectionRange"
-      ],
-      "uses": [
-        "apps/studio-preview/src/tally-detail-controls.tsx:66",
-        "apps/studio-preview/src/tally-detail-controls.tsx:83",
-        "apps/studio-preview/src/tally-detail-controls.tsx:130",
-        "apps/studio-preview/src/tally-pivot-panel.tsx:53",
-        "apps/studio-preview/src/tally-pivot-panel.tsx:72"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/timebase",
-      "names": [
-        "FRAME_RATES"
-      ],
-      "uses": [
-        "apps/forge-media-lab/App.tsx:31",
-        "apps/studio-preview/src/cadence-beat-lane.tsx:20",
-        "apps/studio-preview/src/cadence-beat-lane.tsx:45",
-        "apps/studio-preview/src/cadence-beat-lane.tsx:47",
-        "apps/studio-preview/src/cadence-beat-lane.tsx:83",
-        "apps/studio-preview/src/cadence-beat-lane.tsx:88",
-        "apps/studio-preview/src/engine-studio-surfaces.tsx:293"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/timeline/track-stack",
-      "names": [
-        "stackOrder"
-      ],
-      "uses": [
-        "apps/studio-preview/src/splice-detail-controls.tsx:84"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/timeline/transitions",
-      "names": [
-        "clipsOfCut",
-        "cutsOf",
-        "maxTransitionFrames",
-        "transitionAt",
-        "transitionTarget"
-      ],
-      "uses": [
-        "apps/studio-preview/src/splice-detail-controls.tsx:62",
-        "apps/studio-preview/src/splice-detail-controls.tsx:104",
-        "apps/studio-preview/src/splice-detail-controls.tsx:105",
-        "apps/studio-preview/src/splice-detail-controls.tsx:106"
-      ]
-    },
-    {
-      "module": "@nyc-tron/ui/components/forge/timeline/viewport",
-      "names": [
-        "clampViewport",
-        "followPlayhead"
-      ],
-      "uses": [
-        "apps/studio-preview/src/engine-studio-surfaces.tsx:328",
-        "apps/studio-preview/src/engine-studio-surfaces.tsx:334"
       ]
     },
     {

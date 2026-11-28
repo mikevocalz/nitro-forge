@@ -16,15 +16,25 @@
 //    workspace packages, i.e. `@nitro-forge/*` here (static, dynamic, require and
 //    re-exports; every .native/.ios/.android/.web variant counts, since the
 //    v1 platforms are iOS, Android and web). Tests and node verify scripts
-//    are only in scope if an entry imports them.
+//    are only in scope if an entry imports them. `@nitro-forge/editor-controls`
+//    is the exception: it holds the ledger's editor controls (see 4), so it is
+//    a component source like `@nyc-tron/*`, not part of the graph.
 // 4. Renders or calls (D4). Any non-type binding whose origin is an
-//    `@nyc-tron/*` module (directly, under an alias, through a namespace or
-//    through workspace re-exports) is a hit wherever a reachable file uses it,
+//    `@nyc-tron/*` module or an `@nitro-forge/editor-controls` subpath
+//    (directly, under an alias, through a namespace or through workspace
+//    re-exports) is a hit wherever a reachable file uses it,
 //    whatever its capitalisation: a JSX render is kind "render"; a function
 //    call or a value passed along is kind "call". A render of a Studio UI
 //    slot (`useComponents().Name`) is a "render" of the row named Name.
 // 5. A hit maps to the ledger row with the binding's name; failing that, to
-//    the rows that list the imported Tron module as a source. Hits that match
+//    the rows that list the imported Tron module as a source. The editor
+//    controls moved unchanged from NYC-Tron's packages/ui/src/components/forge/
+//    (owner decision 2026-11-28, AGENTS.md), so `@nitro-forge/editor-controls/<path>`
+//    is looked up as the Tron module it moved from, components/forge/<path> in
+//    @nyc-tron/ui,
+//    which the ledger rows still cite at the pinned Tron commit. The three
+//    precision helpers NYC-Tron moved to its shell are looked up at their old
+//    forge/inputs paths the same way. Hits that match
 //    neither are listed under `unmapped` by module, never dropped.
 // 6. ROW_DECISIONS records owner rulings that the source cannot express (a
 //    basis other than the hits, or a v1 platform recorded NOT RUN). Each one
@@ -47,9 +57,9 @@ export const POST_V1_PLATFORMS = Object.freeze(REQUIRED_PLATFORMS.filter(platfor
 export const RULE = Object.freeze({
   studiosAndLabs: "Workspaces under apps/ and examples/ whose package.json lists react in dependencies.",
   entries: "package.json main (expo-router/entry means every file under app/), index.html module scripts, and top-level scripts that call registerRootComponent.",
-  reachability: "Files imported from an entry through relative paths or scanned workspace packages (@nitro-forge/*), following static, dynamic, require and re-export edges and every .native/.ios/.android/.web variant.",
-  usage: "Renders or calls (D4): any non-type binding that originates in an @nyc-tron/* module (alias, namespace or workspace re-export), whatever its capitalisation. A JSX render, or a render of a Studio UI slot (useComponents().Name), is kind render. A function call or a value passed along is kind call. Type-only imports and typeof positions are not hits.",
-  mapping: "Same-named ledger row first; otherwise every row that lists the imported Tron module as a source. A subpath resolves to packages/<package>/<root>/<subpath>, where root is src, or src/components for expo-controls (its pinned exports map). Anything else is listed under unmapped by module.",
+  reachability: "Files imported from an entry through relative paths or scanned workspace packages (@nitro-forge/*, except @nitro-forge/editor-controls, which is a component source), following static, dynamic, require and re-export edges and every .native/.ios/.android/.web variant.",
+  usage: "Renders or calls (D4): any non-type binding that originates in an @nyc-tron/* module or an @nitro-forge/editor-controls subpath (alias, namespace or workspace re-export), whatever its capitalisation. A JSX render, or a render of a Studio UI slot (useComponents().Name), is kind render. A function call or a value passed along is kind call. Type-only imports and typeof positions are not hits.",
+  mapping: "Same-named ledger row first; otherwise every row that lists the imported Tron module as a source. @nitro-forge/editor-controls/<path> is the Tron module @nyc-tron/ui/components/forge/<path> it moved from, and Tron's shell/precision, shell/precision-scrubber-model and shell/PrecisionScrubber are their old forge/inputs paths. A subpath resolves to packages/<package>/<root>/<subpath>, where root is src, or src/components for expo-controls (its pinned exports map). Anything else is listed under unmapped by module.",
 });
 
 /**
@@ -72,6 +82,29 @@ export const ROW_DECISIONS = Object.freeze({
     requiresUnmapped: "validateLayerBlend",
   },
 });
+
+/** The Forge package that holds the editor controls moved from NYC-Tron, and the Tron spec each subpath moved from. */
+export const EDITOR_CONTROLS = "@nitro-forge/editor-controls";
+// Built from parts so tooling/verify-nyc-tron-pin.mjs does not read it as an import.
+const EDITOR_CONTROLS_TRON_SPEC = "@nyc-tron/ui/components/" + "forge";
+/** True for a module whose bindings are component uses: `@nyc-tron/*` and the editor controls. */
+export const isComponentSource = spec => spec.startsWith("@nyc-tron/") || spec === EDITOR_CONTROLS || spec.startsWith(EDITOR_CONTROLS + "/");
+/**
+ * Helpers NYC-Tron relocated into its shell when the editor controls left it
+ * (packages/editor-controls/README.md). The ledger cites them at their old
+ * forge/inputs paths at the pinned Tron commit, so they are looked up there.
+ */
+const TRON_RELOCATIONS = Object.freeze({
+  "@nyc-tron/ui/components/shell/precision": `${EDITOR_CONTROLS_TRON_SPEC}/inputs/precision`,
+  "@nyc-tron/ui/components/shell/precision-scrubber-model": `${EDITOR_CONTROLS_TRON_SPEC}/inputs/precision-scrubber-model`,
+  "@nyc-tron/ui/components/shell/PrecisionScrubber": `${EDITOR_CONTROLS_TRON_SPEC}/inputs/PrecisionScrubber`,
+});
+/** The Tron spec the ledger cites for an import: editor-controls subpaths and relocated helpers map back; any other spec is unchanged. */
+export const tronSpecFor = spec => {
+  if (spec === EDITOR_CONTROLS) return EDITOR_CONTROLS_TRON_SPEC;
+  if (spec.startsWith(EDITOR_CONTROLS + "/")) return EDITOR_CONTROLS_TRON_SPEC + spec.slice(EDITOR_CONTROLS.length);
+  return /** @type {Record<string, string>} */ (TRON_RELOCATIONS)[spec] ?? spec;
+};
 
 /** Where a package subpath lives under the Tron package root, from its pinned exports map. */
 const TRON_SUBPATH_ROOTS = Object.freeze({ "expo-controls": "src/components" });
@@ -264,6 +297,7 @@ export function deriveScope({ rootDir = repoRoot, ledger, decisions = {} }) {
   /** @returns {string[] | null} files, or null for a module outside the workspace graph */
   const resolveSpec = (from, spec) => {
     if (spec.startsWith(".")) return variants(resolve(dirname(from), spec));
+    if (isComponentSource(spec)) return null;
     const m = /^((?:@[^/]+\/)?[^/.][^/]*)(?:\/(.+))?$/.exec(spec);
     const workspace = m && workspaces.get(m[1]);
     if (!workspace) return null;
@@ -318,7 +352,7 @@ export function deriveScope({ rootDir = repoRoot, ledger, decisions = {} }) {
       const hit = reexport.names.find(item => item.exported === name);
       const imported = hit ? hit.imported : reexport.star && name !== "default" ? name : null;
       if (imported === null) continue;
-      if (reexport.spec.startsWith("@nyc-tron/")) return { tron: { spec: reexport.spec, name: imported } };
+      if (isComponentSource(reexport.spec)) return { tron: { spec: reexport.spec, name: imported } };
       for (const next of resolveSpec(file, reexport.spec) ?? []) {
         const origin = exportOrigin(next, imported, seen);
         if (origin) return origin;
@@ -333,7 +367,7 @@ export function deriveScope({ rootDir = repoRoot, ledger, decisions = {} }) {
     for (const record of moduleOf(file).imports) {
       const binding = record.bindings.find(item => item.local === local && !item.typeOnly);
       if (!binding) continue;
-      if (record.spec.startsWith("@nyc-tron/")) return { tron: { spec: record.spec, name: binding.imported } };
+      if (isComponentSource(record.spec)) return { tron: { spec: record.spec, name: binding.imported } };
       for (const next of resolveSpec(file, record.spec) ?? []) {
         const origin = exportOrigin(next, binding.imported, seen);
         if (origin) return origin;
@@ -355,7 +389,7 @@ export function deriveScope({ rootDir = repoRoot, ledger, decisions = {} }) {
     byModule.get(key)?.add(row.id);
   }
   const specModule = spec => {
-    const m = /^@nyc-tron\/([^/]+)(?:\/(.+))?$/.exec(spec);
+    const m = /^@nyc-tron\/([^/]+)(?:\/(.+))?$/.exec(tronSpecFor(spec));
     if (!m) return "";
     const base = m[2] ? /** @type {Record<string, string>} */ (TRON_SUBPATH_ROOTS)[m[1]] ?? "src" : "src";
     return moduleKey(`packages/${m[1]}/${base}${m[2] ? "/" + m[2] : ""}`);
