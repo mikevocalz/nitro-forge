@@ -53,15 +53,20 @@
     "./package.json": "./package.json"
   },
   "sideEffects": false,
+  "files": [
+    "lib",
+    "src"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@nitro-forge/ignition": "workspace:*"
   },
   "devDependencies": {
+    "@nitro-forge/ignition": "workspace:*",
     "typescript": "7.0.2",
     "vitest": "5.1.0",
     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",

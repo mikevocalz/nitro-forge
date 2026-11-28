@@ -6,6 +6,7 @@ on:
       - 'packages/**/package.json'
       - 'apps/**/package.json'
       - 'package.json'
+      - 'pnpm-lock.yaml'
       - 'tooling/release/**'
       - '.github/workflows/sdk-release-readiness.yml'
   workflow_dispatch:
@@ -29,6 +30,26 @@ jobs:
       - run: node tooling/release/check-package-boundaries.mjs
       - run: node --test tooling/release/nitro-v1-latest.test.mjs
       - run: node tooling/release/nitro-v1-latest.mjs --offline
+
+  # Pack the release set and check that every @nitro-forge dependency in a
+  # packed manifest is a GitHub Release tarball URL, then install three
+  # tarballs by file path into a clean project. Fetches no release URL.
+  tarball-dependency-graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
+      - run: corepack enable && corepack pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build the release set
+        run: >-
+          corepack pnpm --filter @nitro-forge/ignition --filter @nitro-forge/prism
+          --filter @nitro-forge/cadence --filter @nitro-forge/splice --filter @nitro-forge/folio
+          --filter @nitro-forge/pitch --filter @nitro-forge/tally --filter @nitro-forge/quill run build
+      - run: node tooling/release/pack-tarballs.mjs --out dist/release
+      - run: node --test tooling/release/tarball-deps.test.mjs
 
   npm-latest-review:
     needs: verify-release-boundaries

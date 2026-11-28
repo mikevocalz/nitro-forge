@@ -107,6 +107,19 @@
     "./package.json": "./package.json"
   },
   "sideEffects": false,
+  "files": [
+    "lib",
+    "src",
+    "react-native.config.cjs",
+    "Package.swift",
+    "NitroForgeV1.podspec",
+    "nitro.json",
+    "cpp",
+    "nitrogen/generated",
+    "android/build.gradle",
+    "android/CMakeLists.txt",
+    "android/src"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",

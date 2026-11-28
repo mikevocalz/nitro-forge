@@ -52,6 +52,7 @@ describe("NYC-Tron pin", () => {
     const pin = JSON.parse(readFileSync(join(import.meta.dirname, "../../../tooling/nyc-tron.json"), "utf8"));
     const manifest = JSON.parse(readFileSync(join(import.meta.dirname, "../package.json"), "utf8"));
     expect(manifest.devDependencies["@nyc-tron/ui"]).toBe(pin.packages["@nyc-tron/ui"].url);
-    expect(manifest.dependencies["@nyc-tron/ui"]).toBeUndefined();
+    expect(manifest.dependencies?.["@nyc-tron/ui"]).toBeUndefined();
+    expect(manifest.peerDependencies?.["@nyc-tron/ui"]).toBeUndefined();
   });
 });
