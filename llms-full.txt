@@ -76,7 +76,7 @@ docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "shell"
 tokens: []
-registryDependencies: []
+registryDependencies: ["@nitro-forge/studio-theme"]
 a11yStatus: "reviewed-pass"
 ---
 
@@ -93,7 +93,7 @@ The slot contract between Studio and the host UI. `StudioUIProvider` puts a `Stu
 - Package: `@nitro-forge/studio-ui-provider` (registry item)
 - Import: `import { StudioUIProvider, View, Text, Button /* and the other wrappers */ } from '@/components/forge/ui';`
 - Peers: `react` >=19, `react-native` >=0.81
-- Requires: A `StudioUIComponents` implementation (registry item `nyc-tron-host` builds one from NYC-Tron)
+- Requires: `@nitro-forge/studio-theme`; A `StudioUIComponents` implementation (registry item `nyc-tron-host` builds one from NYC-Tron)
 - Command: `npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/ui.tsx`
@@ -498,7 +498,7 @@ docs: "handwritten"
 platforms: []
 category: "display"
 tokens: ["--border-width-hairline", "--color-stage-caption", "--color-stage-cell-text", "--color-stage-clip-audio", "--color-stage-clip-video", "--color-stage-empty-hint", "--color-stage-fill-fallback", "--color-stage-grid-head", "--color-stage-grid-head-text", "--color-stage-grid-line", "--color-stage-heading", "--color-stage-on-clip", "--color-stage-paper", "--color-stage-paper-text", "--color-stage-paper-text-muted", "--color-stage-paper-title", "--color-stage-quote-rule", "--color-stage-slide-text", "--color-stage-track", "--color-stage-track-border", "--color-stage-track-label", "--font-weight-medium", "--radius-control", "--radius-paper", "--spacing-fixed-canvas", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-section", "--spacing-fixed-stack", "--text-body", "--text-label", "--text-micro"]
-registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-ui-provider"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -517,7 +517,7 @@ Default read-only stage. It projects live engine state per studio: quill text an
 - Package: `@nitro-forge/forge-document-stage` (registry item)
 - Import: `import { ForgeDocumentStage } from '@/components/forge/index';`
 - Peers: `react` >=19, `react-native` >=0.81
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)
 - Command: `npx shadcn@4.23.0 add @nitro-forge/forge-document-stage`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/stage.tsx`
@@ -1036,7 +1036,7 @@ docs: "handwritten"
 platforms: []
 category: "shell"
 tokens: []
-registryDependencies: ["@nitro-forge/studio-ui-provider", "@nyc-tron/Button", "@nyc-tron/Card", "@nyc-tron/FieldGroup", "@nyc-tron/IconButton", "@nyc-tron/List", "@nyc-tron/SegmentedControl", "@nyc-tron/Select", "@nyc-tron/TabBar", "@nyc-tron/Toolbar", "@nyc-tron/content/KeyValueList", "@nyc-tron/feedback/Badge", "@nyc-tron/feedback/Banner", "@nyc-tron/feedback/EmptyState", "@nyc-tron/feedback/ErrorMessage", "@nyc-tron/files/DropZone", "@nyc-tron/overlays/AnchoredPopover", "@nyc-tron/theme/NightScope"]
+registryDependencies: ["@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/Button", "@nyc-tron/Card", "@nyc-tron/FieldGroup", "@nyc-tron/IconButton", "@nyc-tron/List", "@nyc-tron/SegmentedControl", "@nyc-tron/Select", "@nyc-tron/TabBar", "@nyc-tron/Toolbar", "@nyc-tron/content/KeyValueList", "@nyc-tron/feedback/Badge", "@nyc-tron/feedback/Banner", "@nyc-tron/feedback/EmptyState", "@nyc-tron/feedback/ErrorMessage", "@nyc-tron/files/DropZone", "@nyc-tron/overlays/AnchoredPopover", "@nyc-tron/theme/NightScope"]
 a11yStatus: "unverified"
 ---
 
@@ -1053,7 +1053,7 @@ a11yStatus: "unverified"
 - Package: `@nitro-forge/nyc-tron-host` (registry item)
 - Import: `import { nycTronStudioUI } from '@/components/forge/nyc-tron-host';`
 - Peers: `react` >=19, `react-native` >=0.81
-- Requires: `@nitro-forge/studio-ui-provider`; `@nyc-tron/Button`; `@nyc-tron/Card`; `@nyc-tron/FieldGroup`; `@nyc-tron/IconButton`; `@nyc-tron/List`; `@nyc-tron/SegmentedControl`; `@nyc-tron/Select`; `@nyc-tron/TabBar`; `@nyc-tron/Toolbar`; `@nyc-tron/content/KeyValueList`; `@nyc-tron/feedback/Badge`; `@nyc-tron/feedback/Banner`; `@nyc-tron/feedback/EmptyState`; `@nyc-tron/feedback/ErrorMessage`; `@nyc-tron/files/DropZone`; `@nyc-tron/overlays/AnchoredPopover`; `@nyc-tron/theme/NightScope`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nyc-tron/Button`; `@nyc-tron/Card`; `@nyc-tron/FieldGroup`; `@nyc-tron/IconButton`; `@nyc-tron/List`; `@nyc-tron/SegmentedControl`; `@nyc-tron/Select`; `@nyc-tron/TabBar`; `@nyc-tron/Toolbar`; `@nyc-tron/content/KeyValueList`; `@nyc-tron/feedback/Badge`; `@nyc-tron/feedback/Banner`; `@nyc-tron/feedback/EmptyState`; `@nyc-tron/feedback/ErrorMessage`; `@nyc-tron/files/DropZone`; `@nyc-tron/overlays/AnchoredPopover`; `@nyc-tron/theme/NightScope`
 - Command: `npx shadcn@4.23.0 add @nitro-forge/nyc-tron-host`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/nyc-tron-host.tsx`, `components/forge/nyc-tron-options.ts`
@@ -1435,7 +1435,7 @@ docs: "handwritten"
 platforms: []
 category: "forge"
 tokens: ["--border-width-strong", "--color-artboard-checker-a", "--color-artboard-checker-b", "--color-on-overlay-chip", "--color-overlay-chip", "--shadow-artboard", "--spacing-fixed-stack"]
-registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-gesture", "@nitro-forge/studio-ui-provider"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -1452,7 +1452,7 @@ The Prism artboard: a transparency checker, the engine composite as children, an
 - Package: `@nitro-forge/prism-canvas` (registry item)
 - Import: `import { PrismCanvas, ARTBOARD_CHECKER } from '@/components/forge/prism-canvas';`  (the original line carried a note; see Notes)
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-gesture`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-gesture`
 - Command: `npx shadcn@4.23.0 add @nitro-forge/prism-canvas`
 - Installs: `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/prism-canvas.tsx`, `components/forge/prism-canvas-model.ts`
@@ -1537,7 +1537,7 @@ docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "forge"
 tokens: ["--border-width-hairline", "--border-width-strong", "--color-accent", "--color-danger", "--color-paper-text", "--color-scrim", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-weight-semibold", "--opacity-scrim", "--radius-card", "--radius-control", "--spacing-canvas-rail", "--spacing-element", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-stack", "--spacing-fixed-target", "--spacing-fixed-toolbar", "--spacing-group", "--spacing-inset", "--spacing-stack", "--spacing-target", "--swatch-amber", "--swatch-rose", "--swatch-teal", "--swatch-violet", "--text-label", "--text-micro", "--z-chrome", "--z-fill-bar", "--z-layer-row", "--z-overlay", "--z-panel", "--z-toast"]
-registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/persona-model", "@nitro-forge/persona-turret", "@nitro-forge/prism-canvas", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/shell/PrecisionScrubber"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/persona-model", "@nitro-forge/persona-turret", "@nitro-forge/prism-canvas", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/shell/MenuButton", "@nyc-tron/shell/PrecisionScrubber"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -1560,10 +1560,10 @@ A Prism canvas editor over real engine commands: bounded PNG composite of the en
 - Package: `@nitro-forge/prism-editor` (registry item)
 - Import: `import { PrismEditor } from '@/components/forge/prism-editor';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-model`; `@nitro-forge/persona-turret`; `@nitro-forge/prism-canvas`; `@nitro-forge/studio-gesture`; `@nyc-tron/shell/PrecisionScrubber`; `@nitro-forge/editor-controls` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/ignition` (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports `base64ToBytes` and `bytesToBase64` from the package index; Prism engine document supplying `apply` and `reload` (engine facade, deferred); the `layer-model` type from `@nitro-forge/editor-controls`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-model`; `@nitro-forge/persona-turret`; `@nitro-forge/prism-canvas`; `@nitro-forge/studio-gesture`; `@nyc-tron/shell/MenuButton`; `@nyc-tron/shell/PrecisionScrubber`; `@nitro-forge/editor-controls` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/ignition` (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports `base64ToBytes` and `bytesToBase64` from the package index; Prism engine document supplying `apply` and `reload` (engine facade, deferred); the `layer-model` type from `@nitro-forge/editor-controls`
 - Command: `npx shadcn@4.23.0 add @nitro-forge/prism-editor`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
-- Files: `components/forge/prism-editor.tsx`, `components/forge/prism-layers.ts`, `components/forge/prism-layer-label.ts`, `components/forge/prism-layout.ts`, `components/forge/prism-transform.ts`, `components/forge/rgba-png.ts`
+- Files: `components/forge/prism-editor.tsx`, `components/forge/prism-layers.ts`, `components/forge/prism-layer-label.ts`, `components/forge/prism-layout.ts`, `components/forge/prism-transform.ts`, `components/forge/prism-blend.ts`, `components/forge/rgba-png.ts`
 
 ## Props
 
@@ -3923,7 +3923,7 @@ Deferred: the six neutral keys (`base`, `raised`, `deep`, `line`, `text`, `muted
 - Use the CSS variables from `studio-theme`, for example `--color-surface-raised`, not a hex value. `docs/agent-native/tokens.map.json` lists 234 proposed tokens with their dark and light values.
 - Every token carries the exact value of the literal it replaces, so tokenizing changes no pixel. Spacing keys are unit multiples (`space.2`, `space.1.5`), the same numbering as Tailwind.
 - Colour drift stays as separate tokens: icon accent `#6859E8` against workspace accent `#6950D1`, Prism blue against the launcher purple, stage paper `#F7F5ED` against `#FFFEFC`. Unifying them changes pixels and is the owner's call (decisions 5, 20, 26, 27).
-- Do not add a hex literal, a numeric style literal, a numeric JSX size prop, a Tailwind arbitrary value or a `fs(x + n)` offset to a file under `packages/`. `tooling/codemod/check-no-hardcoded.mjs` enforces exactly that list (its header is the definition). It is not a claim that no number remains: SVG geometry, data arrays, native Kotlin and Swift, `apps/` and tests are out of its scope, and 75 findings in 51 lines are allowlisted in `tooling/codemod/allowlist.json`, each with a reason.
+- Do not add a hex literal, a numeric style literal, a numeric JSX size prop, a Tailwind arbitrary value or a `fs(x + n)` offset to a file under `packages/`. `tooling/codemod/check-no-hardcoded.mjs` enforces exactly that list (its header is the definition). It is not a claim that no number remains: SVG geometry, data arrays, native Kotlin and Swift, `apps/` and tests are out of its scope, and 85 findings in 59 lines are allowlisted in `tooling/codemod/allowlist.json`, each with a reason.
 - Registry files are generated. Import specifiers are rewritten only in `r/*.json` (decision 39). The repo source keeps `@nyc-tron/ui/components/...` imports.
 
 ## Accessibility status

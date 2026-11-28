@@ -132,7 +132,7 @@ read `llms.txt`, `SKILL.md` and `docs/components/<item>.md` first. `skills.sh.js
 - "No hard-coded values" means what `tooling/codemod/check-no-hardcoded.mjs` checks, listed in its
   header: hex colours, numeric style properties, numeric JSX size props, Tailwind arbitrary values and
   `fs(x + n)` offsets in `packages/*/src`. SVG geometry, data arrays, native code, `apps/` and tests are
-  outside it. The gate reports 75 findings, all allowlisted in `tooling/codemod/allowlist.json` with a
+  outside it. The gate reports 85 findings, all allowlisted in `tooling/codemod/allowlist.json` with a
   reason. Do not read that as "zero numbers remain".
 - `packages/editor-controls` cannot import studio-workspace, so it reads tokens from its own
   `src/tokens.ts`: `tokens` copies studio-workspace values (checked by `node tooling/check-token-mirror.mjs`)
