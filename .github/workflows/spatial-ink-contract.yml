@@ -10,7 +10,7 @@ on:
       - '.github/workflows/spatial-ink-contract.yml'
   push:
     branches:
-      - 'feat/spatial-ink-*'
+      - master
     paths:
       - 'packages/spatial-ink/**'
       - 'package.json'

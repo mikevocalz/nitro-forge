@@ -10,7 +10,7 @@ on:
       - '.github/workflows/forge-2046-instruments.yml'
   push:
     branches:
-      - feat/forge-2046-premium-instruments-2026-11-04
+      - master
     paths:
       - 'packages/studio-workspace/src/instrument-system.ts'
       - 'packages/studio-workspace/src/instrument-system.test.ts'

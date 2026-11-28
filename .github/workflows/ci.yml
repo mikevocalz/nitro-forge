@@ -1,0 +1,203 @@
+name: CI
+
+# The one workflow with no path filters: every pull request and every push to
+# master runs the full Rust workspace and every package's typecheck and tests.
+# The `ci-required` job is the single check to mark as required on master.
+# The path-filtered workflows beside this one stay as focused extra checks.
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+# Pull requests share one group per ref, so a new push cancels the older run.
+# Pushes to master group by commit, so every merged commit gets its own full run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  # LibRaw, pdfium and the RAW fixture, fetched and SHA-256 checked by
+  # tooling/ci/pinned-sources.sh. A restored cache needs no network.
+  PINNED_SOURCES_DIR: ~/.cache/nitro-forge/pinned-sources
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  rust:
+    name: Rust workspace tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Rust toolchain
+        id: toolchain
+        run: |
+          rustc -Vv
+          cargo -V
+          echo "key=$(rustc -V | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Restore pinned third-party sources
+        id: pinned-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.PINNED_SOURCES_DIR }}
+          key: pinned-sources-${{ hashFiles('tooling/raw-prototype/manifest.json', 'tooling/ci/pinned-sources.sh') }}
+      - name: Restore Cargo registry and target
+        id: cargo-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: cargo-rust-${{ runner.os }}-${{ steps.toolchain.outputs.key }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            cargo-rust-${{ runner.os }}-${{ steps.toolchain.outputs.key }}-
+      # Sets NF_RAW_LIBRAW_DIR (nf-raw builds this tree instead of downloading
+      # from libraw.org), FOLIO_PDFIUM_LIBRARY and NF_RAW_TEST_FIXTURE.
+      - name: Fetch and verify LibRaw, pdfium and the RAW fixture
+        run: tooling/ci/pinned-sources.sh "$PINNED_SOURCES_DIR" libraw pdfium raw-fixture
+      - name: Save pinned third-party sources
+        if: steps.pinned-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.PINNED_SOURCES_DIR }}
+          key: ${{ steps.pinned-cache.outputs.cache-primary-key }}
+      - name: cargo test --locked --workspace
+        run: cargo test --locked --workspace
+      - name: LibRaw decode of the RAW fixture (tests ignored by default)
+        run: cargo test --locked -p nf-raw -p raw-decode -- --ignored
+      - name: Save Cargo registry and target
+        if: github.event_name == 'push' && steps.cargo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ steps.cargo-cache.outputs.cache-primary-key }}
+
+  typescript:
+    name: TypeScript typecheck and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
+      - name: Enable pnpm 12.18.0 through corepack
+        id: pnpm
+        run: |
+          corepack enable
+          test "$(pnpm --version)" = "12.18.0"
+          echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Restore pnpm store
+        id: pnpm-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+      - name: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
+      - name: Rust toolchain
+        id: toolchain
+        run: |
+          rustc -Vv
+          cargo -V
+          echo "key=$(rustc -V | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Restore pinned third-party sources
+        id: pinned-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.PINNED_SOURCES_DIR }}
+          key: pinned-sources-${{ hashFiles('tooling/raw-prototype/manifest.json', 'tooling/ci/pinned-sources.sh') }}
+      - name: Restore Cargo registry and target
+        id: cargo-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: cargo-hosts-${{ runner.os }}-${{ steps.toolchain.outputs.key }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            cargo-hosts-${{ runner.os }}-${{ steps.toolchain.outputs.key }}-
+      - name: Fetch and verify LibRaw, pdfium and the RAW fixture
+        run: tooling/ci/pinned-sources.sh "$PINNED_SOURCES_DIR" libraw pdfium raw-fixture
+      - name: Save pinned third-party sources
+        if: steps.pinned-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.PINNED_SOURCES_DIR }}
+          key: ${{ steps.pinned-cache.outputs.cache-primary-key }}
+      # nf-cli backs every engine package's tests. folio-render and raw-decode
+      # back the folio and photo e2e suites, which skip when they are absent.
+      - name: Build the engine host and the folio-render and raw-decode services
+        run: |
+          cargo build --locked -p nf-cli -p folio-render -p raw-decode
+          {
+            echo "NF_CLI=$GITHUB_WORKSPACE/target/debug/nf-cli"
+            echo "FOLIO_RENDER=$GITHUB_WORKSPACE/target/debug/folio-render"
+            echo "RAW_DECODE=$GITHUB_WORKSPACE/target/debug/raw-decode"
+          } >> "$GITHUB_ENV"
+      - name: Build editor-controls declarations (consumers typecheck against its dist)
+        run: pnpm --filter @nitro-forge/editor-controls build
+      - name: Typecheck every package and app
+        run: pnpm exec turbo run typecheck --continue --log-order=grouped
+      # Two packages at a time: each Vitest run already uses every core, and
+      # turbo's default of 10 on 4 cores pushed nf-cli e2e tests past their 5 s
+      # timeout locally (one ignition test: 0.8 s alone, 5.8 s at 10; the whole
+      # suite took 53 s at 2 and 50 s at 10).
+      - name: Test every package and app
+        run: pnpm exec turbo run test --continue --log-order=grouped --concurrency=2
+      - name: Folio and photo e2e suites ran with nothing skipped
+        run: |
+          report="$RUNNER_TEMP/vitest-e2e"
+          mkdir -p "$report"
+          pnpm --filter @nitro-forge/folio exec vitest run tests/render.e2e.test.ts \
+            --reporter=default --reporter=json --outputFile.json="$report/folio.json"
+          pnpm exec vitest run --config tooling/completion-backends.vitest.config.mjs packages/photo/tests/raw.e2e.test.ts \
+            --reporter=default --reporter=json --outputFile.json="$report/photo.json"
+          node tooling/ci/assert-vitest-ran.mjs "$report/folio.json" "$report/photo.json"
+      - name: Save Cargo registry and target
+        if: github.event_name == 'push' && steps.cargo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ steps.cargo-cache.outputs.cache-primary-key }}
+      - name: Save pnpm store
+        if: github.event_name == 'push' && steps.pnpm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
+
+  # Mark only this job as required. It fails when any job above failed, was
+  # cancelled or was skipped, so new jobs need adding to `needs` and nothing else.
+  ci-required:
+    name: ci-required
+    if: always()
+    needs: [rust, typescript]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every CI job succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'to_entries | all(.value.result == "success")' > /dev/null

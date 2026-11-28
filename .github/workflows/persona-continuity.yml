@@ -13,7 +13,7 @@ on:
       - '.github/workflows/persona-continuity.yml'
   push:
     branches:
-      - feat/forge-2046-design-studio-personas-2026-11-04
+      - master
     paths:
       - 'packages/studio-workspace/src/persona.ts'
       - 'packages/studio-workspace/src/persona.test.ts'

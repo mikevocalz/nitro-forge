@@ -30,9 +30,29 @@
 
 ### npm audit nuances
 - `--registry` reports versions from npm's latest dist-tag; pre-release tags and unusual ranges require human investigation. npm `latest` cannot prove Expo SDK compatibility, native Autolinking, iOS deployment support or exact Dawn binary parity.
-- PR #1 already includes Dependabot config for daily npm/Cargo dependency update **proposals**. Pair Skia and WebGPU updates in one reviewed PR and regenerate `pnpm-lock.yaml`. Don't create a parallel unattended npm update bot here.
+- `.github/dependabot.yml` opens dependency update **proposals** only: npm for the root pnpm workspace (weekly), Cargo (weekly) and GitHub Actions (monthly, SHA pins kept). It merges nothing. The `skia-webgpu` group keeps `react-native-skia` and `react-native-webgpu` in one PR; `nitro-v1` and `metro` group the other families that move as one. Both Skia and WebGPU are patched in `pnpm-workspace.yaml`, so a proposal that bumps them fails `pnpm install --frozen-lockfile` until the patch is moved and `pnpm-lock.yaml` regenerated; that is the review point, not a bug. Whether Dependabot handles the pnpm 12 lockfile is unverified until its first run. Don't create a parallel unattended npm update bot here.
 - Explicitly reject v2 `@shopify/react-native-skia` coinstallation; Skia v3 uses new `react-native-skia` import/Graphite. Expo Go includes v2 and cannot be the proof environment.
 - Do not pin latest package versions in this doc without a registry query and compatibility test. Repeat audit before each release and attach report.
+
+## Required CI check
+
+`.github/workflows/ci.yml` ("CI") is the one workflow with no path filters. It runs on every pull request and on every push to `master`, so each merged commit gets a full post-merge run. Branch protection on `master` should require exactly one check, **`ci-required`**. That job needs every other CI job and fails if any of them failed, was cancelled or was skipped, so adding a job to `needs` is the only change a new required job needs.
+
+| Job | What it runs |
+| --- | --- |
+| `rust` | `cargo test --locked --workspace`, then `cargo test --locked -p nf-raw -p raw-decode -- --ignored` (the LibRaw fixture tests) |
+| `typescript` | Node 24.19.0, pnpm 12.18.0 via corepack, `pnpm install --frozen-lockfile`; `cargo build --locked -p nf-cli -p folio-render -p raw-decode`; `editor-controls` build; `turbo run typecheck` and `turbo run test` (two packages at a time) across every package and app with those scripts, including `packages/scene` and `apps/console`; then a check that the folio-render and raw-decode e2e suites ran with no test skipped |
+| `ci-required` | the gate above |
+
+Third-party inputs the repository does not commit are fetched by `tooling/ci/pinned-sources.sh`, checked against SHA-256 pins, and cached under a key derived from the pins, so a warm cache needs no network:
+
+- LibRaw 0.22.3 (pin in `tooling/raw-prototype/manifest.json`, cross-checked against `rust/nf-raw/build.rs`). It is unpacked into `target/ci-libraw` and passed as `NF_RAW_LIBRAW_DIR`, so `nf-raw`'s build script builds that tree instead of downloading from libraw.org. `build.rs` only checks the version header on that path, so the script verifies the tarball hash first.
+- pdfium chromium/8138 `pdfium-linux-x64.tgz` (the release `rust/folio-render/README.md` pins for macOS), passed as `FOLIO_PDFIUM_LIBRARY`.
+- The CC0 Pentax K-7 DNG fixture (pin in the same manifest), passed as `NF_RAW_TEST_FIXTURE`.
+
+Cargo and pnpm caches are restored on every run and saved only from pushes to `master`. Pull requests cancel their own superseded runs; master runs never cancel each other. The path-filtered workflows remain as focused extra checks and are not required.
+
+Verified before the first run: `cargo test --locked --workspace` (except `nf-raw` and `raw-decode`) and the folio-render Rust and TypeScript e2e suites pass on Linux x64 against that pdfium build; every package typecheck and test passes. Not yet run on Linux: the LibRaw build from `NF_RAW_LIBRAW_DIR`, the `nf-raw`/`raw-decode` fixture tests and the photo `raw.e2e` suite (libraw.org and raw.pixls.us were unreachable from the authoring host). The first CI run is their first Linux run.
 
 ## Role roster and ownership
 
@@ -54,7 +74,7 @@
 ## Release procedure (not yet executed)
 1. Run npm registry audit; classify new stable versions and native graph changes. Handle security updates quickly but not without tests.
 2. Commit audited package manifest and `pnpm-lock.yaml` together. `pnpm install --frozen-lockfile` must pass without ignored peer errors or dual Dawn.
-3. Run `node tooling/release/check-package-boundaries.mjs`, Rust workspace tests, `pnpm -r test`, `pnpm -r typecheck`, package build, source license/SBOM and native codegen.
+3. Confirm `ci-required` passed on the release commit (Rust workspace tests, every package typecheck and test). Then run `node tooling/release/check-package-boundaries.mjs`, package build, source license/SBOM and native codegen.
 4. For each selected engine, verify opening, mutation, undo/redo, NFD1 snapshot, reopen, export and corrupt-source handling through the **release tarball**, not a workspace path.
 5. Validate iOS/Android native development builds on actual hardware, plus web WASM and Skia CanvasKit as appropriate. Verify device availability and list unsupported environments.
 6. Package and install `@nitro-forge/ignition`, one engine and optional UI/render packages into two clean example apps with no monorepo aliases. Confirm host auth/storage remain external dependencies.
