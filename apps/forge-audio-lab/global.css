@@ -21,3 +21,5 @@
 }
 
 @source "./node_modules/@nyc-tron/ui/dist/components";
+/* The editor controls ship as source in @nitro-forge/editor-controls. */
+@source "../../packages/editor-controls/src";

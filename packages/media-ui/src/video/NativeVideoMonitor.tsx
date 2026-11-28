@@ -4,8 +4,8 @@ import { useStore } from "zustand";
 import type { StoreApi } from "zustand/vanilla";
 import { VideoPlayer, VideoView } from "react-native-video";
 import { createPlatformMediaDecoder } from "@nyc-tron/platform-services/media";
-import { NativeSeekBar } from "@nyc-tron/ui/components/forge/NativeSeekBar";
-import { TransportControls } from "@nyc-tron/ui/components/forge/timeline/TransportControls";
+import { NativeSeekBar } from "@nitro-forge/editor-controls/NativeSeekBar";
+import { TransportControls } from "@nitro-forge/editor-controls/timeline/TransportControls";
 import type { FrameRate } from "../timebase";
 import { createFrameSession, createVideoMonitorStore, indexAtTime, presentationIndex, type FrameSession, type FrameResult, type VideoMonitorState } from "./frameSession";
 

@@ -4,15 +4,15 @@
  * typecheck` fails if either side drifts. The native ArcKnob contract is
  * checked by examples/native-cadence, which installs @nyc-tron/native-controls.
  */
-import type { InstrumentKnobProps } from "@nyc-tron/ui/components/forge/inputs/InstrumentKnob";
-import type { PrecisionScrubberProps } from "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber";
+import type { InstrumentKnobProps } from "@nitro-forge/editor-controls/inputs/InstrumentKnob";
+import type { PrecisionScrubberProps } from "@nyc-tron/ui/components/shell/PrecisionScrubber";
 import type { CadenceKnobBinding } from "../src/instrument-adapter";
-import type { MixingConsoleProps } from "@nyc-tron/ui/components/forge/audio/MixingConsole";
-import type { LevelFaderProps } from "@nyc-tron/ui/components/forge/audio/LevelFader";
-import type { TempoAndMetronomeProps } from "@nyc-tron/ui/components/forge/audio/TempoAndMetronome";
-import type { MIDIPianoRollProps } from "@nyc-tron/ui/components/forge/midi/MIDIPianoRoll";
-import type { MIDIVelocityLaneProps } from "@nyc-tron/ui/components/forge/midi/MIDIVelocityLane";
-import type { StepSequencerProps } from "@nyc-tron/ui/components/forge/midi/StepSequencer";
+import type { MixingConsoleProps } from "@nitro-forge/editor-controls/audio/MixingConsole";
+import type { LevelFaderProps } from "@nitro-forge/editor-controls/audio/LevelFader";
+import type { TempoAndMetronomeProps } from "@nitro-forge/editor-controls/audio/TempoAndMetronome";
+import type { MIDIPianoRollProps } from "@nitro-forge/editor-controls/midi/MIDIPianoRoll";
+import type { MIDIVelocityLaneProps } from "@nitro-forge/editor-controls/midi/MIDIVelocityLane";
+import type { StepSequencerProps } from "@nitro-forge/editor-controls/midi/StepSequencer";
 import type {
   CadenceClipBindings, CadenceMidiNote, CadenceMixerBindings, CadenceMixerChannel, CadenceTempoBindings,
 } from "../src/editor-adapter";

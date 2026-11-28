@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { presentRecording } from "@nyc-tron/ui/components/forge/audio/recording-model";
+import { presentRecording } from "@nitro-forge/editor-controls/audio/recording-model";
 import { fileLabel, inputLevel, toRecordingViewState } from "../src/recordingView";
 import type { RecordingPhase } from "../src/recording";
 

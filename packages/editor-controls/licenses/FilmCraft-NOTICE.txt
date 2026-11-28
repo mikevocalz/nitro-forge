@@ -1,0 +1,36 @@
+FilmCraft for Android
+Copyright (c) 2026 ArtCraft Team and the FilmCraft contributors.
+
+This repository holds the Android app and the parts of FilmCraft (https://github.com/storytold/filmcraft)
+it builds: the engine crates and assets/.
+Licensed under the MIT License or the Apache License, Version 2.0, at your option
+(LICENSE-MIT, LICENSE-APACHE).
+
+Third-party material
+
+This product bundles third-party material under its own licenses, listed below. The per-file
+list (author, source, license) is in ATTRIBUTION.md.
+
+- Lucide icons (assets/icons/*.svg) — ISC License. See assets/icons/LICENSE-lucide.txt. The Android
+  app turns them into Compose path data at build time.
+- Inter typeface (assets/fonts/Inter-*.ttf) — SIL Open Font License 1.1. See assets/fonts/OFL-Inter.txt.
+- Noto Serif typeface (assets/fonts/NotoSerif-Regular.ttf) — SIL Open Font License 1.1. See assets/fonts/OFL-NotoSerif.txt.
+- JetBrains Mono typeface (assets/fonts/JetBrainsMono-Regular.ttf) — SIL Open Font License 1.1. See assets/fonts/OFL-JetBrainsMono.txt.
+- Fonts from craft-fonts (https://github.com/storytold/craft-fonts), an optional build input
+  (CRAFT_FONTS_DIR) that is not part of this repository. Builds made with it embed the fonts listed in
+  https://github.com/storytold/craft-fonts/blob/main/ATTRIBUTION.md under the SIL Open Font License 1.1.
+- candle (speech recognition and voices on the phone, via crates.io) — MIT OR Apache-2.0, Hugging Face.
+
+Downloaded at runtime, never in this repository or the app:
+
+- Whisper speech-recognition models (for captions), by OpenAI — MIT. Downloaded from
+  huggingface.co/openai only when the user asks, pinned to a revision and checked against its SHA-256.
+- Kokoro-82M natural voices, by hexgrad — Apache-2.0, with a CMUdict-format pronunciation dictionary
+  (BSD-style, Carnegie Mellon University). Downloaded only when the user asks.
+
+Android app (apps/filmcraft-android):
+- UniFFI (https://github.com/mozilla/uniffi-rs) — MPL-2.0: the uniffi crate in the library, and the
+  generator of the Kotlin bindings (generated at build time, not committed).
+- JNA (https://github.com/java-native-access/jna) — Apache-2.0 (dual-licensed with LGPL-2.1; used
+  under Apache-2.0).
+- AndroidX, Jetpack Compose, ExifInterface and kotlinx.coroutines — Apache-2.0.

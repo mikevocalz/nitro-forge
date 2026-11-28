@@ -8,2260 +8,2262 @@
   "description": "Nitro Forge editor controls (audio, timeline, spreadsheet, canvas, color, photo, motion, office and more) built on NYC-Tron UI primitives. Moved here from @nyc-tron/ui/components/forge.",
   "exports": {
     "./WaveformLane": {
-      "types": "./src/WaveformLane.tsx",
+      "types": "./dist/WaveformLane.d.ts",
       "react-native": "./src/WaveformLane.tsx",
       "default": "./src/WaveformLane.tsx"
     },
     "./NativeSeekBar": {
-      "types": "./src/NativeSeekBar.web.tsx",
+      "types": "./dist/NativeSeekBar.web.d.ts",
       "browser": "./src/NativeSeekBar.web.tsx",
       "react-native": "./src/NativeSeekBar.native.tsx",
       "default": "./src/NativeSeekBar.web.tsx"
     },
     "./ColorChannels": {
-      "types": "./src/ColorChannels.tsx",
+      "types": "./dist/ColorChannels.d.ts",
       "react-native": "./src/ColorChannels.tsx",
       "default": "./src/ColorChannels.tsx"
     },
     "./waveform": {
-      "types": "./src/waveform.ts",
+      "types": "./dist/waveform.d.ts",
       "react-native": "./src/waveform.ts",
       "default": "./src/waveform.ts"
     },
     "./timebase": {
-      "types": "./src/timebase.ts",
+      "types": "./dist/timebase.d.ts",
       "react-native": "./src/timebase.ts",
       "default": "./src/timebase.ts"
     },
     "./audio/level": {
-      "types": "./src/audio/level.ts",
+      "types": "./dist/audio/level.d.ts",
       "react-native": "./src/audio/level.ts",
       "default": "./src/audio/level.ts"
     },
     "./audio/LevelFader": {
-      "types": "./src/audio/LevelFader.tsx",
+      "types": "./dist/audio/LevelFader.d.ts",
       "react-native": "./src/audio/LevelFader.tsx",
       "default": "./src/audio/LevelFader.tsx"
     },
     "./color": {
-      "types": "./src/color.ts",
+      "types": "./dist/color.d.ts",
       "react-native": "./src/color.ts",
       "default": "./src/color.ts"
     },
     "./color/HsvPicker": {
-      "types": "./src/color/HsvPicker.tsx",
+      "types": "./dist/color/HsvPicker.d.ts",
       "react-native": "./src/color/HsvPicker.tsx",
       "default": "./src/color/HsvPicker.tsx"
     },
     "./color/fieldGeometry": {
-      "types": "./src/color/fieldGeometry.ts",
+      "types": "./dist/color/fieldGeometry.d.ts",
       "react-native": "./src/color/fieldGeometry.ts",
       "default": "./src/color/fieldGeometry.ts"
     },
     "./color/fieldGesture": {
-      "types": "./src/color/fieldGesture.ts",
+      "types": "./dist/color/fieldGesture.d.ts",
       "react-native": "./src/color/fieldGesture.ts",
       "default": "./src/color/fieldGesture.ts"
     },
     "./color/AlphaSlider": {
-      "types": "./src/color/AlphaSlider.tsx",
+      "types": "./dist/color/AlphaSlider.d.ts",
       "react-native": "./src/color/AlphaSlider.tsx",
       "default": "./src/color/AlphaSlider.tsx"
     },
     "./color/ColorWheel": {
-      "types": "./src/color/ColorWheel.tsx",
+      "types": "./dist/color/ColorWheel.d.ts",
       "react-native": "./src/color/ColorWheel.tsx",
       "default": "./src/color/ColorWheel.tsx"
     },
     "./color/ColorDiscPicker": {
-      "types": "./src/color/ColorDiscPicker.tsx",
+      "types": "./dist/color/ColorDiscPicker.d.ts",
       "react-native": "./src/color/ColorDiscPicker.tsx",
       "default": "./src/color/ColorDiscPicker.tsx"
     },
     "./color/ColorChannelFields": {
-      "types": "./src/color/ColorChannelFields.tsx",
+      "types": "./dist/color/ColorChannelFields.d.ts",
       "react-native": "./src/color/ColorChannelFields.tsx",
       "default": "./src/color/ColorChannelFields.tsx"
     },
     "./color/ForegroundBackgroundChips": {
-      "types": "./src/color/ForegroundBackgroundChips.tsx",
+      "types": "./dist/color/ForegroundBackgroundChips.d.ts",
       "react-native": "./src/color/ForegroundBackgroundChips.tsx",
       "default": "./src/color/ForegroundBackgroundChips.tsx"
     },
     "./color/SwatchGrid": {
-      "types": "./src/color/SwatchGrid.tsx",
+      "types": "./dist/color/SwatchGrid.d.ts",
       "react-native": "./src/color/SwatchGrid.tsx",
       "default": "./src/color/SwatchGrid.tsx"
     },
     "./color/ColorHarmonyAssistant": {
-      "types": "./src/color/ColorHarmonyAssistant.tsx",
+      "types": "./dist/color/ColorHarmonyAssistant.d.ts",
       "react-native": "./src/color/ColorHarmonyAssistant.tsx",
       "default": "./src/color/ColorHarmonyAssistant.tsx"
     },
     "./color/FloatingColorPalette": {
-      "types": "./src/color/FloatingColorPalette.tsx",
+      "types": "./dist/color/FloatingColorPalette.d.ts",
       "react-native": "./src/color/FloatingColorPalette.tsx",
       "default": "./src/color/FloatingColorPalette.tsx"
     },
     "./color/FloatingPaletteUndockHandle": {
-      "types": "./src/color/FloatingPaletteUndockHandle.tsx",
+      "types": "./dist/color/FloatingPaletteUndockHandle.d.ts",
       "react-native": "./src/color/FloatingPaletteUndockHandle.tsx",
       "default": "./src/color/FloatingPaletteUndockHandle.tsx"
     },
     "./color/hsl": {
-      "types": "./src/color/hsl.ts",
+      "types": "./dist/color/hsl.d.ts",
       "react-native": "./src/color/hsl.ts",
       "default": "./src/color/hsl.ts"
     },
     "./color/contrast": {
-      "types": "./src/color/contrast.ts",
+      "types": "./dist/color/contrast.d.ts",
       "react-native": "./src/color/contrast.ts",
       "default": "./src/color/contrast.ts"
     },
     "./color/harmony": {
-      "types": "./src/color/harmony.ts",
+      "types": "./dist/color/harmony.d.ts",
       "react-native": "./src/color/harmony.ts",
       "default": "./src/color/harmony.ts"
     },
     "./color/wheel-geometry": {
-      "types": "./src/color/wheel-geometry.ts",
+      "types": "./dist/color/wheel-geometry.d.ts",
       "react-native": "./src/color/wheel-geometry.ts",
       "default": "./src/color/wheel-geometry.ts"
     },
     "./color/floating-palette": {
-      "types": "./src/color/floating-palette.ts",
+      "types": "./dist/color/floating-palette.d.ts",
       "react-native": "./src/color/floating-palette.ts",
       "default": "./src/color/floating-palette.ts"
     },
     "./color/swatches": {
-      "types": "./src/color/swatches.ts",
+      "types": "./dist/color/swatches.d.ts",
       "react-native": "./src/color/swatches.ts",
       "default": "./src/color/swatches.ts"
     },
     "./color/color-pair": {
-      "types": "./src/color/color-pair.ts",
+      "types": "./dist/color/color-pair.d.ts",
       "react-native": "./src/color/color-pair.ts",
       "default": "./src/color/color-pair.ts"
     },
     "./color/channel-fields": {
-      "types": "./src/color/channel-fields.ts",
+      "types": "./dist/color/channel-fields.d.ts",
       "react-native": "./src/color/channel-fields.ts",
       "default": "./src/color/channel-fields.ts"
     },
     "./SpreadsheetGrid": {
-      "types": "./src/SpreadsheetGrid.tsx",
+      "types": "./dist/SpreadsheetGrid.d.ts",
       "react-native": "./src/SpreadsheetGrid.tsx",
       "default": "./src/SpreadsheetGrid.tsx"
     },
     "./sheet-window": {
-      "types": "./src/sheet-window.ts",
+      "types": "./dist/sheet-window.d.ts",
       "react-native": "./src/sheet-window.ts",
       "default": "./src/sheet-window.ts"
     },
     "./range-tsv": {
-      "types": "./src/range-tsv.ts",
+      "types": "./dist/range-tsv.d.ts",
       "react-native": "./src/range-tsv.ts",
       "default": "./src/range-tsv.ts"
     },
     "./range-paste": {
-      "types": "./src/range-paste.ts",
+      "types": "./dist/range-paste.d.ts",
       "react-native": "./src/range-paste.ts",
       "default": "./src/range-paste.ts"
     },
     "./formula-refs": {
-      "types": "./src/formula-refs.ts",
+      "types": "./dist/formula-refs.d.ts",
       "react-native": "./src/formula-refs.ts",
       "default": "./src/formula-refs.ts"
     },
     "./inputs/InstrumentKnob": {
-      "types": "./src/inputs/InstrumentKnob.tsx",
+      "types": "./dist/inputs/InstrumentKnob.d.ts",
       "react-native": "./src/inputs/InstrumentKnob.tsx",
       "default": "./src/inputs/InstrumentKnob.tsx"
     },
     "./inputs/InstrumentXYPad": {
-      "types": "./src/inputs/InstrumentXYPad.tsx",
+      "types": "./dist/inputs/InstrumentXYPad.d.ts",
       "react-native": "./src/inputs/InstrumentXYPad.tsx",
       "default": "./src/inputs/InstrumentXYPad.tsx"
     },
     "./graph/model": {
-      "types": "./src/graph/model.ts",
+      "types": "./dist/graph/model.d.ts",
       "react-native": "./src/graph/model.ts",
       "default": "./src/graph/model.ts"
     },
     "./graph/PatchGraph": {
-      "types": "./src/graph/PatchGraph.tsx",
+      "types": "./dist/graph/PatchGraph.d.ts",
       "react-native": "./src/graph/PatchGraph.tsx",
       "default": "./src/graph/PatchGraph.tsx"
     },
     "./graphics/crop": {
-      "types": "./src/graphics/crop.ts",
+      "types": "./dist/graphics/crop.d.ts",
       "react-native": "./src/graphics/crop.ts",
       "default": "./src/graphics/crop.ts"
     },
     "./graphics/ImageCropOverlay": {
-      "types": "./src/graphics/ImageCropOverlay.tsx",
+      "types": "./dist/graphics/ImageCropOverlay.d.ts",
       "react-native": "./src/graphics/ImageCropOverlay.tsx",
       "default": "./src/graphics/ImageCropOverlay.tsx"
     },
     "./layers/layer-model": {
-      "types": "./src/layers/layer-model.ts",
+      "types": "./dist/layers/layer-model.d.ts",
       "react-native": "./src/layers/layer-model.ts",
       "default": "./src/layers/layer-model.ts"
     },
     "./layers/LayerStack": {
-      "types": "./src/layers/LayerStack.tsx",
+      "types": "./dist/layers/LayerStack.d.ts",
       "react-native": "./src/layers/LayerStack.tsx",
       "default": "./src/layers/LayerStack.tsx"
     },
     "./ink/ink-model": {
-      "types": "./src/ink/ink-model.ts",
+      "types": "./dist/ink/ink-model.d.ts",
       "react-native": "./src/ink/ink-model.ts",
       "default": "./src/ink/ink-model.ts"
     },
     "./ink/InkToolbar": {
-      "types": "./src/ink/InkToolbar.tsx",
+      "types": "./dist/ink/InkToolbar.d.ts",
       "react-native": "./src/ink/InkToolbar.tsx",
       "default": "./src/ink/InkToolbar.tsx"
     },
     "./timeline/TimecodeDisplay": {
-      "types": "./src/timeline/TimecodeDisplay.tsx",
+      "types": "./dist/timeline/TimecodeDisplay.d.ts",
       "react-native": "./src/timeline/TimecodeDisplay.tsx",
       "default": "./src/timeline/TimecodeDisplay.tsx"
     },
     "./timeline/TransportControls": {
-      "types": "./src/timeline/TransportControls.tsx",
+      "types": "./dist/timeline/TransportControls.d.ts",
       "react-native": "./src/timeline/TransportControls.tsx",
       "default": "./src/timeline/TransportControls.tsx"
     },
     "./timeline/PlaybackRateMenu": {
-      "types": "./src/timeline/PlaybackRateMenu.tsx",
+      "types": "./dist/timeline/PlaybackRateMenu.d.ts",
       "react-native": "./src/timeline/PlaybackRateMenu.tsx",
       "default": "./src/timeline/PlaybackRateMenu.tsx"
     },
     "./timeline/SeekBar": {
-      "types": "./src/timeline/SeekBar.tsx",
+      "types": "./dist/timeline/SeekBar.d.ts",
       "react-native": "./src/timeline/SeekBar.tsx",
       "default": "./src/timeline/SeekBar.tsx"
     },
     "./timeline/TimelineRuler": {
-      "types": "./src/timeline/TimelineRuler.tsx",
+      "types": "./dist/timeline/TimelineRuler.d.ts",
       "react-native": "./src/timeline/TimelineRuler.tsx",
       "default": "./src/timeline/TimelineRuler.tsx"
     },
     "./timeline/TimelinePlayhead": {
-      "types": "./src/timeline/TimelinePlayhead.tsx",
+      "types": "./dist/timeline/TimelinePlayhead.d.ts",
       "react-native": "./src/timeline/TimelinePlayhead.tsx",
       "default": "./src/timeline/TimelinePlayhead.tsx"
     },
     "./timeline/InOutRangeHandles": {
-      "types": "./src/timeline/InOutRangeHandles.tsx",
+      "types": "./dist/timeline/InOutRangeHandles.d.ts",
       "react-native": "./src/timeline/InOutRangeHandles.tsx",
       "default": "./src/timeline/InOutRangeHandles.tsx"
     },
     "./timeline/TimelineZoomAndScroll": {
-      "types": "./src/timeline/TimelineZoomAndScroll.tsx",
+      "types": "./dist/timeline/TimelineZoomAndScroll.d.ts",
       "react-native": "./src/timeline/TimelineZoomAndScroll.tsx",
       "default": "./src/timeline/TimelineZoomAndScroll.tsx"
     },
     "./timeline/TimelineClipLane": {
-      "types": "./src/timeline/TimelineClipLane.tsx",
+      "types": "./dist/timeline/TimelineClipLane.d.ts",
       "react-native": "./src/timeline/TimelineClipLane.tsx",
       "default": "./src/timeline/TimelineClipLane.tsx"
     },
     "./timeline/ClipTrimHandles": {
-      "types": "./src/timeline/ClipTrimHandles.tsx",
+      "types": "./dist/timeline/ClipTrimHandles.d.ts",
       "react-native": "./src/timeline/ClipTrimHandles.tsx",
       "default": "./src/timeline/ClipTrimHandles.tsx"
     },
     "./timeline/RazorSplitTool": {
-      "types": "./src/timeline/RazorSplitTool.tsx",
+      "types": "./dist/timeline/RazorSplitTool.d.ts",
       "react-native": "./src/timeline/RazorSplitTool.tsx",
       "default": "./src/timeline/RazorSplitTool.tsx"
     },
     "./timeline/SafeAreaOverlay": {
-      "types": "./src/timeline/SafeAreaOverlay.tsx",
+      "types": "./dist/timeline/SafeAreaOverlay.d.ts",
       "react-native": "./src/timeline/SafeAreaOverlay.tsx",
       "default": "./src/timeline/SafeAreaOverlay.tsx"
     },
     "./timeline/time": {
-      "types": "./src/timeline/time.ts",
+      "types": "./dist/timeline/time.d.ts",
       "react-native": "./src/timeline/time.ts",
       "default": "./src/timeline/time.ts"
     },
     "./timeline/ruler": {
-      "types": "./src/timeline/ruler.ts",
+      "types": "./dist/timeline/ruler.d.ts",
       "react-native": "./src/timeline/ruler.ts",
       "default": "./src/timeline/ruler.ts"
     },
     "./timeline/viewport": {
-      "types": "./src/timeline/viewport.ts",
+      "types": "./dist/timeline/viewport.d.ts",
       "react-native": "./src/timeline/viewport.ts",
       "default": "./src/timeline/viewport.ts"
     },
     "./timeline/edits": {
-      "types": "./src/timeline/edits.ts",
+      "types": "./dist/timeline/edits.d.ts",
       "react-native": "./src/timeline/edits.ts",
       "default": "./src/timeline/edits.ts"
     },
     "./timeline/safe-area": {
-      "types": "./src/timeline/safe-area.ts",
+      "types": "./dist/timeline/safe-area.d.ts",
       "react-native": "./src/timeline/safe-area.ts",
       "default": "./src/timeline/safe-area.ts"
     },
     "./spreadsheet/SheetTabs": {
-      "types": "./src/spreadsheet/SheetTabs.tsx",
+      "types": "./dist/spreadsheet/SheetTabs.d.ts",
       "react-native": "./src/spreadsheet/SheetTabs.tsx",
       "default": "./src/spreadsheet/SheetTabs.tsx"
     },
     "./spreadsheet/sheet-tabs-model": {
-      "types": "./src/spreadsheet/sheet-tabs-model.ts",
+      "types": "./dist/spreadsheet/sheet-tabs-model.d.ts",
       "react-native": "./src/spreadsheet/sheet-tabs-model.ts",
       "default": "./src/spreadsheet/sheet-tabs-model.ts"
     },
     "./spreadsheet/ChartBuilder": {
-      "types": "./src/spreadsheet/ChartBuilder.tsx",
+      "types": "./dist/spreadsheet/ChartBuilder.d.ts",
       "react-native": "./src/spreadsheet/ChartBuilder.tsx",
       "default": "./src/spreadsheet/ChartBuilder.tsx"
     },
     "./spreadsheet/chart-model": {
-      "types": "./src/spreadsheet/chart-model.ts",
+      "types": "./dist/spreadsheet/chart-model.d.ts",
       "react-native": "./src/spreadsheet/chart-model.ts",
       "default": "./src/spreadsheet/chart-model.ts"
     },
     "./spreadsheet/Sparkline": {
-      "types": "./src/spreadsheet/Sparkline.tsx",
+      "types": "./dist/spreadsheet/Sparkline.d.ts",
       "react-native": "./src/spreadsheet/Sparkline.tsx",
       "default": "./src/spreadsheet/Sparkline.tsx"
     },
     "./spreadsheet/SparklineEditor": {
-      "types": "./src/spreadsheet/SparklineEditor.tsx",
+      "types": "./dist/spreadsheet/SparklineEditor.d.ts",
       "react-native": "./src/spreadsheet/SparklineEditor.tsx",
       "default": "./src/spreadsheet/SparklineEditor.tsx"
     },
     "./spreadsheet/sparkline-model": {
-      "types": "./src/spreadsheet/sparkline-model.ts",
+      "types": "./dist/spreadsheet/sparkline-model.d.ts",
       "react-native": "./src/spreadsheet/sparkline-model.ts",
       "default": "./src/spreadsheet/sparkline-model.ts"
     },
     "./spreadsheet/FreezeSplitControls": {
-      "types": "./src/spreadsheet/FreezeSplitControls.tsx",
+      "types": "./dist/spreadsheet/FreezeSplitControls.d.ts",
       "react-native": "./src/spreadsheet/FreezeSplitControls.tsx",
       "default": "./src/spreadsheet/FreezeSplitControls.tsx"
     },
     "./spreadsheet/SplitSpreadsheetView": {
-      "types": "./src/spreadsheet/SplitSpreadsheetView.tsx",
+      "types": "./dist/spreadsheet/SplitSpreadsheetView.d.ts",
       "react-native": "./src/spreadsheet/SplitSpreadsheetView.tsx",
       "default": "./src/spreadsheet/SplitSpreadsheetView.tsx"
     },
     "./spreadsheet/freeze-split-model": {
-      "types": "./src/spreadsheet/freeze-split-model.ts",
+      "types": "./dist/spreadsheet/freeze-split-model.d.ts",
       "react-native": "./src/spreadsheet/freeze-split-model.ts",
       "default": "./src/spreadsheet/freeze-split-model.ts"
     },
     "./spreadsheet/SpreadsheetCardsView": {
-      "types": "./src/spreadsheet/SpreadsheetCardsView.tsx",
+      "types": "./dist/spreadsheet/SpreadsheetCardsView.d.ts",
       "react-native": "./src/spreadsheet/SpreadsheetCardsView.tsx",
       "default": "./src/spreadsheet/SpreadsheetCardsView.tsx"
     },
     "./spreadsheet/cards-model": {
-      "types": "./src/spreadsheet/cards-model.ts",
+      "types": "./dist/spreadsheet/cards-model.d.ts",
       "react-native": "./src/spreadsheet/cards-model.ts",
       "default": "./src/spreadsheet/cards-model.ts"
     },
     "./spreadsheet/FormulaReferenceText": {
-      "types": "./src/spreadsheet/FormulaReferenceText.tsx",
+      "types": "./dist/spreadsheet/FormulaReferenceText.d.ts",
       "react-native": "./src/spreadsheet/FormulaReferenceText.tsx",
       "default": "./src/spreadsheet/FormulaReferenceText.tsx"
     },
     "./spreadsheet/reference-colors": {
-      "types": "./src/spreadsheet/reference-colors.ts",
+      "types": "./dist/spreadsheet/reference-colors.d.ts",
       "react-native": "./src/spreadsheet/reference-colors.ts",
       "default": "./src/spreadsheet/reference-colors.ts"
     },
     "./spreadsheet/fill-handle": {
-      "types": "./src/spreadsheet/fill-handle.ts",
+      "types": "./dist/spreadsheet/fill-handle.d.ts",
       "react-native": "./src/spreadsheet/fill-handle.ts",
       "default": "./src/spreadsheet/fill-handle.ts"
     },
     "./audio/pan": {
-      "types": "./src/audio/pan.ts",
+      "types": "./dist/audio/pan.d.ts",
       "react-native": "./src/audio/pan.ts",
       "default": "./src/audio/pan.ts"
     },
     "./audio/PanControl": {
-      "types": "./src/audio/PanControl.tsx",
+      "types": "./dist/audio/PanControl.d.ts",
       "react-native": "./src/audio/PanControl.tsx",
       "default": "./src/audio/PanControl.tsx"
     },
     "./audio/SoloMuteButtons": {
-      "types": "./src/audio/SoloMuteButtons.tsx",
+      "types": "./dist/audio/SoloMuteButtons.d.ts",
       "react-native": "./src/audio/SoloMuteButtons.tsx",
       "default": "./src/audio/SoloMuteButtons.tsx"
     },
     "./audio/mixer": {
-      "types": "./src/audio/mixer.ts",
+      "types": "./dist/audio/mixer.d.ts",
       "react-native": "./src/audio/mixer.ts",
       "default": "./src/audio/mixer.ts"
     },
     "./audio/ChannelStrip": {
-      "types": "./src/audio/ChannelStrip.tsx",
+      "types": "./dist/audio/ChannelStrip.d.ts",
       "react-native": "./src/audio/ChannelStrip.tsx",
       "default": "./src/audio/ChannelStrip.tsx"
     },
     "./audio/MixingConsole": {
-      "types": "./src/audio/MixingConsole.tsx",
+      "types": "./dist/audio/MixingConsole.d.ts",
       "react-native": "./src/audio/MixingConsole.tsx",
       "default": "./src/audio/MixingConsole.tsx"
     },
     "./audio/tempo": {
-      "types": "./src/audio/tempo.ts",
+      "types": "./dist/audio/tempo.d.ts",
       "react-native": "./src/audio/tempo.ts",
       "default": "./src/audio/tempo.ts"
     },
     "./audio/TempoAndMetronome": {
-      "types": "./src/audio/TempoAndMetronome.tsx",
+      "types": "./dist/audio/TempoAndMetronome.d.ts",
       "react-native": "./src/audio/TempoAndMetronome.tsx",
       "default": "./src/audio/TempoAndMetronome.tsx"
     },
     "./midi/note-grid": {
-      "types": "./src/midi/note-grid.ts",
+      "types": "./dist/midi/note-grid.d.ts",
       "react-native": "./src/midi/note-grid.ts",
       "default": "./src/midi/note-grid.ts"
     },
     "./midi/MIDIPianoRoll": {
-      "types": "./src/midi/MIDIPianoRoll.tsx",
+      "types": "./dist/midi/MIDIPianoRoll.d.ts",
       "react-native": "./src/midi/MIDIPianoRoll.tsx",
       "default": "./src/midi/MIDIPianoRoll.tsx"
     },
     "./midi/MIDIVelocityLane": {
-      "types": "./src/midi/MIDIVelocityLane.tsx",
+      "types": "./dist/midi/MIDIVelocityLane.d.ts",
       "react-native": "./src/midi/MIDIVelocityLane.tsx",
       "default": "./src/midi/MIDIVelocityLane.tsx"
     },
     "./midi/StepSequencer": {
-      "types": "./src/midi/StepSequencer.tsx",
+      "types": "./dist/midi/StepSequencer.d.ts",
       "react-native": "./src/midi/StepSequencer.tsx",
       "default": "./src/midi/StepSequencer.tsx"
     },
     "./office/ReadAloudTransport": {
-      "types": "./src/office/ReadAloudTransport.tsx",
+      "types": "./dist/office/ReadAloudTransport.d.ts",
       "react-native": "./src/office/ReadAloudTransport.tsx",
       "default": "./src/office/ReadAloudTransport.tsx"
     },
     "./office/office-controls": {
-      "types": "./src/office/office-controls.tsx",
+      "types": "./dist/office/office-controls.d.ts",
       "react-native": "./src/office/office-controls.tsx",
       "default": "./src/office/office-controls.tsx"
     },
     "./office/read-aloud-model": {
-      "types": "./src/office/read-aloud-model.ts",
+      "types": "./dist/office/read-aloud-model.d.ts",
       "react-native": "./src/office/read-aloud-model.ts",
       "default": "./src/office/read-aloud-model.ts"
     },
     "./slides/SlideAnimationPane": {
-      "types": "./src/slides/SlideAnimationPane.tsx",
+      "types": "./dist/slides/SlideAnimationPane.d.ts",
       "react-native": "./src/slides/SlideAnimationPane.tsx",
       "default": "./src/slides/SlideAnimationPane.tsx"
     },
     "./slides/SlideCanvas": {
-      "types": "./src/slides/SlideCanvas.tsx",
+      "types": "./dist/slides/SlideCanvas.d.ts",
       "react-native": "./src/slides/SlideCanvas.tsx",
       "default": "./src/slides/SlideCanvas.tsx"
     },
     "./slides/SlideFilmstrip": {
-      "types": "./src/slides/SlideFilmstrip.tsx",
+      "types": "./dist/slides/SlideFilmstrip.d.ts",
       "react-native": "./src/slides/SlideFilmstrip.tsx",
       "default": "./src/slides/SlideFilmstrip.tsx"
     },
     "./slides/SlideSorter": {
-      "types": "./src/slides/SlideSorter.tsx",
+      "types": "./dist/slides/SlideSorter.d.ts",
       "react-native": "./src/slides/SlideSorter.tsx",
       "default": "./src/slides/SlideSorter.tsx"
     },
     "./slides/SlideThumbnail": {
-      "types": "./src/slides/SlideThumbnail.tsx",
+      "types": "./dist/slides/SlideThumbnail.d.ts",
       "react-native": "./src/slides/SlideThumbnail.tsx",
       "default": "./src/slides/SlideThumbnail.tsx"
     },
     "./slides/animation-model": {
-      "types": "./src/slides/animation-model.ts",
+      "types": "./dist/slides/animation-model.d.ts",
       "react-native": "./src/slides/animation-model.ts",
       "default": "./src/slides/animation-model.ts"
     },
     "./slides/canvas-model": {
-      "types": "./src/slides/canvas-model.ts",
+      "types": "./dist/slides/canvas-model.d.ts",
       "react-native": "./src/slides/canvas-model.ts",
       "default": "./src/slides/canvas-model.ts"
     },
     "./slides/slide-model": {
-      "types": "./src/slides/slide-model.ts",
+      "types": "./dist/slides/slide-model.d.ts",
       "react-native": "./src/slides/slide-model.ts",
       "default": "./src/slides/slide-model.ts"
     },
     "./document/BulletsNumberingEditor": {
-      "types": "./src/document/BulletsNumberingEditor.tsx",
+      "types": "./dist/document/BulletsNumberingEditor.d.ts",
       "react-native": "./src/document/BulletsNumberingEditor.tsx",
       "default": "./src/document/BulletsNumberingEditor.tsx"
     },
     "./document/DocumentReadAloudTransport": {
-      "types": "./src/document/DocumentReadAloudTransport.tsx",
+      "types": "./dist/document/DocumentReadAloudTransport.d.ts",
       "react-native": "./src/document/DocumentReadAloudTransport.tsx",
       "default": "./src/document/DocumentReadAloudTransport.tsx"
     },
     "./document/NavigationOutline": {
-      "types": "./src/document/NavigationOutline.tsx",
+      "types": "./dist/document/NavigationOutline.d.ts",
       "react-native": "./src/document/NavigationOutline.tsx",
       "default": "./src/document/NavigationOutline.tsx"
     },
     "./document/RichTextRibbon": {
-      "types": "./src/document/RichTextRibbon.tsx",
+      "types": "./dist/document/RichTextRibbon.d.ts",
       "react-native": "./src/document/RichTextRibbon.tsx",
       "default": "./src/document/RichTextRibbon.tsx"
     },
     "./document/list-model": {
-      "types": "./src/document/list-model.ts",
+      "types": "./dist/document/list-model.d.ts",
       "react-native": "./src/document/list-model.ts",
       "default": "./src/document/list-model.ts"
     },
     "./document/outline-model": {
-      "types": "./src/document/outline-model.ts",
+      "types": "./dist/document/outline-model.d.ts",
       "react-native": "./src/document/outline-model.ts",
       "default": "./src/document/outline-model.ts"
     },
     "./document/ribbon-model": {
-      "types": "./src/document/ribbon-model.ts",
+      "types": "./dist/document/ribbon-model.d.ts",
       "react-native": "./src/document/ribbon-model.ts",
       "default": "./src/document/ribbon-model.ts"
     },
     "./pdf/AnnotationToolbar": {
-      "types": "./src/pdf/AnnotationToolbar.tsx",
+      "types": "./dist/pdf/AnnotationToolbar.d.ts",
       "react-native": "./src/pdf/AnnotationToolbar.tsx",
       "default": "./src/pdf/AnnotationToolbar.tsx"
     },
     "./pdf/CommentsThreadPanel": {
-      "types": "./src/pdf/CommentsThreadPanel.tsx",
+      "types": "./dist/pdf/CommentsThreadPanel.d.ts",
       "react-native": "./src/pdf/CommentsThreadPanel.tsx",
       "default": "./src/pdf/CommentsThreadPanel.tsx"
     },
     "./pdf/PDFReadAloudTransport": {
-      "types": "./src/pdf/PDFReadAloudTransport.tsx",
+      "types": "./dist/pdf/PDFReadAloudTransport.d.ts",
       "react-native": "./src/pdf/PDFReadAloudTransport.tsx",
       "default": "./src/pdf/PDFReadAloudTransport.tsx"
     },
     "./pdf/TextSearchResults": {
-      "types": "./src/pdf/TextSearchResults.tsx",
+      "types": "./dist/pdf/TextSearchResults.d.ts",
       "react-native": "./src/pdf/TextSearchResults.tsx",
       "default": "./src/pdf/TextSearchResults.tsx"
     },
     "./pdf/annotation-model": {
-      "types": "./src/pdf/annotation-model.ts",
+      "types": "./dist/pdf/annotation-model.d.ts",
       "react-native": "./src/pdf/annotation-model.ts",
       "default": "./src/pdf/annotation-model.ts"
     },
     "./pdf/comments-model": {
-      "types": "./src/pdf/comments-model.ts",
+      "types": "./dist/pdf/comments-model.d.ts",
       "react-native": "./src/pdf/comments-model.ts",
       "default": "./src/pdf/comments-model.ts"
     },
     "./pdf/search-model": {
-      "types": "./src/pdf/search-model.ts",
+      "types": "./dist/pdf/search-model.d.ts",
       "react-native": "./src/pdf/search-model.ts",
       "default": "./src/pdf/search-model.ts"
     },
     "./audio/RecordingTrack": {
-      "types": "./src/audio/RecordingTrack.tsx",
+      "types": "./dist/audio/RecordingTrack.d.ts",
       "react-native": "./src/audio/RecordingTrack.tsx",
       "default": "./src/audio/RecordingTrack.tsx"
     },
     "./audio/LevelMeter": {
-      "types": "./src/audio/LevelMeter.tsx",
+      "types": "./dist/audio/LevelMeter.d.ts",
       "react-native": "./src/audio/LevelMeter.tsx",
       "default": "./src/audio/LevelMeter.tsx"
     },
     "./audio/AudioPreview": {
-      "types": "./src/audio/AudioPreview.tsx",
+      "types": "./dist/audio/AudioPreview.d.ts",
       "react-native": "./src/audio/AudioPreview.tsx",
       "default": "./src/audio/AudioPreview.tsx"
     },
     "./audio/level-meter": {
-      "types": "./src/audio/level-meter.ts",
+      "types": "./dist/audio/level-meter.d.ts",
       "react-native": "./src/audio/level-meter.ts",
       "default": "./src/audio/level-meter.ts"
     },
     "./audio/recording-model": {
-      "types": "./src/audio/recording-model.ts",
+      "types": "./dist/audio/recording-model.d.ts",
       "react-native": "./src/audio/recording-model.ts",
       "default": "./src/audio/recording-model.ts"
     },
     "./audio/preview-model": {
-      "types": "./src/audio/preview-model.ts",
+      "types": "./dist/audio/preview-model.d.ts",
       "react-native": "./src/audio/preview-model.ts",
       "default": "./src/audio/preview-model.ts"
     },
     "./devices/DevicePairingDialog": {
-      "types": "./src/devices/DevicePairingDialog.tsx",
+      "types": "./dist/devices/DevicePairingDialog.d.ts",
       "react-native": "./src/devices/DevicePairingDialog.tsx",
       "default": "./src/devices/DevicePairingDialog.tsx"
     },
     "./devices/pairing-model": {
-      "types": "./src/devices/pairing-model.ts",
+      "types": "./dist/devices/pairing-model.d.ts",
       "react-native": "./src/devices/pairing-model.ts",
       "default": "./src/devices/pairing-model.ts"
     },
     "./timeline/JKLShuttleController": {
-      "types": "./src/timeline/JKLShuttleController.tsx",
+      "types": "./dist/timeline/JKLShuttleController.d.ts",
       "react-native": "./src/timeline/JKLShuttleController.tsx",
       "default": "./src/timeline/JKLShuttleController.tsx"
     },
     "./timeline/LoopRangeBar": {
-      "types": "./src/timeline/LoopRangeBar.tsx",
+      "types": "./dist/timeline/LoopRangeBar.d.ts",
       "react-native": "./src/timeline/LoopRangeBar.tsx",
       "default": "./src/timeline/LoopRangeBar.tsx"
     },
     "./timeline/TrackHeaders": {
-      "types": "./src/timeline/TrackHeaders.tsx",
+      "types": "./dist/timeline/TrackHeaders.d.ts",
       "react-native": "./src/timeline/TrackHeaders.tsx",
       "default": "./src/timeline/TrackHeaders.tsx"
     },
     "./timeline/RollSlipSlideControls": {
-      "types": "./src/timeline/RollSlipSlideControls.tsx",
+      "types": "./dist/timeline/RollSlipSlideControls.d.ts",
       "react-native": "./src/timeline/RollSlipSlideControls.tsx",
       "default": "./src/timeline/RollSlipSlideControls.tsx"
     },
     "./timeline/DragReorderAndRipple": {
-      "types": "./src/timeline/DragReorderAndRipple.tsx",
+      "types": "./dist/timeline/DragReorderAndRipple.d.ts",
       "react-native": "./src/timeline/DragReorderAndRipple.tsx",
       "default": "./src/timeline/DragReorderAndRipple.tsx"
     },
     "./timeline/TransitionHandles": {
-      "types": "./src/timeline/TransitionHandles.tsx",
+      "types": "./dist/timeline/TransitionHandles.d.ts",
       "react-native": "./src/timeline/TransitionHandles.tsx",
       "default": "./src/timeline/TransitionHandles.tsx"
     },
     "./timeline/TimelineMarkers": {
-      "types": "./src/timeline/TimelineMarkers.tsx",
+      "types": "./dist/timeline/TimelineMarkers.d.ts",
       "react-native": "./src/timeline/TimelineMarkers.tsx",
       "default": "./src/timeline/TimelineMarkers.tsx"
     },
     "./timeline/OverlayAndEffectsTrackStack": {
-      "types": "./src/timeline/OverlayAndEffectsTrackStack.tsx",
+      "types": "./dist/timeline/OverlayAndEffectsTrackStack.d.ts",
       "react-native": "./src/timeline/OverlayAndEffectsTrackStack.tsx",
       "default": "./src/timeline/OverlayAndEffectsTrackStack.tsx"
     },
     "./timeline/TransitionPresetBrowser": {
-      "types": "./src/timeline/TransitionPresetBrowser.tsx",
+      "types": "./dist/timeline/TransitionPresetBrowser.d.ts",
       "react-native": "./src/timeline/TransitionPresetBrowser.tsx",
       "default": "./src/timeline/TransitionPresetBrowser.tsx"
     },
     "./timeline/BatchEditPanel": {
-      "types": "./src/timeline/BatchEditPanel.tsx",
+      "types": "./dist/timeline/BatchEditPanel.d.ts",
       "react-native": "./src/timeline/BatchEditPanel.tsx",
       "default": "./src/timeline/BatchEditPanel.tsx"
     },
     "./timeline/ModeEdgeHandles": {
-      "types": "./src/timeline/ModeEdgeHandles.tsx",
+      "types": "./dist/timeline/ModeEdgeHandles.d.ts",
       "react-native": "./src/timeline/ModeEdgeHandles.tsx",
       "default": "./src/timeline/ModeEdgeHandles.tsx"
     },
     "./timeline/trim-modes": {
-      "types": "./src/timeline/trim-modes.ts",
+      "types": "./dist/timeline/trim-modes.d.ts",
       "react-native": "./src/timeline/trim-modes.ts",
       "default": "./src/timeline/trim-modes.ts"
     },
     "./timeline/placement": {
-      "types": "./src/timeline/placement.ts",
+      "types": "./dist/timeline/placement.d.ts",
       "react-native": "./src/timeline/placement.ts",
       "default": "./src/timeline/placement.ts"
     },
     "./timeline/transitions": {
-      "types": "./src/timeline/transitions.ts",
+      "types": "./dist/timeline/transitions.d.ts",
       "react-native": "./src/timeline/transitions.ts",
       "default": "./src/timeline/transitions.ts"
     },
     "./timeline/markers": {
-      "types": "./src/timeline/markers.ts",
+      "types": "./dist/timeline/markers.d.ts",
       "react-native": "./src/timeline/markers.ts",
       "default": "./src/timeline/markers.ts"
     },
     "./timeline/loop-range": {
-      "types": "./src/timeline/loop-range.ts",
+      "types": "./dist/timeline/loop-range.d.ts",
       "react-native": "./src/timeline/loop-range.ts",
       "default": "./src/timeline/loop-range.ts"
     },
     "./timeline/shuttle": {
-      "types": "./src/timeline/shuttle.ts",
+      "types": "./dist/timeline/shuttle.d.ts",
       "react-native": "./src/timeline/shuttle.ts",
       "default": "./src/timeline/shuttle.ts"
     },
     "./timeline/batch": {
-      "types": "./src/timeline/batch.ts",
+      "types": "./dist/timeline/batch.d.ts",
       "react-native": "./src/timeline/batch.ts",
       "default": "./src/timeline/batch.ts"
     },
     "./timeline/transition-presets": {
-      "types": "./src/timeline/transition-presets.ts",
+      "types": "./dist/timeline/transition-presets.d.ts",
       "react-native": "./src/timeline/transition-presets.ts",
       "default": "./src/timeline/transition-presets.ts"
     },
     "./timeline/track-stack": {
-      "types": "./src/timeline/track-stack.ts",
+      "types": "./dist/timeline/track-stack.d.ts",
       "react-native": "./src/timeline/track-stack.ts",
       "default": "./src/timeline/track-stack.ts"
     },
     "./canvas-tools/ColorDropCanvasTarget": {
-      "types": "./src/canvas-tools/ColorDropCanvasTarget.tsx",
+      "types": "./dist/canvas-tools/ColorDropCanvasTarget.d.ts",
       "react-native": "./src/canvas-tools/ColorDropCanvasTarget.tsx",
       "default": "./src/canvas-tools/ColorDropCanvasTarget.tsx"
     },
     "./canvas-tools/GestureCustomizationPanel": {
-      "types": "./src/canvas-tools/GestureCustomizationPanel.tsx",
+      "types": "./dist/canvas-tools/GestureCustomizationPanel.d.ts",
       "react-native": "./src/canvas-tools/GestureCustomizationPanel.tsx",
       "default": "./src/canvas-tools/GestureCustomizationPanel.tsx"
     },
     "./canvas-tools/ReferenceImageBoard": {
-      "types": "./src/canvas-tools/ReferenceImageBoard.tsx",
+      "types": "./dist/canvas-tools/ReferenceImageBoard.d.ts",
       "react-native": "./src/canvas-tools/ReferenceImageBoard.tsx",
       "default": "./src/canvas-tools/ReferenceImageBoard.tsx"
     },
     "./canvas-tools/color-drop-model": {
-      "types": "./src/canvas-tools/color-drop-model.ts",
+      "types": "./dist/canvas-tools/color-drop-model.d.ts",
       "react-native": "./src/canvas-tools/color-drop-model.ts",
       "default": "./src/canvas-tools/color-drop-model.ts"
     },
     "./canvas-tools/gesture-map-model": {
-      "types": "./src/canvas-tools/gesture-map-model.ts",
+      "types": "./dist/canvas-tools/gesture-map-model.d.ts",
       "react-native": "./src/canvas-tools/gesture-map-model.ts",
       "default": "./src/canvas-tools/gesture-map-model.ts"
     },
     "./canvas-tools/reference-board-model": {
-      "types": "./src/canvas-tools/reference-board-model.ts",
+      "types": "./dist/canvas-tools/reference-board-model.d.ts",
       "react-native": "./src/canvas-tools/reference-board-model.ts",
       "default": "./src/canvas-tools/reference-board-model.ts"
     },
     "./canvas/AlignDistributePanel": {
-      "types": "./src/canvas/AlignDistributePanel.tsx",
+      "types": "./dist/canvas/AlignDistributePanel.d.ts",
       "react-native": "./src/canvas/AlignDistributePanel.tsx",
       "default": "./src/canvas/AlignDistributePanel.tsx"
     },
     "./canvas/CanvasRuler": {
-      "types": "./src/canvas/CanvasRuler.tsx",
+      "types": "./dist/canvas/CanvasRuler.d.ts",
       "react-native": "./src/canvas/CanvasRuler.tsx",
       "default": "./src/canvas/CanvasRuler.tsx"
     },
     "./canvas/SmartGuides": {
-      "types": "./src/canvas/SmartGuides.tsx",
+      "types": "./dist/canvas/SmartGuides.d.ts",
       "react-native": "./src/canvas/SmartGuides.tsx",
       "default": "./src/canvas/SmartGuides.tsx"
     },
     "./canvas/SnapGridOverlay": {
-      "types": "./src/canvas/SnapGridOverlay.tsx",
+      "types": "./dist/canvas/SnapGridOverlay.d.ts",
       "react-native": "./src/canvas/SnapGridOverlay.tsx",
       "default": "./src/canvas/SnapGridOverlay.tsx"
     },
     "./canvas/SnapGridSettings": {
-      "types": "./src/canvas/SnapGridSettings.tsx",
+      "types": "./dist/canvas/SnapGridSettings.d.ts",
       "react-native": "./src/canvas/SnapGridSettings.tsx",
       "default": "./src/canvas/SnapGridSettings.tsx"
     },
     "./canvas/TransformOriginHandle": {
-      "types": "./src/canvas/TransformOriginHandle.tsx",
+      "types": "./dist/canvas/TransformOriginHandle.d.ts",
       "react-native": "./src/canvas/TransformOriginHandle.tsx",
       "default": "./src/canvas/TransformOriginHandle.tsx"
     },
     "./canvas/align-distribute-model": {
-      "types": "./src/canvas/align-distribute-model.ts",
+      "types": "./dist/canvas/align-distribute-model.d.ts",
       "react-native": "./src/canvas/align-distribute-model.ts",
       "default": "./src/canvas/align-distribute-model.ts"
     },
     "./canvas/canvas-viewport": {
-      "types": "./src/canvas/canvas-viewport.ts",
+      "types": "./dist/canvas/canvas-viewport.d.ts",
       "react-native": "./src/canvas/canvas-viewport.ts",
       "default": "./src/canvas/canvas-viewport.ts"
     },
     "./canvas/ruler-model": {
-      "types": "./src/canvas/ruler-model.ts",
+      "types": "./dist/canvas/ruler-model.d.ts",
       "react-native": "./src/canvas/ruler-model.ts",
       "default": "./src/canvas/ruler-model.ts"
     },
     "./canvas/smart-guides-model": {
-      "types": "./src/canvas/smart-guides-model.ts",
+      "types": "./dist/canvas/smart-guides-model.d.ts",
       "react-native": "./src/canvas/smart-guides-model.ts",
       "default": "./src/canvas/smart-guides-model.ts"
     },
     "./canvas/snap-grid-model": {
-      "types": "./src/canvas/snap-grid-model.ts",
+      "types": "./dist/canvas/snap-grid-model.d.ts",
       "react-native": "./src/canvas/snap-grid-model.ts",
       "default": "./src/canvas/snap-grid-model.ts"
     },
     "./canvas/transform-origin-model": {
-      "types": "./src/canvas/transform-origin-model.ts",
+      "types": "./dist/canvas/transform-origin-model.d.ts",
       "react-native": "./src/canvas/transform-origin-model.ts",
       "default": "./src/canvas/transform-origin-model.ts"
     },
     "./layers/ArtboardNavigator": {
-      "types": "./src/layers/ArtboardNavigator.tsx",
+      "types": "./dist/layers/ArtboardNavigator.d.ts",
       "react-native": "./src/layers/ArtboardNavigator.tsx",
       "default": "./src/layers/ArtboardNavigator.tsx"
     },
     "./layers/CanvasCompareView": {
-      "types": "./src/layers/CanvasCompareView.tsx",
+      "types": "./dist/layers/CanvasCompareView.d.ts",
       "react-native": "./src/layers/CanvasCompareView.tsx",
       "default": "./src/layers/CanvasCompareView.tsx"
     },
     "./layers/ClippingMaskControls": {
-      "types": "./src/layers/ClippingMaskControls.tsx",
+      "types": "./dist/layers/ClippingMaskControls.d.ts",
       "react-native": "./src/layers/ClippingMaskControls.tsx",
       "default": "./src/layers/ClippingMaskControls.tsx"
     },
     "./layers/LayerThumbnail": {
-      "types": "./src/layers/LayerThumbnail.tsx",
+      "types": "./dist/layers/LayerThumbnail.d.ts",
       "react-native": "./src/layers/LayerThumbnail.tsx",
       "default": "./src/layers/LayerThumbnail.tsx"
     },
     "./layers/MaskThumbnailAndEditor": {
-      "types": "./src/layers/MaskThumbnailAndEditor.tsx",
+      "types": "./dist/layers/MaskThumbnailAndEditor.d.ts",
       "react-native": "./src/layers/MaskThumbnailAndEditor.tsx",
       "default": "./src/layers/MaskThumbnailAndEditor.tsx"
     },
     "./layers/artboard-model": {
-      "types": "./src/layers/artboard-model.ts",
+      "types": "./dist/layers/artboard-model.d.ts",
       "react-native": "./src/layers/artboard-model.ts",
       "default": "./src/layers/artboard-model.ts"
     },
     "./layers/clipping-model": {
-      "types": "./src/layers/clipping-model.ts",
+      "types": "./dist/layers/clipping-model.d.ts",
       "react-native": "./src/layers/clipping-model.ts",
       "default": "./src/layers/clipping-model.ts"
     },
     "./layers/compare-model": {
-      "types": "./src/layers/compare-model.ts",
+      "types": "./dist/layers/compare-model.d.ts",
       "react-native": "./src/layers/compare-model.ts",
       "default": "./src/layers/compare-model.ts"
     },
     "./layers/layer-thumbnail-model": {
-      "types": "./src/layers/layer-thumbnail-model.ts",
+      "types": "./dist/layers/layer-thumbnail-model.d.ts",
       "react-native": "./src/layers/layer-thumbnail-model.ts",
       "default": "./src/layers/layer-thumbnail-model.ts"
     },
     "./layers/mask-model": {
-      "types": "./src/layers/mask-model.ts",
+      "types": "./dist/layers/mask-model.d.ts",
       "react-native": "./src/layers/mask-model.ts",
       "default": "./src/layers/mask-model.ts"
     },
     "./selection/MagicSelectionControls": {
-      "types": "./src/selection/MagicSelectionControls.tsx",
+      "types": "./dist/selection/MagicSelectionControls.d.ts",
       "react-native": "./src/selection/MagicSelectionControls.tsx",
       "default": "./src/selection/MagicSelectionControls.tsx"
     },
     "./selection/SelectionMarquee": {
-      "types": "./src/selection/SelectionMarquee.tsx",
+      "types": "./dist/selection/SelectionMarquee.d.ts",
       "react-native": "./src/selection/SelectionMarquee.tsx",
       "default": "./src/selection/SelectionMarquee.tsx"
     },
     "./selection/magic-selection-model": {
-      "types": "./src/selection/magic-selection-model.ts",
+      "types": "./dist/selection/magic-selection-model.d.ts",
       "react-native": "./src/selection/magic-selection-model.ts",
       "default": "./src/selection/magic-selection-model.ts"
     },
     "./selection/selection-model": {
-      "types": "./src/selection/selection-model.ts",
+      "types": "./dist/selection/selection-model.d.ts",
       "react-native": "./src/selection/selection-model.ts",
       "default": "./src/selection/selection-model.ts"
     },
     "./vector/FillStrokeInspector": {
-      "types": "./src/vector/FillStrokeInspector.tsx",
+      "types": "./dist/vector/FillStrokeInspector.d.ts",
       "react-native": "./src/vector/FillStrokeInspector.tsx",
       "default": "./src/vector/FillStrokeInspector.tsx"
     },
     "./vector/GradientOnCanvasHandles": {
-      "types": "./src/vector/GradientOnCanvasHandles.tsx",
+      "types": "./dist/vector/GradientOnCanvasHandles.d.ts",
       "react-native": "./src/vector/GradientOnCanvasHandles.tsx",
       "default": "./src/vector/GradientOnCanvasHandles.tsx"
     },
     "./vector/PenNodeEditor": {
-      "types": "./src/vector/PenNodeEditor.tsx",
+      "types": "./dist/vector/PenNodeEditor.d.ts",
       "react-native": "./src/vector/PenNodeEditor.tsx",
       "default": "./src/vector/PenNodeEditor.tsx"
     },
     "./vector/ShapeBuilder": {
-      "types": "./src/vector/ShapeBuilder.tsx",
+      "types": "./dist/vector/ShapeBuilder.d.ts",
       "react-native": "./src/vector/ShapeBuilder.tsx",
       "default": "./src/vector/ShapeBuilder.tsx"
     },
     "./vector/fill-stroke-model": {
-      "types": "./src/vector/fill-stroke-model.ts",
+      "types": "./dist/vector/fill-stroke-model.d.ts",
       "react-native": "./src/vector/fill-stroke-model.ts",
       "default": "./src/vector/fill-stroke-model.ts"
     },
     "./vector/gradient-handles-model": {
-      "types": "./src/vector/gradient-handles-model.ts",
+      "types": "./dist/vector/gradient-handles-model.d.ts",
       "react-native": "./src/vector/gradient-handles-model.ts",
       "default": "./src/vector/gradient-handles-model.ts"
     },
     "./vector/pen-node-model": {
-      "types": "./src/vector/pen-node-model.ts",
+      "types": "./dist/vector/pen-node-model.d.ts",
       "react-native": "./src/vector/pen-node-model.ts",
       "default": "./src/vector/pen-node-model.ts"
     },
     "./vector/shape-builder-model": {
-      "types": "./src/vector/shape-builder-model.ts",
+      "types": "./dist/vector/shape-builder-model.d.ts",
       "react-native": "./src/vector/shape-builder-model.ts",
       "default": "./src/vector/shape-builder-model.ts"
     },
     "./vector/vector-types": {
-      "types": "./src/vector/vector-types.ts",
+      "types": "./dist/vector/vector-types.d.ts",
       "react-native": "./src/vector/vector-types.ts",
       "default": "./src/vector/vector-types.ts"
     },
     "./audio/AutomationLane": {
-      "types": "./src/audio/AutomationLane.tsx",
+      "types": "./dist/audio/AutomationLane.d.ts",
       "react-native": "./src/audio/AutomationLane.tsx",
       "default": "./src/audio/AutomationLane.tsx"
     },
     "./audio/AutomationModePicker": {
-      "types": "./src/audio/AutomationModePicker.tsx",
+      "types": "./dist/audio/AutomationModePicker.d.ts",
       "react-native": "./src/audio/AutomationModePicker.tsx",
       "default": "./src/audio/AutomationModePicker.tsx"
     },
     "./audio/BusAndRoutingMatrix": {
-      "types": "./src/audio/BusAndRoutingMatrix.tsx",
+      "types": "./dist/audio/BusAndRoutingMatrix.d.ts",
       "react-native": "./src/audio/BusAndRoutingMatrix.tsx",
       "default": "./src/audio/BusAndRoutingMatrix.tsx"
     },
     "./audio/DynamicsTransferGraph": {
-      "types": "./src/audio/DynamicsTransferGraph.tsx",
+      "types": "./dist/audio/DynamicsTransferGraph.d.ts",
       "react-native": "./src/audio/DynamicsTransferGraph.tsx",
       "default": "./src/audio/DynamicsTransferGraph.tsx"
     },
     "./audio/EQFrequencyGraph": {
-      "types": "./src/audio/EQFrequencyGraph.tsx",
+      "types": "./dist/audio/EQFrequencyGraph.d.ts",
       "react-native": "./src/audio/EQFrequencyGraph.tsx",
       "default": "./src/audio/EQFrequencyGraph.tsx"
     },
     "./audio/InsertEffectRack": {
-      "types": "./src/audio/InsertEffectRack.tsx",
+      "types": "./dist/audio/InsertEffectRack.d.ts",
       "react-native": "./src/audio/InsertEffectRack.tsx",
       "default": "./src/audio/InsertEffectRack.tsx"
     },
     "./audio/LoudnessMeter": {
-      "types": "./src/audio/LoudnessMeter.tsx",
+      "types": "./dist/audio/LoudnessMeter.d.ts",
       "react-native": "./src/audio/LoudnessMeter.tsx",
       "default": "./src/audio/LoudnessMeter.tsx"
     },
     "./audio/MixGroupBar": {
-      "types": "./src/audio/MixGroupBar.tsx",
+      "types": "./dist/audio/MixGroupBar.d.ts",
       "react-native": "./src/audio/MixGroupBar.tsx",
       "default": "./src/audio/MixGroupBar.tsx"
     },
     "./audio/PluginPresetBrowser": {
-      "types": "./src/audio/PluginPresetBrowser.tsx",
+      "types": "./dist/audio/PluginPresetBrowser.d.ts",
       "react-native": "./src/audio/PluginPresetBrowser.tsx",
       "default": "./src/audio/PluginPresetBrowser.tsx"
     },
     "./audio/SpectrogramView": {
-      "types": "./src/audio/SpectrogramView.tsx",
+      "types": "./dist/audio/SpectrogramView.d.ts",
       "react-native": "./src/audio/SpectrogramView.tsx",
       "default": "./src/audio/SpectrogramView.tsx"
     },
     "./audio/automation": {
-      "types": "./src/audio/automation.ts",
+      "types": "./dist/audio/automation.d.ts",
       "react-native": "./src/audio/automation.ts",
       "default": "./src/audio/automation.ts"
     },
     "./audio/dynamics-graph": {
-      "types": "./src/audio/dynamics-graph.ts",
+      "types": "./dist/audio/dynamics-graph.d.ts",
       "react-native": "./src/audio/dynamics-graph.ts",
       "default": "./src/audio/dynamics-graph.ts"
     },
     "./audio/eq-graph": {
-      "types": "./src/audio/eq-graph.ts",
+      "types": "./dist/audio/eq-graph.d.ts",
       "react-native": "./src/audio/eq-graph.ts",
       "default": "./src/audio/eq-graph.ts"
     },
     "./audio/inserts": {
-      "types": "./src/audio/inserts.ts",
+      "types": "./dist/audio/inserts.d.ts",
       "react-native": "./src/audio/inserts.ts",
       "default": "./src/audio/inserts.ts"
     },
     "./audio/loudness": {
-      "types": "./src/audio/loudness.ts",
+      "types": "./dist/audio/loudness.d.ts",
       "react-native": "./src/audio/loudness.ts",
       "default": "./src/audio/loudness.ts"
     },
     "./audio/meter-ballistics": {
-      "types": "./src/audio/meter-ballistics.ts",
+      "types": "./dist/audio/meter-ballistics.d.ts",
       "react-native": "./src/audio/meter-ballistics.ts",
       "default": "./src/audio/meter-ballistics.ts"
     },
     "./audio/mix-groups": {
-      "types": "./src/audio/mix-groups.ts",
+      "types": "./dist/audio/mix-groups.d.ts",
       "react-native": "./src/audio/mix-groups.ts",
       "default": "./src/audio/mix-groups.ts"
     },
     "./audio/routing": {
-      "types": "./src/audio/routing.ts",
+      "types": "./dist/audio/routing.d.ts",
       "react-native": "./src/audio/routing.ts",
       "default": "./src/audio/routing.ts"
     },
     "./audio/spectrogram": {
-      "types": "./src/audio/spectrogram.ts",
+      "types": "./dist/audio/spectrogram.d.ts",
       "react-native": "./src/audio/spectrogram.ts",
       "default": "./src/audio/spectrogram.ts"
     },
     "./midi/MidiChannelPicker": {
-      "types": "./src/midi/MidiChannelPicker.tsx",
+      "types": "./dist/midi/MidiChannelPicker.d.ts",
       "react-native": "./src/midi/MidiChannelPicker.tsx",
       "default": "./src/midi/MidiChannelPicker.tsx"
     },
     "./midi/velocity-line": {
-      "types": "./src/midi/velocity-line.ts",
+      "types": "./dist/midi/velocity-line.d.ts",
       "react-native": "./src/midi/velocity-line.ts",
       "default": "./src/midi/velocity-line.ts"
     },
     "./color/ColorPickerDialog": {
-      "types": "./src/color/ColorPickerDialog.tsx",
+      "types": "./dist/color/ColorPickerDialog.d.ts",
       "react-native": "./src/color/ColorPickerDialog.tsx",
       "default": "./src/color/ColorPickerDialog.tsx"
     },
     "./color/color-picker-dialog-model": {
-      "types": "./src/color/color-picker-dialog-model.ts",
+      "types": "./dist/color/color-picker-dialog-model.d.ts",
       "react-native": "./src/color/color-picker-dialog-model.ts",
       "default": "./src/color/color-picker-dialog-model.ts"
     },
     "./frame-throttle": {
-      "types": "./src/frame-throttle.ts",
+      "types": "./dist/frame-throttle.d.ts",
       "react-native": "./src/frame-throttle.ts",
       "default": "./src/frame-throttle.ts"
     },
     "./slides/PresenterInkOverlay": {
-      "types": "./src/slides/PresenterInkOverlay.tsx",
+      "types": "./dist/slides/PresenterInkOverlay.d.ts",
       "react-native": "./src/slides/PresenterInkOverlay.tsx",
       "default": "./src/slides/PresenterInkOverlay.tsx"
     },
     "./slides/PresenterInkStrip": {
-      "types": "./src/slides/PresenterInkStrip.tsx",
+      "types": "./dist/slides/PresenterInkStrip.d.ts",
       "react-native": "./src/slides/PresenterInkStrip.tsx",
       "default": "./src/slides/PresenterInkStrip.tsx"
     },
     "./slides/presenter-ink-model": {
-      "types": "./src/slides/presenter-ink-model.ts",
+      "types": "./dist/slides/presenter-ink-model.d.ts",
       "react-native": "./src/slides/presenter-ink-model.ts",
       "default": "./src/slides/presenter-ink-model.ts"
     },
     "./audio/AudioInterruptionRecoveryDialog": {
-      "types": "./src/audio/AudioInterruptionRecoveryDialog.tsx",
+      "types": "./dist/audio/AudioInterruptionRecoveryDialog.d.ts",
       "react-native": "./src/audio/AudioInterruptionRecoveryDialog.tsx",
       "default": "./src/audio/AudioInterruptionRecoveryDialog.tsx"
     },
     "./audio/audio-recovery-model": {
-      "types": "./src/audio/audio-recovery-model.ts",
+      "types": "./dist/audio/audio-recovery-model.d.ts",
       "react-native": "./src/audio/audio-recovery-model.ts",
       "default": "./src/audio/audio-recovery-model.ts"
     },
     "./color/PrintColorChannels": {
-      "types": "./src/color/PrintColorChannels.tsx",
+      "types": "./dist/color/PrintColorChannels.d.ts",
       "react-native": "./src/color/PrintColorChannels.tsx",
       "default": "./src/color/PrintColorChannels.tsx"
     },
     "./color/WideGamutChannels": {
-      "types": "./src/color/WideGamutChannels.tsx",
+      "types": "./dist/color/WideGamutChannels.d.ts",
       "react-native": "./src/color/WideGamutChannels.tsx",
       "default": "./src/color/WideGamutChannels.tsx"
     },
     "./color/ColorSpaceChooser": {
-      "types": "./src/color/ColorSpaceChooser.tsx",
+      "types": "./dist/color/ColorSpaceChooser.d.ts",
       "react-native": "./src/color/ColorSpaceChooser.tsx",
       "default": "./src/color/ColorSpaceChooser.tsx"
     },
     "./color/GamutWarning": {
-      "types": "./src/color/GamutWarning.tsx",
+      "types": "./dist/color/GamutWarning.d.ts",
       "react-native": "./src/color/GamutWarning.tsx",
       "default": "./src/color/GamutWarning.tsx"
     },
     "./color/ThemeColorReferences": {
-      "types": "./src/color/ThemeColorReferences.tsx",
+      "types": "./dist/color/ThemeColorReferences.d.ts",
       "react-native": "./src/color/ThemeColorReferences.tsx",
       "default": "./src/color/ThemeColorReferences.tsx"
     },
     "./color/SpotAndGlobalColorEditor": {
-      "types": "./src/color/SpotAndGlobalColorEditor.tsx",
+      "types": "./dist/color/SpotAndGlobalColorEditor.d.ts",
       "react-native": "./src/color/SpotAndGlobalColorEditor.tsx",
       "default": "./src/color/SpotAndGlobalColorEditor.tsx"
     },
     "./color/SoftProofControls": {
-      "types": "./src/color/SoftProofControls.tsx",
+      "types": "./dist/color/SoftProofControls.d.ts",
       "react-native": "./src/color/SoftProofControls.tsx",
       "default": "./src/color/SoftProofControls.tsx"
     },
     "./color/color-management": {
-      "types": "./src/color/color-management.ts",
+      "types": "./dist/color/color-management.d.ts",
       "react-native": "./src/color/color-management.ts",
       "default": "./src/color/color-management.ts"
     },
     "./color/LevelsEditor": {
-      "types": "./src/color/LevelsEditor.tsx",
+      "types": "./dist/color/LevelsEditor.d.ts",
       "react-native": "./src/color/LevelsEditor.tsx",
       "default": "./src/color/LevelsEditor.tsx"
     },
     "./color/LiveHistogram": {
-      "types": "./src/color/LiveHistogram.tsx",
+      "types": "./dist/color/LiveHistogram.d.ts",
       "react-native": "./src/color/LiveHistogram.tsx",
       "default": "./src/color/LiveHistogram.tsx"
     },
     "./color/ColorGradingWheels": {
-      "types": "./src/color/ColorGradingWheels.tsx",
+      "types": "./dist/color/ColorGradingWheels.d.ts",
       "react-native": "./src/color/ColorGradingWheels.tsx",
       "default": "./src/color/ColorGradingWheels.tsx"
     },
     "./color/HSLSecondaryEditor": {
-      "types": "./src/color/HSLSecondaryEditor.tsx",
+      "types": "./dist/color/HSLSecondaryEditor.d.ts",
       "react-native": "./src/color/HSLSecondaryEditor.tsx",
       "default": "./src/color/HSLSecondaryEditor.tsx"
     },
     "./color/color-adjustments": {
-      "types": "./src/color/color-adjustments.ts",
+      "types": "./dist/color/color-adjustments.d.ts",
       "react-native": "./src/color/color-adjustments.ts",
       "default": "./src/color/color-adjustments.ts"
     },
     "./color/GradientStopEditor": {
-      "types": "./src/color/GradientStopEditor.tsx",
+      "types": "./dist/color/GradientStopEditor.d.ts",
       "react-native": "./src/color/GradientStopEditor.tsx",
       "default": "./src/color/GradientStopEditor.tsx"
     },
     "./color/CurvesEditor": {
-      "types": "./src/color/CurvesEditor.tsx",
+      "types": "./dist/color/CurvesEditor.d.ts",
       "react-native": "./src/color/CurvesEditor.tsx",
       "default": "./src/color/CurvesEditor.tsx"
     },
     "./color/VideoScopesPanel": {
-      "types": "./src/color/VideoScopesPanel.tsx",
+      "types": "./dist/color/VideoScopesPanel.d.ts",
       "react-native": "./src/color/VideoScopesPanel.tsx",
       "default": "./src/color/VideoScopesPanel.tsx"
     },
     "./color/SVColorField": {
-      "types": "./src/color/SVColorField.tsx",
+      "types": "./dist/color/SVColorField.d.ts",
       "react-native": "./src/color/SVColorField.tsx",
       "default": "./src/color/SVColorField.tsx"
     },
     "./color/HueSlider": {
-      "types": "./src/color/HueSlider.tsx",
+      "types": "./dist/color/HueSlider.d.ts",
       "react-native": "./src/color/HueSlider.tsx",
       "default": "./src/color/HueSlider.tsx"
     },
     "./color/GradientMeshEditor": {
-      "types": "./src/color/GradientMeshEditor.tsx",
+      "types": "./dist/color/GradientMeshEditor.d.ts",
       "react-native": "./src/color/GradientMeshEditor.tsx",
       "default": "./src/color/GradientMeshEditor.tsx"
     },
     "./color/gradient-mesh": {
-      "types": "./src/color/gradient-mesh.ts",
+      "types": "./dist/color/gradient-mesh.d.ts",
       "react-native": "./src/color/gradient-mesh.ts",
       "default": "./src/color/gradient-mesh.ts"
     },
     "./color/EyedropperTool": {
-      "types": "./src/color/EyedropperTool.tsx",
+      "types": "./dist/color/EyedropperTool.d.ts",
       "react-native": "./src/color/EyedropperTool.tsx",
       "default": "./src/color/EyedropperTool.tsx"
     },
     "./color/gradient-options": {
-      "types": "./src/color/gradient-options.ts",
+      "types": "./dist/color/gradient-options.d.ts",
       "react-native": "./src/color/gradient-options.ts",
       "default": "./src/color/gradient-options.ts"
     },
     "./photo/ExposureAndWhiteBalance": {
-      "types": "./src/photo/ExposureAndWhiteBalance.tsx",
+      "types": "./dist/photo/ExposureAndWhiteBalance.d.ts",
       "react-native": "./src/photo/ExposureAndWhiteBalance.tsx",
       "default": "./src/photo/ExposureAndWhiteBalance.tsx"
     },
     "./photo/ToneAndPresence": {
-      "types": "./src/photo/ToneAndPresence.tsx",
+      "types": "./dist/photo/ToneAndPresence.d.ts",
       "react-native": "./src/photo/ToneAndPresence.tsx",
       "default": "./src/photo/ToneAndPresence.tsx"
     },
     "./photo/EightBandColorMixer": {
-      "types": "./src/photo/EightBandColorMixer.tsx",
+      "types": "./dist/photo/EightBandColorMixer.d.ts",
       "react-native": "./src/photo/EightBandColorMixer.tsx",
       "default": "./src/photo/EightBandColorMixer.tsx"
     },
     "./photo/LensCorrectionPanel": {
-      "types": "./src/photo/LensCorrectionPanel.tsx",
+      "types": "./dist/photo/LensCorrectionPanel.d.ts",
       "react-native": "./src/photo/LensCorrectionPanel.tsx",
       "default": "./src/photo/LensCorrectionPanel.tsx"
     },
     "./photo/RatingAndFlagControl": {
-      "types": "./src/photo/RatingAndFlagControl.tsx",
+      "types": "./dist/photo/RatingAndFlagControl.d.ts",
       "react-native": "./src/photo/RatingAndFlagControl.tsx",
       "default": "./src/photo/RatingAndFlagControl.tsx"
     },
     "./photo/photo-adjustments": {
-      "types": "./src/photo/photo-adjustments.ts",
+      "types": "./dist/photo/photo-adjustments.d.ts",
       "react-native": "./src/photo/photo-adjustments.ts",
       "default": "./src/photo/photo-adjustments.ts"
     },
     "./photo/RAWDevelopPanel": {
-      "types": "./src/photo/RAWDevelopPanel.tsx",
+      "types": "./dist/photo/RAWDevelopPanel.d.ts",
       "react-native": "./src/photo/RAWDevelopPanel.tsx",
       "default": "./src/photo/RAWDevelopPanel.tsx"
     },
     "./photo/PhotoLibraryGrid": {
-      "types": "./src/photo/PhotoLibraryGrid.tsx",
+      "types": "./dist/photo/PhotoLibraryGrid.d.ts",
       "react-native": "./src/photo/PhotoLibraryGrid.tsx",
       "default": "./src/photo/PhotoLibraryGrid.tsx"
     },
     "./photo/CatalogFilterBar": {
-      "types": "./src/photo/CatalogFilterBar.tsx",
+      "types": "./dist/photo/CatalogFilterBar.d.ts",
       "react-native": "./src/photo/CatalogFilterBar.tsx",
       "default": "./src/photo/CatalogFilterBar.tsx"
     },
     "./photo/BeforeAfterCompare": {
-      "types": "./src/photo/BeforeAfterCompare.tsx",
+      "types": "./dist/photo/BeforeAfterCompare.d.ts",
       "react-native": "./src/photo/BeforeAfterCompare.tsx",
       "default": "./src/photo/BeforeAfterCompare.tsx"
     },
     "./photo/photo-catalog": {
-      "types": "./src/photo/photo-catalog.ts",
+      "types": "./dist/photo/photo-catalog.d.ts",
       "react-native": "./src/photo/photo-catalog.ts",
       "default": "./src/photo/photo-catalog.ts"
     },
     "./photo/PhotoMetadataInspector": {
-      "types": "./src/photo/PhotoMetadataInspector.tsx",
+      "types": "./dist/photo/PhotoMetadataInspector.d.ts",
       "react-native": "./src/photo/PhotoMetadataInspector.tsx",
       "default": "./src/photo/PhotoMetadataInspector.tsx"
     },
     "./photo/photo-metadata": {
-      "types": "./src/photo/photo-metadata.ts",
+      "types": "./dist/photo/photo-metadata.d.ts",
       "react-native": "./src/photo/photo-metadata.ts",
       "default": "./src/photo/photo-metadata.ts"
     },
     "./photo/PresetFilmstrip": {
-      "types": "./src/photo/PresetFilmstrip.tsx",
+      "types": "./dist/photo/PresetFilmstrip.d.ts",
       "react-native": "./src/photo/PresetFilmstrip.tsx",
       "default": "./src/photo/PresetFilmstrip.tsx"
     },
     "./photo/PresetManager": {
-      "types": "./src/photo/PresetManager.tsx",
+      "types": "./dist/photo/PresetManager.d.ts",
       "react-native": "./src/photo/PresetManager.tsx",
       "default": "./src/photo/PresetManager.tsx"
     },
     "./photo/photo-presets": {
-      "types": "./src/photo/photo-presets.ts",
+      "types": "./dist/photo/photo-presets.d.ts",
       "react-native": "./src/photo/photo-presets.ts",
       "default": "./src/photo/photo-presets.ts"
     },
     "./photo/PhotoVersionHistoryBrowser": {
-      "types": "./src/photo/PhotoVersionHistoryBrowser.tsx",
+      "types": "./dist/photo/PhotoVersionHistoryBrowser.d.ts",
       "react-native": "./src/photo/PhotoVersionHistoryBrowser.tsx",
       "default": "./src/photo/PhotoVersionHistoryBrowser.tsx"
     },
     "./photo/BatchExportPanel": {
-      "types": "./src/photo/BatchExportPanel.tsx",
+      "types": "./dist/photo/BatchExportPanel.d.ts",
       "react-native": "./src/photo/BatchExportPanel.tsx",
       "default": "./src/photo/BatchExportPanel.tsx"
     },
     "./photo/photo-export": {
-      "types": "./src/photo/photo-export.ts",
+      "types": "./dist/photo/photo-export.d.ts",
       "react-native": "./src/photo/photo-export.ts",
       "default": "./src/photo/photo-export.ts"
     },
     "./photo/LocalMaskBrush": {
-      "types": "./src/photo/LocalMaskBrush.tsx",
+      "types": "./dist/photo/LocalMaskBrush.d.ts",
       "react-native": "./src/photo/LocalMaskBrush.tsx",
       "default": "./src/photo/LocalMaskBrush.tsx"
     },
     "./photo/CleanupAndRetouchPanel": {
-      "types": "./src/photo/CleanupAndRetouchPanel.tsx",
+      "types": "./dist/photo/CleanupAndRetouchPanel.d.ts",
       "react-native": "./src/photo/CleanupAndRetouchPanel.tsx",
       "default": "./src/photo/CleanupAndRetouchPanel.tsx"
     },
     "./photo/LinearRadialGradientMask": {
-      "types": "./src/photo/LinearRadialGradientMask.tsx",
+      "types": "./dist/photo/LinearRadialGradientMask.d.ts",
       "react-native": "./src/photo/LinearRadialGradientMask.tsx",
       "default": "./src/photo/LinearRadialGradientMask.tsx"
     },
     "./photo/LuminanceColorRangeMask": {
-      "types": "./src/photo/LuminanceColorRangeMask.tsx",
+      "types": "./dist/photo/LuminanceColorRangeMask.d.ts",
       "react-native": "./src/photo/LuminanceColorRangeMask.tsx",
       "default": "./src/photo/LuminanceColorRangeMask.tsx"
     },
     "./photo/photo-masks": {
-      "types": "./src/photo/photo-masks.ts",
+      "types": "./dist/photo/photo-masks.d.ts",
       "react-native": "./src/photo/photo-masks.ts",
       "default": "./src/photo/photo-masks.ts"
     },
     "./motion/Transform3DInspector": {
-      "types": "./src/motion/Transform3DInspector.tsx",
+      "types": "./dist/motion/Transform3DInspector.d.ts",
       "react-native": "./src/motion/Transform3DInspector.tsx",
       "default": "./src/motion/Transform3DInspector.tsx"
     },
     "./motion/CameraAndLightControls": {
-      "types": "./src/motion/CameraAndLightControls.tsx",
+      "types": "./dist/motion/CameraAndLightControls.d.ts",
       "react-native": "./src/motion/CameraAndLightControls.tsx",
       "default": "./src/motion/CameraAndLightControls.tsx"
     },
     "./motion/MatteAndMaskPanel": {
-      "types": "./src/motion/MatteAndMaskPanel.tsx",
+      "types": "./dist/motion/MatteAndMaskPanel.d.ts",
       "react-native": "./src/motion/MatteAndMaskPanel.tsx",
       "default": "./src/motion/MatteAndMaskPanel.tsx"
     },
     "./motion/ParticleEmitterControls": {
-      "types": "./src/motion/ParticleEmitterControls.tsx",
+      "types": "./dist/motion/ParticleEmitterControls.d.ts",
       "react-native": "./src/motion/ParticleEmitterControls.tsx",
       "default": "./src/motion/ParticleEmitterControls.tsx"
     },
     "./motion/motion-settings": {
-      "types": "./src/motion/motion-settings.ts",
+      "types": "./dist/motion/motion-settings.d.ts",
       "react-native": "./src/motion/motion-settings.ts",
       "default": "./src/motion/motion-settings.ts"
     },
     "./motion/EasingPresetGallery": {
-      "types": "./src/motion/EasingPresetGallery.tsx",
+      "types": "./dist/motion/EasingPresetGallery.d.ts",
       "react-native": "./src/motion/EasingPresetGallery.tsx",
       "default": "./src/motion/EasingPresetGallery.tsx"
     },
     "./motion/RenderQueuePanel": {
-      "types": "./src/motion/RenderQueuePanel.tsx",
+      "types": "./dist/motion/RenderQueuePanel.d.ts",
       "react-native": "./src/motion/RenderQueuePanel.tsx",
       "default": "./src/motion/RenderQueuePanel.tsx"
     },
     "./motion/motion-easing": {
-      "types": "./src/motion/motion-easing.ts",
+      "types": "./dist/motion/motion-easing.d.ts",
       "react-native": "./src/motion/motion-easing.ts",
       "default": "./src/motion/motion-easing.ts"
     },
     "./motion/motion-render": {
-      "types": "./src/motion/motion-render.ts",
+      "types": "./dist/motion/motion-render.d.ts",
       "react-native": "./src/motion/motion-render.ts",
       "default": "./src/motion/motion-render.ts"
     },
     "./motion/KeyframeValueGraph": {
-      "types": "./src/motion/KeyframeValueGraph.tsx",
+      "types": "./dist/motion/KeyframeValueGraph.d.ts",
       "react-native": "./src/motion/KeyframeValueGraph.tsx",
       "default": "./src/motion/KeyframeValueGraph.tsx"
     },
     "./motion/KeyframeSpeedGraph": {
-      "types": "./src/motion/KeyframeSpeedGraph.tsx",
+      "types": "./dist/motion/KeyframeSpeedGraph.d.ts",
       "react-native": "./src/motion/KeyframeSpeedGraph.tsx",
       "default": "./src/motion/KeyframeSpeedGraph.tsx"
     },
     "./motion/TimeRemapCurve": {
-      "types": "./src/motion/TimeRemapCurve.tsx",
+      "types": "./dist/motion/TimeRemapCurve.d.ts",
       "react-native": "./src/motion/TimeRemapCurve.tsx",
       "default": "./src/motion/TimeRemapCurve.tsx"
     },
     "./motion/motion-curves": {
-      "types": "./src/motion/motion-curves.ts",
+      "types": "./dist/motion/motion-curves.d.ts",
       "react-native": "./src/motion/motion-curves.ts",
       "default": "./src/motion/motion-curves.ts"
     },
     "./motion/MotionKeyframeTimeline": {
-      "types": "./src/motion/MotionKeyframeTimeline.tsx",
+      "types": "./dist/motion/MotionKeyframeTimeline.d.ts",
       "react-native": "./src/motion/MotionKeyframeTimeline.tsx",
       "default": "./src/motion/MotionKeyframeTimeline.tsx"
     },
     "./motion/motion-timeline": {
-      "types": "./src/motion/motion-timeline.ts",
+      "types": "./dist/motion/motion-timeline.d.ts",
       "react-native": "./src/motion/motion-timeline.ts",
       "default": "./src/motion/motion-timeline.ts"
     },
     "./motion/CompositionLayerTree": {
-      "types": "./src/motion/CompositionLayerTree.tsx",
+      "types": "./dist/motion/CompositionLayerTree.d.ts",
       "react-native": "./src/motion/CompositionLayerTree.tsx",
       "default": "./src/motion/CompositionLayerTree.tsx"
     },
     "./motion/composition-tree": {
-      "types": "./src/motion/composition-tree.ts",
+      "types": "./dist/motion/composition-tree.d.ts",
       "react-native": "./src/motion/composition-tree.ts",
       "default": "./src/motion/composition-tree.ts"
     },
     "./motion/MotionPathEditor": {
-      "types": "./src/motion/MotionPathEditor.tsx",
+      "types": "./dist/motion/MotionPathEditor.d.ts",
       "react-native": "./src/motion/MotionPathEditor.tsx",
       "default": "./src/motion/MotionPathEditor.tsx"
     },
     "./motion/motion-path": {
-      "types": "./src/motion/motion-path.ts",
+      "types": "./dist/motion/motion-path.d.ts",
       "react-native": "./src/motion/motion-path.ts",
       "default": "./src/motion/motion-path.ts"
     },
     "./motion/EffectStackAndInspector": {
-      "types": "./src/motion/EffectStackAndInspector.tsx",
+      "types": "./dist/motion/EffectStackAndInspector.d.ts",
       "react-native": "./src/motion/EffectStackAndInspector.tsx",
       "default": "./src/motion/EffectStackAndInspector.tsx"
     },
     "./motion/motion-effects": {
-      "types": "./src/motion/motion-effects.ts",
+      "types": "./dist/motion/motion-effects.d.ts",
       "react-native": "./src/motion/motion-effects.ts",
       "default": "./src/motion/motion-effects.ts"
     },
     "./motion/ExpressionEditor": {
-      "types": "./src/motion/ExpressionEditor.tsx",
+      "types": "./dist/motion/ExpressionEditor.d.ts",
       "react-native": "./src/motion/ExpressionEditor.tsx",
       "default": "./src/motion/ExpressionEditor.tsx"
     },
     "./motion/motion-expression": {
-      "types": "./src/motion/motion-expression.ts",
+      "types": "./dist/motion/motion-expression.d.ts",
       "react-native": "./src/motion/motion-expression.ts",
       "default": "./src/motion/motion-expression.ts"
     },
     "./motion/NodeGraphEditor": {
-      "types": "./src/motion/NodeGraphEditor.tsx",
+      "types": "./dist/motion/NodeGraphEditor.d.ts",
       "react-native": "./src/motion/NodeGraphEditor.tsx",
       "default": "./src/motion/NodeGraphEditor.tsx"
     },
     "./motion/motion-node-graph": {
-      "types": "./src/motion/motion-node-graph.ts",
+      "types": "./dist/motion/motion-node-graph.d.ts",
       "react-native": "./src/motion/motion-node-graph.ts",
       "default": "./src/motion/motion-node-graph.ts"
     },
     "./canvas/CanvasPanZoom": {
-      "types": "./src/canvas/CanvasPanZoom.tsx",
+      "types": "./dist/canvas/CanvasPanZoom.d.ts",
       "react-native": "./src/canvas/CanvasPanZoom.tsx",
       "default": "./src/canvas/CanvasPanZoom.tsx"
     },
     "./canvas/canvas-pan-zoom-model": {
-      "types": "./src/canvas/canvas-pan-zoom-model.ts",
+      "types": "./dist/canvas/canvas-pan-zoom-model.d.ts",
       "react-native": "./src/canvas/canvas-pan-zoom-model.ts",
       "default": "./src/canvas/canvas-pan-zoom-model.ts"
     },
     "./canvas/GPUCanvasViewport": {
-      "types": "./src/canvas/GPUCanvasViewport.tsx",
+      "types": "./dist/canvas/GPUCanvasViewport.d.ts",
       "react-native": "./src/canvas/GPUCanvasViewport.tsx",
       "default": "./src/canvas/GPUCanvasViewport.tsx"
     },
     "./canvas/graphite-frame": {
-      "types": "./src/canvas/graphite-frame.ts",
+      "types": "./dist/canvas/graphite-frame.d.ts",
       "react-native": "./src/canvas/graphite-frame.ts",
       "default": "./src/canvas/graphite-frame.ts"
     },
     "./selection/SelectionBounds": {
-      "types": "./src/selection/SelectionBounds.tsx",
+      "types": "./dist/selection/SelectionBounds.d.ts",
       "react-native": "./src/selection/SelectionBounds.tsx",
       "default": "./src/selection/SelectionBounds.tsx"
     },
     "./selection/selection-bounds-model": {
-      "types": "./src/selection/selection-bounds-model.ts",
+      "types": "./dist/selection/selection-bounds-model.d.ts",
       "react-native": "./src/selection/selection-bounds-model.ts",
       "default": "./src/selection/selection-bounds-model.ts"
     },
     "./selection/MultiSelectionControls": {
-      "types": "./src/selection/MultiSelectionControls.tsx",
+      "types": "./dist/selection/MultiSelectionControls.d.ts",
       "react-native": "./src/selection/MultiSelectionControls.tsx",
       "default": "./src/selection/MultiSelectionControls.tsx"
     },
     "./selection/multi-selection-model": {
-      "types": "./src/selection/multi-selection-model.ts",
+      "types": "./dist/selection/multi-selection-model.d.ts",
       "react-native": "./src/selection/multi-selection-model.ts",
       "default": "./src/selection/multi-selection-model.ts"
     },
     "./layers/layer-tree-model": {
-      "types": "./src/layers/layer-tree-model.ts",
+      "types": "./dist/layers/layer-tree-model.d.ts",
       "react-native": "./src/layers/layer-tree-model.ts",
       "default": "./src/layers/layer-tree-model.ts"
     },
     "./layers/LayerBlendAndOpacity": {
-      "types": "./src/layers/LayerBlendAndOpacity.tsx",
+      "types": "./dist/layers/LayerBlendAndOpacity.d.ts",
       "react-native": "./src/layers/LayerBlendAndOpacity.tsx",
       "default": "./src/layers/LayerBlendAndOpacity.tsx"
     },
     "./layers/layer-blend-model": {
-      "types": "./src/layers/layer-blend-model.ts",
+      "types": "./dist/layers/layer-blend-model.d.ts",
       "react-native": "./src/layers/layer-blend-model.ts",
       "default": "./src/layers/layer-blend-model.ts"
     },
     "./canvas/GuidedCropAndStraighten": {
-      "types": "./src/canvas/GuidedCropAndStraighten.tsx",
+      "types": "./dist/canvas/GuidedCropAndStraighten.d.ts",
       "react-native": "./src/canvas/GuidedCropAndStraighten.tsx",
       "default": "./src/canvas/GuidedCropAndStraighten.tsx"
     },
     "./ink/BrushPresetBrowser": {
-      "types": "./src/ink/BrushPresetBrowser.tsx",
+      "types": "./dist/ink/BrushPresetBrowser.d.ts",
       "react-native": "./src/ink/BrushPresetBrowser.tsx",
       "default": "./src/ink/BrushPresetBrowser.tsx"
     },
     "./ink/BrushDynamicsInspector": {
-      "types": "./src/ink/BrushDynamicsInspector.tsx",
+      "types": "./dist/ink/BrushDynamicsInspector.d.ts",
       "react-native": "./src/ink/BrushDynamicsInspector.tsx",
       "default": "./src/ink/BrushDynamicsInspector.tsx"
     },
     "./ink/InkStrokePreview": {
-      "types": "./src/ink/InkStrokePreview.tsx",
+      "types": "./dist/ink/InkStrokePreview.d.ts",
       "react-native": "./src/ink/InkStrokePreview.tsx",
       "default": "./src/ink/InkStrokePreview.tsx"
     },
     "./ink/EraserModePicker": {
-      "types": "./src/ink/EraserModePicker.tsx",
+      "types": "./dist/ink/EraserModePicker.d.ts",
       "react-native": "./src/ink/EraserModePicker.tsx",
       "default": "./src/ink/EraserModePicker.tsx"
     },
     "./ink/BrushTaperControl": {
-      "types": "./src/ink/BrushTaperControl.tsx",
+      "types": "./dist/ink/BrushTaperControl.d.ts",
       "react-native": "./src/ink/BrushTaperControl.tsx",
       "default": "./src/ink/BrushTaperControl.tsx"
     },
     "./ink/TimelapsePlaybackExporter": {
-      "types": "./src/ink/TimelapsePlaybackExporter.tsx",
+      "types": "./dist/ink/TimelapsePlaybackExporter.d.ts",
       "react-native": "./src/ink/TimelapsePlaybackExporter.tsx",
       "default": "./src/ink/TimelapsePlaybackExporter.tsx"
     },
     "./ink/BrushStabilizationPreview": {
-      "types": "./src/ink/BrushStabilizationPreview.tsx",
+      "types": "./dist/ink/BrushStabilizationPreview.d.ts",
       "react-native": "./src/ink/BrushStabilizationPreview.tsx",
       "default": "./src/ink/BrushStabilizationPreview.tsx"
     },
     "./ink/brush-model": {
-      "types": "./src/ink/brush-model.ts",
+      "types": "./dist/ink/brush-model.d.ts",
       "react-native": "./src/ink/brush-model.ts",
       "default": "./src/ink/brush-model.ts"
     },
     "./devices/PenPairingDialog": {
-      "types": "./src/devices/PenPairingDialog.tsx",
+      "types": "./dist/devices/PenPairingDialog.d.ts",
       "react-native": "./src/devices/PenPairingDialog.tsx",
       "default": "./src/devices/PenPairingDialog.tsx"
     },
     "./timeline/MediaMonitor": {
-      "types": "./src/timeline/MediaMonitor.tsx",
+      "types": "./dist/timeline/MediaMonitor.d.ts",
       "react-native": "./src/timeline/MediaMonitor.tsx",
       "default": "./src/timeline/MediaMonitor.tsx"
     },
     "./timeline/SourceMonitor": {
-      "types": "./src/timeline/SourceMonitor.tsx",
+      "types": "./dist/timeline/SourceMonitor.d.ts",
       "react-native": "./src/timeline/SourceMonitor.tsx",
       "default": "./src/timeline/SourceMonitor.tsx"
     },
     "./timeline/ProgramMonitor": {
-      "types": "./src/timeline/ProgramMonitor.tsx",
+      "types": "./dist/timeline/ProgramMonitor.d.ts",
       "react-native": "./src/timeline/ProgramMonitor.tsx",
       "default": "./src/timeline/ProgramMonitor.tsx"
     },
     "./timeline/VideoFilmstrip": {
-      "types": "./src/timeline/VideoFilmstrip.tsx",
+      "types": "./dist/timeline/VideoFilmstrip.d.ts",
       "react-native": "./src/timeline/VideoFilmstrip.tsx",
       "default": "./src/timeline/VideoFilmstrip.tsx"
     },
     "./timeline/AudioClipWaveform": {
-      "types": "./src/timeline/AudioClipWaveform.tsx",
+      "types": "./dist/timeline/AudioClipWaveform.d.ts",
       "react-native": "./src/timeline/AudioClipWaveform.tsx",
       "default": "./src/timeline/AudioClipWaveform.tsx"
     },
     "./timeline/ScopesDock": {
-      "types": "./src/timeline/ScopesDock.tsx",
+      "types": "./dist/timeline/ScopesDock.d.ts",
       "react-native": "./src/timeline/ScopesDock.tsx",
       "default": "./src/timeline/ScopesDock.tsx"
     },
     "./timeline/MulticamAngleViewer": {
-      "types": "./src/timeline/MulticamAngleViewer.tsx",
+      "types": "./dist/timeline/MulticamAngleViewer.d.ts",
       "react-native": "./src/timeline/MulticamAngleViewer.tsx",
       "default": "./src/timeline/MulticamAngleViewer.tsx"
     },
     "./timeline/RenderCacheIndicator": {
-      "types": "./src/timeline/RenderCacheIndicator.tsx",
+      "types": "./dist/timeline/RenderCacheIndicator.d.ts",
       "react-native": "./src/timeline/RenderCacheIndicator.tsx",
       "default": "./src/timeline/RenderCacheIndicator.tsx"
     },
     "./timeline/PictureInPictureControls": {
-      "types": "./src/timeline/PictureInPictureControls.tsx",
+      "types": "./dist/timeline/PictureInPictureControls.d.ts",
       "react-native": "./src/timeline/PictureInPictureControls.tsx",
       "default": "./src/timeline/PictureInPictureControls.tsx"
     },
     "./timeline/waveform-cache": {
-      "types": "./src/timeline/waveform-cache.ts",
+      "types": "./dist/timeline/waveform-cache.d.ts",
       "react-native": "./src/timeline/waveform-cache.ts",
       "default": "./src/timeline/waveform-cache.ts"
     },
     "./timeline/ExportMonitor": {
-      "types": "./src/timeline/ExportMonitor.tsx",
+      "types": "./dist/timeline/ExportMonitor.d.ts",
       "react-native": "./src/timeline/ExportMonitor.tsx",
       "default": "./src/timeline/ExportMonitor.tsx"
     },
     "./timeline/VideoSpeedRampCurve": {
-      "types": "./src/timeline/VideoSpeedRampCurve.tsx",
+      "types": "./dist/timeline/VideoSpeedRampCurve.d.ts",
       "react-native": "./src/timeline/VideoSpeedRampCurve.tsx",
       "default": "./src/timeline/VideoSpeedRampCurve.tsx"
     },
     "./timeline/VideoQualityInspector": {
-      "types": "./src/timeline/VideoQualityInspector.tsx",
+      "types": "./dist/timeline/VideoQualityInspector.d.ts",
       "react-native": "./src/timeline/VideoQualityInspector.tsx",
       "default": "./src/timeline/VideoQualityInspector.tsx"
     },
     "./timeline/VideoStabilizationInspector": {
-      "types": "./src/timeline/VideoStabilizationInspector.tsx",
+      "types": "./dist/timeline/VideoStabilizationInspector.d.ts",
       "react-native": "./src/timeline/VideoStabilizationInspector.tsx",
       "default": "./src/timeline/VideoStabilizationInspector.tsx"
     },
     "./timeline/AutoReframeGuides": {
-      "types": "./src/timeline/AutoReframeGuides.tsx",
+      "types": "./dist/timeline/AutoReframeGuides.d.ts",
       "react-native": "./src/timeline/AutoReframeGuides.tsx",
       "default": "./src/timeline/AutoReframeGuides.tsx"
     },
     "./timeline/CoverFramePicker": {
-      "types": "./src/timeline/CoverFramePicker.tsx",
+      "types": "./dist/timeline/CoverFramePicker.d.ts",
       "react-native": "./src/timeline/CoverFramePicker.tsx",
       "default": "./src/timeline/CoverFramePicker.tsx"
     },
     "./timeline/VideoEffectsBrowser": {
-      "types": "./src/timeline/VideoEffectsBrowser.tsx",
+      "types": "./dist/timeline/VideoEffectsBrowser.d.ts",
       "react-native": "./src/timeline/VideoEffectsBrowser.tsx",
       "default": "./src/timeline/VideoEffectsBrowser.tsx"
     },
     "./timeline/MotionTrackingOverlay": {
-      "types": "./src/timeline/MotionTrackingOverlay.tsx",
+      "types": "./dist/timeline/MotionTrackingOverlay.d.ts",
       "react-native": "./src/timeline/MotionTrackingOverlay.tsx",
       "default": "./src/timeline/MotionTrackingOverlay.tsx"
     },
     "./timeline/CaptionWordTimingHandles": {
-      "types": "./src/timeline/CaptionWordTimingHandles.tsx",
+      "types": "./dist/timeline/CaptionWordTimingHandles.d.ts",
       "react-native": "./src/timeline/CaptionWordTimingHandles.tsx",
       "default": "./src/timeline/CaptionWordTimingHandles.tsx"
     },
     "./timeline/AutoCaptionTranscriptTimeline": {
-      "types": "./src/timeline/AutoCaptionTranscriptTimeline.tsx",
+      "types": "./dist/timeline/AutoCaptionTranscriptTimeline.d.ts",
       "react-native": "./src/timeline/AutoCaptionTranscriptTimeline.tsx",
       "default": "./src/timeline/AutoCaptionTranscriptTimeline.tsx"
     },
     "./timeline/StickerMotionLane": {
-      "types": "./src/timeline/StickerMotionLane.tsx",
+      "types": "./dist/timeline/StickerMotionLane.d.ts",
       "react-native": "./src/timeline/StickerMotionLane.tsx",
       "default": "./src/timeline/StickerMotionLane.tsx"
     },
     "./audio/VerticalFader": {
-      "types": "./src/audio/VerticalFader.tsx",
+      "types": "./dist/audio/VerticalFader.d.ts",
       "react-native": "./src/audio/VerticalFader.tsx",
       "default": "./src/audio/VerticalFader.tsx"
     },
     "./audio/NativeAudioTransport": {
-      "types": "./src/audio/NativeAudioTransport.tsx",
+      "types": "./dist/audio/NativeAudioTransport.d.ts",
       "react-native": "./src/audio/NativeAudioTransport.tsx",
       "default": "./src/audio/NativeAudioTransport.tsx"
     },
     "./audio/RecordingArmButton": {
-      "types": "./src/audio/RecordingArmButton.tsx",
+      "types": "./dist/audio/RecordingArmButton.d.ts",
       "react-native": "./src/audio/RecordingArmButton.tsx",
       "default": "./src/audio/RecordingArmButton.tsx"
     },
     "./audio/InputMonitorToggle": {
-      "types": "./src/audio/InputMonitorToggle.tsx",
+      "types": "./dist/audio/InputMonitorToggle.d.ts",
       "react-native": "./src/audio/InputMonitorToggle.tsx",
       "default": "./src/audio/InputMonitorToggle.tsx"
     },
     "./audio/DeviceAndChannelPicker": {
-      "types": "./src/audio/DeviceAndChannelPicker.tsx",
+      "types": "./dist/audio/DeviceAndChannelPicker.d.ts",
       "react-native": "./src/audio/DeviceAndChannelPicker.tsx",
       "default": "./src/audio/DeviceAndChannelPicker.tsx"
     },
     "./audio/StereoMultichannelWaveform": {
-      "types": "./src/audio/StereoMultichannelWaveform.tsx",
+      "types": "./dist/audio/StereoMultichannelWaveform.d.ts",
       "react-native": "./src/audio/StereoMultichannelWaveform.tsx",
       "default": "./src/audio/StereoMultichannelWaveform.tsx"
     },
     "./audio/LiveRecordingWaveform": {
-      "types": "./src/audio/LiveRecordingWaveform.tsx",
+      "types": "./dist/audio/LiveRecordingWaveform.d.ts",
       "react-native": "./src/audio/LiveRecordingWaveform.tsx",
       "default": "./src/audio/LiveRecordingWaveform.tsx"
     },
     "./audio/RealtimePeakMeter": {
-      "types": "./src/audio/RealtimePeakMeter.tsx",
+      "types": "./dist/audio/RealtimePeakMeter.d.ts",
       "react-native": "./src/audio/RealtimePeakMeter.tsx",
       "default": "./src/audio/RealtimePeakMeter.tsx"
     },
     "./audio/SurroundPanView": {
-      "types": "./src/audio/SurroundPanView.tsx",
+      "types": "./dist/audio/SurroundPanView.d.ts",
       "react-native": "./src/audio/SurroundPanView.tsx",
       "default": "./src/audio/SurroundPanView.tsx"
     },
     "./audio/PanAndBalanceControl": {
-      "types": "./src/audio/PanAndBalanceControl.tsx",
+      "types": "./dist/audio/PanAndBalanceControl.d.ts",
       "react-native": "./src/audio/PanAndBalanceControl.tsx",
       "default": "./src/audio/PanAndBalanceControl.tsx"
     },
     "./audio/ClipGainEnvelope": {
-      "types": "./src/audio/ClipGainEnvelope.tsx",
+      "types": "./dist/audio/ClipGainEnvelope.d.ts",
       "react-native": "./src/audio/ClipGainEnvelope.tsx",
       "default": "./src/audio/ClipGainEnvelope.tsx"
     },
     "./audio/AudioClipTrimAndFade": {
-      "types": "./src/audio/AudioClipTrimAndFade.tsx",
+      "types": "./dist/audio/AudioClipTrimAndFade.d.ts",
       "react-native": "./src/audio/AudioClipTrimAndFade.tsx",
       "default": "./src/audio/AudioClipTrimAndFade.tsx"
     },
     "./audio/LoopPunchRecording": {
-      "types": "./src/audio/LoopPunchRecording.tsx",
+      "types": "./dist/audio/LoopPunchRecording.d.ts",
       "react-native": "./src/audio/LoopPunchRecording.tsx",
       "default": "./src/audio/LoopPunchRecording.tsx"
     },
     "./audio/SampleEditor": {
-      "types": "./src/audio/SampleEditor.tsx",
+      "types": "./dist/audio/SampleEditor.d.ts",
       "react-native": "./src/audio/SampleEditor.tsx",
       "default": "./src/audio/SampleEditor.tsx"
     },
     "./audio/LatencyCalibrationPanel": {
-      "types": "./src/audio/LatencyCalibrationPanel.tsx",
+      "types": "./dist/audio/LatencyCalibrationPanel.d.ts",
       "react-native": "./src/audio/LatencyCalibrationPanel.tsx",
       "default": "./src/audio/LatencyCalibrationPanel.tsx"
     },
     "./audio/TakePlaylistAndComping": {
-      "types": "./src/audio/TakePlaylistAndComping.tsx",
+      "types": "./dist/audio/TakePlaylistAndComping.d.ts",
       "react-native": "./src/audio/TakePlaylistAndComping.tsx",
       "default": "./src/audio/TakePlaylistAndComping.tsx"
     },
     "./audio/AudioVideoSync": {
-      "types": "./src/audio/AudioVideoSync.tsx",
+      "types": "./dist/audio/AudioVideoSync.d.ts",
       "react-native": "./src/audio/AudioVideoSync.tsx",
       "default": "./src/audio/AudioVideoSync.tsx"
     },
     "./audio/AudioProcessingPanel": {
-      "types": "./src/audio/AudioProcessingPanel.tsx",
+      "types": "./dist/audio/AudioProcessingPanel.d.ts",
       "react-native": "./src/audio/AudioProcessingPanel.tsx",
       "default": "./src/audio/AudioProcessingPanel.tsx"
     },
     "./audio/VoiceIsolationPanel": {
-      "types": "./src/audio/VoiceIsolationPanel.tsx",
+      "types": "./dist/audio/VoiceIsolationPanel.d.ts",
       "react-native": "./src/audio/VoiceIsolationPanel.tsx",
       "default": "./src/audio/VoiceIsolationPanel.tsx"
     },
     "./audio/NoiseReductionMonitor": {
-      "types": "./src/audio/NoiseReductionMonitor.tsx",
+      "types": "./dist/audio/NoiseReductionMonitor.d.ts",
       "react-native": "./src/audio/NoiseReductionMonitor.tsx",
       "default": "./src/audio/NoiseReductionMonitor.tsx"
     },
     "./audio/AutoDuckEnvelopePanel": {
-      "types": "./src/audio/AutoDuckEnvelopePanel.tsx",
+      "types": "./dist/audio/AutoDuckEnvelopePanel.d.ts",
       "react-native": "./src/audio/AutoDuckEnvelopePanel.tsx",
       "default": "./src/audio/AutoDuckEnvelopePanel.tsx"
     },
     "./audio/AudioEffectsPresetPanel": {
-      "types": "./src/audio/AudioEffectsPresetPanel.tsx",
+      "types": "./dist/audio/AudioEffectsPresetPanel.d.ts",
       "react-native": "./src/audio/AudioEffectsPresetPanel.tsx",
       "default": "./src/audio/AudioEffectsPresetPanel.tsx"
     },
     "./audio/BeatDetectionMarkerLane": {
-      "types": "./src/audio/BeatDetectionMarkerLane.tsx",
+      "types": "./dist/audio/BeatDetectionMarkerLane.d.ts",
       "react-native": "./src/audio/BeatDetectionMarkerLane.tsx",
       "default": "./src/audio/BeatDetectionMarkerLane.tsx"
     },
     "./audio/SoundEffectsLibrary": {
-      "types": "./src/audio/SoundEffectsLibrary.tsx",
+      "types": "./dist/audio/SoundEffectsLibrary.d.ts",
       "react-native": "./src/audio/SoundEffectsLibrary.tsx",
       "default": "./src/audio/SoundEffectsLibrary.tsx"
     },
     "./audio/SpeechTranscriptTakeReview": {
-      "types": "./src/audio/SpeechTranscriptTakeReview.tsx",
+      "types": "./dist/audio/SpeechTranscriptTakeReview.d.ts",
       "react-native": "./src/audio/SpeechTranscriptTakeReview.tsx",
       "default": "./src/audio/SpeechTranscriptTakeReview.tsx"
     },
     "./audio/VoiceoverCountdownAndTakeBin": {
-      "types": "./src/audio/VoiceoverCountdownAndTakeBin.tsx",
+      "types": "./dist/audio/VoiceoverCountdownAndTakeBin.d.ts",
       "react-native": "./src/audio/VoiceoverCountdownAndTakeBin.tsx",
       "default": "./src/audio/VoiceoverCountdownAndTakeBin.tsx"
     },
     "./inputs/PropertyInspector": {
-      "types": "./src/inputs/PropertyInspector.tsx",
+      "types": "./dist/inputs/PropertyInspector.d.ts",
       "react-native": "./src/inputs/PropertyInspector.tsx",
       "default": "./src/inputs/PropertyInspector.tsx"
     },
     "./document/TypographyInspector": {
-      "types": "./src/document/TypographyInspector.tsx",
+      "types": "./dist/document/TypographyInspector.d.ts",
       "react-native": "./src/document/TypographyInspector.tsx",
       "default": "./src/document/TypographyInspector.tsx"
     },
     "./document/PageSetupPanel": {
-      "types": "./src/document/PageSetupPanel.tsx",
+      "types": "./dist/document/PageSetupPanel.d.ts",
       "react-native": "./src/document/PageSetupPanel.tsx",
       "default": "./src/document/PageSetupPanel.tsx"
     },
     "./document/HeadersFootersEditor": {
-      "types": "./src/document/HeadersFootersEditor.tsx",
+      "types": "./dist/document/HeadersFootersEditor.d.ts",
       "react-native": "./src/document/HeadersFootersEditor.tsx",
       "default": "./src/document/HeadersFootersEditor.tsx"
     },
     "./document/ParagraphStylesGallery": {
-      "types": "./src/document/ParagraphStylesGallery.tsx",
+      "types": "./dist/document/ParagraphStylesGallery.d.ts",
       "react-native": "./src/document/ParagraphStylesGallery.tsx",
       "default": "./src/document/ParagraphStylesGallery.tsx"
     },
     "./document/TableLayoutInspector": {
-      "types": "./src/document/TableLayoutInspector.tsx",
+      "types": "./dist/document/TableLayoutInspector.d.ts",
       "react-native": "./src/document/TableLayoutInspector.tsx",
       "default": "./src/document/TableLayoutInspector.tsx"
     },
     "./document/InsertTableGrid": {
-      "types": "./src/document/InsertTableGrid.tsx",
+      "types": "./dist/document/InsertTableGrid.d.ts",
       "react-native": "./src/document/InsertTableGrid.tsx",
       "default": "./src/document/InsertTableGrid.tsx"
     },
     "./document/ParagraphRuler": {
-      "types": "./src/document/ParagraphRuler.tsx",
+      "types": "./dist/document/ParagraphRuler.d.ts",
       "react-native": "./src/document/ParagraphRuler.tsx",
       "default": "./src/document/ParagraphRuler.tsx"
     },
     "./document/CommentsAndReviewRail": {
-      "types": "./src/document/CommentsAndReviewRail.tsx",
+      "types": "./dist/document/CommentsAndReviewRail.d.ts",
       "react-native": "./src/document/CommentsAndReviewRail.tsx",
       "default": "./src/document/CommentsAndReviewRail.tsx"
     },
     "./document/TrackChangesView": {
-      "types": "./src/document/TrackChangesView.tsx",
+      "types": "./dist/document/TrackChangesView.d.ts",
       "react-native": "./src/document/TrackChangesView.tsx",
       "default": "./src/document/TrackChangesView.tsx"
     },
     "./document/TableOfContentsEditor": {
-      "types": "./src/document/TableOfContentsEditor.tsx",
+      "types": "./dist/document/TableOfContentsEditor.d.ts",
       "react-native": "./src/document/TableOfContentsEditor.tsx",
       "default": "./src/document/TableOfContentsEditor.tsx"
     },
     "./document/DictationSessionPanel": {
-      "types": "./src/document/DictationSessionPanel.tsx",
+      "types": "./dist/document/DictationSessionPanel.d.ts",
       "react-native": "./src/document/DictationSessionPanel.tsx",
       "default": "./src/document/DictationSessionPanel.tsx"
     },
     "./document/TextWrapAndFrames": {
-      "types": "./src/document/TextWrapAndFrames.tsx",
+      "types": "./dist/document/TextWrapAndFrames.d.ts",
       "react-native": "./src/document/TextWrapAndFrames.tsx",
       "default": "./src/document/TextWrapAndFrames.tsx"
     },
     "./document/LayoutSpreadNavigator": {
-      "types": "./src/document/LayoutSpreadNavigator.tsx",
+      "types": "./dist/document/LayoutSpreadNavigator.d.ts",
       "react-native": "./src/document/LayoutSpreadNavigator.tsx",
       "default": "./src/document/LayoutSpreadNavigator.tsx"
     },
     "./document/MailMergeFieldPicker": {
-      "types": "./src/document/MailMergeFieldPicker.tsx",
+      "types": "./dist/document/MailMergeFieldPicker.d.ts",
       "react-native": "./src/document/MailMergeFieldPicker.tsx",
       "default": "./src/document/MailMergeFieldPicker.tsx"
     },
     "./document/SpellGrammarPopover": {
-      "types": "./src/document/SpellGrammarPopover.tsx",
+      "types": "./dist/document/SpellGrammarPopover.d.ts",
       "react-native": "./src/document/SpellGrammarPopover.tsx",
       "default": "./src/document/SpellGrammarPopover.tsx"
     },
     "./document/FootnoteCitationEditor": {
-      "types": "./src/document/FootnoteCitationEditor.tsx",
+      "types": "./dist/document/FootnoteCitationEditor.d.ts",
       "react-native": "./src/document/FootnoteCitationEditor.tsx",
       "default": "./src/document/FootnoteCitationEditor.tsx"
     },
     "./document/TextSelectionAndCaret": {
-      "types": "./src/document/TextSelectionAndCaret.tsx",
+      "types": "./dist/document/TextSelectionAndCaret.d.ts",
       "react-native": "./src/document/TextSelectionAndCaret.tsx",
       "default": "./src/document/TextSelectionAndCaret.tsx"
     },
     "./document/PaginatedTextCanvas": {
-      "types": "./src/document/PaginatedTextCanvas.tsx",
+      "types": "./dist/document/PaginatedTextCanvas.d.ts",
       "react-native": "./src/document/PaginatedTextCanvas.tsx",
       "default": "./src/document/PaginatedTextCanvas.tsx"
     },
     "./spreadsheet/VirtualSpreadsheetGrid": {
-      "types": "./src/spreadsheet/VirtualSpreadsheetGrid.tsx",
+      "types": "./dist/spreadsheet/VirtualSpreadsheetGrid.d.ts",
       "react-native": "./src/spreadsheet/VirtualSpreadsheetGrid.tsx",
       "default": "./src/spreadsheet/VirtualSpreadsheetGrid.tsx"
     },
     "./spreadsheet/FormulaBar": {
-      "types": "./src/spreadsheet/FormulaBar.tsx",
+      "types": "./dist/spreadsheet/FormulaBar.d.ts",
       "react-native": "./src/spreadsheet/FormulaBar.tsx",
       "default": "./src/spreadsheet/FormulaBar.tsx"
     },
     "./spreadsheet/NameBox": {
-      "types": "./src/spreadsheet/NameBox.tsx",
+      "types": "./dist/spreadsheet/NameBox.d.ts",
       "react-native": "./src/spreadsheet/NameBox.tsx",
       "default": "./src/spreadsheet/NameBox.tsx"
     },
     "./spreadsheet/FormulaAutocomplete": {
-      "types": "./src/spreadsheet/FormulaAutocomplete.tsx",
+      "types": "./dist/spreadsheet/FormulaAutocomplete.d.ts",
       "react-native": "./src/spreadsheet/FormulaAutocomplete.tsx",
       "default": "./src/spreadsheet/FormulaAutocomplete.tsx"
     },
     "./spreadsheet/ReferenceColorizer": {
-      "types": "./src/spreadsheet/ReferenceColorizer.tsx",
+      "types": "./dist/spreadsheet/ReferenceColorizer.d.ts",
       "react-native": "./src/spreadsheet/ReferenceColorizer.tsx",
       "default": "./src/spreadsheet/ReferenceColorizer.tsx"
     },
     "./spreadsheet/CellSelectionOverlay": {
-      "types": "./src/spreadsheet/CellSelectionOverlay.tsx",
+      "types": "./dist/spreadsheet/CellSelectionOverlay.d.ts",
       "react-native": "./src/spreadsheet/CellSelectionOverlay.tsx",
       "default": "./src/spreadsheet/CellSelectionOverlay.tsx"
     },
     "./spreadsheet/FillHandleAndAutoFill": {
-      "types": "./src/spreadsheet/FillHandleAndAutoFill.tsx",
+      "types": "./dist/spreadsheet/FillHandleAndAutoFill.d.ts",
       "react-native": "./src/spreadsheet/FillHandleAndAutoFill.tsx",
       "default": "./src/spreadsheet/FillHandleAndAutoFill.tsx"
     },
     "./spreadsheet/CellFormatInspector": {
-      "types": "./src/spreadsheet/CellFormatInspector.tsx",
+      "types": "./dist/spreadsheet/CellFormatInspector.d.ts",
       "react-native": "./src/spreadsheet/CellFormatInspector.tsx",
       "default": "./src/spreadsheet/CellFormatInspector.tsx"
     },
     "./spreadsheet/ValidationDropdown": {
-      "types": "./src/spreadsheet/ValidationDropdown.tsx",
+      "types": "./dist/spreadsheet/ValidationDropdown.d.ts",
       "react-native": "./src/spreadsheet/ValidationDropdown.tsx",
       "default": "./src/spreadsheet/ValidationDropdown.tsx"
     },
     "./spreadsheet/TableStyleGallery": {
-      "types": "./src/spreadsheet/TableStyleGallery.tsx",
+      "types": "./dist/spreadsheet/TableStyleGallery.d.ts",
       "react-native": "./src/spreadsheet/TableStyleGallery.tsx",
       "default": "./src/spreadsheet/TableStyleGallery.tsx"
     },
     "./spreadsheet/ConditionalFormatRules": {
-      "types": "./src/spreadsheet/ConditionalFormatRules.tsx",
+      "types": "./dist/spreadsheet/ConditionalFormatRules.d.ts",
       "react-native": "./src/spreadsheet/ConditionalFormatRules.tsx",
       "default": "./src/spreadsheet/ConditionalFormatRules.tsx"
     },
     "./spreadsheet/SortFilterHeader": {
-      "types": "./src/spreadsheet/SortFilterHeader.tsx",
+      "types": "./dist/spreadsheet/SortFilterHeader.d.ts",
       "react-native": "./src/spreadsheet/SortFilterHeader.tsx",
       "default": "./src/spreadsheet/SortFilterHeader.tsx"
     },
     "./spreadsheet/DataImportWizard": {
-      "types": "./src/spreadsheet/DataImportWizard.tsx",
+      "types": "./dist/spreadsheet/DataImportWizard.d.ts",
       "react-native": "./src/spreadsheet/DataImportWizard.tsx",
       "default": "./src/spreadsheet/DataImportWizard.tsx"
     },
     "./spreadsheet/SavedSheetViewManager": {
-      "types": "./src/spreadsheet/SavedSheetViewManager.tsx",
+      "types": "./dist/spreadsheet/SavedSheetViewManager.d.ts",
       "react-native": "./src/spreadsheet/SavedSheetViewManager.tsx",
       "default": "./src/spreadsheet/SavedSheetViewManager.tsx"
     },
     "./spreadsheet/PivotFieldList": {
-      "types": "./src/spreadsheet/PivotFieldList.tsx",
+      "types": "./dist/spreadsheet/PivotFieldList.d.ts",
       "react-native": "./src/spreadsheet/PivotFieldList.tsx",
       "default": "./src/spreadsheet/PivotFieldList.tsx"
     },
     "./spreadsheet/RangeComments": {
-      "types": "./src/spreadsheet/RangeComments.tsx",
+      "types": "./dist/spreadsheet/RangeComments.d.ts",
       "react-native": "./src/spreadsheet/RangeComments.tsx",
       "default": "./src/spreadsheet/RangeComments.tsx"
     },
     "./inputs/AssetPresetGallery": {
-      "types": "./src/inputs/AssetPresetGallery.tsx",
+      "types": "./dist/inputs/AssetPresetGallery.d.ts",
       "react-native": "./src/inputs/AssetPresetGallery.tsx",
       "default": "./src/inputs/AssetPresetGallery.tsx"
     },
     "./slides/ThemeAndTemplateGallery": {
-      "types": "./src/slides/ThemeAndTemplateGallery.tsx",
+      "types": "./dist/slides/ThemeAndTemplateGallery.d.ts",
       "react-native": "./src/slides/ThemeAndTemplateGallery.tsx",
       "default": "./src/slides/ThemeAndTemplateGallery.tsx"
     },
     "./slides/MasterLayoutEditor": {
-      "types": "./src/slides/MasterLayoutEditor.tsx",
+      "types": "./dist/slides/MasterLayoutEditor.d.ts",
       "react-native": "./src/slides/MasterLayoutEditor.tsx",
       "default": "./src/slides/MasterLayoutEditor.tsx"
     },
     "./slides/ShapePresetGallery": {
-      "types": "./src/slides/ShapePresetGallery.tsx",
+      "types": "./dist/slides/ShapePresetGallery.d.ts",
       "react-native": "./src/slides/ShapePresetGallery.tsx",
       "default": "./src/slides/ShapePresetGallery.tsx"
     },
     "./slides/TransitionPicker": {
-      "types": "./src/slides/TransitionPicker.tsx",
+      "types": "./dist/slides/TransitionPicker.d.ts",
       "react-native": "./src/slides/TransitionPicker.tsx",
       "default": "./src/slides/TransitionPicker.tsx"
     },
     "./slides/SlideNotesEditor": {
-      "types": "./src/slides/SlideNotesEditor.tsx",
+      "types": "./dist/slides/SlideNotesEditor.d.ts",
       "react-native": "./src/slides/SlideNotesEditor.tsx",
       "default": "./src/slides/SlideNotesEditor.tsx"
     },
     "./slides/PresenterView": {
-      "types": "./src/slides/PresenterView.tsx",
+      "types": "./dist/slides/PresenterView.d.ts",
       "react-native": "./src/slides/PresenterView.tsx",
       "default": "./src/slides/PresenterView.tsx"
     },
     "./slides/RehearsalTimers": {
-      "types": "./src/slides/RehearsalTimers.tsx",
+      "types": "./dist/slides/RehearsalTimers.d.ts",
       "react-native": "./src/slides/RehearsalTimers.tsx",
       "default": "./src/slides/RehearsalTimers.tsx"
     },
     "./slides/MorphPreview": {
-      "types": "./src/slides/MorphPreview.tsx",
+      "types": "./dist/slides/MorphPreview.d.ts",
       "react-native": "./src/slides/MorphPreview.tsx",
       "default": "./src/slides/MorphPreview.tsx"
     },
     "./slides/MediaInsertInspector": {
-      "types": "./src/slides/MediaInsertInspector.tsx",
+      "types": "./dist/slides/MediaInsertInspector.d.ts",
       "react-native": "./src/slides/MediaInsertInspector.tsx",
       "default": "./src/slides/MediaInsertInspector.tsx"
     },
     "./slides/ChartAndTableEditor": {
-      "types": "./src/slides/ChartAndTableEditor.tsx",
+      "types": "./dist/slides/ChartAndTableEditor.d.ts",
       "react-native": "./src/slides/ChartAndTableEditor.tsx",
       "default": "./src/slides/ChartAndTableEditor.tsx"
     },
     "./slides/ConnectorAndDiagramTools": {
-      "types": "./src/slides/ConnectorAndDiagramTools.tsx",
+      "types": "./dist/slides/ConnectorAndDiagramTools.d.ts",
       "react-native": "./src/slides/ConnectorAndDiagramTools.tsx",
       "default": "./src/slides/ConnectorAndDiagramTools.tsx"
     },
     "./slides/InkAndLaserPointer": {
-      "types": "./src/slides/InkAndLaserPointer.tsx",
+      "types": "./dist/slides/InkAndLaserPointer.d.ts",
       "react-native": "./src/slides/InkAndLaserPointer.tsx",
       "default": "./src/slides/InkAndLaserPointer.tsx"
     },
     "./pdf/PDFPageLayoutSelector": {
-      "types": "./src/pdf/PDFPageLayoutSelector.tsx",
+      "types": "./dist/pdf/PDFPageLayoutSelector.d.ts",
       "react-native": "./src/pdf/PDFPageLayoutSelector.tsx",
       "default": "./src/pdf/PDFPageLayoutSelector.tsx"
     },
     "./pdf/VirtualPDFPageViewer": {
-      "types": "./src/pdf/VirtualPDFPageViewer.tsx",
+      "types": "./dist/pdf/VirtualPDFPageViewer.d.ts",
       "react-native": "./src/pdf/VirtualPDFPageViewer.tsx",
       "default": "./src/pdf/VirtualPDFPageViewer.tsx"
     },
     "./pdf/PDFTextSelection": {
-      "types": "./src/pdf/PDFTextSelection.tsx",
+      "types": "./dist/pdf/PDFTextSelection.d.ts",
       "react-native": "./src/pdf/PDFTextSelection.tsx",
       "default": "./src/pdf/PDFTextSelection.tsx"
     },
     "./pdf/PDFInlineTextEdit": {
-      "types": "./src/pdf/PDFInlineTextEdit.tsx",
+      "types": "./dist/pdf/PDFInlineTextEdit.d.ts",
       "react-native": "./src/pdf/PDFInlineTextEdit.tsx",
       "default": "./src/pdf/PDFInlineTextEdit.tsx"
     },
     "./inputs/OutlineTree": {
-      "types": "./src/inputs/OutlineTree.tsx",
+      "types": "./dist/inputs/OutlineTree.d.ts",
       "react-native": "./src/inputs/OutlineTree.tsx",
       "default": "./src/inputs/OutlineTree.tsx"
     },
     "./pdf/BookmarkOutline": {
-      "types": "./src/pdf/BookmarkOutline.tsx",
+      "types": "./dist/pdf/BookmarkOutline.d.ts",
       "react-native": "./src/pdf/BookmarkOutline.tsx",
       "default": "./src/pdf/BookmarkOutline.tsx"
     },
     "./pdf/PDFThumbnailSidebar": {
-      "types": "./src/pdf/PDFThumbnailSidebar.tsx",
+      "types": "./dist/pdf/PDFThumbnailSidebar.d.ts",
       "react-native": "./src/pdf/PDFThumbnailSidebar.tsx",
       "default": "./src/pdf/PDFThumbnailSidebar.tsx"
     },
     "./pdf/PageReorderOrganizer": {
-      "types": "./src/pdf/PageReorderOrganizer.tsx",
+      "types": "./dist/pdf/PageReorderOrganizer.d.ts",
       "react-native": "./src/pdf/PageReorderOrganizer.tsx",
       "default": "./src/pdf/PageReorderOrganizer.tsx"
     },
     "./pdf/ExtractMergeSplitDialog": {
-      "types": "./src/pdf/ExtractMergeSplitDialog.tsx",
+      "types": "./dist/pdf/ExtractMergeSplitDialog.d.ts",
       "react-native": "./src/pdf/ExtractMergeSplitDialog.tsx",
       "default": "./src/pdf/ExtractMergeSplitDialog.tsx"
     },
     "./pdf/HyperlinkInspector": {
-      "types": "./src/pdf/HyperlinkInspector.tsx",
+      "types": "./dist/pdf/HyperlinkInspector.d.ts",
       "react-native": "./src/pdf/HyperlinkInspector.tsx",
       "default": "./src/pdf/HyperlinkInspector.tsx"
     },
     "./pdf/PDFCompareOverlay": {
-      "types": "./src/pdf/PDFCompareOverlay.tsx",
+      "types": "./dist/pdf/PDFCompareOverlay.d.ts",
       "react-native": "./src/pdf/PDFCompareOverlay.tsx",
       "default": "./src/pdf/PDFCompareOverlay.tsx"
     },
     "./pdf/PrintAndExportPreview": {
-      "types": "./src/pdf/PrintAndExportPreview.tsx",
+      "types": "./dist/pdf/PrintAndExportPreview.d.ts",
       "react-native": "./src/pdf/PrintAndExportPreview.tsx",
       "default": "./src/pdf/PrintAndExportPreview.tsx"
     },
     "./pdf/EncryptPermissionsPanel": {
-      "types": "./src/pdf/EncryptPermissionsPanel.tsx",
+      "types": "./dist/pdf/EncryptPermissionsPanel.d.ts",
       "react-native": "./src/pdf/EncryptPermissionsPanel.tsx",
       "default": "./src/pdf/EncryptPermissionsPanel.tsx"
     },
     "./pdf/RedactionReviewTool": {
-      "types": "./src/pdf/RedactionReviewTool.tsx",
+      "types": "./dist/pdf/RedactionReviewTool.d.ts",
       "react-native": "./src/pdf/RedactionReviewTool.tsx",
       "default": "./src/pdf/RedactionReviewTool.tsx"
     },
     "./pdf/SignatureStampTool": {
-      "types": "./src/pdf/SignatureStampTool.tsx",
+      "types": "./dist/pdf/SignatureStampTool.d.ts",
       "react-native": "./src/pdf/SignatureStampTool.tsx",
       "default": "./src/pdf/SignatureStampTool.tsx"
     },
     "./pdf/PDFFormFieldEditor": {
-      "types": "./src/pdf/PDFFormFieldEditor.tsx",
+      "types": "./dist/pdf/PDFFormFieldEditor.d.ts",
       "react-native": "./src/pdf/PDFFormFieldEditor.tsx",
       "default": "./src/pdf/PDFFormFieldEditor.tsx"
     },
     "./pdf/PDFVoiceNoteAttachment": {
-      "types": "./src/pdf/PDFVoiceNoteAttachment.tsx",
+      "types": "./dist/pdf/PDFVoiceNoteAttachment.d.ts",
       "react-native": "./src/pdf/PDFVoiceNoteAttachment.tsx",
       "default": "./src/pdf/PDFVoiceNoteAttachment.tsx"
     },
     "./pdf/PDFScanSession": {
-      "types": "./src/pdf/PDFScanSession.tsx",
+      "types": "./dist/pdf/PDFScanSession.d.ts",
       "react-native": "./src/pdf/PDFScanSession.tsx",
       "default": "./src/pdf/PDFScanSession.tsx"
     },
     "./inputs/PointEditor2D": {
-      "types": "./src/inputs/PointEditor2D.tsx",
+      "types": "./dist/inputs/PointEditor2D.d.ts",
       "react-native": "./src/inputs/PointEditor2D.tsx",
       "default": "./src/inputs/PointEditor2D.tsx"
     },
     "./design/FrameAndComponentTree": {
-      "types": "./src/design/FrameAndComponentTree.tsx",
+      "types": "./dist/design/FrameAndComponentTree.d.ts",
       "react-native": "./src/design/FrameAndComponentTree.tsx",
       "default": "./src/design/FrameAndComponentTree.tsx"
     },
     "./design/AutoLayoutInspector": {
-      "types": "./src/design/AutoLayoutInspector.tsx",
+      "types": "./dist/design/AutoLayoutInspector.d.ts",
       "react-native": "./src/design/AutoLayoutInspector.tsx",
       "default": "./src/design/AutoLayoutInspector.tsx"
     },
     "./design/HugFillFixedSizeControls": {
-      "types": "./src/design/HugFillFixedSizeControls.tsx",
+      "types": "./dist/design/HugFillFixedSizeControls.d.ts",
       "react-native": "./src/design/HugFillFixedSizeControls.tsx",
       "default": "./src/design/HugFillFixedSizeControls.tsx"
     },
     "./design/ConstraintsPanel": {
-      "types": "./src/design/ConstraintsPanel.tsx",
+      "types": "./dist/design/ConstraintsPanel.d.ts",
       "react-native": "./src/design/ConstraintsPanel.tsx",
       "default": "./src/design/ConstraintsPanel.tsx"
     },
     "./design/ComponentVariantPicker": {
-      "types": "./src/design/ComponentVariantPicker.tsx",
+      "types": "./dist/design/ComponentVariantPicker.d.ts",
       "react-native": "./src/design/ComponentVariantPicker.tsx",
       "default": "./src/design/ComponentVariantPicker.tsx"
     },
     "./design/ReusableStylesPanel": {
-      "types": "./src/design/ReusableStylesPanel.tsx",
+      "types": "./dist/design/ReusableStylesPanel.d.ts",
       "react-native": "./src/design/ReusableStylesPanel.tsx",
       "default": "./src/design/ReusableStylesPanel.tsx"
     },
     "./design/VariablesAndModes": {
-      "types": "./src/design/VariablesAndModes.tsx",
+      "types": "./dist/design/VariablesAndModes.d.ts",
       "react-native": "./src/design/VariablesAndModes.tsx",
       "default": "./src/design/VariablesAndModes.tsx"
     },
     "./design/PrototypeConnectionTool": {
-      "types": "./src/design/PrototypeConnectionTool.tsx",
+      "types": "./dist/design/PrototypeConnectionTool.d.ts",
       "react-native": "./src/design/PrototypeConnectionTool.tsx",
       "default": "./src/design/PrototypeConnectionTool.tsx"
     },
     "./design/InteractionTriggerEditor": {
-      "types": "./src/design/InteractionTriggerEditor.tsx",
+      "types": "./dist/design/InteractionTriggerEditor.d.ts",
       "react-native": "./src/design/InteractionTriggerEditor.tsx",
       "default": "./src/design/InteractionTriggerEditor.tsx"
     },
     "./design/PrototypePreviewPlayer": {
-      "types": "./src/design/PrototypePreviewPlayer.tsx",
+      "types": "./dist/design/PrototypePreviewPlayer.d.ts",
       "react-native": "./src/design/PrototypePreviewPlayer.tsx",
       "default": "./src/design/PrototypePreviewPlayer.tsx"
     },
     "./design/FlowOverview": {
-      "types": "./src/design/FlowOverview.tsx",
+      "types": "./dist/design/FlowOverview.d.ts",
       "react-native": "./src/design/FlowOverview.tsx",
       "default": "./src/design/FlowOverview.tsx"
     },
     "./design/DevHandoffInspector": {
-      "types": "./src/design/DevHandoffInspector.tsx",
+      "types": "./dist/design/DevHandoffInspector.d.ts",
       "react-native": "./src/design/DevHandoffInspector.tsx",
       "default": "./src/design/DevHandoffInspector.tsx"
     },
     "./design/CollaborationPresence": {
-      "types": "./src/design/CollaborationPresence.tsx",
+      "types": "./dist/design/CollaborationPresence.d.ts",
       "react-native": "./src/design/CollaborationPresence.tsx",
       "default": "./src/design/CollaborationPresence.tsx"
     },
     "./design/CommentPins": {
-      "types": "./src/design/CommentPins.tsx",
+      "types": "./dist/design/CommentPins.d.ts",
       "react-native": "./src/design/CommentPins.tsx",
       "default": "./src/design/CommentPins.tsx"
     },
     "./design/MultiExportSlices": {
-      "types": "./src/design/MultiExportSlices.tsx",
+      "types": "./dist/design/MultiExportSlices.d.ts",
       "react-native": "./src/design/MultiExportSlices.tsx",
       "default": "./src/design/MultiExportSlices.tsx"
     },
     "./cad/Native3DViewport": {
-      "types": "./src/cad/Native3DViewport.tsx",
+      "types": "./dist/cad/Native3DViewport.d.ts",
       "react-native": "./src/cad/Native3DViewport.tsx",
       "default": "./src/cad/Native3DViewport.tsx"
     },
     "./cad/ViewCubeAndAxisGizmo": {
-      "types": "./src/cad/ViewCubeAndAxisGizmo.tsx",
+      "types": "./dist/cad/ViewCubeAndAxisGizmo.d.ts",
       "react-native": "./src/cad/ViewCubeAndAxisGizmo.tsx",
       "default": "./src/cad/ViewCubeAndAxisGizmo.tsx"
     },
     "./cad/TransformGizmo3D": {
-      "types": "./src/cad/TransformGizmo3D.tsx",
+      "types": "./dist/cad/TransformGizmo3D.d.ts",
       "react-native": "./src/cad/TransformGizmo3D.tsx",
       "default": "./src/cad/TransformGizmo3D.tsx"
     },
     "./cad/UVEditor": {
-      "types": "./src/cad/UVEditor.tsx",
+      "types": "./dist/cad/UVEditor.d.ts",
       "react-native": "./src/cad/UVEditor.tsx",
       "default": "./src/cad/UVEditor.tsx"
     },
     "./cad/TextureSetPanel": {
-      "types": "./src/cad/TextureSetPanel.tsx",
+      "types": "./dist/cad/TextureSetPanel.d.ts",
       "react-native": "./src/cad/TextureSetPanel.tsx",
       "default": "./src/cad/TextureSetPanel.tsx"
     },
     "./cad/PBRMaterialInspector": {
-      "types": "./src/cad/PBRMaterialInspector.tsx",
+      "types": "./dist/cad/PBRMaterialInspector.d.ts",
       "react-native": "./src/cad/PBRMaterialInspector.tsx",
       "default": "./src/cad/PBRMaterialInspector.tsx"
     },
     "./cad/TextureBrush3D": {
-      "types": "./src/cad/TextureBrush3D.tsx",
+      "types": "./dist/cad/TextureBrush3D.d.ts",
       "react-native": "./src/cad/TextureBrush3D.tsx",
       "default": "./src/cad/TextureBrush3D.tsx"
     },
     "./cad/TextureMaskAndGenerator": {
-      "types": "./src/cad/TextureMaskAndGenerator.tsx",
+      "types": "./dist/cad/TextureMaskAndGenerator.d.ts",
       "react-native": "./src/cad/TextureMaskAndGenerator.tsx",
       "default": "./src/cad/TextureMaskAndGenerator.tsx"
     },
     "./cad/BakingMapPanel": {
-      "types": "./src/cad/BakingMapPanel.tsx",
+      "types": "./dist/cad/BakingMapPanel.d.ts",
       "react-native": "./src/cad/BakingMapPanel.tsx",
       "default": "./src/cad/BakingMapPanel.tsx"
     },
     "./cad/NodeGraphCanvas": {
-      "types": "./src/cad/NodeGraphCanvas.tsx",
+      "types": "./dist/cad/NodeGraphCanvas.d.ts",
       "react-native": "./src/cad/NodeGraphCanvas.tsx",
       "default": "./src/cad/NodeGraphCanvas.tsx"
     },
     "./cad/NodeLibrarySearch": {
-      "types": "./src/cad/NodeLibrarySearch.tsx",
+      "types": "./dist/cad/NodeLibrarySearch.d.ts",
       "react-native": "./src/cad/NodeLibrarySearch.tsx",
       "default": "./src/cad/NodeLibrarySearch.tsx"
     },
     "./cad/LiveNodeThumbnail": {
-      "types": "./src/cad/LiveNodeThumbnail.tsx",
+      "types": "./dist/cad/LiveNodeThumbnail.d.ts",
       "react-native": "./src/cad/LiveNodeThumbnail.tsx",
       "default": "./src/cad/LiveNodeThumbnail.tsx"
     },
     "./cad/DraftingCommandLine": {
-      "types": "./src/cad/DraftingCommandLine.tsx",
+      "types": "./dist/cad/DraftingCommandLine.d.ts",
       "react-native": "./src/cad/DraftingCommandLine.tsx",
       "default": "./src/cad/DraftingCommandLine.tsx"
     },
     "./cad/ObjectSnapsAndOrtho": {
-      "types": "./src/cad/ObjectSnapsAndOrtho.tsx",
+      "types": "./dist/cad/ObjectSnapsAndOrtho.d.ts",
       "react-native": "./src/cad/ObjectSnapsAndOrtho.tsx",
       "default": "./src/cad/ObjectSnapsAndOrtho.tsx"
     },
     "./cad/DimensionsAndHatching": {
-      "types": "./src/cad/DimensionsAndHatching.tsx",
+      "types": "./dist/cad/DimensionsAndHatching.d.ts",
       "react-native": "./src/cad/DimensionsAndHatching.tsx",
       "default": "./src/cad/DimensionsAndHatching.tsx"
     },
     "./cad/PaperSpaceLayout": {
-      "types": "./src/cad/PaperSpaceLayout.tsx",
+      "types": "./dist/cad/PaperSpaceLayout.d.ts",
       "react-native": "./src/cad/PaperSpaceLayout.tsx",
       "default": "./src/cad/PaperSpaceLayout.tsx"
     },
     "./cad/ParametricConstraintEditor": {
-      "types": "./src/cad/ParametricConstraintEditor.tsx",
+      "types": "./dist/cad/ParametricConstraintEditor.d.ts",
       "react-native": "./src/cad/ParametricConstraintEditor.tsx",
       "default": "./src/cad/ParametricConstraintEditor.tsx"
     },
     "./platform/AccessiblePrecisionScrubControl": {
-      "types": "./src/platform/AccessiblePrecisionScrubControl.tsx",
+      "types": "./dist/platform/AccessiblePrecisionScrubControl.d.ts",
       "react-native": "./src/platform/AccessiblePrecisionScrubControl.tsx",
       "default": "./src/platform/AccessiblePrecisionScrubControl.tsx"
     },
     "./timeline/FrameAccurateScrubber": {
-      "types": "./src/timeline/FrameAccurateScrubber.tsx",
+      "types": "./dist/timeline/FrameAccurateScrubber.d.ts",
       "react-native": "./src/timeline/FrameAccurateScrubber.native.tsx",
       "default": "./src/timeline/FrameAccurateScrubber.tsx"
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p examples/native-instruments/tsconfig.json",
+    "typecheck:examples": "tsc --noEmit -p examples/native-instruments/tsconfig.json",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs tests/render/*.test.mjs"
   },
   "dependencies": {
     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
@@ -2276,7 +2278,10 @@
     "react-native-skia": ">=3.9.1 <4"
   },
   "devDependencies": {
-    "@types/react": "~19.3.0"
+    "@nyc-tron/core": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-core-1.0.0-rc.2.tgz",
+    "@types/react": "~19.3.0",
+    "@typescript/typescript6": "6.0.2",
+    "typescript": "7.0.2"
   },
   "peerDependenciesMeta": {
     "@expo/ui": {

@@ -1,0 +1,63 @@
+/* RNW's unlayered reset (transparent background, 0-width black border) beats
+   layered utilities; marking utilities important mirrors Uniwind resolving
+   className to styles ahead of the reset. */
+@import "tailwindcss" important;
+/* The moved editor controls, their examples and these fixtures. server.mjs adds
+   the installed @nyc-tron/ui dist (Tron's primitives) as one more source. */
+@source "../../src";
+@source "../../examples/native-instruments";
+@source "./fixture.tsx";
+@source "./fixtures";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *, .dark, .dark *));
+/* Reference values from NYC-Tron UI docs/THEME_TOKENS.md
+   (https://github.com/mikevocalz/NYC-Tron-UI/blob/main/docs/THEME_TOKENS.md). */
+@theme {
+  --color-primary: #1f5fd1;
+  --color-on-primary: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f1f3f6;
+  --color-border: #c9ced6;
+  --color-text: #15181d;
+  --color-text-muted: #5a626e;
+  --color-danger: #b42318;
+  --color-on-danger: #ffffff;
+  --color-accent: #1f7a6d;
+  --color-info: #1d5fa8;
+  --color-success: #1e7a3c;
+  --color-focus: #1f5fd1;
+  --radius-control: 8px;
+  --radius-card: 12px;
+}
+/* `.light` restores the light values inside a scope, the way a Uniwind theme
+   class does; `.dark` is what NightScope (ScopedTheme) emits. */
+.light {
+  --color-primary: #1f5fd1;
+  --color-on-primary: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f1f3f6;
+  --color-border: #c9ced6;
+  --color-text: #15181d;
+  --color-text-muted: #5a626e;
+  --color-danger: #b42318;
+  --color-on-danger: #ffffff;
+  --color-accent: #1f7a6d;
+  --color-info: #1d5fa8;
+  --color-success: #1e7a3c;
+  --color-focus: #1f5fd1;
+}
+[data-theme=dark], .dark {
+  --color-primary: #7aa7ff;
+  --color-on-primary: #0b1730;
+  --color-surface-raised: #1b1f26;
+  --color-surface-sunken: #12151a;
+  --color-border: #39404b;
+  --color-text: #e8ebf0;
+  --color-text-muted: #a3abb7;
+  --color-danger: #ff8a80;
+  --color-on-danger: #2b0703;
+  --color-accent: #5fd0bf;
+  --color-info: #8ab8ff;
+  --color-success: #6fd08c;
+  --color-focus: #7aa7ff;
+}
+html,body{margin:0;background:var(--color-surface-sunken);font-family:system-ui,sans-serif}

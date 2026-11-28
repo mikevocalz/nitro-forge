@@ -1,4 +1,4 @@
-import type { LayerRow } from '@nyc-tron/ui/components/forge/layers/layer-model';
+import type { LayerRow } from '@nitro-forge/editor-controls/layers/layer-model';
 import type { CanvasLayer } from './prism-canvas-model.ts';
 import { prismLayerLabel } from './prism-layer-label.ts';
 import type { CanvasShape } from './prism-canvas-model.ts';

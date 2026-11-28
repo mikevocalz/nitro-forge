@@ -53,8 +53,9 @@ function engineBridge(): Plugin {
 }
 
 /** NYC-Tron styles RN primitives with `className`; route the `react-native`
- * imports of every @nyc-tron package to the RNW binding that forwards it
- * (src/react-native-classname.tsx). */
+ * imports of every @nyc-tron package, and of @nitro-forge/editor-controls
+ * (which moved out of @nyc-tron/ui and is served from source), to the RNW
+ * binding that forwards it (src/react-native-classname.tsx). */
 function nycTronClassName(): Plugin {
   const shim = fileURLToPath(new URL('./src/react-native-classname.tsx', import.meta.url));
   // The react-native alias below runs first, so the id may already be RNW's entry.
@@ -64,7 +65,7 @@ function nycTronClassName(): Plugin {
     enforce: 'pre',
     resolveId(source, importer) {
       const from = importer?.replaceAll('\\', '/') ?? '';
-      if ((source === 'react-native' || source === rnw) && from.includes('/@nyc-tron/')) return shim;
+      if ((source === 'react-native' || source === rnw) && (from.includes('/@nyc-tron/') || from.includes('/packages/editor-controls/'))) return shim;
       // One React Native Web for the app and the binding: two copies run two responder systems.
       // Resolved as the app's own `react-native` import, so dev serves the optimized copy.
       if (source === 'react-native-web' && from.endsWith('/react-native-classname.tsx')) return this.resolve('react-native', importer, { skipSelf: true });
@@ -97,9 +98,12 @@ function reactNativeDevFlag(): Plugin {
   return { name: 'react-native-dev-flag', config: (_, { mode }) => ({ define: { __DEV__: JSON.stringify(mode !== 'production') } }) };
 }
 
-/** Every NYC-Tron entry the app or studio-workspace imports on web. */
+/** Every NYC-Tron entry the app, studio-workspace or the editor controls they
+ * use import on web. @nitro-forge/editor-controls is a workspace package served
+ * from source, so it is not pre-bundled; the NYC-Tron entries it imports are
+ * listed here so they share one pre-bundle with the app's own. */
 const nycTronEntries = [
-  '@nyc-tron/ui/components/forge/layers/LayerStack', '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber',
+  '@nyc-tron/ui/components/shell/PrecisionScrubber',
   '@nyc-tron/ui/components/DragGrabHandle', '@nyc-tron/ui/components/gestures/PanResponderDrag',
   '@nyc-tron/ui/components/Button', '@nyc-tron/ui/components/Card', '@nyc-tron/ui/components/SegmentedControl',
   '@nyc-tron/ui/components/TabBar', '@nyc-tron/ui/components/Toolbar', '@nyc-tron/ui/components/List',
@@ -107,6 +111,20 @@ const nycTronEntries = [
   '@nyc-tron/ui/components/feedback/Badge', '@nyc-tron/ui/components/feedback/EmptyState', '@nyc-tron/ui/components/feedback/ErrorMessage',
   '@nyc-tron/ui/components/content/KeyValueList', '@nyc-tron/ui/components/theme/NightScope', '@nyc-tron/ui/components/files/DropZone',
   '@nyc-tron/ui/components/files/FilePicker', '@nyc-tron/ui/components/html',
+  // Imported by the editor controls.
+  '@nyc-tron/ui/components/Select', '@nyc-tron/ui/components/TextField', '@nyc-tron/ui/components/feedback/announce',
+  '@nyc-tron/ui/components/forms/SettingSwitch', '@nyc-tron/ui/components/forms/choice-keys', '@nyc-tron/ui/components/forms/toggle-a11y',
+  '@nyc-tron/ui/components/gestures/adjust-keys', '@nyc-tron/ui/components/gestures/canvas-responder',
+  '@nyc-tron/ui/components/gestures/coordinate-admission', '@nyc-tron/ui/components/gestures/drag-transport',
+  '@nyc-tron/ui/components/gestures/editor-interaction-scope', '@nyc-tron/ui/components/gestures/local-pointer',
+  '@nyc-tron/ui/components/gestures/measured-drop-owner', '@nyc-tron/ui/components/gestures/useLocalPointer',
+  '@nyc-tron/ui/components/gestures/value-gesture', '@nyc-tron/ui/components/local-store', '@nyc-tron/ui/components/useLocalStore',
+  '@nyc-tron/ui/components/overlays/AnchoredPopover', '@nyc-tron/ui/components/overlays/popover-position',
+  '@nyc-tron/ui/components/shell/MenuButton', '@nyc-tron/ui/components/shell/UnitInput', '@nyc-tron/ui/components/shell/precision',
+  '@nyc-tron/ui/components/gestures/canvas-gesture-relations', '@nyc-tron/ui/components/gestures/useEditorPan',
+  '@nyc-tron/ui/components/gestures/GestureHandlerDrag', '@nyc-tron/ui/components/shell/SliderField',
+  '@nyc-tron/ui/components/shell/PropertyRow', '@nyc-tron/ui/components/shell/preset-model',
+  '@nyc-tron/ui/components/shell/shell-keys', '@nyc-tron/ui/components/shell/useOwnedAction', '@nyc-tron/ui/components/styles',
   '@nyc-tron/expo-controls/Select', '@nyc-tron/expo-controls/NativeActionMenu',
 ];
 

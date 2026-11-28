@@ -1,9 +1,9 @@
 import {useMemo} from 'react';
 import {Button,Text,View} from '@nitro-forge/studio-workspace/ui';
-import {ShapeBuilder} from '@nyc-tron/ui/components/forge/vector/ShapeBuilder';
-import {FillStrokeInspector} from '@nyc-tron/ui/components/forge/vector/FillStrokeInspector';
-import type {BuilderLayer,BooleanGroup} from '@nyc-tron/ui/components/forge/vector/shape-builder-model';
-import type {ContentBounds} from '@nyc-tron/ui/components/forge/vector/fill-stroke-model';
+import {ShapeBuilder} from '@nitro-forge/editor-controls/vector/ShapeBuilder';
+import {FillStrokeInspector} from '@nitro-forge/editor-controls/vector/FillStrokeInspector';
+import type {BuilderLayer,BooleanGroup} from '@nitro-forge/editor-controls/vector/shape-builder-model';
+import type {ContentBounds} from '@nitro-forge/editor-controls/vector/fill-stroke-model';
 import type {PrismDocument} from '../../../packages/prism/src/index';
 import {PrismCanvasAdapter,type PrismCanvasState} from '../../../packages/prism/src/canvas-cluster';
 

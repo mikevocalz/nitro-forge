@@ -5,10 +5,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { SlideFilmstripProps } from "@nyc-tron/ui/components/forge/slides/SlideFilmstrip";
-import type { SlideSorterProps } from "@nyc-tron/ui/components/forge/slides/SlideSorter";
-import type { SlideCanvasProps } from "@nyc-tron/ui/components/forge/slides/SlideCanvas";
-import type { SlideAnimationPaneProps } from "@nyc-tron/ui/components/forge/slides/SlideAnimationPane";
+import type { SlideFilmstripProps } from "@nitro-forge/editor-controls/slides/SlideFilmstrip";
+import type { SlideSorterProps } from "@nitro-forge/editor-controls/slides/SlideSorter";
+import type { SlideCanvasProps } from "@nitro-forge/editor-controls/slides/SlideCanvas";
+import type { SlideAnimationPaneProps } from "@nitro-forge/editor-controls/slides/SlideAnimationPane";
 import type {
   PitchAnimationBinding, PitchCanvasBinding, PitchSlideListBinding,
 } from "../src/office-cluster";

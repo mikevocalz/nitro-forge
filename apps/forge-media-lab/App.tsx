@@ -1,11 +1,11 @@
 import { ScrollView, Text, View } from "react-native";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
-import { NativeSeekBar } from "@nyc-tron/ui/components/forge/NativeSeekBar";
-import { WaveformLane } from "@nyc-tron/ui/components/forge/WaveformLane";
-import { FRAME_RATES } from "@nyc-tron/ui/components/forge/timebase";
-import type { WaveformPeak } from "@nyc-tron/ui/components/forge/waveform";
-import { LevelFader } from "@nyc-tron/ui/components/forge/audio/LevelFader";
+import { NativeSeekBar } from "@nitro-forge/editor-controls/NativeSeekBar";
+import { WaveformLane } from "@nitro-forge/editor-controls/WaveformLane";
+import { FRAME_RATES } from "@nitro-forge/editor-controls/timebase";
+import type { WaveformPeak } from "@nitro-forge/editor-controls/waveform";
+import { LevelFader } from "@nitro-forge/editor-controls/audio/LevelFader";
 import { surfaces } from "./src/brand";
 
 interface DemoState { frame: number; gain: number }
