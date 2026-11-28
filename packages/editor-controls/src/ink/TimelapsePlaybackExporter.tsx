@@ -8,6 +8,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {controlIdentity,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
+import {exact} from '../exact-optional.ts';
 export interface TimelapseExportSettings {format:'mp4'|'webm';width:number;height:number;fps:number}
 export interface TimelapseArtifact {uri:string;bytes:number;mime:'video/mp4'|'video/webm';width:number;height:number;durationMs:number}
 export interface TimelapseProgress {completedFrames:number;totalFrames:number}
@@ -59,7 +60,7 @@ export function TimelapsePlaybackExporter({scope='timelapse',revision=0,...props
   <Button title="Export timelapse file" disabled={off||exportReason!==undefined} accessibilityHint={exportReason} unstyled={unstyled} onPress={exportFile}/>
   {action.pending==='export'?<><Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{s.progress?`${s.progress.completedFrames} of ${s.progress.totalFrames} frames encoded`:'Encoding; progress not reported'}</Text><Button title="Cancel timelapse export" unstyled={unstyled} onPress={()=>{action.cancel();admitted.current=false;store.setState({progress:null});}}/></>:null}
   {s.artifact?<><Text {...{className:unstyled?undefined:'text-text'}}>Exported {s.artifact.bytes} bytes</Text><Button title="Open exported timelapse" disabled={off} unstyled={unstyled} onPress={()=>{if(current()&&s.artifact)onOpenExport(s.artifact);}}/></>:null}
-  {disabledReason?<Text {...{className:unstyled?undefined:'text-text'}}>{disabledReason}</Text>:null}<ErrorMessage message={action.error??s.progressError??undefined} unstyled={unstyled}/>
+  {disabledReason?<Text {...{className:unstyled?undefined:'text-text'}}>{disabledReason}</Text>:null}<ErrorMessage {...exact({message:action.error??s.progressError??undefined,unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(){return createStore(()=>({progress:null as TimelapseProgress|null,artifact:null as TimelapseArtifact|null,progressError:null as string|null}));}

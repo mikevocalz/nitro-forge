@@ -17,6 +17,7 @@ import {formatTimecode,type FrameRate} from "../timebase.ts";
 import {framesToSeconds} from "./time.ts";
 import {adjacentMarker,moveMarker,resizeMarker,sortMarkers,type MarkerUpdate,type TimelineMarker} from "./markers.ts";
 import {frameToX,type TimelineViewport} from "./viewport.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode TimelineMarkers}. */
 export interface TimelineMarkersProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -170,7 +171,7 @@ function TimelineMarkersBody({
     onUpdate(selected.id,{frame:selected.frame,seconds:framesToSeconds(selected.frame,rate),[field]:value});
   };
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
       <Button title="Add marker" variant="secondary" size="sm" disabled={disabled||durationFrames<0} {...id("add")}
         accessibilityHint={`Adds a marker at ${tc(playheadFrame)}`}

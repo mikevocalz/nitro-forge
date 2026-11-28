@@ -10,8 +10,9 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {assertFaderRange,clampGain,dbToGain,dragToGain,FADER_RANGES,formatDb,gainToPosition,stepGain,type FaderRange} from './level.ts';
+import {exact} from '../exact-optional.ts';
 export interface NativeVerticalFaderProps extends Omit<ViewProps,'children'>,ScopedControlProps {
- targetSize?:number;labels?:LevelFaderLabels;
+ targetSize?:number;labels?:LevelFaderLabels|undefined;
  value:number;label:string;range?:FaderRange;length?:number;stepDb?:number;className?:string;
  onPreview?:(gain:number)=>void;onCommit:(gain:number,signal?:AbortSignal)=>void|Promise<unknown>;unstyled?:boolean;
 }
@@ -58,7 +59,7 @@ export function NativeVerticalFader({scope='vertical-fader',revision=0,...props}
   <View style={{flexDirection:'row',gap:4}}><Button targetSize={target} title="−" accessibilityLabel={labels?.lower?.(label,stepDb)??`Lower ${label} by ${stepDb} dB`} disabled={off} unstyled={unstyled} onPress={()=>commit(stepGain(value,-1,stepDb,range))}/><Button targetSize={target} title="+" accessibilityLabel={labels?.raise?.(label,stepDb)??`Raise ${label} by ${stepDb} dB`} disabled={off} unstyled={unstyled} onPress={()=>commit(stepGain(value,1,stepDb,range))}/></View>
   <Button targetSize={target} title={s.fine?(labels?.fineOn??'Fine on'):(labels?.fineOff??'Fine off')} accessibilityLabel={s.fine?(labels?.fineOnName??'Fine gain on'):(labels?.fineOffName??'Fine gain off')} variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>{if(admitted())store.setState({fine:!s.fine});}}/>
   <Button targetSize={target} title={labels?.reset??'Reset unity'} accessibilityLabel={labels?.resetName??'Reset gain to unity'} variant="ghost" disabled={off} unstyled={unstyled} onPress={reset}/>
-  <ErrorMessage message={s.error??guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:s.error??guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(){return createStore(()=>({preview:null as number|null,fine:false,draft:'',dirty:false,error:null as string|null}));}

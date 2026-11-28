@@ -13,6 +13,7 @@ import {
   type AlignCommand,type AlignEdge,type AlignItem,type AlignReferenceKind,type ArrangeAction,type Availability,
   type DistributeAxis,type DistributeCommand,type DistributeMode,type MoveLayerCommand,type StackPosition,
 } from "./align-distribute-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode AlignDistributePanel}. Every value is owned by the host. */
 export interface AlignDistributePanelProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -87,7 +88,7 @@ function AlignDistributePanelBody({
   };
   return <View {...rest} accessibilityLabel="Align and arrange"
     {...{role:"group",className:joinClasses(styled&&"gap-4",className)}}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <View style={{gap:8}}>
       {heading("Align")}
       <SegmentedControl aria-label="Align relative to" value={reference} onChange={onReferenceChange} disabled={disabled} unstyled={unstyled}

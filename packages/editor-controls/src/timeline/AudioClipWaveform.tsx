@@ -7,6 +7,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {createWaveformCache,sharedWaveformCache,mediaProviderId} from './waveform-cache.ts';
+import {exact} from '../exact-optional.ts';
 export interface AudioClipWaveformProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  sourceId:string;sourceRevision:number;range:WaveformRange;columns?:number;height?:number;position?:number;
  /** Real decoded min/max peaks for the requested source interval. */
@@ -28,6 +29,6 @@ export function AudioClipWaveform({scope='clip-waveform',revision=0,...props}:Au
    {...(onSeek&&disabledReason===undefined?{onSeekNormalized:(value:number)=>guard.run('seek',(host,signal)=>host.onSeek?.(host.range.start+value*(host.range.end-host.range.start),signal))}:{})}/>
    :<Text accessibilityRole={state.kind==='error'?'alert':undefined} {...{className:unstyled?undefined:'text-text'}}>{state.kind==='error'?state.message:state.kind==='ready'?'No decoded audio samples':'Loading source waveform'}</Text>}
   {state.kind==='error'?<Button title="Retry waveform" variant="secondary" unstyled={unstyled} onPress={()=>cache.request(key,signal=>loadPeaks(range,columns,signal),true)}/>:null}
-  <ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

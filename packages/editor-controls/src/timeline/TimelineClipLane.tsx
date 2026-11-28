@@ -24,6 +24,7 @@ import {
 } from "./trim-modes.ts";
 import {positionToSeconds} from "./time.ts";
 import {frameToX,scrollBy,visibleRange,zoomAt,type TimelineViewport} from "./viewport.ts";
+import {exact} from '../exact-optional.ts';
 
 /**
  * What a press or drag on a clip does. `razor` splits at the pressed frame
@@ -94,9 +95,9 @@ const fromTrimMode=(clipId:string,p:TrimModePreview):Drag=>({clipId,clips:p.clip
 interface ClipViewProps {
   clip:TimelineClip;track:TimelineTrack;tracks:readonly TimelineTrack[];viewport:TimelineViewport;rate:FrameRate;
   laneHeight:number;selected:boolean;inSet:boolean;tool:TimelineTool;playheadFrame:number;snapping:boolean;disabled:boolean;styled:boolean;
-  dropFrame:boolean;drag:LocalStore<Drag>;dragState:Drag;pan:Pan;moveMode?:MoveMode;rippleScope:RippleScope;
+  dropFrame:boolean;drag:LocalStore<Drag>;dragState:Drag;pan:Pan;moveMode?:MoveMode|undefined;rippleScope:RippleScope;
   modifier:{current:boolean};
-  onSelect:(id:string|undefined)=>void;onToggleSelect?:(id:string)=>void;onEdit:(e:TimelineEdit)=>void;
+  onSelect:(id:string|undefined)=>void;onToggleSelect?:((id:string)=>void)|undefined;onEdit:(e:TimelineEdit)=>void;
   renderClipContent?:TimelineClipLaneProps["renderClipContent"];
 }
 
@@ -358,7 +359,7 @@ function TimelineClipLaneBody({
   const originId=draggedClip?tracks.find(t=>t.clips.includes(draggedClip))?.id:undefined;
   return <View {...rest} ref={container as never} {...(testID?{testID}:{})} accessibilityRole="list" accessibilityLabel="Timeline tracks"
     {...{className:joinClasses(className)}} style={[{width:viewport.widthPx,direction:"ltr"},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {tracks.map(track=>{
       const clips=visibleClips(track,{start:range.start-1,end:range.end+1});
       const sel=track.clips.find(c=>c.id===selectedClipId);

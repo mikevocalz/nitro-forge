@@ -20,6 +20,7 @@ import {
   type GradientPaint,type Point,type ViewTransform,
 } from "./vector-types.ts";
 import {CanvasKnob,LinePiece,NoticeLine,VectorButton,type CanvasKeyEvent,type DragModifiers} from "./vector-controls.tsx";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode GradientOnCanvasHandles}. The paint and stop selection are owned by the host. */
 export interface GradientOnCanvasHandlesProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -283,7 +284,7 @@ function GradientOnCanvasHandlesBody({
   };
   return <View {...rest} {...{onKeyDown:onRootKey,className:joinClasses("gap-2",className)}}
     style={[{alignSelf:"flex-start",maxWidth:"100%"},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Applying change"}</Text>:null}
     <View {...canvasHandlers} accessibilityLabel={label} testID="gradient-canvas"
       {...{className:joinClasses("overflow-hidden",styled&&"rounded-control border border-border")}}

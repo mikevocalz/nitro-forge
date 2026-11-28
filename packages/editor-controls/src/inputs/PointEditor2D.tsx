@@ -8,6 +8,7 @@ import {Select} from '@nyc-tron/ui/components/Select';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from './useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface EditorPoint2D {id:string;label:string;x:number;y:number}
 export interface PointEditor2DProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  points:readonly EditorPoint2D[];selectedId:string|null;onSelect:(id:string)=>void;
@@ -28,6 +29,6 @@ export function PointEditor2D({scope='point-editor',revision=0,...props}:PointEd
  return <View {...rest} style={[{gap:8},style]}><Select label="Active point" value={selectedId??''} options={points.map(p=>({value:p.id,label:p.label}))} disabled={off||points.length===0} unstyled={unstyled} onValueChange={id=>{const h=guard.current();if(h?.points.some(p=>p.id===id))h.onSelect(id);}}/>
  <View style={{height:280,minWidth:44,overflow:'hidden'}} onLayout={e=>{const {width,height}=e.nativeEvent.layout;if(width!==v.width||height!==v.height)store.setState({width,height});}}><View pointerEvents="none" style={{position:'absolute',left:22,top:22,right:22,bottom:22}}>{renderPreview(points.map(p=>v.draft?.id===p.id?v.draft:p))}</View>
  {shown?<GestureDetector gesture={gesture}><View collapsable={false} accessibilityLabel={'Drag '+shown.label} style={{position:'absolute',left:shown.x*Math.max(0,v.width-44),top:shown.y*Math.max(0,v.height-44),width:44,height:44,alignItems:'center',justifyContent:'center'}}><View {...{className:unstyled?undefined:'border-2 border-focus bg-surface-raised'}} style={{width:18,height:18,borderRadius:9}}/></View></GestureDetector>:null}</View>
- {point?<PropertyInspector scope={scope} revision={revision} label={point.label} disabledReason={off?'Point editing unavailable':undefined} unstyled={unstyled} fields={(['x','y'] as const).map(axis=>({kind:'number',id:axis,label:axis.toUpperCase(),value:point[axis],min:0,max:1,step:.001}))} onCommit={(axis,value)=>guard.run('point',(h,s)=>{const p=h.points.find(p=>p.id===h.selectedId);if(p&&(axis==='x'||axis==='y')&&typeof value==='number'&&value>=0&&value<=1)return h.onCommit({...p,[axis]:value},s);})}/>:null}<ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/></View>;
+ {point?<PropertyInspector scope={scope} revision={revision} label={point.label} disabledReason={off?'Point editing unavailable':undefined} unstyled={unstyled} fields={(['x','y'] as const).map(axis=>({kind:'number',id:axis,label:axis.toUpperCase(),value:point[axis],min:0,max:1,step:.001}))} onCommit={(axis,value)=>guard.run('point',(h,s)=>{const p=h.points.find(p=>p.id===h.selectedId);if(p&&(axis==='x'||axis==='y')&&typeof value==='number'&&value>=0&&value<=1)return h.onCommit({...p,[axis]:value},s);})}/>:null}<ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/></View>;
 }
 function makeStore(){return createStore(()=>({width:0,height:0,draft:null as EditorPoint2D|null}));}

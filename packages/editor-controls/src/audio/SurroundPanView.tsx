@@ -7,6 +7,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface SurroundPosition {x:number;y:number;z:number;spread:number}
 export interface SurroundSpeaker {id:string;label:string;x:number;y:number;z:number}
 export interface SurroundPanViewProps extends Omit<ViewProps,'children'>,ScopedControlProps {
@@ -40,7 +41,7 @@ export function SurroundPanView({scope='surround-pan',revision=0,...props}:Surro
   <PrecisionScrubber scope={scope} revision={revision} label="Source height Z" value={value.z} min={-1} max={1} step={.01} disabled={off} unstyled={unstyled} onCommit={z=>commit({...value,z})}/>
   <PrecisionScrubber scope={scope} revision={revision} label="Surround spread" value={value.spread} min={0} max={1} step={.01} disabled={off} unstyled={unstyled} onCommit={spread=>commit({...value,spread})}/>
   <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{speakers.map(s=><Button key={s.id} title={'Route to '+s.label} accessibilityState={{checked:destinations.includes(s.id)}} disabled={off} unstyled={unstyled} onPress={()=>guard.run('route',(host,signal)=>{const ids=host.destinations.filter(id=>host.speakers.some(s=>s.id===id));return host.onDestinationsChange(ids.includes(s.id)?ids.filter(id=>id!==s.id):[...ids,s.id],signal);})}/>)}</View>
-  <ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(){return createStore(()=>({preview:null as SurroundPosition|null}));}

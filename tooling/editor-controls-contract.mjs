@@ -1,14 +1,14 @@
 // Shared step for the tooling/verify-*.mjs contract scripts.
 //
-// The editor controls (@nitro-forge/editor-controls) compile under their own
-// compiler flags (see packages/editor-controls/tsconfig.json), so a contract
-// cannot compile their sources under Forge's stricter base flags. Instead:
+// The editor controls (@nitro-forge/editor-controls) import each other with
+// .ts/.tsx extensions, which their tsconfig.json allows and Forge's base config
+// does not, so a contract cannot compile their sources directly. Instead:
 //   1. tronSubpathsMissing() checks that a NYC-Tron UI build exports every
 //      @nyc-tron/ui subpath the controls import. For a NYC-Tron checkout,
 //      stageTronDeclarations() copies its declarations into this tree first.
 //   2. emitEditorControlsDeclarations() compiles the controls with their own
-//      flags against that NYC-Tron UI build and writes their declarations to
-//      a temporary folder.
+//      tsconfig.json against that NYC-Tron UI build and writes their
+//      declarations to a temporary folder.
 //   3. The caller compiles its contract with Forge's base flags, resolving
 //      @nitro-forge/editor-controls/* to those declarations.
 import { execFileSync } from 'node:child_process';

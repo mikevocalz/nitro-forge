@@ -9,6 +9,7 @@ import {officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {SlideObjectView} from "./SlideThumbnail.tsx";
 import {SLIDE_SNAP_POINTS,fitScale,nudge,objectLabel,resizeFromCorner,snapRect,stepRotation,type SnapGuide} from "./canvas-model.ts";
 import {SLIDE_DEFAULT_SIZE,rgbaCss,type SlideObject,type SlideSize,type SlideSummary} from "./slide-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode SlideCanvas}. Every edit is reported once, on release or commit; the slide is controlled. */
 export interface SlideCanvasProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -18,14 +19,14 @@ export interface SlideCanvasProps extends Omit<ViewProps,"children">,ScopedContr
   /** `undefined` clears the selection (press on empty canvas, Escape). */
   readonly onSelectObject:(id:string|undefined)=>void;
   /** Called once per drag or nudge with the new top-left corner. Renders drag handling. */
-  readonly onMoveObject?:(id:string,x:number,y:number)=>void|Promise<unknown>;
+  readonly onMoveObject?:((id:string,x:number,y:number)=>void|Promise<unknown>)|undefined;
   /** Called once per resize with the new size. Renders the corner handle. */
-  readonly onResizeObject?:(id:string,w:number,h:number)=>void|Promise<unknown>;
+  readonly onResizeObject?:((id:string,w:number,h:number)=>void|Promise<unknown>)|undefined;
   /** Called with absolute degrees (`[` and `]` step 15°). */
-  readonly onRotateObject?:(id:string,degrees:number)=>void|Promise<unknown>;
+  readonly onRotateObject?:((id:string,degrees:number)=>void|Promise<unknown>)|undefined;
   /** Commits edited text of a text box. Double press or Enter starts editing. */
-  readonly onSetText?:(id:string,text:string)=>void|Promise<unknown>;
-  readonly onRemoveObject?:(id:string)=>void|Promise<unknown>;
+  readonly onSetText?:((id:string,text:string)=>void|Promise<unknown>)|undefined;
+  readonly onRemoveObject?:((id:string)=>void|Promise<unknown>)|undefined;
   /** Snap to slide edges and center and to other objects. @default true */
   readonly snap?:boolean;
   readonly renderImage?:(src:string,object:SlideObject)=>ReactNode;
@@ -213,7 +214,7 @@ function SlideCanvasBody({boundary,actionError,disabledReason,disabled=false,
       {slide.objects.length===0?<View pointerEvents="none" style={{position:"absolute",left:0,right:0,top:0,bottom:0,alignItems:"center",justifyContent:"center"}}>
         <Text {...{className:joinClasses(styled&&"text-text-muted")}}>Empty slide. Add text, a shape or an image.</Text>
       </View>:null}
-    </View>:null}<ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/>
+    </View>:null}<ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/>
   </View>;
 }
 

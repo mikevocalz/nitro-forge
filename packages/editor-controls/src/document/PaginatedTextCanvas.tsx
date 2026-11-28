@@ -4,6 +4,7 @@ import {TextSelectionAndCaret,type DocumentTextSelection} from './TextSelectionA
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {exact} from '../exact-optional.ts';
 export interface TextCanvasPage {id:string;label:string;width:number;height:number;marginTop:number;marginBottom:number;marginLeft:number;marginRight:number;text:string;contentRevision:string|number;oversetCharacters:number}
 export interface PageEditorContext {readOnly:boolean;selection:DocumentTextSelection;onTextChange:(text:string)=>void;onSelectionChange:(selection:DocumentTextSelection)=>void;onFocus:()=>void;onMeasuredContent:(size:{width:number;height:number})=>void}
 type PageEditorBackend={mode:'plain-text';renderRichEditor?:never}|{mode:'native-rich-text';renderRichEditor:(page:TextCanvasPage,context:PageEditorContext)=>ReactNode};
@@ -27,5 +28,5 @@ export function PaginatedTextCanvas({scope='paginated-text',revision=0,...props}
   </View>
   {page.oversetCharacters>0?<Text {...{className:unstyled?undefined:'text-text bg-surface-raised'}} style={{position:'absolute',bottom:0,left:0,right:0}}>{page.oversetCharacters} overset characters</Text>:null}
  </View>;})}
- </ScrollView></ScrollView><ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/></View>;
+ </ScrollView></ScrollView><ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/></View>;
 }

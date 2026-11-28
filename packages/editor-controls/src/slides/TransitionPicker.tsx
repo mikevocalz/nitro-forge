@@ -4,6 +4,7 @@ import {PropertyInspector,type PropertyInspectorProps} from '../inputs/PropertyI
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface SlideTransition {effectId:string;durationMs:number;advance:'manual'|'after';advanceAfterMs:number;easing:'linear'|'ease-in'|'ease-out'|'ease-in-out'}
 export interface TransitionPickerProps extends Omit<PropertyInspectorProps,'label'|'fields'|'onCommit'> {
  value:SlideTransition;effects:readonly {id:string;label:string;minDurationMs:number;maxDurationMs:number;unavailableReason?:string}[];
@@ -19,5 +20,5 @@ export function TransitionPicker({value,effects,previewProgress,renderPreview,on
  {kind:'choice',id:'easing',label:'Transition easing',value:value.easing,choices:['linear','ease-in','ease-out','ease-in-out'].map(id=>({id,label:id}))},
  {kind:'choice',id:'advance',label:'Slide advance',value:value.advance,choices:[{id:'manual',label:'On command'},{id:'after',label:'After delay'}]},
  {kind:'number',id:'advanceAfterMs',label:'Automatic advance delay',value:value.advanceAfterMs,min:0,max:86400000,step:100,unit:'ms'}
- ]} onCommit={(id,v)=>guard.run('transition',(h,s)=>{const next={...h.value,[id]:v},e=h.effects.find(e=>e.id===next.effectId);if(!e||e.unavailableReason!==undefined)throw new Error('Transition effect unavailable');if(id==='effectId')next.durationMs=Math.max(e.minDurationMs,Math.min(e.maxDurationMs,next.durationMs));if(next.durationMs<e.minDurationMs||next.durationMs>e.maxDurationMs)throw new Error('Transition duration outside the supported range');return h.onCommit(next,s);})}/>{renderPreview(value,previewProgress)}<Button title="Preview slide transition" disabled={off||!effect||effect.unavailableReason!==undefined} unstyled={props.unstyled} onPress={()=>guard.run('preview',(h,s)=>h.onPreview(s))}/><ErrorMessage message={guard.error??props.disabledReason??effect?.unavailableReason} unstyled={props.unstyled}/></View>;
+ ]} onCommit={(id,v)=>guard.run('transition',(h,s)=>{const next={...h.value,[id]:v},e=h.effects.find(e=>e.id===next.effectId);if(!e||e.unavailableReason!==undefined)throw new Error('Transition effect unavailable');if(id==='effectId')next.durationMs=Math.max(e.minDurationMs,Math.min(e.maxDurationMs,next.durationMs));if(next.durationMs<e.minDurationMs||next.durationMs>e.maxDurationMs)throw new Error('Transition duration outside the supported range');return h.onCommit(next,s);})}/>{renderPreview(value,previewProgress)}<Button title="Preview slide transition" disabled={off||!effect||effect.unavailableReason!==undefined} {...exact({unstyled:props.unstyled})} onPress={()=>guard.run('preview',(h,s)=>h.onPreview(s))}/><ErrorMessage {...exact({message:guard.error??props.disabledReason??effect?.unavailableReason,unstyled:props.unstyled})}/></View>;
 }

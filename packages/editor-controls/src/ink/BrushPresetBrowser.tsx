@@ -7,6 +7,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {joinClasses} from '@nyc-tron/ui/components/styles';
+import {exact} from '../exact-optional.ts';
 export interface BrushPreset {id:string;name:string;category:string;favorite:boolean;disabledReason?:string}
 export interface BrushPresetBrowserProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  presets:readonly BrushPreset[];selectedId?:string;onSelect:(id:string,signal?:AbortSignal)=>void|Promise<unknown>;
@@ -30,7 +31,7 @@ export function BrushPresetBrowser({scope='brush-presets',revision=0,...props}:B
    <Text {...{className:unstyled?undefined:'text-text'}}>{item.category}</Text>
    <Button title={(item.favorite?'Unfavorite ':'Favorite ')+item.name} variant="ghost" disabled={off} unstyled={unstyled} onPress={()=>guard.run('favorite',(host,signal)=>{const p=host.presets.find(p=>p.id===item.id);return p?host.onFavorite(p.id,!p.favorite,signal):undefined;})}/>
   </View>}/>
-  {off?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{disabledReason??'Updating brush'}</Text>:null}<ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  {off?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{disabledReason??'Updating brush'}</Text>:null}<ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(){return createStore(()=>({query:'',favorites:false}));}

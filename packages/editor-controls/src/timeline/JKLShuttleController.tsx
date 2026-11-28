@@ -5,6 +5,7 @@ import {Pressable,Text,View,type ViewProps} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {keyboardKey,type KeyEventLike} from "@nyc-tron/ui/components/gestures/drag-transport";
 import {DEFAULT_SHUTTLE_LADDER,assertLadder,shuttleLabel,shuttleRate} from "./shuttle.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode JKLShuttleController}. */
 export interface JKLShuttleControllerProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -75,7 +76,7 @@ function JKLShuttleControllerBody({
     accessibilityRole="toolbar" accessibilityLabel="Shuttle"
     {...{className:joinClasses("gap-2",className)}}
     style={[{flexDirection:"row",alignItems:"center",flexWrap:"wrap",direction:"ltr"},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {key("j",jStops?"Slower":"Reverse",jStops?"Slows forward playback one step":"Plays in reverse; press again to go faster",rate<0,jStops&&rate<=0)}
     {key("k","Stop","Stops playback. Hold K and press J or L to step a frame",rate===0)}
     {key("l","Forward","Plays forward; press again to go faster",rate>0)}

@@ -7,6 +7,7 @@ import {Button} from "@nyc-tron/ui/components/Button";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {OFFICE_TOUCH_TARGET,ToolButton} from "../office/office-controls.tsx";
 import {groupThreads,resolveReply,threadCounts,threadLabel,type CommentEntry,type CommentFilter,type CommentThread} from "./comments-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode CommentsThreadPanel}. Each action renders only when its callback is passed. */
 export interface CommentsThreadPanelProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -19,15 +20,15 @@ export interface CommentsThreadPanelProps extends Omit<ViewProps,"children">,Sco
   /** Shows the thread's page and anchor. */
   readonly onSelect:(id:string)=>void;
   /** Adds a reply. Rejecting keeps the draft so nothing typed is lost. */
-  readonly onReply?:(threadId:string,body:string,mentions?:readonly string[])=>void|Promise<unknown>;
-  readonly onResolvedChange?:(threadId:string,resolved:boolean)=>void|Promise<unknown>;
-  readonly onDelete?:(threadId:string)=>void|Promise<unknown>;
+  readonly onReply?:((threadId:string,body:string,mentions?:readonly string[])=>void|Promise<unknown>)|undefined;
+  readonly onResolvedChange?:((threadId:string,resolved:boolean)=>void|Promise<unknown>)|undefined;
+  readonly onDelete?:((threadId:string)=>void|Promise<unknown>)|undefined;
   /** The filter row renders only when `onResolvedChange` is passed (otherwise nothing is ever resolved). */
   readonly filter?:CommentFilter;
-  readonly onFilterChange?:(filter:CommentFilter)=>void;
+  readonly onFilterChange?:((filter:CommentFilter)=>void)|undefined;
   /** Read failed: shown instead of the list. "No comments" is only said after a successful read. */
   readonly error?:string;
-  readonly onRetry?:()=>void;
+  readonly onRetry?:(()=>void)|undefined;
   /** @default "Comments" */
   readonly label?:string;
   className?:string;
@@ -75,7 +76,7 @@ function CommentsThreadPanelBody({actionError,disabledReason,disabled=false,ment
   };
   return <View {...rest} accessibilityLabel={label} {...{role:"region",className:joinClasses("min-w-0",className)}}
     style={[{gap:10},rest.style as object]}>
-    <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/>
     {canFilter?<View accessibilityRole="radiogroup" accessibilityLabel="Show comments" style={{flexDirection:"row",gap:4,flexWrap:"wrap"}}>
       {(["open","resolved","all"] as const).map(f=><Pressable key={f} accessibilityRole="radio" accessibilityState={{checked:filter===f}}
         onPress={()=>onFilterChange!(f)}

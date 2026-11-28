@@ -13,6 +13,7 @@ export interface SampleEditorProps extends Omit<ViewProps,'children'>,ScopedCont
  onKeyboardCommit:(value:SampleKeyboardMap,signal?:AbortSignal)=>unknown;onAudition:(note:number,signal?:AbortSignal)=>unknown;unstyled?:boolean;
 }
 import {Button} from '@nyc-tron/ui/components/Button';
+import {exact} from '../exact-optional.ts';
 export function SampleEditor({scope='sample-editor',revision=0,...props}:SampleEditorProps){
  const {source,loop,keyboard,onRegionCommit:_region,onLoopCommit:_loop,onKeyboardCommit:_keyboard,onAudition:_audition,unstyled=false,disabledReason,style,...rest}=props;
  if(![keyboard.rootNote,keyboard.lowNote,keyboard.highNote].every(n=>Number.isInteger(n)&&n>=0&&n<=127)||keyboard.lowNote>keyboard.highNote||keyboard.rootNote<keyboard.lowNote||keyboard.rootNote>keyboard.highNote||!Number.isFinite(keyboard.tuneCents)||Math.abs(keyboard.tuneCents)>1200)throw new RangeError('Invalid sample keyboard map');
@@ -23,6 +24,6 @@ export function SampleEditor({scope='sample-editor',revision=0,...props}:SampleE
   <Text {...{className:unstyled?undefined:'text-text'}}>MIDI keyboard mapping</Text>
   {([{key:'lowNote',label:'Lowest mapped note',min:0,max:keyboard.rootNote},{key:'highNote',label:'Highest mapped note',min:keyboard.rootNote,max:127},{key:'rootNote',label:'Root note',min:keyboard.lowNote,max:keyboard.highNote},{key:'tuneCents',label:'Sample tuning',min:-1200,max:1200}] as const).map(f=>f.min<f.max?<PrecisionScrubber key={f.key} scope={owner+f.key} label={f.label} value={keyboard[f.key]} min={f.min} max={f.max} step={1} disabled={off} unstyled={unstyled} onCommit={n=>guard.run('mapping',(h,s)=>h.onKeyboardCommit({...h.keyboard,[f.key]:n},s))}/>:null)}
   <Button title={`Audition root note ${keyboard.rootNote}`} disabled={off} unstyled={unstyled} onPress={()=>guard.run('audition',(h,s)=>h.onAudition(h.keyboard.rootNote,s))}/>
-  <ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/>
  </View>;
 }

@@ -7,6 +7,7 @@ import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface AudioTake {id:string;label:string;lengthSamples:number;peaks:WaveformLaneProps['peaks'];muted:boolean}
 export interface CompRegion {id:string;takeId:string;startSample:number;endSample:number}
 export interface TakePlaylistAndCompingProps extends Omit<ViewProps,'children'>,ScopedControlProps {
@@ -28,7 +29,7 @@ export function TakePlaylistAndComping({scope='take-comping',revision=0,...props
   {([{key:'startSample',label:'Comp selection start',min:0,max:selection.endSample-1},{key:'endSample',label:'Comp selection end',min:selection.startSample+1,max:durationSamples}] as const).map(f=>f.max>f.min?<PrecisionScrubber key={f.key} scope={owner+f.key} label={f.label} value={selection[f.key]} min={f.min} max={f.max} step={1} unit="samples" disabled={off} unstyled={unstyled} onCommit={n=>guard.current()?.onSelectionChange({...selection,[f.key]:n})}/>:null)}
   <FlatList data={takes} keyExtractor={t=>t.id} style={{height:360}} initialNumToRender={4} windowSize={5} extraData={[off,selectedTakeId,selection]} ListEmptyComponent={<Text {...{className:unstyled?undefined:'text-text'}}>No recorded takes supplied</Text>} renderItem={({item})=><TakeLane key={owner+item.id} take={item} disabled={off||item.muted} selected={selectedTakeId===item.id} scope={owner} unstyled={unstyled} onSwipe={(a,b)=>comp(item.id,a,b)} onSelect={()=>guard.current()?.onSelectTake(item.id)} onAudition={()=>guard.run('audition',(h,s)=>h.onAudition(item.id,s))} onComp={()=>comp(item.id)}/>}/>
   <FlatList data={regions} keyExtractor={r=>r.id} initialNumToRender={6} windowSize={5} style={{maxHeight:240}} renderItem={({item})=><View style={{flexDirection:'row',alignItems:'center',gap:8}}><Text style={{flex:1}} {...{className:unstyled?undefined:'text-text'}}>{takes.find(t=>t.id===item.takeId)?.label}: {item.startSample}–{item.endSample}</Text><Button title="Remove comp region" disabled={off} unstyled={unstyled} onPress={()=>guard.run('remove',(h,s)=>h.regions.some(r=>r.id===item.id)?h.onRemoveRegion(item.id,s):undefined)}/></View>}/>
-  <ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/>
  </View>;
 }
 function TakeLane({take,disabled,selected,scope,unstyled,onSwipe,onSelect,onAudition,onComp}:{take:AudioTake;disabled:boolean;selected:boolean;scope:string;unstyled:boolean;onSwipe:(a:number,b:number)=>unknown;onSelect:()=>void;onAudition:()=>unknown;onComp:()=>unknown}){

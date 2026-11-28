@@ -9,6 +9,7 @@ import { parseA1Range } from "./chart-model.ts";
 import { PanelCheckbox, PanelChoices, PanelField, PanelHeading } from "./panel-controls.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { SPARKLINE_KINDS, sparklineSpecProblem, type SparklineKind, type SparklineSpec } from "./sparkline-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /**
  * Controlled sparkline editor: type, data range, target cell, high/low and
@@ -22,8 +23,8 @@ export interface SparklineEditorProps extends Omit<ViewProps, "children">,Scoped
   readonly cells: Readonly<Record<string, { readonly computed: string | number | boolean | null } | undefined>>;
   /** Adds "Use selection" for the data range. */
   readonly selection?: SheetRange;
-  readonly onApply?: (spec: SparklineSpec) => unknown;
-  readonly onRemove?: (spec: SparklineSpec) => unknown;
+  readonly onApply?: ((spec: SparklineSpec) => unknown) | undefined;
+  readonly onRemove?: ((spec: SparklineSpec) => unknown) | undefined;
   readonly disabled?:boolean;
   readonly className?: string;
   readonly unstyled?: boolean;
@@ -114,5 +115,5 @@ function SparklineEditorBody({actionError,disabledReason,disabled=false,
     {range && !problem ? <Text {...{ className: muted }} style={{ fontSize: 12 }}>
       {`Draws ${rangeAddress(range)} in ${spec.location.toUpperCase()}.`}
     </Text> : null}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

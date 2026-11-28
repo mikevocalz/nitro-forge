@@ -24,7 +24,7 @@ export interface ArtboardNavigatorProps extends Omit<ViewProps,"children"> {
   scope?:string;revision?:string|number;disabled?:boolean;
   /** Artboards in document order, as `describe.artboards` lists them. */
   artboards:readonly ArtboardItem[];
-  selectedId?:string;
+  selectedId?:string|undefined;
   /** Tap, Enter or Space on an artboard: the host selects it and brings it into view. */
   onSelect:(id:string)=>void;
   /** `addArtboard`; the navigator proposes a name, size and a spot right of the others. */

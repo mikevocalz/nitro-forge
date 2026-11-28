@@ -9,6 +9,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {exact} from '../exact-optional.ts';
 export interface SlideMediaSettings {fit:'contain'|'cover'|'stretch';autoplay:boolean;loop:boolean;muted:boolean;volume:number;showControls:boolean;hideWhenStopped:boolean}
 export interface MediaInsertInspectorProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  mediaId:string;kind:'video'|'audio';sourceLabel:string;surface:ReactNode;aspectRatio:number;settings:SlideMediaSettings;
@@ -26,5 +27,5 @@ export function MediaInsertInspector({scope='slide-media',revision=0,...props}:M
  {kind:'number',id:'volume',label:'Media gain',value:settings.volume,min:0,max:1,step:.01}
  ]} onCommit={(id,v)=>guard.run('settings',(h,s)=>h.onSettingsCommit({...h.settings,[id]:v},s))}/>
  {durationFrames>0?<InOutRangeHandles scope={owner} revision={revision} viewport={{startFrame:0,pxPerFrame:timelineWidth/durationFrames,widthPx:timelineWidth}} rate={rate} durationFrames={durationFrames} playheadFrame={frame} range={range} disabled={off} unstyled={unstyled} onCommit={range=>guard.run('range',(h,s)=>h.onRangeCommit(range,s))}/>:null}
- <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}><Button title="Preview inserted media" disabled={off} unstyled={unstyled} onPress={()=>guard.run('preview',(h,s)=>h.onPreview(s))}/><Button title="Replace media source" disabled={replace.pending||guard.pending||disabledReason!==undefined} unstyled={unstyled} onPress={()=>replace.run('replace',(h,s)=>h.onReplace(s))}/></View><ErrorMessage message={guard.error??replace.error??error??disabledReason} unstyled={unstyled}/></View>;
+ <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}><Button title="Preview inserted media" disabled={off} unstyled={unstyled} onPress={()=>guard.run('preview',(h,s)=>h.onPreview(s))}/><Button title="Replace media source" disabled={replace.pending||guard.pending||disabledReason!==undefined} unstyled={unstyled} onPress={()=>replace.run('replace',(h,s)=>h.onReplace(s))}/></View><ErrorMessage {...exact({message:guard.error??replace.error??error??disabledReason,unstyled:unstyled})}/></View>;
 }

@@ -17,6 +17,7 @@ import {
  type DocPoint,type DocRect,type SelectRegionRequest,type SelectionKey,type SelectionMode,type SelectionShape,
  type SelectionTool,type ViewMapping,
 } from "./selection-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode SelectionMarquee}. The selection itself lives in the host's editor. */
 export interface SelectionMarqueeProps extends Omit<ViewProps,"children"> {
@@ -54,7 +55,7 @@ export interface SelectionMarqueeProps extends Omit<ViewProps,"children"> {
   * Why selecting is unavailable right now (for example "The active layer is hidden").
   * The surface then refuses gestures and shows this text.
   */
- disabledReason?:string;
+ disabledReason?:string|undefined;
  /** The host's canvas, drawn under the marquee. */
  children?:ReactNode;
  /** @default "Selection" */
@@ -300,7 +301,7 @@ function SelectionMarqueeBody({
  return <View {...rest} {...{className:joinClasses("gap-2",className)}} style={[{maxWidth:"100%"},style]}>
   {renderToolbar?renderToolbar(controls):controls}
   {pending?<Text accessibilityLiveRegion="polite">Selection change in progress</Text>:null}
-  <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
   <View ref={surface} collapsable={false} {...pan.current.panHandlers}
    {...{onKeyDown,onKeyUp,focusable:true,
     className:joinClasses("overflow-hidden",styled&&"rounded-control border border-border focus-visible:ring-2 focus-visible:ring-focus")}}

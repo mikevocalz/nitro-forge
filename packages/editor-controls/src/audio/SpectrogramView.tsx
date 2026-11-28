@@ -19,6 +19,7 @@ import {
   SPECTROGRAM_THRESHOLDS_DB, columnsForWidth, describeSpectrogram, frequencyTicks, poolSpectrogram,
   spectrogramRuns, timeTicks, type IntensityStep,
 } from "./spectrogram.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Load state of a {@linkcode SpectrogramView}. */
 export type SpectrogramStatus = "measuring" | "ready" | "error" | "empty";
@@ -38,7 +39,7 @@ export interface SpectrogramViewProps extends Omit<ViewProps, "children">,Scoped
   /** Plot height in pt. @default 160 */
   readonly height?: number;
   readonly visibleRange?:WaveformRange;
-  readonly onVisibleRangeCommit?:(range:WaveformRange)=>void|Promise<unknown>;
+  readonly onVisibleRangeCommit?:((range:WaveformRange)=>void|Promise<unknown>)|undefined;
   /** Shown when `status` is `"error"`. */
   readonly error?: string;
   className?: string;
@@ -151,6 +152,6 @@ function SpectrogramViewBody({actionError,disabledReason,visibleRange={start:0,e
      <Button title="Later spectrum" disabled={disabledReason!==undefined||visibleRange.end===1} unstyled={unstyled} onPress={()=>onVisibleRangeCommit(rangeAt(visibleRange.start+span/2))}/>
     </View>:null}
     <Text {...{className:muted}}>Source window {(start*hopSeconds).toFixed(3)}–{(Math.min(end,sourceFrames.length)*hopSeconds).toFixed(3)} s</Text>
-    {body}<ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/>
+    {body}<ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/>
   </View>;
 }

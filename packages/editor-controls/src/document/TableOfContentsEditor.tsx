@@ -3,6 +3,7 @@ import {PropertyInspector,type PropertyInspectorProps} from '../inputs/PropertyI
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface ContentsSettings {minimumLevel:number;maximumLevel:number;showPageNumbers:boolean;rightAlignNumbers:boolean;leader:'none'|'dots'|'dashes';hyperlinks:boolean}
 export interface TableOfContentsEditorProps extends Omit<PropertyInspectorProps,'label'|'fields'|'onCommit'> {
  value:ContentsSettings;entries:readonly {id:string;label:string;level:number;pageLabel:string}[];stale:boolean;
@@ -16,6 +17,6 @@ export function TableOfContentsEditor({value,entries,stale,onCommit,onUpdate,onJ
  ...(['showPageNumbers','rightAlignNumbers','hyperlinks'] as const).map(id=>({kind:'boolean' as const,id,label:{showPageNumbers:'Page numbers',rightAlignNumbers:'Align numbers right',hyperlinks:'Create heading links'}[id],value:value[id]})),
  {kind:'choice',id:'leader',label:'Tab leader',value:value.leader,choices:['none','dots','dashes'].map(id=>({id,label:id}))}
  ]} onCommit={(id,v)=>guard.run('settings',(h,s)=>{const next={...h.value,[id]:v};if(next.minimumLevel>next.maximumLevel)throw new Error('Heading levels must be in ascending order');return h.onCommit(next,s);})}/><Text {...{className:props.unstyled?undefined:'text-text'}}>{stale?'Contents fields need updating':'Contents fields are current'}</Text>
- <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}>{(['page-numbers','entire-table'] as const).map(mode=><Button key={mode} title={'Update '+mode} disabled={off} unstyled={props.unstyled} onPress={()=>guard.run('update',(h,s)=>h.onUpdate(mode,s))}/>)}</View>
- <FlatList data={entries} keyExtractor={e=>e.id} style={{maxHeight:320}} initialNumToRender={8} windowSize={5} renderItem={({item})=><Button title={`${item.label} · ${item.pageLabel}`} style={{marginStart:Math.max(0,Math.min(9,item.level)-1)*8}} variant="secondary" disabled={off} unstyled={props.unstyled} onPress={()=>guard.current()?.onJump(item.id)}/>}/><ErrorMessage message={guard.error??props.disabledReason} unstyled={props.unstyled}/></View>;
+ <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}>{(['page-numbers','entire-table'] as const).map(mode=><Button key={mode} title={'Update '+mode} disabled={off} {...exact({unstyled:props.unstyled})} onPress={()=>guard.run('update',(h,s)=>h.onUpdate(mode,s))}/>)}</View>
+ <FlatList data={entries} keyExtractor={e=>e.id} style={{maxHeight:320}} initialNumToRender={8} windowSize={5} renderItem={({item})=><Button title={`${item.label} · ${item.pageLabel}`} style={{marginStart:Math.max(0,Math.min(9,item.level)-1)*8}} variant="secondary" disabled={off} {...exact({unstyled:props.unstyled})} onPress={()=>guard.current()?.onJump(item.id)}/>}/><ErrorMessage {...exact({message:guard.error??props.disabledReason,unstyled:props.unstyled})}/></View>;
 }

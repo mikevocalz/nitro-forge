@@ -2,6 +2,7 @@ import {Text,View,type ViewProps} from 'react-native';
 import {SegmentedControl} from '@nyc-tron/ui/components/SegmentedControl';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export type EraserMode='pixel'|'vector'|'mask'|'object';
 export interface EraserCapability {mode:EraserMode;available:boolean;reason?:string}
 export interface EraserModePickerProps extends Omit<ViewProps,'children'>,ScopedControlProps {
@@ -17,6 +18,6 @@ export function EraserModePicker({scope='eraser',revision=0,...props}:EraserMode
    onChange={mode=>guard.run('mode',(host,signal)=>host.capabilities.find(c=>c.mode===mode)?.available?host.onChange(mode,signal):undefined)}/>
   {MODES.filter(m=>!capabilities.find(c=>c.mode===m.value)?.available).map(m=><Text {...{className:unstyled?undefined:'text-text'}} key={m.value}>{m.label}: {capabilities.find(c=>c.mode===m.value)?.reason??'Not supported by the current document'}</Text>)}
   {off?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{disabledReason??'Changing eraser'}</Text>:null}
-  <ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

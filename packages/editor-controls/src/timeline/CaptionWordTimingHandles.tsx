@@ -11,6 +11,7 @@ import type {TimelineViewport} from './viewport.ts';
 import type {FrameRate} from '../timebase.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface CaptionWord {id:string;text:string;startFrame:number;endFrame:number}
 export interface CaptionWordTimingHandlesProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  words:readonly CaptionWord[];selectedId:string|null;onSelect:(id:string)=>void;durationFrames:number;frame:number;rate:FrameRate;viewport:TimelineViewport;
@@ -38,7 +39,7 @@ export function CaptionWordTimingHandles({scope='caption-word-timing',revision=0
    {preview&&!valid(preview)?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">Timing overlaps a neighboring word or has no duration</Text>:null}
    {low>=high?<Text {...{className:unstyled?undefined:'text-text'}}>Adjacent words leave no timing space. Adjust a neighboring word first.</Text>:null}
   </>:<Text {...{className:unstyled?undefined:'text-text'}}>Select a caption word to adjust its timing</Text>}
-  <ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(){return createStore(()=>({preview:null as InOutRange|null}));}

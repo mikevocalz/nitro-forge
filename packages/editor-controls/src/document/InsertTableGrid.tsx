@@ -8,6 +8,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {PropertyInspector} from '../inputs/PropertyInspector.tsx';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {exact} from '../exact-optional.ts';
 export interface InsertTableGridProps extends Omit<ViewProps,'children'>,ScopedControlProps {maxRows?:number;maxColumns?:number;onInsert:(rows:number,columns:number,signal?:AbortSignal)=>unknown;unstyled?:boolean}
 /** Native touch selection plus numeric insertion for larger tables and keyboard/accessibility use. */
 export function InsertTableGrid({scope='insert-table',revision=0,...props}:InsertTableGridProps){
@@ -23,7 +24,7 @@ export function InsertTableGrid({scope='insert-table',revision=0,...props}:Inser
   <Text accessibilityLiveRegion="polite" {...{className:unstyled?undefined:'text-text'}}>{s.rows} rows by {s.columns} columns</Text>
   <GestureDetector key={owner} gesture={gesture} touchAction="none"><View collapsable={false} onLayout={e=>store.setState({width:e.nativeEvent.layout.width})} accessible={false} style={{height:rows*44}}>{Array.from({length:rows},(_,r)=><View key={r} style={{flexDirection:'row',height:44}}>{Array.from({length:columns},(_,c)=><View key={c} pointerEvents="none" {...{className:unstyled?undefined:`border border-border ${r<s.rows&&c<s.columns?'bg-accent/20':'bg-surface-raised'}`}} style={{flex:1}}/>)}</View>)}</View></GestureDetector>
   <PropertyInspector scope={owner} label="Table dimensions" unstyled={unstyled} disabledReason={off?'Table insertion unavailable':undefined} fields={[...(maxRows>1?[{id:'rows',kind:'number' as const,label:'Rows',value:Math.min(s.rows,maxRows),min:1,max:maxRows,step:1}]:[]),...(maxColumns>1?[{id:'columns',kind:'number' as const,label:'Columns',value:Math.min(s.columns,maxColumns),min:1,max:maxColumns,step:1}]:[])]} onCommit={(id,value)=>{if(typeof value==='number')store.setState({[id]:Math.round(value)});}}/>
-  <Button title="Insert selected table" disabled={off||s.rows>maxRows||s.columns>maxColumns} unstyled={unstyled} onPress={insert}/><ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/>
+  <Button title="Insert selected table" disabled={off||s.rows>maxRows||s.columns>maxColumns} unstyled={unstyled} onPress={insert}/><ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(){return createStore(()=>({rows:1,columns:1,width:0}));}

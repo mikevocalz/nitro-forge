@@ -4,6 +4,7 @@ import {Pressable,Switch,Text,View,type ViewProps} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {speedLabel} from "./ruler.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode PlaybackRateMenu}. */
 export interface PlaybackRateMenuProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -45,7 +46,7 @@ function PlaybackRateMenuBody({
   const options=supportsReverse?[-1,...rates]:[...rates];
   const id=(s:string)=>testID?{testID:testID+"-"+s}:{};
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <Pressable accessibilityRole="button" accessibilityLabel={`Playback speed ${speedLabel(rate)}`}
       accessibilityState={{expanded:open,disabled}} aria-expanded={open} disabled={disabled}
       onPress={()=>store.set(o=>!o)} {...id("toggle")}

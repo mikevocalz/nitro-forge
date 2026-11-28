@@ -6,6 +6,7 @@ import type {ThumbnailSource} from '../layers/layer-thumbnail-model.ts';
 import {VideoFilmstrip,type VideoFilmstripProps} from './VideoFilmstrip.tsx';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export type VideoCover={kind:'frame';frame:number}|{kind:'image';assetId:string};
 export interface CoverFramePickerProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  value:VideoCover|null;frame:number;preview:ReactNode;
@@ -30,6 +31,6 @@ export function CoverFramePicker({scope='cover-frame',revision=0,...props}:Cover
    <Button title={'Use '+image.label+' as cover'} disabled={off} unstyled={unstyled} onPress={()=>guard.run('cover',(host,signal)=>host.images.some(i=>i.id===image.id)?host.onCommit({kind:'image',assetId:image.id},signal):undefined)}/>
   </View>)}</View>
   <Text {...{className:unstyled?undefined:'text-text'}}>Current cover: {value===null?'Not selected':value.kind==='frame'?'frame '+value.frame:'image '+value.assetId}</Text>
-  <ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

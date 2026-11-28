@@ -10,6 +10,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {validatePDFRect,type PDFRect} from './pdf-page-model.ts';
+import {exact} from '../exact-optional.ts';
 export interface PDFTextRun {id:string;text:string;fontFamily:string;fontSize:number;rect:PDFRect;editable:boolean;limitation?:string}
 export interface PDFInlineTextEditProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  pageId:string;surface:ReactNode;activeRun:PDFTextRun|null;layoutMode:'preserve-bounds'|'reflow-box';availableLayoutModes:readonly ('preserve-bounds'|'reflow-box')[];
@@ -33,7 +34,7 @@ export function PDFInlineTextEdit({scope='pdf-inline-text',revision=0,...props}:
  <Text accessibilityLiveRegion="polite" {...{className:unstyled?undefined:'text-text'}}>{status==='saving'?'Saving PDF text':status==='saved'&&lastSavedText===draft?'PDF save acknowledged':draft!==lastSavedText?'Edited text awaiting save':'No pending text changes'}</Text>
  <Button title="Save PDF text change" disabled={off||!editable||!valid||draft===lastSavedText||!availableLayoutModes.includes(layoutMode)} unstyled={unstyled} onPress={()=>guard.run('save',(h,s)=>{const text=store.getState().draft;if(!h.activeRun?.editable||h.validation.text!==text||!h.validation.valid||!h.availableLayoutModes.includes(h.layoutMode))throw new Error('PDF font or layout validation is not complete');return h.onSave(h.activeRun.id,text,h.layoutMode,s);})}/>
  <Button title="Cancel PDF text edit" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onCancel();}}/>
- <ErrorMessage message={activeRun.limitation??(validation.text===draft&&!validation.valid?validation.message:undefined)} unstyled={unstyled}/></>:<Text {...{className:unstyled?undefined:'text-text'}}>Tap a PDF text run to inspect editing support</Text>}
- <ErrorMessage message={guard.error??error??disabledReason} unstyled={unstyled}/></View>;
+ <ErrorMessage {...exact({message:activeRun.limitation??(validation.text===draft&&!validation.valid?validation.message:undefined),unstyled:unstyled})}/></>:<Text {...{className:unstyled?undefined:'text-text'}}>Tap a PDF text run to inspect editing support</Text>}
+ <ErrorMessage {...exact({message:guard.error??error??disabledReason,unstyled:unstyled})}/></View>;
 }
 function makeStore(draft:string){return createStore(()=>({draft}));}

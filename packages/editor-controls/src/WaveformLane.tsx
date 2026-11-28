@@ -9,6 +9,7 @@ import {
   FULL_RANGE,assertWaveformRange,peaksToBars,resamplePeaks,slicePeaks,
   type WaveformPeak,type WaveformRange,
 } from "./waveform.ts";
+import {exact} from './exact-optional.ts';
 
 
 export interface WaveformLaneProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -16,7 +17,7 @@ export interface WaveformLaneProps extends Omit<ViewProps,"children">,ScopedCont
   readonly peaks:readonly WaveformPeak[];
   readonly columns?:number;
   readonly height?:number;
-  readonly onSeekNormalized?:(position:number)=>void;
+  readonly onSeekNormalized?:((position:number)=>void)|undefined;
   /** Current playhead in [0, 1]; screen-reader steps move from here. */
   readonly position?:number;
   /** Normalized distance per accessibility increment/decrement. */
@@ -28,12 +29,12 @@ export interface WaveformLaneProps extends Omit<ViewProps,"children">,ScopedCont
    */
   readonly visibleRange?:WaveformRange;
   /** Live preview of the range while the lane is dragged sideways. */
-  readonly onVisibleRangeChange?:(range:WaveformRange)=>void;
+  readonly onVisibleRangeChange?:((range:WaveformRange)=>void)|undefined;
   /**
    * Once per finished sideways drag. Without it the lane does not scroll and
    * every release seeks.
    */
-  readonly onVisibleRangeCommit?:(range:WaveformRange)=>void;
+  readonly onVisibleRangeCommit?:((range:WaveformRange)=>void)|undefined;
   className?:string;
   barClassName?:string;
   unstyled?:boolean;
@@ -55,7 +56,7 @@ export function WaveformLane({scope='waveform',revision=0,...props}:WaveformLane
   onSeekNormalized={props.onSeekNormalized?value=>{guard.current()?.onSeekNormalized?.(value);}:undefined}
   onVisibleRangeChange={props.onVisibleRangeChange?value=>{guard.current()?.onVisibleRangeChange?.(value);}:undefined}
   onVisibleRangeCommit={props.onVisibleRangeCommit?value=>guard.run('range',host=>host.onVisibleRangeCommit?.(value)):undefined}/>
-  <ErrorMessage message={guard.error??props.disabledReason} unstyled={props.unstyled}/></View>;
+  <ErrorMessage {...exact({message:guard.error??props.disabledReason,unstyled:props.unstyled})}/></View>;
 }
 function WaveformLaneBody({
 

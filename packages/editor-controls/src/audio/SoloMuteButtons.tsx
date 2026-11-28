@@ -6,6 +6,7 @@ import { Platform, Pressable, Text, View, type ViewProps } from "react-native";
 import { joinClasses } from "@nyc-tron/ui/components/styles";
 import { webToggleProps } from "@nyc-tron/ui/components/forms/toggle-a11y";
 import type { Audibility, audibility } from "./mixer.ts";
+import {exact} from '../exact-optional.ts';
 
 
 export interface SoloMuteLabels {
@@ -19,7 +20,7 @@ const defaultToggleLabels:SoloMuteLabels={mute:name=>'Mute '+name,solo:name=>'So
 export interface SoloMuteButtonsProps extends Omit<ViewProps, "children">,ScopedControlProps {
   /** App-owned minimum interaction target. Defaults to 44 points. */
   readonly targetSize?: number;
-  readonly labels?:Partial<SoloMuteLabels>;
+  readonly labels?:Partial<SoloMuteLabels>|undefined;
   /** Channel name used in the accessible names, e.g. `"Mute Bass"`. */
   readonly label: string;
   /** Committed mute state. */
@@ -42,7 +43,7 @@ export interface SoloMuteButtonsProps extends Omit<ViewProps, "children">,Scoped
    * Once per press with the requested solo-safe state. When given, a third
    * toggle named `"Solo safe <label>"` is drawn under mute and solo.
    */
-  readonly onSoloSafeCommit?: (safe: boolean) => void | Promise<unknown>;
+  readonly onSoloSafeCommit?: ((safe: boolean) => void | Promise<unknown>) | undefined;
   /** @default "row" */
   readonly direction?: "row" | "column";
   /** @default false */
@@ -120,5 +121,5 @@ function SoloMuteButtonsBody({actionError,disabledReason,
     </Pressable> : null}
     {webHint ? <Text nativeID={hintId}
       style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0 }}>{hint}</Text> : null}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

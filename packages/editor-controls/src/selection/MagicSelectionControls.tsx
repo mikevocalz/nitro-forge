@@ -20,6 +20,7 @@ import {
  validateWandSettings,wandProblem,type MagicWandRequest,type MagicWandSettings,type ModifySelectionRequest,
  type RefineEdgeRequest,type WandSample,
 } from "./magic-selection-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Radii the edge tools use, in document pixels. Host-owned like every other setting. */
 export interface SelectionEdgeRadii {
@@ -92,7 +93,7 @@ function MagicSelectionControlsBody({
   {...{className:joinClasses("gap-3",styled&&"rounded-card border border-border bg-surface-raised p-3",className)}}>
   {disabledReason?<Text accessibilityLiveRegion="polite">{disabledReason}</Text>:null}
   {busy?<Text accessibilityLiveRegion="polite">Selection change in progress</Text>:null}
-  <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
   {heading("Magic wand")}
   <PrecisionScrubber label={`Tolerance (${formatTolerance(settings.tolerance)})`} value={settings.tolerance}
    disabled={unavailable} min={0} max={MAX_TOLERANCE} step={1} unstyled={unstyled} onCommit={v=>set({tolerance:Math.round(v)})}/>
@@ -246,7 +247,7 @@ function MagicWandCanvasBody({
  };
  const cv=cursor?docToView(mapping,cursor):null;
  return <View {...rest} {...{className:joinClasses("gap-2",className)}} style={[{maxWidth:"100%"},style]}>
-  <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
   <View ref={surface} collapsable={false} {...pan.current.panHandlers}
    {...{onKeyDown,onKeyUp,focusable:true,
     className:joinClasses("overflow-hidden",styled&&"rounded-control border border-border focus-visible:ring-2 focus-visible:ring-focus")}}

@@ -10,6 +10,7 @@ import type {TimelineViewport} from './viewport.ts';
 import type {FrameRate} from '../timebase.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface StickerTransform {x:number;y:number;rotation:number;scale:number}
 export interface TimelineSticker {id:string;assetId:string;label:string;startFrame:number;endFrame:number;transform:StickerTransform;locked?:boolean}
 export interface StickerMotionLaneProps extends Omit<ViewProps,'children'>,ScopedControlProps {
@@ -41,6 +42,6 @@ export function StickerMotionLane({scope='sticker-motion',revision=0,...props}:S
     onCommit={(curves,selection)=>{const host=guard.current();const live=host?.stickers.find(s=>s.id===selected.id);if(host&&live&&!live.locked)host.keyframes.onCommit(curves,selection);}}/>
    <Button title={'Remove '+selected.label} disabled={off||!!selected.locked} unstyled={unstyled} onPress={()=>guard.run('remove',(host,signal)=>host.stickers.some(s=>s.id===selected.id&&!s.locked)?host.onRemove(selected.id,signal):undefined)}/>
   </View>:<Text {...{className:unstyled?undefined:'text-text'}}>Select a sticker to edit its range, transform and motion</Text>}
-  <ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

@@ -14,6 +14,7 @@ import {
   midiGridLines, pitchName, usesSeveralChannels, visiblePitches, type MidiNote, type NoteGrid,
 } from "./note-grid.ts";
 import { MidiChannelPicker } from "./MidiChannelPicker.tsx";
+import {exact} from '../exact-optional.ts';
 
 const HIT = 44;
 /** Width of the keyboard column; a {@linkcode MIDIVelocityLane} below insets by it. */
@@ -50,25 +51,25 @@ export interface MIDIPianoRollProps extends Omit<ViewProps, "children">,ScopedCo
   readonly height?: number;
   /** Highlighted note. */
   readonly selectedIndex?: number;
-  readonly onSelect?: (index: number) => void;
+  readonly onSelect?: ((index: number) => void) | undefined;
   /** Once per finished body drag or arrow-key move: new start and pitch together. */
   readonly onNoteMove: (index: number, startTicks: number, pitch: number) => void | Promise<unknown>;
   /** Once per finished end-edge drag or Shift+arrow. */
   readonly onNoteResize: (index: number, lengthTicks: number) => void | Promise<unknown>;
   /** Tap on an empty cell. Leave out to make the grid read-only for adding. */
-  readonly onNoteAdd?: (startTicks: number, lengthTicks: number, pitch: number) => void | Promise<unknown>;
+  readonly onNoteAdd?: ((startTicks: number, lengthTicks: number, pitch: number) => void | Promise<unknown>) | undefined;
   /** Delete/Backspace on a focused note, or the screen-reader delete action. */
-  readonly onNoteRemove?: (index: number) => void | Promise<unknown>;
+  readonly onNoteRemove?: ((index: number) => void | Promise<unknown>) | undefined;
   /**
    * Press on a key in the keyboard column. The UI plays nothing itself; the
    * app routes this to its synth. Leave out and the keys are labels only.
    */
-  readonly onAudition?: (pitch: number) => void;
+  readonly onAudition?: ((pitch: number) => void) | undefined;
   /**
    * Horizontal scroll offset of the grid, points, so a velocity lane or ruler
    * can follow it (see `MIDIVelocityLane.scrollX`).
    */
-  readonly onScrollX?: (x: number) => void;
+  readonly onScrollX?: ((x: number) => void) | undefined;
   /** Nonnegative requested horizontal offset in layout points, clamped after measuring the viewport. */
   readonly scrollX?: number;
   /**
@@ -77,7 +78,7 @@ export interface MIDIPianoRollProps extends Omit<ViewProps, "children">,ScopedCo
    * above the grid while a note is selected. A note without `channel` shows
    * as channel 1 (zero-based 0), which is where the engine plays it.
    */
-  readonly onNoteChannel?: (index: number, channel: number) => void | Promise<unknown>;
+  readonly onNoteChannel?: ((index: number, channel: number) => void | Promise<unknown>) | undefined;
   /** @default false */
   readonly disabled?: boolean;
   /** Accessible name. @default "Piano roll" */
@@ -243,7 +244,7 @@ function MIDIPianoRollBody({actionError,disabledReason,retained,interactionBound
         </ScrollView>
       </View>
     </ScrollView>
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 type Drag = { mode: "idle" | "move" | "resize"; startTicks: number; pitch: number; lengthTicks: number };
@@ -259,7 +260,7 @@ interface NoteBoxProps {
   readonly selected: boolean;
   readonly disabled: boolean;
   readonly styled: boolean;
-  readonly onSelect?: (index: number) => void;
+  readonly onSelect?: ((index: number) => void) | undefined;
   readonly onMove: MIDIPianoRollProps["onNoteMove"];
   readonly onResize: MIDIPianoRollProps["onNoteResize"];
   readonly onRemove?: MIDIPianoRollProps["onNoteRemove"];

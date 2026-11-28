@@ -3,6 +3,7 @@ import {MotionCurveEditor,type MotionCurveEditorProps} from '../motion/MotionCur
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface VideoSpeedRampCurveProps extends Omit<MotionCurveEditorProps,'mode'|'valueLabel'|'onCommit'> {
  clipId:string;allowReverse?:boolean;allowFreeze?:boolean;estimatedSourceDurationSeconds?:number;
  onCommit:(...args:[...Parameters<MotionCurveEditorProps['onCommit']>,signal?:AbortSignal])=>void|Promise<unknown>;
@@ -17,7 +18,7 @@ export function VideoSpeedRampCurve({clipId,allowReverse=false,allowFreeze=false
   <MotionCurveEditor key={owner} {...props} mode="value" valueLabel="Playback speed ×" disabled={!!props.disabled||guard.pending}
    onCommit={(curve,selected)=>guard.run('ramp',(current,signal)=>current.onCommit(curve,selected,signal))}/>
   <Text {...{className:props.unstyled?undefined:'text-text'}}>Engine source-duration estimate: {estimatedSourceDurationSeconds===undefined?'Not reported':estimatedSourceDurationSeconds.toFixed(3)+' s'}</Text>
-  <Button title="Undo speed change" disabled={!canUndo||!!props.disabled||guard.pending} unstyled={props.unstyled} onPress={()=>guard.run('undo',(current,signal)=>current.onUndo(signal))}/>
-  <ErrorMessage message={guard.error??undefined} unstyled={props.unstyled}/>
+  <Button title="Undo speed change" disabled={!canUndo||!!props.disabled||guard.pending} {...exact({unstyled:props.unstyled})} onPress={()=>guard.run('undo',(current,signal)=>current.onUndo(signal))}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:props.unstyled})}/>
  </View>;
 }

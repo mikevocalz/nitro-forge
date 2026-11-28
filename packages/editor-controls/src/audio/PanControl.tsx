@@ -29,7 +29,7 @@ export interface PanControlLabels {
 export interface PanControlProps extends Omit<ViewProps, "children"> {
   /** App-owned minimum interaction target. Defaults to 44 points. */
   readonly targetSize?: number;
-  readonly labels?:PanControlLabels;
+  readonly labels?:PanControlLabels|undefined;
   /** Committed mono pan from the app or engine, -1 (left) .. 1 (right). */
   readonly value: number;
   /**
@@ -45,7 +45,7 @@ export interface PanControlProps extends Omit<ViewProps, "children"> {
    */
   readonly mode?: "pan" | "balance";
   /** Live preview while dragging, and the restored value on cancel. */
-  readonly onChange?: (pan: number) => void;
+  readonly onChange?: ((pan: number) => void) | undefined;
   /**
    * Once per completed drag, step or centre reset. Not called when the pan
    * is unchanged. The control keeps showing `value`, so a rejected promise

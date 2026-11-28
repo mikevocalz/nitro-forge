@@ -13,6 +13,7 @@ import {
   COMPARE_MODES,REFERENCE_SCALE,compareFrame,compareReason,normalizeFraction,resolveCompareSource,sideBySideDirection,
   splitFromDrag,splitFromKey,splitValueText,type CompareImage,type CompareMode,type CompareSource,
 } from "./compare-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode CanvasCompareView}. Mode, split and opacity are host state. */
 export interface CanvasCompareViewProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -223,7 +224,7 @@ function CanvasCompareViewBody({
   };
 
   return <View {...rest} {...{className:joinClasses("min-w-0 gap-2",className)}} style={[{flex:1},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Applying comparison change"}</Text>:null}
     <SegmentedControl disabled={busy||disabledReason!==undefined} aria-label="Compare mode" options={COMPARE_MODES} value={mode} onChange={onModeChange} unstyled={unstyled}/>
     <View onLayout={e=>{

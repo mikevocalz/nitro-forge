@@ -26,6 +26,7 @@ import {
   INSERT_KINDS, INSERT_KIND_LABELS, MAX_INSERTS, addBlockedReason, describeInsert, moveTarget,
   type InsertKind, type InsertSlot,
 } from "./inserts.ts";
+import {exact} from '../exact-optional.ts';
 
 const HIT = 44;
 
@@ -40,7 +41,7 @@ export interface InsertEffectRackProps extends Omit<ViewProps, "children">,Scope
   /** Slot whose parameters the app is showing, if any. */
   readonly selectedId?: string;
   /** Called when a slot is pressed, e.g. to open its editor or preset browser. */
-  readonly onSelect?: (id: string) => void;
+  readonly onSelect?: ((id: string) => void) | undefined;
   /** Once per pick from the "Add effect" picker. The new slot goes at the end. */
   readonly onAdd: (kind: InsertKind) => void | Promise<unknown>;
   /** Once per remove button press, Delete key or screen-reader action. */
@@ -156,7 +157,7 @@ function InsertEffectRackBody({actionError,disabledReason,
         </Pressable>)}
       </View> : null}
     </View>
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 type SlotRowProps = {
@@ -167,7 +168,7 @@ type SlotRowProps = {
   disabled: boolean;
   styled: boolean;
   trackLabel: string;
-  onSelect?: (id: string) => void;
+  onSelect?: ((id: string) => void) | undefined;
   onRemove: InsertEffectRackProps["onRemove"];
   onBypassCommit: InsertEffectRackProps["onBypassCommit"];
   move: (slot: InsertSlot, index: number, direction: -1 | 1) => void;

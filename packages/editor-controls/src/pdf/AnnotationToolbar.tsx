@@ -4,6 +4,7 @@ import {Text,View,type ViewProps} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {ToolButton,officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {ANNOTATION_TOOL_INFO,orderTools,toolForKey,type AnnotationTool} from "./annotation-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode AnnotationToolbar}. */
 export interface AnnotationToolbarProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -15,10 +16,10 @@ export interface AnnotationToolbarProps extends Omit<ViewProps,"children">,Scope
   readonly activeTool:AnnotationTool;
   readonly onToolChange:(tool:AnnotationTool)=>void;
   /** Undo control; renders only when passed. */
-  readonly onUndo?:()=>void;
+  readonly onUndo?:(()=>void)|undefined;
   readonly canUndo?:boolean;
   /** Redo control; renders only when passed. */
-  readonly onRedo?:()=>void;
+  readonly onRedo?:(()=>void)|undefined;
   readonly canRedo?:boolean;
   /** One-line instruction for the active tool, e.g. "Drag across text to highlight it." */
   readonly hint?:string;
@@ -36,7 +37,7 @@ export interface AnnotationToolbarProps extends Omit<ViewProps,"children">,Scope
  */
 export function AnnotationToolbar({scope='pdf-annotations',revision=0,...props}:AnnotationToolbarProps){
  const owner=JSON.stringify([...controlIdentity(scope,revision),props.tools,props.disabledReason]),guard=useScopedControl(owner,props,props.disabledReason!==undefined);
- return <><ErrorMessage message={guard.error??props.disabledReason} unstyled={props.unstyled}/><AnnotationToolbarBody {...props}
+ return <><ErrorMessage {...exact({message:guard.error??props.disabledReason,unstyled:props.unstyled})}/><AnnotationToolbarBody {...props}
  onToolChange={tool=>{const h=guard.current();if(h?.tools.includes(tool))h.onToolChange(tool);}}
  onUndo={props.onUndo?()=>guard.run('undo',h=>h.canUndo!==false?h.onUndo?.():undefined):undefined}
  onRedo={props.onRedo?()=>guard.run('redo',h=>h.canRedo!==false?h.onRedo?.():undefined):undefined}/></>;

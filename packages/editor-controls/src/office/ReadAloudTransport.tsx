@@ -5,6 +5,7 @@ import {Pressable,Text,View,type ViewProps} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {OFFICE_TOUCH_TARGET,PauseGlyph,PlayGlyph,SkipGlyph,ToolButton,officeKey,type OfficeKeyEvent} from "./office-controls.tsx";
 import {clampRate,formatRate,readAloudPosition,stepRate,wordSpans,type ReadAloudSentence} from "./read-aloud-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /**
  * Where the voice is. `unavailable` means the device has no usable voice; the
@@ -32,7 +33,7 @@ export interface ReadAloudTransportProps extends Omit<ViewProps,"children">,Scop
   /** Moves one sentence back (-1) or forward (1). Not called past either end. */
   readonly onSkip:(direction:-1|1)=>void;
   /** Ends the session. The stop control renders only when this is passed. */
-  readonly onStop?:()=>void;
+  readonly onStop?:(()=>void)|undefined;
   /** Line above the sentence naming where the reader is: a heading, "Page 3 of 12". */
   readonly context?:string;
   /** Extra controls after the transport, such as page steppers. */
@@ -135,7 +136,7 @@ function ReadAloudTransportBody({actionError,disabledReason,disabled=false,
       {onStop?<ToolButton label="Stop reading" styled={styled} onPress={onStop}/>:null}
       {accessory}
     </View>
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 function SentenceText({sentence,wordIndex,styled,announce}:{sentence:ReadAloudSentence;wordIndex:number|undefined;styled:boolean;announce:boolean}){

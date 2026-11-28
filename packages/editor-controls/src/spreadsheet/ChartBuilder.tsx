@@ -12,6 +12,7 @@ import {
   type ChartCellValues, type SheetChartData, type SheetChartKind, type SheetChartSpec,
 } from "./chart-model.ts";
 import { PanelCheckbox, PanelChoices, PanelField, PanelHeading } from "./panel-controls.tsx";
+import {exact} from '../exact-optional.ts';
 
 /**
  * Controlled chart builder: type gallery, data range, series orientation,
@@ -26,7 +27,7 @@ export interface ChartBuilderProps extends Omit<ViewProps, "children">,ScopedCon
   readonly spec: SheetChartSpec;
   readonly presentation?:ChartPresentation;
   readonly chartColors?:readonly {id:string;label:string}[];
-  readonly onPresentationChange?:(value:ChartPresentation)=>unknown;
+  readonly onPresentationChange?:((value:ChartPresentation)=>unknown)|undefined;
   readonly onSpecChange: (spec: SheetChartSpec) => void;
   /** Values for `spec.range`, keyed by A1 address. */
   readonly cells: ChartCellValues;
@@ -34,7 +35,7 @@ export interface ChartBuilderProps extends Omit<ViewProps, "children">,ScopedCon
   readonly selection?: SheetRange;
   /** Draws the chart. Receives series already validated and labeled. */
   readonly renderPreview?: (spec: SheetChartSpec, data: SheetChartData) => ReactNode;
-  readonly onInsert?: (spec: SheetChartSpec, data: SheetChartData) => unknown;
+  readonly onInsert?: ((spec: SheetChartSpec, data: SheetChartData) => unknown) | undefined;
   /** `true` while the app is still loading `cells` for the range. */
   readonly loading?: boolean;
   readonly disabled?:boolean;
@@ -147,5 +148,5 @@ function ChartBuilderBody({actionError,disabledReason,disabled=false,scope='char
       <Button title="Insert chart" disabled={!data || points === 0 || loading} unstyled={unstyled}
         onPress={() => data && onInsert(spec, data)} />
     </View> : null}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

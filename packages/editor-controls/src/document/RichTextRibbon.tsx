@@ -5,6 +5,7 @@ import {Pressable,Text,View,type ViewProps} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {OFFICE_TOUCH_TARGET,ToolButton} from "../office/office-controls.tsx";
 import {TEXT_CASE_LABELS,stepFontSize,type InlineToggle,type RibbonState,type SharedValue,type TextCase} from "./ribbon-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** A color the ribbon offers. `value` is document data (the engine's color string), not a theme token. */
 export interface RibbonColor {
@@ -24,24 +25,24 @@ export interface RichTextRibbonProps extends Omit<ViewProps,"children">,ScopedCo
   /** Character state of the selection, from `ribbonStateFor`. */
   readonly state:RibbonState;
   /** Bold, italic, underline and strikethrough. */
-  readonly onToggle?:(toggle:InlineToggle,on:boolean)=>void;
+  readonly onToggle?:((toggle:InlineToggle,on:boolean)=>void)|undefined;
   /** Toggles to show, in order. @default all four */
   readonly toggles?:readonly InlineToggle[];
   readonly colors?:readonly RibbonColor[];
   /** `undefined` clears the color back to automatic. */
-  readonly onColorChange?:(color:string|undefined)=>void;
+  readonly onColorChange?:((color:string|undefined)=>void)|undefined;
   readonly highlights?:readonly RibbonColor[];
   readonly highlight?:SharedValue<string>;
-  readonly onHighlightChange?:(color:string|undefined)=>void;
+  readonly onHighlightChange?:((color:string|undefined)=>void)|undefined;
   readonly fontFamilies?:readonly string[];
   readonly fontFamily?:SharedValue<string>;
-  readonly onFontFamilyChange?:(family:string)=>void;
+  readonly onFontFamilyChange?:((family:string)=>void)|undefined;
   readonly fontSize?:SharedValue<number>;
-  readonly onFontSizeChange?:(size:number)=>void;
-  readonly onChangeCase?:(mode:TextCase)=>void;
+  readonly onFontSizeChange?:((size:number)=>void)|undefined;
+  readonly onChangeCase?:((mode:TextCase)=>void)|undefined;
   readonly paragraphStyles?:readonly RibbonParagraphStyle[];
   readonly paragraphStyle?:SharedValue<string>;
-  readonly onParagraphStyleChange?:(id:string)=>void;
+  readonly onParagraphStyleChange?:((id:string)=>void)|undefined;
   /** Disables every control, e.g. while the document is read-only. */
   readonly disabled?:boolean;
   /** @default "Formatting" */
@@ -128,7 +129,7 @@ function RichTextRibbonBody({actionError,disabledReason,
       {(Object.keys(TEXT_CASE_LABELS) as TextCase[]).map(c=><ToolButton quiet key={c} label={TEXT_CASE_LABELS[c]} disabled={disabled}
         styled={styled} onPress={()=>onChangeCase(c)}/>)}
     </Group>:null}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 function Group({label,styled,children}:{label:string;styled:boolean;children:ReactNode}){

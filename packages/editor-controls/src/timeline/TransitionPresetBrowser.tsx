@@ -23,6 +23,7 @@ import {
   TRANSITION_KINDS,filterTransitionKinds,transitionDiagram,type TransitionKindInfo,
 } from "./transition-presets.ts";
 import type {TransitionTarget} from "./transitions.ts";
+import {exact} from '../exact-optional.ts';
 
 /** The cut the browser applies to, as the host resolved it. */
 export interface PresetBrowserCut {
@@ -111,7 +112,7 @@ function TransitionPresetBrowserBody({
   const tc=(f:number)=>formatTimecode(f,rate,{dropFrame});
   const presets=presetsSeconds.map(s=>({value:String(Math.max(1,Math.round(s*fps))),label:s+" s"}));
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-3",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {kind&&renderPreview?<View accessibilityLabel="Live transition preview">{renderPreview(kind.kind,frames)}</View>:<Text {...{className:joinClasses(styled&&"text-text-muted")}}>Live transition preview not provided by this editor</Text>}
     <TextField id={(testID??"transitions")+"-search"} label="Search transitions" value={state.query}
       maxLength={128} onChangeText={query=>store.set(s=>({...s,query}))} editable={!disabled} autoCorrect={false}/>

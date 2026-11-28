@@ -7,6 +7,7 @@ import {ImageCropOverlay} from '../graphics/ImageCropOverlay.tsx';
 import {fitCropAspect,validateCrop,type CropRect} from '../graphics/crop.ts';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface GuidedCropValue {readonly rect:CropRect;readonly angle:number;readonly ratio:'free'|'original'|'1:1'|'4:3'|'3:2'|'16:9'}
 export interface GuidedCropAndStraightenProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  value:GuidedCropValue;imageWidth:number;imageHeight:number;width:number;height:number;
@@ -31,7 +32,7 @@ export function GuidedCropAndStraighten({scope='guided-crop',revision=0,...props
  // Forward View props only; host operations and image dimensions are not native attributes.
  const {onCommit:_commit,onPreview:_preview,disabledReason,...viewProps}=rest;
  return <View {...viewProps} style={[{minWidth:0,gap:8},style]} accessibilityLabel="Crop and straighten">
-  <ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
   {off?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{disabledReason??'Applying crop'}</Text>:null}
   <SegmentedControl aria-label="Crop ratio" disabled={off} options={RATIOS} value={value.ratio} unstyled={unstyled} onChange={name=>{const r=ratio(name);void commit({...value,ratio:name,rect:r===undefined?value.rect:fitCropAspect(value.rect,r)});}}/>
   <ImageCropOverlay key={owner} scope={scope} revision={revision} disabled={off} rect={value.rect} width={width} height={height} grid={grid} {...(aspect===undefined?{}:{aspectRatio:aspect})} unstyled={unstyled}

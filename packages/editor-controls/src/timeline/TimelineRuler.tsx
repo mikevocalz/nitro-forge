@@ -6,6 +6,7 @@ import type {FrameRate} from "../timebase.ts";
 import {rulerTicks} from "./ruler.ts";
 import {frameToX,visibleFrames,xToFrame,type TimelineViewport} from "./viewport.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
+import {exact} from '../exact-optional.ts';
 
 /** A named point on the ruler. */
 export interface TimelineMark {
@@ -62,7 +63,7 @@ function TimelineRulerBody({
     accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden
     {...{className:joinClasses(styled&&"bg-surface-sunken border-b border-border",className)}}
     style={[{height:44,overflow:"hidden",direction:"ltr",...NO_SELECT},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {ticks.map((t,i)=>{
       const x=frameToX(viewport,t.frame);
       // The wrapper is as wide as a label: a one-unit wrapper caps the label's

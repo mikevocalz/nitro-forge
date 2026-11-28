@@ -4,6 +4,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {assertFrameRate,type FrameRate} from '../timebase.ts';
+import {exact} from '../exact-optional.ts';
 export interface AudioVideoSyncProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  surface:ReactNode;aspectRatio:number;sampleRate:number;audioSample:number;presentedFrame:number|null;
  rate:FrameRate;pictureOffsetSamples:number;toleranceSamples:number;playing:boolean;
@@ -20,6 +21,6 @@ export function AudioVideoSync({scope='audio-video-sync',revision=0,...props}:Au
   <Text {...{className:unstyled?undefined:'text-text'}}>{drift===null?'No presented-frame measurement supplied':`Picture ${drift>=0?'ahead':'behind'} by ${Math.abs(drift/sampleRate*1000).toFixed(2)} ms · ${Math.abs(drift)<=toleranceSamples?'within tolerance':'outside tolerance'}`}</Text>
   <Button title="Lock picture to audio clock" disabled={off||lockStatus==='locked'||lockStatus==='locking'} unstyled={unstyled} onPress={()=>guard.run('lock',(h,s)=>h.onLock(s))}/>
   {lockStatus==='locked'||lockStatus==='locking'||guard.pendingId==='lock'?<Button title="Release picture clock lock" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onUnlock();}}/>:null}
-  <ErrorMessage message={guard.error??error??disabledReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??error??disabledReason,unstyled:unstyled})}/>
  </View>;
 }

@@ -17,6 +17,7 @@ import type {RippleScope,TimelineTrack} from "./edits.ts";
 import {
   SPEED_RANGE,batchRemove,batchRippleDelete,batchShift,batchSpeed,selectedClips,type BatchEdit,type BatchResult,
 } from "./batch.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode BatchEditPanel}. */
 export interface BatchEditPanelProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -75,7 +76,7 @@ function BatchEditPanelBody({
   const why=(r:BatchResult)=>r.valid?undefined:r.reason;
   const n=sel.length;
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-3",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
       <Text accessibilityLiveRegion="polite" {...id("count")} {...{className:joinClasses(styled&&"text-text font-semibold")}}>
         {n?`${n} clip${n===1?"":"s"} selected`:"No clips selected"}</Text>
@@ -85,7 +86,7 @@ function BatchEditPanelBody({
       Shift-click clips, or use Shift+Enter on a focused clip, to select several.</Text>:null}
     <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"flex-end",gap:8}}>
       <TextField id={(testID??"batch")+"-shift"} label="Shift by frames" value={form.shift} keyboardType="number-pad" editable={!disabled}
-        onChangeText={shift=>store.set(f=>({...f,shift}))} style={{width:88}} errorText={Number.isNaN(shiftFrames)?"Whole frames":undefined}/>
+        onChangeText={shift=>store.set(f=>({...f,shift}))} style={{width:88}} {...exact({errorText:Number.isNaN(shiftFrames)?"Whole frames":undefined})}/>
       <View style={{flexDirection:"row",gap:8,direction:"ltr"}}>
       <Button title="Earlier" variant="secondary" size="sm" disabled={disabled||!earlier.valid} {...id("earlier")}
         accessibilityHint={why(earlier)??"Move every selected clip earlier"} onPress={()=>run(earlier)}/>

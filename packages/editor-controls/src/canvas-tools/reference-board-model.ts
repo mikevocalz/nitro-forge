@@ -150,7 +150,7 @@ export type ReferenceKeyCommand=
  * times), Shift+arrows resize it, Delete or Backspace removes it, Escape cancels
  * a drag. Board geometry stays left-to-right in RTL layouts.
  */
-export function resolveReferenceKey(e:{key?:string;shiftKey?:boolean;altKey?:boolean}):ReferenceKeyCommand|undefined{
+export function resolveReferenceKey(e:{key?:string|undefined;shiftKey?:boolean;altKey?:boolean}):ReferenceKeyCommand|undefined{
   if(e.key==="Delete"||e.key==="Backspace")return {type:"remove"};
   if(e.key==="Escape")return {type:"cancel"};
   const s=REFERENCE_KEY_STEP*(e.altKey?10:1);

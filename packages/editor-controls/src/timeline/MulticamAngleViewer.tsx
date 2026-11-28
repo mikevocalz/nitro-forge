@@ -3,6 +3,7 @@ import {Text,View,type ViewProps} from 'react-native';
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface MulticamAngle {id:string;label:string;offsetFrames:number;presentedFrame?:number;status:'loading'|'ready'|'error';error?:string;surface:ReactNode}
 export interface MulticamAngleViewerProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  angles:readonly MulticamAngle[];selectedId?:string;frame:number;maxDriftFrames?:number;
@@ -21,6 +22,6 @@ export function MulticamAngleViewer({scope='multicam',revision=0,...props}:Multi
    <Button title={'Cut to '+angle.label} accessibilityState={{selected:angle.id===selectedId}} disabled={disabledReason!==undefined||guard.pending||reason!==undefined} accessibilityHint={reason} unstyled={unstyled}
     onPress={()=>guard.run('cut',(host,signal)=>{const live=host.angles.find(a=>a.id===angle.id);return live&&!problem(live,host.frame,host.maxDriftFrames??1)?host.onSelect({angleId:live.id,frame:host.frame,offsetFrames:live.offsetFrames},signal):undefined;})}/>
   </View>;})}</View>
-  {angles.length===0?<Text {...{className:unstyled?undefined:'text-text'}}>No camera angles loaded</Text>:null}<ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  {angles.length===0?<Text {...{className:unstyled?undefined:'text-text'}}>No camera angles loaded</Text>:null}<ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

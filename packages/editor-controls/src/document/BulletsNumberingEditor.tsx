@@ -4,6 +4,7 @@ import {Pressable,Text,View,type ViewProps} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {OFFICE_TOUCH_TARGET,ToolButton,officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {LIST_FORMATS,canIndent,defaultLevelFormats,canOutdent,formatLabel,listMarker,listPreviewMarkers,type ListFormat,type ListKind} from "./list-model.ts";
+import {exact} from '../exact-optional.ts';
 
 export {BULLETS_NUMBERING_CAPABILITIES} from "./list-model.ts";
 
@@ -31,9 +32,9 @@ export interface BulletsNumberingEditorProps extends Omit<ViewProps,"children">,
   /** Per-level formats, index = level. Defaults to bullets everywhere. */
   readonly levelFormats?:readonly ListFormat[];
   /** Changes one level's format; renders the level picker. */
-  readonly onLevelFormatChange?:(level:number,format:ListFormat)=>void;
+  readonly onLevelFormatChange?:((level:number,format:ListFormat)=>void)|undefined;
   /** Moves the selection one level deeper (+1) or shallower (-1); renders the indent pair. */
-  readonly onShiftLevel?:(direction:1|-1)=>void;
+  readonly onShiftLevel?:((direction:1|-1)=>void)|undefined;
   readonly disabled?:boolean;
   className?:string;
   unstyled?:boolean;
@@ -113,5 +114,5 @@ function BulletsNumberingEditorBody({actionError,disabledReason,disabled=false,
         </View>;
       })}
     </View>
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

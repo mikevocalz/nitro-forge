@@ -4,6 +4,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
+import {exact} from '../exact-optional.ts';
 export interface LoopPunchConfiguration {loop:boolean;punch:boolean;startSample:number;endSample:number;preRollSamples:number;postRollSamples:number}
 export interface LoopPunchRecordingProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  durationSamples:number;sampleRate:number;value:LoopPunchConfiguration;recording:boolean;passCount:number;
@@ -20,6 +21,6 @@ export function LoopPunchRecording({scope='loop-punch',revision=0,...props}:Loop
   {(['loop','punch'] as const).map(key=><Button key={key} title={`${key==='loop'?'Loop recording':'Punch recording'} ${value[key]?'on':'off'}`} accessibilityState={{checked:value[key]}} disabled={off} unstyled={unstyled} onPress={()=>change({[key]:!value[key]})}/>)}
   {([{key:'startSample',label:'Recording range start',min:0,max:value.endSample-1},{key:'endSample',label:'Recording range end',min:value.startSample+1,max:durationSamples},{key:'preRollSamples',label:'Pre-roll',min:0,max:durationSamples},{key:'postRollSamples',label:'Post-roll',min:0,max:durationSamples}] as const).map(f=>f.max>f.min?<PrecisionScrubber key={f.key} scope={owner+f.key} label={f.label} value={value[f.key]} min={f.min} max={f.max} step={1} unit="samples" disabled={off} unstyled={unstyled} onCommit={n=>change({[f.key]:n})}/>:null)}
   <Text {...{className:unstyled?undefined:'text-text'}}>Range {((value.endSample-value.startSample)/sampleRate).toFixed(3)} s; boundaries locked during recording.</Text>
-  <ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/>
  </View>;
 }

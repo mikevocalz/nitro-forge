@@ -9,6 +9,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
 import {flattenLayerTree,validateLayerTreeMove} from './layer-tree-model.ts';
 import {cancelPreview} from "../cancel-preview.ts";
+import {exact} from "../exact-optional.ts";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {AnchoredPopover} from "@nyc-tron/ui/components/overlays/AnchoredPopover";
 import {PrecisionScrubber} from "@nyc-tron/ui/components/shell/PrecisionScrubber";
@@ -45,7 +46,7 @@ export interface LayerStackProps extends Omit<ViewProps,"children">{
   * Called on every opacity change during a drag so the compositor can draw a
   * live preview. A cancelled drag calls it once more with the original value.
   */
- onOpacityPreview?:(id:string,value:number)=>void;
+ onOpacityPreview?:((id:string,value:number)=>void)|undefined;
  /** Called once per completed opacity drag or screen-reader step, never per frame. */
  onOpacityCommit:(id:string,value:number)=>void|Promise<unknown>;
  /** Called once when a drag or move action lands a layer on a new index (0 = top). */
@@ -112,9 +113,9 @@ export function LayerStack({scope='layers',revision=0,disabled=false,expandedIds
   onOpacityPreview={(id,value)=>{const p=allowed(id);if(p)p.props.onOpacityPreview?.(id,value);}} onOpacityCommit={(id,value)=>{const p=allowed(id);if(p)return mutate(id,()=>p.props.onOpacityCommit(id,value));}}
   onMove={move} onRename={(id,name)=>{const p=allowed(id);if(p)return mutate(id,()=>p.props.onRename(id,name));}} {...(props.onRemove?{onRemove:(id:string)=>{const p=allowed(id);if(p)return mutate(id,()=>p.props.onRemove!(id));}}:{})}
   {...(controls?{renderControls:(layer:LayerRow)=>{const row=rows.find(value=>value.layer.id===layer.id)!,original=row.layer;const groups=props.layers.filter(item=>item.kind==='group');return <View style={{height:44,flexDirection:'row',alignItems:'center',gap:4,paddingStart:Math.min(row.depth,6)*8}}>
-   {original.kind==='group'?<Button title={expandedIds.includes(layer.id)?'−':'+'} accessibilityLabel={(expandedIds.includes(layer.id)?'Collapse ':'Expand ')+layer.name} disabled={disabled||busy||!row.hasChildren||!onExpandedChange} unstyled={props.unstyled} style={{minWidth:44,minHeight:44}} onPress={()=>{const p=current();if(p&&!p.busy)p.onExpandedChange?.(expandedIds.includes(layer.id)?expandedIds.filter(id=>id!==layer.id):[...expandedIds,layer.id]);}}/>:<View style={{width:44}}/>}
-   <Button title={original.locked?'Unlock':'Lock'} accessibilityLabel={(original.locked?'Unlock ':'Lock ')+layer.name} disabled={disabled||busy||row.inheritedLock||!onToggleLocked} unstyled={props.unstyled} style={{minWidth:44,minHeight:44}} onPress={()=>{const p=current();if(p&&!p.busy&&!row.inheritedLock)void mutate(layer.id,()=>p.onToggleLocked?.(layer.id));}}/>
-   {nested||onReparent?<View style={{flex:1,minWidth:80}}><MenuButton label={'Group for '+layer.name} editScope={JSON.stringify([scope,revision,layer.id,original.parentId,original.locked,row.inheritedLock,disabled])} disabled={disabled||busy||!!original.locked||row.inheritedLock||!onReparent} unstyled={props.unstyled} items={[{id:'root',label:'Document root'},...groups.map(group=>{let unavailable=false;try{validateLayerTreeMove(props.layers,layer.id,group.id,0);}catch{unavailable=true;}return {id:'group:'+group.id,label:group.name,disabled:unavailable};})]} onSelect={value=>{const p=allowed(layer.id);if(!p?.onReparent)return;const parent=value==='root'?null:value.slice(6);if(parent===(original.parentId??null))return;const toIndex=p.props.layers.filter(item=>item.id!==layer.id&&(item.parentId??null)===parent).length;validateLayerTreeMove(p.props.layers,layer.id,parent,toIndex);void mutate(layer.id,()=>p.onReparent!(layer.id,parent,toIndex));}}><Text numberOfLines={1} {...{className:joinClasses(!props.unstyled&&'text-text')}}>{original.parentId?props.layers.find(item=>item.id===original.parentId)?.name:'Document root'}</Text></MenuButton></View>:null}
+   {original.kind==='group'?<Button title={expandedIds.includes(layer.id)?'−':'+'} accessibilityLabel={(expandedIds.includes(layer.id)?'Collapse ':'Expand ')+layer.name} disabled={disabled||busy||!row.hasChildren||!onExpandedChange} {...exact({unstyled:props.unstyled})} style={{minWidth:44,minHeight:44}} onPress={()=>{const p=current();if(p&&!p.busy)p.onExpandedChange?.(expandedIds.includes(layer.id)?expandedIds.filter(id=>id!==layer.id):[...expandedIds,layer.id]);}}/>:<View style={{width:44}}/>}
+   <Button title={original.locked?'Unlock':'Lock'} accessibilityLabel={(original.locked?'Unlock ':'Lock ')+layer.name} disabled={disabled||busy||row.inheritedLock||!onToggleLocked} {...exact({unstyled:props.unstyled})} style={{minWidth:44,minHeight:44}} onPress={()=>{const p=current();if(p&&!p.busy&&!row.inheritedLock)void mutate(layer.id,()=>p.onToggleLocked?.(layer.id));}}/>
+   {nested||onReparent?<View style={{flex:1,minWidth:80}}><MenuButton label={'Group for '+layer.name} editScope={JSON.stringify([scope,revision,layer.id,original.parentId,original.locked,row.inheritedLock,disabled])} disabled={disabled||busy||!!original.locked||row.inheritedLock||!onReparent} {...exact({unstyled:props.unstyled})} items={[{id:'root',label:'Document root'},...groups.map(group=>{let unavailable=false;try{validateLayerTreeMove(props.layers,layer.id,group.id,0);}catch{unavailable=true;}return {id:'group:'+group.id,label:group.name,disabled:unavailable};})]} onSelect={value=>{const p=allowed(layer.id);if(!p?.onReparent)return;const parent=value==='root'?null:value.slice(6);if(parent===(original.parentId??null))return;const toIndex=p.props.layers.filter(item=>item.id!==layer.id&&(item.parentId??null)===parent).length;validateLayerTreeMove(p.props.layers,layer.id,parent,toIndex);void mutate(layer.id,()=>p.onReparent!(layer.id,parent,toIndex));}}><Text numberOfLines={1} {...{className:joinClasses(!props.unstyled&&'text-text')}}>{original.parentId?props.layers.find(item=>item.id===original.parentId)?.name:'Document root'}</Text></MenuButton></View>:null}
    <Text numberOfLines={1} {...{className:joinClasses(!props.unstyled&&'text-text-muted')}}>{'Level '+(row.depth+1)}</Text>
   </View>;}}:{})}/>;
 }
@@ -153,7 +154,7 @@ function LayerStackBody({
       count={layers.length} rowHeight={height} primaryHeight={primaryHeight} controls={renderControls?.(layer)} disabled={disabled} canReorder={canReorder} thumbnailSlot={thumbnailSlot} mode={mode} selected={layer.id===selectedId} styled={styled}
       accentColor={accentColor} onSelect={onSelect} onToggleVisible={onToggleVisible}
       onOpacityPreview={onOpacityPreview} onOpacityCommit={onOpacityCommit} onMove={onMove} onRename={onRename}
-      onRemove={onRemove}/>)}
+      {...exact({onRemove})}/>)}
   </ScrollView>
   {busy?<Text accessibilityLiveRegion="polite" {...{className:joinClasses(styled&&'text-text-muted')}}>Updating layer</Text>:null}
   <ErrorMessage {...(actionError?{message:actionError}:{})} unstyled={unstyled}/>

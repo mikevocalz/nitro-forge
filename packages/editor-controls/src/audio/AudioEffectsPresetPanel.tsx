@@ -3,6 +3,7 @@ import {EffectStackAndInspector,type EffectStackAndInspectorProps} from '../moti
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface AudioEffectsPresetPanelProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  stack:Omit<EffectStackAndInspectorProps,'scope'|'revision'|'disabled'|'unstyled'>;bypassed:boolean;
  previewStatus:'idle'|'rendering'|'ready'|'error';previewError?:string;onRenderPreview:(signal?:AbortSignal)=>unknown;onCancelPreview:()=>void;
@@ -19,6 +20,6 @@ export function AudioEffectsPresetPanel({scope='audio-effects',revision=0,...pro
   <Button title="Render offline audio preview" disabled={off} unstyled={unstyled} onPress={()=>guard.run('render',(h,s)=>h.onRenderPreview(s))}/>
   {previewStatus==='rendering'||guard.pendingId==='render'?<Button title="Cancel offline preview" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onCancelPreview();}}/>:null}
   <Button title="Audition rendered preview" disabled={off||previewStatus!=='ready'} unstyled={unstyled} onPress={()=>guard.run('audition',(h,s)=>h.previewStatus==='ready'?h.onAuditionPreview(s):undefined)}/>
-  <ErrorMessage message={guard.error??previewError??disabledReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??previewError??disabledReason,unstyled:unstyled})}/>
  </View>;
 }

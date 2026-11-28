@@ -15,6 +15,7 @@ import {
   slideEdit,slidePreview,slipEdit,slipPreview,type TrimModePreview,
 } from "./trim-modes.ts";
 import type {TimelineTool} from "./TimelineClipLane.tsx";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode RollSlipSlideControls}. */
 export interface RollSlipSlideControlsProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -70,7 +71,7 @@ function RollSlipSlideControlsBody({
   const styled=!unstyled;
   const id=(s:string)=>testID?{testID:testID+"-"+s}:{};
   const found=tracks.flatMap(t=>t.clips.filter(c=>c.id===selectedClipId).map(clip=>({track:t,clip})))[0];
-  const attempt=(delta:number):{preview?:TrimModePreview;edit?:TimelineEdit}=>{
+  const attempt=(delta:number):{preview?:TrimModePreview;edit?:TimelineEdit|undefined}=>{
     if(!found||!isMode(tool))return {};
     const {track,clip}=found;
     if(tool==="slip"){const p=slipPreview(track,clip,delta);return {preview:p,edit:slipEdit(clip,track.id,p,rate)};}
@@ -94,7 +95,7 @@ function RollSlipSlideControlsBody({
     :undefined;
   const stepLabel=(d:number)=>`${Math.abs(d)} frame${Math.abs(d)===1?"":"s"} ${d<0?"earlier":"later"}`;
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <SegmentedControl aria-label="Trim tool" options={MODES} value={MODES.some(m=>m.value===tool)?tool:""}
       onChange={onToolChange} disabled={disabled} unstyled={unstyled} {...id("tool")}/>
     {isMode(tool)?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}}>{HELP[tool]}</Text>:null}

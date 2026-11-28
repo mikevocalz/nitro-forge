@@ -9,6 +9,7 @@ import {createCanvasResponder} from "@nyc-tron/ui/components/gestures/canvas-res
 import {ErrorMessage} from "@nyc-tron/ui/components/feedback/ErrorMessage";
 import {createGraphRequests,currentGraphOutput,graphInteractionBoundary,graphDragPoint,graphDisplayedNodes} from "./patch-interaction-model.ts";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
+import {exact} from '../exact-optional.ts';
 
 type Local={positions:Readonly<Record<string,GraphPoint>>;output:GraphSelection|null;error:string|null};
 export interface PatchGraphProps extends Omit<ViewProps,"children">{
@@ -75,7 +76,7 @@ export function PatchGraph({
        const from=byId.get(edge.from.nodeId)!,to=byId.get(edge.to.nodeId)!;
        const points=cubicGraphPoints(getPortAnchor(from,edge.from.portId,"output"),getPortAnchor(to,edge.to.portId,"input"),16);
        return points.slice(1).map((p,i)=>{
-         const prev=points[i],dx=p.x-prev.x,dy=p.y-prev.y,len=Math.hypot(dx,dy);
+         const prev=points[i]!,dx=p.x-prev.x,dy=p.y-prev.y,len=Math.hypot(dx,dy);
          return <View key={edge.id+"-"+i} pointerEvents="none"
            {...{className:joinClasses(styled&&!accentColor&&"bg-accent")}} style={{position:"absolute",left:(p.x+prev.x-len)/2,
            top:(p.y+prev.y)/2-1,width:len,height:2,...(accentColor?{backgroundColor:accentColor}:null),
@@ -97,7 +98,7 @@ export function PatchGraph({
     onPress={cancelPending} style={{minHeight:44,justifyContent:"center",paddingHorizontal:12}}>
       <Text {...{className:joinClasses(styled&&"text-text")}}>Connecting {output.nodeId}:{output.portId} · Tap an input, or cancel</Text>
     </Pressable>:null}
-  <ErrorMessage message={error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:error??undefined,unstyled:unstyled})}/>
  </View>;
 }
 type PatchNodeProps={

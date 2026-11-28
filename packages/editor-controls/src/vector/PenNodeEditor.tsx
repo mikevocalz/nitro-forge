@@ -19,6 +19,7 @@ import {
   type HandleOffset,type NodeKind,type NodeRef,type PathNode,type Point,type Subpath,type ViewTransform,
 } from "./vector-types.ts";
 import {CanvasKnob,LinePiece,NoticeLine,VectorButton,type CanvasKeyEvent,type DragModifiers} from "./vector-controls.tsx";
+import {exact} from '../exact-optional.ts';
 
 /** Source contract for hosts that require scoped, focus-preserving canvas edits.
  * Older alpha.4 artifacts omit this marker; availability must be detected at runtime. */
@@ -328,7 +329,7 @@ function PenNodeEditorBody({
   const selSub=selected?shown[selected.subpath]:undefined;
   return <View {...rest} {...{onKeyDown:onRootKey,onKeyUp:onRootKeyUp,className:joinClasses("gap-2",className)}}
     style={[{alignSelf:"flex-start",maxWidth:"100%"},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Applying path change"}</Text>:null}
     <View {...canvasHandlers} accessibilityLabel={label} testID="pen-canvas"
       {...{className:joinClasses("overflow-hidden",styled&&"rounded-control border border-border")}}

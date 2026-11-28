@@ -5,6 +5,7 @@ import {Select} from '@nyc-tron/ui/components/Select';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface VideoEffectsBrowserProps extends EffectStackAndInspectorProps {
  clipId:string;preview:ReactNode;appearance:{intensity:number;maskId:string|null};masks:readonly {id:string;label:string}[];
  onAppearanceChange:(value:{intensity:number;maskId:string|null},signal?:AbortSignal)=>void|Promise<unknown>;
@@ -19,8 +20,8 @@ export function VideoEffectsBrowser({clipId,preview,appearance,masks,onAppearanc
   {preview}<Text {...{className:props.unstyled?undefined:'text-text'}}>Clip: {clipId}</Text>
   <EffectStackAndInspector key={owner} {...props} disabled={off} onSelect={id=>guard.current()?.onSelect(id)}
    onMutation={(mutation,signal)=>{const current=guard.current();return current?.onMutation(mutation,signal);}}/>
-  <PrecisionScrubber scope={props.scope} revision={props.revision} label="Effect intensity" value={appearance.intensity} min={0} max={1} step={.01} disabled={off} unstyled={props.unstyled} onCommit={intensity=>set({intensity})}/>
-  <Select label="Effect mask" value={appearance.maskId??''} options={[{value:'',label:'No mask'},...masks.map(m=>({value:m.id,label:m.label}))]} disabled={off} unstyled={props.unstyled} onValueChange={maskId=>set({maskId:maskId||null})}/>
-  <ErrorMessage message={guard.error??undefined} unstyled={props.unstyled}/>
+  <PrecisionScrubber scope={props.scope} revision={props.revision} label="Effect intensity" value={appearance.intensity} min={0} max={1} step={.01} disabled={off} {...exact({unstyled:props.unstyled})} onCommit={intensity=>set({intensity})}/>
+  <Select label="Effect mask" value={appearance.maskId??''} options={[{value:'',label:'No mask'},...masks.map(m=>({value:m.id,label:m.label}))]} disabled={off} {...exact({unstyled:props.unstyled})} onValueChange={maskId=>set({maskId:maskId||null})}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:props.unstyled})}/>
  </View>;
 }

@@ -29,6 +29,7 @@ import {
   sendLabel, sendLevel, stepSendLevel,
   type RouteId, type RoutingBus, type RoutingSource,
 } from "./routing.ts";
+import {exact} from '../exact-optional.ts';
 
 const HIT = 44;
 const SLOP = 4;
@@ -38,8 +39,8 @@ export interface BusAndRoutingMatrixProps extends Omit<ViewProps, "children">,Sc
   /** Committed routing of each source track, in display order. */
   readonly sources: readonly RoutingSource[];
   readonly ioBindings?:readonly {sourceId:RouteId;inputId:string|null;sidechainId:string|null;inputs:readonly {id:string;label:string}[];sidechains:readonly {id:string;label:string}[]}[];
-  readonly onInputCommit?:(sourceId:RouteId,inputId:string|null)=>void|Promise<unknown>;
-  readonly onSidechainCommit?:(sourceId:RouteId,source:string|null)=>void|Promise<unknown>;
+  readonly onInputCommit?:((sourceId:RouteId,inputId:string|null)=>void|Promise<unknown>)|undefined;
+  readonly onSidechainCommit?:((sourceId:RouteId,source:string|null)=>void|Promise<unknown>)|undefined;
   /** Buses that sources can output or send to. Buses feed the master only. */
   readonly buses: readonly RoutingBus[];
   /**
@@ -57,9 +58,9 @@ export interface BusAndRoutingMatrixProps extends Omit<ViewProps, "children">,Sc
   /** Once per press of a send's remove button or Delete on its slider. */
   readonly onSendRemove: (sourceId: RouteId, busId: RouteId) => void | Promise<unknown>;
   /** Live send level while a drag is in progress; never persist it. */
-  readonly onSendChange?: (sourceId: RouteId, busId: RouteId, level: number) => void;
+  readonly onSendChange?: ((sourceId: RouteId, busId: RouteId, level: number) => void) | undefined;
   /** The way out when there are no buses, e.g. "Add bus". */
-  readonly emptyAction?: EmptyStateExit;
+  readonly emptyAction?: EmptyStateExit | undefined;
   /** @default false */
   readonly disabled?: boolean;
   /** Accessible name of the matrix region. @default "Routing" */
@@ -138,7 +139,7 @@ function BusAndRoutingMatrixBody({actionError,disabledReason,
   });
   return <View {...rest} onLayout={measure} accessibilityLabel={label} {...{ role: "group" }}
     {...{ className: frame }} style={[{ opacity: width === 0 ? 0 : 1 }, rest.style]}>
-    {buses.length===0?<EmptyState title="No buses yet" description="Add a bus to send tracks to a shared output or effect." exitAction={disabled?undefined:emptyAction} unstyled={unstyled}/>:null}
+    {buses.length===0?<EmptyState title="No buses yet" description="Add a bus to send tracks to a shared output or effect." {...exact({exitAction:disabled?undefined:emptyAction})} unstyled={unstyled}/>:null}
     {ioBindings.map(binding=><View key={String(binding.sourceId)} style={{gap:8,padding:8}}>
      <Text {...{className:muted}}>{sources.find(s=>s.id===binding.sourceId)?.name} input and sidechain</Text>
      {onInputCommit?<Select label="Track input" value={binding.inputId===null?'none':'source:'+binding.inputId} options={[{value:'none',label:'No input'},...binding.inputs.map(v=>({value:'source:'+v.id,label:v.label}))]} disabled={disabled} unstyled={unstyled} onValueChange={id=>onInputCommit(binding.sourceId,id==='none'?null:id.slice(7))}/>:null}
@@ -156,7 +157,7 @@ function BusAndRoutingMatrixBody({actionError,disabledReason,
     </View> : <View style={{ padding: 12, gap: 12 }}>
       {sources.map(source => <SourceCard key={source.id} {...rowProps(source)} />)}
     </View>}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 type RowProps = {

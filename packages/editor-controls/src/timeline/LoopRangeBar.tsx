@@ -12,6 +12,7 @@ import {frameForKey} from "./frame-keys.ts";
 import {loopCommit,loopFromMarks,setLoopEdge,type LoopCommit,type LoopRange} from "./loop-range.ts";
 import {frameToX,xToFrame,type TimelineViewport} from "./viewport.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode LoopRangeBar}. */
 export interface LoopRangeBarProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -40,7 +41,7 @@ const HIT=44;
 
 function Edge({boundary,restorePreview,edge,range,viewport,durationFrames,rate,onPreview,onCommit,dropFrame,disabled,styled}:{
   boundary:string;restorePreview?:LoopRangeBarProps["onPreview"];edge:"in"|"out";range:LoopRange;viewport:TimelineViewport;durationFrames:number;rate:FrameRate;
-  onPreview?:(r:LoopRange)=>void;onCommit:(r:LoopCommit)=>void;dropFrame:boolean;disabled:boolean;styled:boolean;
+  onPreview?:((r:LoopRange)=>void)|undefined;onCommit:(r:LoopCommit)=>void;dropFrame:boolean;disabled:boolean;styled:boolean;
 }){
   const committed=useRef(boundary);
   useLayoutEffect(()=>{committed.current=boundary;},[boundary]);
@@ -118,7 +119,7 @@ function LoopRangeBarBody({
   const endX=range?Math.min(viewport.widthPx,frameToX(viewport,range.outFrame)):0;
   const off=disabled||durationFrames<1;
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
       <Pressable accessibilityRole="switch" aria-checked={looping} accessibilityState={{checked:looping,disabled:off||!range}}
         disabled={off||!range} accessibilityLabel="Loop playback"

@@ -4,6 +4,7 @@ import {ErrorMessage} from "@nyc-tron/ui/components/feedback/ErrorMessage";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {controlIdentity,useScopedControl,type ScopedControlProps} from "../inputs/useScopedControl.ts";
 import {AUTOMATION_MODES,type AutomationMode} from "./automation.ts";
+import {exact} from '../exact-optional.ts';
 export interface AutomationModePickerProps extends Omit<ViewProps,"children">,ScopedControlProps {
  readonly mode:AutomationMode;readonly onModeCommit:(mode:AutomationMode,signal?:AbortSignal)=>void|Promise<unknown>;
  /** Only the host can enable live write/touch/latch/trim support. */
@@ -23,6 +24,6 @@ export function AutomationModePicker({scope='automation-mode',revision=0,...prop
   <SegmentedControl aria-label={label} value={mode} disabled={disabled||disabledReason!==undefined||guard.pending} unstyled={unstyled} options={AUTOMATION_MODES.map(m=>({value:m,label:NAMES[m],disabled:reason(m)!==undefined}))}
    onChange={next=>guard.run('mode',(host,signal)=>{const caps=host.capabilities??LEGACY,entry=caps.find(c=>c.mode===next);return entry&&(!('disabledReason' in entry)||entry.disabledReason===undefined)?host.onModeCommit(next,signal):undefined;})}/>
   {AUTOMATION_MODES.filter(m=>reason(m)!==undefined).map(m=><Text key={m} {...{className:joinClasses(!unstyled&&'text-text-muted text-xs')}}>{NAMES[m]}: {reason(m)}</Text>)}
-  <ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

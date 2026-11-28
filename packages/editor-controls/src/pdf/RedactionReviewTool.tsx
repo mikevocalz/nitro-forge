@@ -8,6 +8,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {validatePDFRect,type PDFRect} from './pdf-page-model.ts';
+import {exact} from '../exact-optional.ts';
 export interface PDFRedactionMark {id:string;pageId:string;pageLabel:string;rects:readonly PDFRect[];reason:string}
 export interface RedactionReviewToolProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  marks:readonly PDFRedactionMark[];planRevision:string|number;selectedId:string|null;preview:ReactNode;
@@ -25,6 +26,6 @@ export function RedactionReviewTool({scope='pdf-redaction',revision=0,...props}:
  <FlatList data={marks} keyExtractor={m=>m.id} initialNumToRender={6} windowSize={5} style={{maxHeight:320}} extraData={[selectedId,off]} renderItem={({item})=><View style={{gap:6,paddingVertical:6}}><Button title={item.pageLabel+' · '+(item.reason||'Redaction mark')} accessibilityState={{selected:item.id===selectedId}} variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>guard.current()?.onSelect(item.id)}/><Button title="Remove preview redaction mark" variant="ghost" disabled={off} unstyled={unstyled} onPress={()=>guard.run('remove',(h,s)=>h.marks.some(m=>m.id===item.id)?h.onRemoveMark(item.id,s):undefined)}/></View>}/>
  <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}><Button title="Mark selected PDF content for redaction" disabled={off} unstyled={unstyled} onPress={()=>guard.run('add',(h,s)=>h.onAddFromSelection(s))}/><Button title="Validate redaction plan" disabled={off||marks.length===0} unstyled={unstyled} onPress={()=>guard.run('review',(h,s)=>h.onReview(s))}/><Button title="Apply reviewed redactions" variant="danger" disabled={off||!ready} unstyled={unstyled} onPress={()=>store.setState({confirm:true})}/></View>
  {confirm?<View style={{gap:6}}><Text accessibilityRole="header" {...{className:unstyled?undefined:'text-text'}}>Permanently apply {marks.length} redactions? This removes the reviewed content from the output PDF.</Text><Button title="Confirm permanent PDF redaction" variant="danger" disabled={off||!ready} unstyled={unstyled} onPress={()=>guard.run('apply',(h,s)=>{if(!h.canApply||h.review.status!=='ready'||h.review.planRevision!==h.planRevision||h.planRevision!==planRevision||!h.marks.length)throw new Error('The redaction plan changed; review it again');store.setState({confirm:false});return h.onApply(h.marks.map(m=>m.id),h.planRevision,s);})}/><Button title="Keep reviewing redaction marks" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>store.setState({confirm:false})}/></View>:null}
- <ErrorMessage message={guard.error??error??review.message??disabledReason} unstyled={unstyled}/></View>;
+ <ErrorMessage {...exact({message:guard.error??error??review.message??disabledReason,unstyled:unstyled})}/></View>;
 }
 function makeStore(){return createStore(()=>({confirm:false}));}

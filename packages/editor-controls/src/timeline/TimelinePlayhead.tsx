@@ -7,6 +7,7 @@ import {formatTimecode,type FrameRate} from "../timebase.ts";
 import {frameForKey} from "./frame-keys.ts";
 import {frameToX,xToFrame,type TimelineViewport} from "./viewport.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode TimelinePlayhead}. */
 export interface TimelinePlayheadProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -70,7 +71,7 @@ function TimelinePlayheadBody({
   const step=(d:number)=>{const n=clamp(committed+d);if(!disabled&&n!==committed)onSeek(n);};
   return <View {...rest} pointerEvents="box-none" {...(testID?{testID}:{})}
     style={[{position:"absolute",left:0,top:0,width:viewport.widthPx,height,direction:"ltr"},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {inView?<View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}}
       style={{position:"absolute",left:x-1,top:0,width:2,height}}/>:null}
     <View {...scrub.handlers}

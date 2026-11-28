@@ -16,6 +16,7 @@ import {
   FADER_RANGES, clampGain, dragToGain, formatDb, gainToPosition, stepGain,
   type FaderRange,
 } from "./level.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Visual thickness of the thumb along the travel axis, in points. */
 const THUMB = 16;
@@ -37,7 +38,7 @@ export interface LevelFaderLabels {
 export interface LevelFaderProps extends Omit<ViewProps, "children">,ScopedControlProps {
   /** App-owned minimum interaction target. Defaults to 44 points. */
   readonly targetSize?: number;
-  readonly labels?:LevelFaderLabels;
+  readonly labels?:LevelFaderLabels|undefined;
   /** Committed linear gain from the app or engine (0 = silence, 1 = 0 dB). */
   readonly value: number;
   /** Accessible name and visible label, e.g. `"Vocals"`. */
@@ -47,7 +48,7 @@ export interface LevelFaderProps extends Omit<ViewProps, "children">,ScopedContr
    * `value` when a drag is cancelled, and with the stepped gain just before
    * each step's `onCommit`. Use it for live preview only.
    */
-  readonly onChange?: (gain: number) => void;
+  readonly onChange?: ((gain: number) => void) | undefined;
   /**
    * Called once per completed drag on release, and once per step from the
    * buttons, arrow keys or a screen-reader action. Not called when the gain
@@ -239,7 +240,7 @@ function LevelFaderBody({
 
   return <View {...rest}
     {...{ className: joinClasses("items-center gap-2", styled && "rounded-control bg-surface-raised p-3", className) }}>
-      <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+      <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>{label}</Text>
     <View {...responder.current.panHandlers}
       accessible focusable={!disabled} accessibilityRole="adjustable"

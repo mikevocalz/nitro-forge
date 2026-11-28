@@ -29,7 +29,7 @@ const defaultGroupLabels:MixGroupLabels={region:'Mix groups',solo:'Solo',mute:'M
 export interface MixGroupBarProps extends Omit<ViewProps, "children"> {
   /** App-owned minimum interaction target. Defaults to 44 points. */
   readonly targetSize?: number;
-  readonly labels?:Partial<MixGroupLabels>;
+  readonly labels?:Partial<MixGroupLabels>|undefined;
   /** From {@linkcode mixGroups}, in display order. */
   readonly groups: readonly MixGroup[];
   /**

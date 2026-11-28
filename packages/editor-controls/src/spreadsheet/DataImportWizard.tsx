@@ -5,6 +5,7 @@ import {Select} from '@nyc-tron/ui/components/Select';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {exact} from '../exact-optional.ts';
 export interface ImportSettings {format:'csv'|'tsv'|'xlsx';encoding:'utf-8'|'utf-16'|'windows-1252';delimiter:string;headers:boolean;worksheetId:string;decimalSeparator:'.'|','}
 export interface ImportColumn {id:string;label:string;targetId:string|null;conversion:'text'|'number'|'date'|'boolean'|'skip'}
 export interface DataImportWizardProps extends Omit<ViewProps,'children'>,ScopedControlProps {
@@ -30,5 +31,5 @@ export function DataImportWizard({scope='data-import',revision=0,...props}:DataI
  <Button title="Preview converted rows" disabled={off||sourceLabel===null} unstyled={unstyled} onPress={()=>guard.run('preview',(h,s)=>h.sourceLabel!==null?h.onPreview(s):undefined)}/>
  <FlatList data={preview} keyExtractor={r=>r.id} style={{maxHeight:240}} initialNumToRender={6} windowSize={5} renderItem={({item})=><View style={{gap:4,paddingVertical:6}}><Text selectable {...{className:unstyled?undefined:'text-text'}}>{item.values.join(' | ')}</Text>{item.errors.map((error,i)=><Text key={i} {...{className:unstyled?undefined:'text-danger'}}>{error}</Text>)}</View>}/>
  <Button title="Import reviewed data" disabled={off||status!=='preview'||!canImport} unstyled={unstyled} onPress={()=>guard.run('import',(h,s)=>h.canImport&&h.status==='preview'?h.onImport(s):undefined)}/>
- {busy||guard.pending?<Button title="Cancel data import" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onCancel();}}/>:null}<ErrorMessage message={guard.error??error??disabledReason} unstyled={unstyled}/></View>;
+ {busy||guard.pending?<Button title="Cancel data import" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onCancel();}}/>:null}<ErrorMessage {...exact({message:guard.error??error??disabledReason,unstyled:unstyled})}/></View>;
 }

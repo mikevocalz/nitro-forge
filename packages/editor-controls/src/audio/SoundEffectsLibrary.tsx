@@ -5,6 +5,7 @@ import {useStore} from 'zustand';
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface LicensedSoundEffect {id:string;label:string;category:string;durationSeconds:number;licenseLabel:string;attribution?:string;insertAllowed:boolean;unavailableReason?:string}
 export interface SoundEffectsLibraryProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  sounds:readonly LicensedSoundEffect[];status:'loading'|'ready'|'error';error?:string;previewingId:string|null;
@@ -26,7 +27,7 @@ export function SoundEffectsLibrary({scope='sound-effects',revision=0,...props}:
   </View>}/>
   {previewingId!==null||guard.pendingId==='preview'?<Button title="Stop sound preview" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onStopPreview();}}/>:null}
   {status==='error'?<Button title="Retry sound library" unstyled={unstyled} onPress={onRetry}/>:null}
-  <ErrorMessage message={guard.error??error??disabledReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??error??disabledReason,unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(){return createStore(()=>({query:'',category:null as string|null}));}

@@ -25,7 +25,7 @@ function AudioRecoveryBody(props:AudioInterruptionRecoveryDialogProps){
  const local=useRef<StoreApi<{busy:boolean;error:string|undefined}>|null>(null);if(!local.current)local.current=createStore(()=>({busy:false,error:undefined}));
  const store=local.current,busy=useStore(store,s=>s.busy),error=useStore(store,s=>s.error);
  const run=async(action:Action)=>{if(store.getState().busy)return;store.setState({busy:true,error:undefined});try{await action();props.onClose();}catch(e){store.setState({error:e instanceof Error?e.message:String(e)});}finally{store.setState({busy:false});}};
- const notice=props.notice,styled=!props.unstyled;
+ const notice=props.notice,styled=!props.unstyled,unstyled=props.unstyled??false;
  return <Modal visible={props.visible} transparent animationType="none" onRequestClose={()=>{if(!busy)props.onClose();}}>
   <View style={{flex:1,padding:16,alignItems:'center',justifyContent:'center'}} {...{className:styled?'bg-text/50':undefined}}>
    <View accessibilityViewIsModal role="dialog" aria-modal accessibilityLabel={recoveryTitle(notice)} style={{width:'100%',maxWidth:460}} {...{className:joinClasses(styled&&'bg-surface-raised border border-border rounded-card p-4 gap-4',props.className)}}>
@@ -34,10 +34,10 @@ function AudioRecoveryBody(props:AudioInterruptionRecoveryDialogProps){
     {notice.kind==='paused'&&!notice.ready?<Text {...{className:styled?'text-text-muted':undefined}}>Resume is unavailable until the host confirms audio is ready.</Text>:null}
     {error||props.error?<Text accessibilityLiveRegion="polite" {...{className:styled?'text-danger':undefined}}>{error??props.error}</Text>:null}
     <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,justifyContent:'flex-end'}}>
-     <Button title="Close" variant="ghost" unstyled={props.unstyled} disabled={busy||props.disabledReason!==undefined} onPress={props.onClose}/>
-     {'onKeep' in props?<><Button title="Discard recording" variant="danger" unstyled={props.unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onDiscard);}}/><Button title="Keep recording" unstyled={props.unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onKeep);}}/></>:
-      'onRetry' in props?<><Button title="Stop" variant="secondary" unstyled={props.unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onStop);}}/><Button title="Restart audio" unstyled={props.unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onRetry);}}/></>:
-      <><Button title="Stop" variant="secondary" unstyled={props.unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onStop);}}/><Button title="Resume" unstyled={props.unstyled} disabled={busy||!props.notice.ready||props.disabledReason!==undefined} onPress={()=>{void run(props.onResume);}}/></>}
+     <Button title="Close" variant="ghost" unstyled={unstyled} disabled={busy||props.disabledReason!==undefined} onPress={props.onClose}/>
+     {'onKeep' in props?<><Button title="Discard recording" variant="danger" unstyled={unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onDiscard);}}/><Button title="Keep recording" unstyled={unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onKeep);}}/></>:
+      'onRetry' in props?<><Button title="Stop" variant="secondary" unstyled={unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onStop);}}/><Button title="Restart audio" unstyled={unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onRetry);}}/></>:
+      <><Button title="Stop" variant="secondary" unstyled={unstyled} disabled={busy||props.disabledReason!==undefined} onPress={()=>{void run(props.onStop);}}/><Button title="Resume" unstyled={unstyled} disabled={busy||!props.notice.ready||props.disabledReason!==undefined} onPress={()=>{void run(props.onResume);}}/></>}
     </View>
    </View>
   </View>

@@ -9,6 +9,7 @@ import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {IconButton} from "@nyc-tron/ui/components/IconButton";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {trackSilenced,type TimelineTrack,type TrackKind} from "./edits.ts";
+import {exact} from '../exact-optional.ts';
 
 /** A track switch Splice stores (`setTrackFlags`). */
 export type TrackFlag="locked"|"hidden"|"muted"|"solo";
@@ -41,7 +42,7 @@ export interface TrackHeadersProps extends Omit<ViewProps,"children">,ScopedCont
    * full row elsewhere, as `OverlayAndEffectsTrackStack` does under the lanes.
    */
   readonly compact?:boolean;
-  readonly openTrackId?:string;
+  readonly openTrackId?:string|undefined;
   /** Every track, when `tracks` is a subset: solo on a track not shown still silences these. @default tracks */
   readonly allTracks?:readonly TimelineTrack[];
   readonly onOpenTrack?:(trackId:string|undefined)=>void;
@@ -134,7 +135,7 @@ function TrackHeadersBody({
   const id=(s:string)=>testID?{testID:testID+"-"+s}:{};
   return <View {...rest} {...(testID?{testID}:{})} accessibilityRole="list" accessibilityLabel="Track headers"
     {...{className:joinClasses(className)}} style={[{width},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {tracks.map(track=>{
       const silenced=trackSilenced(track,allTracks??tracks);
       const soloedAway=track.kind==="audio"&&!track.muted&&silenced;

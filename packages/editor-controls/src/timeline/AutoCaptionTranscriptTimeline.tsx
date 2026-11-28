@@ -9,6 +9,7 @@ import {MenuButton} from '@nyc-tron/ui/components/shell/MenuButton';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {assertFrameRate,formatTimecode,type FrameRate} from '../timebase.ts';
+import {exact} from '../exact-optional.ts';
 export interface CaptionSegment {id:string;text:string;speakerId:string|null;startFrame:number;endFrame:number}
 export interface AutoCaptionTranscriptTimelineProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  segments:readonly CaptionSegment[];speakers:readonly {id:string;label:string}[];frame:number;durationFrames:number;rate:FrameRate;selectedId:string|null;onSelect:(id:string)=>void;
@@ -33,7 +34,7 @@ export function AutoCaptionTranscriptTimeline({scope='auto-captions',revision=0,
    renderItem={({item})=><CaptionRow key={JSON.stringify([owner,item.id])} segment={item} speakers={speakers} scope={owner} active={frame>=item.startFrame&&frame<item.endFrame} selected={selectedId===item.id} disabled={off} rate={rate} unstyled={unstyled}
     onSelect={()=>guard.current()?.onSelect(item.id)} onSeek={()=>guard.run('seek',(host,signal)=>host.onSeek(item.startFrame,signal))}
     onEdit={patch=>guard.run('edit',(host,signal)=>host.segments.some(s=>s.id===item.id)&&(patch.speakerId===undefined||patch.speakerId===null||host.speakers.some(s=>s.id===patch.speakerId))?host.onEdit(item.id,patch,signal):undefined)}/>}/>
-  <ErrorMessage message={guard.error??generation.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??generation.error??undefined,unstyled:unstyled})}/>
  </View>;
 }
 function CaptionRow({segment,speakers,scope,active,selected,disabled,rate,unstyled,onSelect,onSeek,onEdit}:{segment:CaptionSegment;speakers:readonly {id:string;label:string}[];scope:string;active:boolean;selected:boolean;disabled:boolean;rate:FrameRate;unstyled:boolean;onSelect:()=>void;onSeek:()=>void;onEdit:(patch:{text?:string;speakerId?:string|null})=>unknown}){

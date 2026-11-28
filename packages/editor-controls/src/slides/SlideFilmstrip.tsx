@@ -10,6 +10,7 @@ import {dragTargetIndex} from "../layers/layer-model.ts";
 import {OFFICE_TOUCH_TARGET,PlusGlyph,officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {SlideThumbnail} from "./SlideThumbnail.tsx";
 import {SLIDE_DEFAULT_SIZE,slideLabel,type SlideObject,type SlideSize,type SlideSummary} from "./slide-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode SlideFilmstrip}. Each action renders only when its callback is passed. */
 export interface SlideFilmstripProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -19,11 +20,11 @@ export interface SlideFilmstripProps extends Omit<ViewProps,"children">,ScopedCo
   readonly selectedId?:string;
   readonly onSelect:(id:string)=>void;
   /** Moves a slide to `toIndex` (0-based). Drag, Alt+Up/Down and screen-reader actions call it once per move. */
-  readonly onMove?:(id:string,toIndex:number)=>void|Promise<unknown>;
+  readonly onMove?:((id:string,toIndex:number)=>void|Promise<unknown>)|undefined;
   /** Adds a slide. Where it goes is the host engine's call (Pitch appends). */
-  readonly onAdd?:()=>void|Promise<unknown>;
+  readonly onAdd?:(()=>void|Promise<unknown>)|undefined;
   /** Removes a slide. Not offered when only one slide is left. */
-  readonly onRemove?:(id:string)=>void|Promise<unknown>;
+  readonly onRemove?:((id:string)=>void|Promise<unknown>)|undefined;
   readonly size?:SlideSize;
   readonly renderImage?:(src:string,object:SlideObject)=>ReactNode;
   /** Thumbnail width in points. @default 136 */
@@ -84,11 +85,11 @@ function SlideFilmstripBody({boundary,actionError,disabledReason,disabled=false,
       <PlusGlyph styled={styled} size={12}/>
       {horizontal?null:<Text {...{className:joinClasses(styled&&"text-text text-sm")}}>New slide</Text>}
     </Pressable>:null}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 type RowProps={
-  disabled:boolean;sectionLabel?:string;reserveSection:boolean;slide:SlideSummary;index:number;count:number;selected:boolean;drag:Drag|null;
+  disabled:boolean;sectionLabel?:string|undefined;reserveSection:boolean;slide:SlideSummary;index:number;count:number;selected:boolean;drag:Drag|null;
   store:{get:()=>{drag:Drag|null};set:(v:{drag:Drag|null})=>void};rowHeight:number;thumbnailWidth:number;size:SlideSize;
   renderImage:SlideFilmstripProps["renderImage"];styled:boolean;horizontal:boolean;
 }&Pick<SlideFilmstripProps,"onSelect"|"onMove"|"onRemove">;

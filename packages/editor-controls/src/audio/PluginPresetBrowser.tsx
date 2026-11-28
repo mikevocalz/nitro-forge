@@ -19,6 +19,7 @@ import { useStore } from "zustand";
 import { joinClasses } from "@nyc-tron/ui/components/styles";
 import { useStatusAnnouncement } from "@nyc-tron/ui/components/feedback/announce";
 import { INSERT_KIND_LABELS, filterPresets, type InsertKind, type InsertPreset } from "./inserts.ts";
+import {exact} from '../exact-optional.ts';
 
 const HIT = 44;
 
@@ -41,10 +42,10 @@ export interface PluginPresetBrowserProps extends Omit<ViewProps, "children">,Sc
   readonly onApply: (presetId: string,transaction?:{undoGroup:string}) => void | Promise<unknown>;
   /** @default "ready" */
   readonly status?: PresetListStatus;
-  readonly onSave?:(name:string)=>void|Promise<unknown>;
-  readonly comparison?:{active:'A'|'B';hasA:boolean;hasB:boolean;onCapture:(slot:'A'|'B')=>void|Promise<unknown>;onRecall:(slot:'A'|'B')=>void|Promise<unknown>};
+  readonly onSave?:((name:string)=>void|Promise<unknown>)|undefined;
+  readonly comparison?:{active:'A'|'B';hasA:boolean;hasB:boolean;onCapture:(slot:'A'|'B')=>void|Promise<unknown>;onRecall:(slot:'A'|'B')=>void|Promise<unknown>}|undefined;
   /** Shown as a Retry button when `status` is `"error"`. */
-  readonly onRetry?: () => void;
+  readonly onRetry?: (() => void) | undefined;
   /** @default false */
   readonly disabled?: boolean;
   className?: string;
@@ -95,7 +96,7 @@ function PluginPresetBrowserBody({actionError,disabledReason,
     if (dir === 0 || disabled || shown.length === 0) return;
     e.preventDefault();
     const at = shown.findIndex(p => p.id === currentId);
-    const next = shown[at < 0 ? (dir > 0 ? 0 : shown.length - 1) : (at + dir + shown.length) % shown.length];
+    const next = shown[at < 0 ? (dir > 0 ? 0 : shown.length - 1) : (at + dir + shown.length) % shown.length]!;
     apply(next.id);
     refs.current.get(next.id)?.focus?.();
   };
@@ -163,5 +164,5 @@ function PluginPresetBrowserBody({actionError,disabledReason,
     {comparison?<View style={{gap:6}}><Text {...{className:body}}>Comparison: {comparison.active}</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{(['A','B'] as const).map(slot=><View key={slot} style={{gap:6}}><Button title={'Capture '+slot} disabled={disabled} unstyled={unstyled} onPress={()=>comparison.onCapture(slot)}/><Button title={'Recall '+slot} disabled={disabled||!(slot==='A'?comparison.hasA:comparison.hasB)} unstyled={unstyled} onPress={()=>comparison.onRecall(slot)}/></View>)}</View></View>:null}
     {onSave?<View style={{gap:6}}><TextInput accessibilityLabel="New preset name" value={saveName} maxLength={256} editable={!disabled} onChangeText={name=>store.setState({name})} style={{minHeight:44,padding:8}} {...{className:body}}/><Button title="Save current settings as preset" disabled={disabled||!saveName.trim()} unstyled={unstyled} onPress={()=>onSave(saveName.trim())}/></View>:null}
     {content}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

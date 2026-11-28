@@ -18,6 +18,7 @@ import {
   type FillRule,type LineCap,type LineJoin,type Paint,type PaintOrder,type Rgba,type Stroke,
 } from "./vector-types.ts";
 import {GroupLabel,NoticeLine,VECTOR_TOUCH_TARGET,VectorButton} from "./vector-controls.tsx";
+import {exact} from '../exact-optional.ts';
 
 /** A color the host offers as a swatch. */
 export interface PaintSwatch {
@@ -127,7 +128,7 @@ function FillStrokeInspectorBody({
 
   return <View {...rest} {...{className:joinClasses("gap-4",styled&&"rounded-control border border-border bg-surface-raised p-3",className)}}
     style={[{minWidth:0},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Applying change"}</Text>:null}
     <View style={{gap:8}} testID="fill-section">
       <GroupLabel styled={styled}>Fill</GroupLabel>

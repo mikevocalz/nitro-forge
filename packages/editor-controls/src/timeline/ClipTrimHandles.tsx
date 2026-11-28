@@ -30,6 +30,7 @@ import {useLocalPointer} from "@nyc-tron/ui/components/gestures/useLocalPointer"
 import {createValueGesture} from "@nyc-tron/ui/components/gestures/value-gesture";
 import {formatTimecode,type FrameRate} from "../timebase.ts";
 import {clipEnd,trimEdit,trimPreview,type EditPreview,type TimelineClip,type TimelineEdit,type TimelineTrack} from "./edits.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode ClipTrimHandles}. */
 export interface ClipTrimHandlesProps extends ScopedControlProps {
@@ -135,7 +136,7 @@ export function ClipTrimHandles({scope='clip-trim',revision=0,...props}:ClipTrim
  const parent=useContext(EditorInteractionScope),owner=JSON.stringify(controlIdentity(scope,revision));
  const boundary=useEditorBoundary([owner,parent,props.disabledReason,props.disabled,props.clip,props.track.locked,props.pxPerFrame,props.height,props.rate]);
  const guard=useScopedControl(boundary,props,props.disabledReason!==undefined||!!props.disabled||!!props.track.locked);
- return <EditorInteractionScope.Provider value={boundary}><ErrorMessage message={guard.error??undefined} unstyled={props.unstyled}/><ClipTrimHandlesBody {...props} disabled={!!props.disabled||props.disabledReason!==undefined||!!props.track.locked||guard.pending}
+ return <EditorInteractionScope.Provider value={boundary}><ErrorMessage {...exact({message:guard.error??undefined,unstyled:props.unstyled})}/><ClipTrimHandlesBody {...props} disabled={!!props.disabled||props.disabledReason!==undefined||!!props.track.locked||guard.pending}
   onPreview={(edge,value)=>guard.current()?.onPreview(edge,value)} onEdit={value=>guard.run('trim',host=>host.onEdit(value))}/></EditorInteractionScope.Provider>;
 }
 function ClipTrimHandlesBody(props:ClipTrimHandlesProps){

@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View, type KeyDownEvent, type ViewProps } 
 import { joinClasses } from "@nyc-tron/ui/components/styles";
 import { webToggleProps } from "@nyc-tron/ui/components/forms/toggle-a11y";
 import { stepCells, type MidiNote, type StepLane } from "./note-grid.ts";
+import {exact} from '../exact-optional.ts';
 
 const HIT = 44;
 const NAME_COLUMN = 72;
@@ -123,5 +124,5 @@ function StepSequencerBody({actionError,disabledReason,
         </View>
       </ScrollView>
     </View>
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

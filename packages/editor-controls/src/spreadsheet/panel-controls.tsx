@@ -60,7 +60,7 @@ export function PanelChoices<T extends string>({ label, value, choices, onChange
 /** Labeled single-line field; `error` is announced and drawn under it. */
 export function PanelField({disabled=false, label, value, onChange, placeholder, error, hint, unstyled, autoCapitalize = "none" }: {
   disabled?:boolean;label: string; value: string; onChange: (next: string) => void; placeholder?: string;
-  error?: string; hint?: string; unstyled: boolean; autoCapitalize?: "none" | "sentences";
+  error?: string | undefined; hint?: string | undefined; unstyled: boolean; autoCapitalize?: "none" | "sentences";
 }) {
   return <View style={{ gap: 4, minWidth: 140, flexGrow: 1, flexBasis: 140 }}>
     <Text {...{ className: !unstyled ? "text-text-muted" : undefined }} style={{ fontSize: 13 }}>{label}</Text>

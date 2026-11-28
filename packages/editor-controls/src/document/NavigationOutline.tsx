@@ -6,6 +6,7 @@ import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {ChevronGlyph,OFFICE_TOUCH_TARGET,officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {headingAtBlock,headingsByPage,rowForHeading,visibleOutline,type OutlineHeading} from "./outline-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** A named place in the document. */
 export interface OutlineBookmark {
@@ -27,12 +28,12 @@ export interface NavigationOutlineProps extends Omit<ViewProps,"children">,Scope
   readonly onJumpToHeading:(heading:OutlineHeading)=>void;
   /** Laid-out page count. The Pages view renders only with this and `onJumpToPage`. */
   readonly pageCount?:number;
-  readonly onJumpToPage?:(page:number)=>void;
+  readonly onJumpToPage?:((page:number)=>void)|undefined;
   /** Thumbnail for a page (the host's renderer). Without it the Pages view lists pages by their first heading. */
   readonly renderPageThumbnail?:(page:number)=>ReactNode;
   /** The Bookmarks view renders only with `onJumpToBookmark`. */
   readonly bookmarks?:readonly OutlineBookmark[];
-  readonly onJumpToBookmark?:(bookmark:OutlineBookmark)=>void;
+  readonly onJumpToBookmark?:((bookmark:OutlineBookmark)=>void)|undefined;
   /** Show headings down to this level (1–9); 0 shows every level. @default 0 */
   readonly showLevel?:number;
   readonly disabled?:boolean;
@@ -136,5 +137,5 @@ function NavigationOutlineBody({actionError,disabledReason,disabled=false,
           {b.page!==undefined?<Text {...{className:muted}}>{"Page "+(b.page+1)}</Text>:null}
         </Pressable>)}
     </ScrollView>
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
