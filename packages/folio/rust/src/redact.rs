@@ -603,7 +603,9 @@ fn handle_do(
                 .and_then(|a| matrix_of(a))
                 .unwrap_or(IDENTITY);
             let inner_ctm = ctm.mul(form_matrix);
-            let data = stream.get_plain_content_with_limit(crate::MAX_DECODED_STREAM_BYTES).map_err(ser_err)?;
+            let data = stream
+                .get_plain_content_with_limit(crate::MAX_DECODED_STREAM_BYTES)
+                .map_err(ser_err)?;
             let ops = decode_ops(&data)?;
             let result = walk_ops(
                 doc, &ops, inner_ctm, rect, locked_streams, xobj_id, &inner_xobjs, out, state,
@@ -1174,7 +1176,9 @@ fn apply_image_strip(next: &mut Document, plan: &ImagePlan) -> Result<(), Engine
     for (stream_id, drop_idx) in by_stream {
         let data = {
             let stream = next.get_object(stream_id).and_then(Object::as_stream).map_err(ser_err)?;
-            stream.get_plain_content_with_limit(crate::MAX_DECODED_STREAM_BYTES).map_err(ser_err)?
+            stream
+                .get_plain_content_with_limit(crate::MAX_DECODED_STREAM_BYTES)
+                .map_err(ser_err)?
         };
         let ops = decode_ops(&data)?;
         let kept: Vec<Operation> = ops
