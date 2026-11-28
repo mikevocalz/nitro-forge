@@ -39,6 +39,25 @@ cargo test --workspace         # engine unit tests
 pnpm --filter @nitro-forge/console demo
 ```
 
+## Installing in another app
+
+Forge ships as GitHub Release tarballs only and never publishes to npm, so do
+not install `@nitro-forge/*` by version from a registry. No release has been
+cut yet; once one is, an app lists each package by its release asset URL.
+`@nitro-forge/ignition` is a peer dependency of every engine, so the app lists
+it too and gets one copy of the native module:
+
+```json
+"dependencies": {
+  "@nitro-forge/ignition": "https://github.com/mikevocalz/nitro-forge/releases/download/v0.1.0/nitro-forge-ignition-0.1.0.tgz",
+  "@nitro-forge/tally": "https://github.com/mikevocalz/nitro-forge/releases/download/v0.1.0/nitro-forge-tally-0.1.0.tgz"
+}
+```
+
+The packed manifests already point their own `@nitro-forge/*` peers at these
+URLs (`node tooling/release/pack-tarballs.mjs`, described in
+`docs/release/RELEASE_TRAIN.md`).
+
 ## Using a package
 
 ```ts
