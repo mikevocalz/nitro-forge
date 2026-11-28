@@ -192,7 +192,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
       {heading('Name')}
       <TextInput testID="composer-name" accessibilityLabel="Persona name" placeholder="Print layout" maxLength={PERSONA_NAME_MAX}
         value={draft.label} onChangeText={text => setDraft({ label: text })} returnKeyType="done"
-        style={{ minHeight: scale.size.target, borderWidth: 1, borderColor: c.line, borderRadius: scale.radius.control, paddingHorizontal: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.body }} />
+        style={{ minHeight: scale.size.target, borderWidth: 1, borderColor: c.controlBorder, borderRadius: scale.radius.control, paddingHorizontal: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.body }} />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: scale.space.element }}>
         {label('Shown on the turret and the rail header')}
         <Text style={{ color: c.muted, fontSize: scale.type.label, fontVariant: ['tabular-nums'] }}>{nameCounter(draft.label)}</Text>
@@ -205,7 +205,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
       style={({ pressed }) => ({
         width: grid.tile || undefined, flexGrow: grid.tile ? 0 : 1, minHeight: scale.size.target, flexDirection: 'row', alignItems: 'center', gap: scale.space.element,
         paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element, borderRadius: scale.radius.control, borderWidth: 1,
-        borderColor: props.on ? c.accent : c.line, backgroundColor: props.on ? c.soft : pressed ? c.raised : c.deep, opacity: pressed ? 0.85 : 1,
+        borderColor: props.on ? c.accent : c.controlBorder, backgroundColor: props.on ? c.soft : pressed ? c.raised : c.deep, opacity: pressed ? 0.85 : 1,
       })}>
       <View style={{ width: 18, alignItems: 'center' }}>{props.mark ?? (props.on
         ? <ForgeIcon name="check" size={14} color={c.accent} reducedMotion />
@@ -248,7 +248,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
     <View key={key} role="listitem" style={{
       minHeight: scale.size.target, flexDirection: 'row', alignItems: 'center', gap: scale.space.element,
       paddingLeft: parts.leading ? scale.space.stack : scale.space.inset, paddingRight: scale.space.stack, paddingVertical: scale.space.stack,
-      borderRadius: scale.radius.control, borderWidth: 1, borderColor: parts.on ? c.accent : c.line, backgroundColor: parts.on ? c.soft : c.deep,
+      borderRadius: scale.radius.control, borderWidth: 1, borderColor: parts.on ? c.accent : c.controlBorder, backgroundColor: parts.on ? c.soft : c.deep,
     }}>
       {parts.leading}
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -261,7 +261,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
   const capabilityBody = <>
     {foldTitle('capabilities', 'Capabilities', disclosureCount('capabilities', draft.capabilities.length, composerCapabilities.length))}
     {unfolded('capabilities') && <>
-      {label('Unbuilt items can still be picked. The preview marks them missing until the engine supports them.')}
+      {label('Unbuilt items can still be picked. The preview marks them missing until this build supports them.')}
       {tileGrid('composer-capabilities', composerCapabilities.map(cap => {
         const on = draft.capabilities.includes(cap.id);
         const tag = capabilityTag(cap);
@@ -402,7 +402,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
       <TextInput testID="composer-import" accessibilityLabel="Persona JSON to import" multiline numberOfLines={4} value={s.importText}
         placeholder='Paste an exported persona, starting with {"format":1' autoCapitalize="none" autoCorrect={false}
         onChangeText={text => ui.setState({ importText: text })}
-        style={{ minHeight: 96, borderWidth: 1, borderColor: c.line, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono, textAlignVertical: 'top' }} />
+        style={{ minHeight: 96, borderWidth: 1, borderColor: c.controlBorder, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono, textAlignVertical: 'top' }} />
       <Button title="Import persona" onPress={runImport} disabled={!s.importText.trim()} variant="primary" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className={HC_EDGE} />
     </View>}
     {noticeBanner('list')}
@@ -423,7 +423,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
     {s.exported && <View style={{ gap: scale.space.stack }}>
       {label(`${s.exported.label} as JSON`)}
       <TextInput testID="composer-export" accessibilityLabel={`${s.exported.label} as JSON`} value={s.exported.json} editable={false} selectTextOnFocus multiline
-        style={{ minHeight: 72, borderWidth: 1, borderColor: c.line, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono }} />
+        style={{ minHeight: 72, borderWidth: 1, borderColor: c.controlBorder, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono }} />
     </View>}
   </View>;
 

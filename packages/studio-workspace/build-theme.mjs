@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { forgeRadius, workspaceThemes, workspaceScale, workspaceStatus } from './src/theme.ts';
-const names = { base: 'surface', raised: 'raised', deep: 'mat', line: 'border', text: 'text', muted: 'muted', accent: 'accent', ink: 'on-accent', soft: 'tint', paper: 'paper', paperInk: 'paper-ink', paperMuted: 'paper-muted', error: 'error' };
+const names = { base: 'surface', raised: 'raised', deep: 'mat', line: 'border', controlBorder: 'control-border', text: 'text', muted: 'muted', accent: 'accent', ink: 'on-accent', soft: 'tint', paper: 'paper', paperInk: 'paper-ink', paperMuted: 'paper-muted', error: 'error' };
 const forge = values => Object.entries(values).map(([key, value]) => `  --color-forge-${names[key]}: ${value};`);
 // NYC-Tron UI ships no colours: its recipes read these variables
 // (docs/THEME_TOKENS.md in NYC-Tron-UI). Forge fills them from its chrome.
@@ -8,7 +8,7 @@ const nycTron = scheme => {
   const c = workspaceThemes[scheme], s = workspaceStatus[scheme];
   return Object.entries({
     primary: c.accent, 'on-primary': c.ink, 'surface-raised': c.raised, 'surface-sunken': c.deep,
-    border: c.line, text: c.text, 'text-muted': c.muted, danger: c.error, 'on-danger': s.onError,
+    border: c.line, 'control-border': c.controlBorder, text: c.text, 'text-muted': c.muted, danger: c.error, 'on-danger': s.onError,
     accent: c.accent, info: s.info, success: s.success, focus: c.accent,
   }).map(([key, value]) => `  --color-${key}: ${value};`);
 };

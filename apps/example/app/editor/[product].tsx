@@ -44,7 +44,7 @@ function StudioEditor({ studioId }: { studioId: Studio }) {
     <ForgeWorkspace studioId={studioId} title={surfaces.workspaceTitle(config.title)} documentTitle={surfaces.documentTitle(config.title)}
       headerLeading={<Button title={surfaces.leading.label} aria-label={surfaces.leading.label} onPress={() => surfaces.leading.href === '/' ? router.replace('/') : router.push('/about')} variant="ghost" tone="carolina" size="sm" cornerRadius={forgeRadius.sm} className="rounded-sm" />}
       theme={theme} state={doc.state} rows={doc.state ? config.rows(doc.state) : []}
-      actions={config.actions.map(action => ({ title: action.title, run: () => action.run(doc) }))}
+      actions={config.actions.map(action => ({ id: action.id, title: action.title, run: () => action.run(doc) }))}
       onUndo={doc.undo} onRedo={doc.redo} onSave={save} onRefresh={doc.reload}
       busy={!doc.state} error={doc.error}>
       {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={surfaces.documentTitle(config.title)} state={doc.state} apply={doc.apply} reload={doc.reload} /> : studioId === 'prism' ? <PrismEditor state={doc.state} theme={theme} apply={doc.apply} reload={doc.reload} busy={!doc.state} personas={personas.personas} onPersonaEffect={playTurretHaptic} onComposePersona={() => router.push({ pathname: '/persona-composer', params: { session: personaKey } })} {...(openPersonas ? { onOpenPersonas: openPersonas } : {})} /> : undefined}

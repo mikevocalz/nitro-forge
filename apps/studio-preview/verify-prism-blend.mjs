@@ -113,7 +113,7 @@ try {
       await page.getByText('Multiply', { exact: true }).last().click();
       await page.waitForFunction(() => [...document.querySelectorAll('[aria-label="Layer blend mode"]')].some(el => el.textContent === 'Multiply'), null, { timeout: 30_000 });
       // Undo is the engine's: the mode goes back to Normal.
-      await page.getByRole('button', { name: 'Undo', exact: true }).first().click();
+      await page.getByTestId('workspace-undo').first().click();
       await page.waitForFunction(() => [...document.querySelectorAll('[aria-label="Layer blend mode"]')].some(el => el.textContent === 'Normal'), null, { timeout: 30_000 });
       assert.deepEqual(pageErrors, [], 'no uncaught errors');
     } finally { await context.close(); }

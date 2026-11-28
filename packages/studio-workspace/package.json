@@ -7,6 +7,7 @@
     ".": "./src/index.tsx",
     "./model": "./src/model.ts",
     "./theme": "./src/theme.ts",
+    "./keyboard": "./src/keyboard-shortcuts.ts",
     "./apps": "./src/app-manifest.ts",
     "./prism": "./src/prism-editor.tsx",
     "./prism-blend": "./src/prism-blend.ts",

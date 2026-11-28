@@ -65,7 +65,7 @@ async function openApp(app) {
   await page.goto(base, { waitUntil: 'load' });
   await page.getByRole('heading', { name: 'All applications' }).waitFor({ timeout: 90_000 });
   await page.getByText(`Open ${app}`).first().click();
-  await page.getByRole('button', { name: 'Undo', exact: true }).first().waitFor({ timeout: 60_000 });
+  await page.getByTestId('workspace-undo').first().waitFor({ timeout: 60_000 });
   return { context, page, pageErrors, ops };
 }
 const opsNamed = (ops, name) => ops.filter(entry => entry.op === name);
@@ -133,14 +133,14 @@ try {
       if (captureDir) await page.screenshot({ path: join(captureDir, 'f3-i15-tally-all-filter-refreshed-1280x1000.png') });
 
       // Undo removes the refresh output only; the pivot definition and the source stay.
-      await page.getByRole('button', { name: 'Undo', exact: true }).first().click();
+      await page.getByTestId('workspace-undo').first().click();
       await waitForCell(page, 'C2', /^C2, empty\b/);
       await waitForCell(page, 'C1', /^C1, empty\b/);
       // The panel re-reads pivots after every reload; wait for that read to settle.
       try { await panel.getByText(/^Pivot \S+ reads A1:A3;/).waitFor({ timeout: 15_000 }); }
       catch { throw new Error(`the pivot definition is gone after Undo of the refresh; the panel reads: ${(await panel.innerText()).slice(0, 300)}`); }
       for (const [address, pattern] of [['A1', /^A1, 5\b/], ['A2', /^A2, 7\b/], ['A3', /^A3, 12\b/]]) await waitForCell(page, address, pattern);
-      await page.getByRole('button', { name: 'Redo', exact: true }).first().click();
+      await page.getByTestId('workspace-redo').first().click();
       await waitForCell(page, 'C2', /^C2, 24\b/);
       assert.deepEqual(pageErrors, [], 'no uncaught errors');
     } finally { await context.close(); }
@@ -149,9 +149,9 @@ try {
   await scenario('E-35 Cadence: detectBeats at sensitivity 0 and 1, one undo step per run, marker rename keeps ticks', async () => {
     const { context, page, pageErrors, ops } = await openApp('Cadence');
     try {
-      await page.getByRole('tab', { name: 'Commands', exact: true }).click();
-      await page.getByRole('button', { name: 'Add MIDI track', exact: true }).last().click();
-      await page.getByRole('button', { name: 'Add C-major clip to first track', exact: true }).click();
+      await page.getByRole('tab', { name: 'Actions', exact: true }).click();
+      await page.getByTestId('workspace-action-add-midi-track').last().click();
+      await page.getByTestId('workspace-action-add-chord').click();
       // Soften the clip's second note in the MIDI tab's velocity lane (keyboard on the
       // slider), so a quiet onset exists that only the higher sensitivity picks up.
       await page.getByRole('tab', { name: 'MIDI', exact: true }).click();
@@ -187,7 +187,7 @@ try {
         try { await page.waitForFunction(([n]) => document.querySelectorAll('[data-testid="cadence-beat-lane"] [role="list"][aria-label="Markers"] [role="slider"]').length === n, [count], { timeout: 15_000 }); }
         catch { throw new Error(`the lane shows ${await markerSliders.count()} markers, expected ${count}`); }
       };
-      const undo = page.getByRole('button', { name: 'Undo', exact: true }).first(), redo = page.getByRole('button', { name: 'Redo', exact: true }).first();
+      const undo = page.getByTestId('workspace-undo').first(), redo = page.getByTestId('workspace-redo').first();
 
       const low = await detect(0);
       console.log(`  sensitivity 0: ${low.found} onsets, ${low.added} added`);

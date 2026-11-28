@@ -47,6 +47,8 @@ export type StudioButtonProps = {
   selected?: boolean; 'aria-label'?: string; accessibilityHint?: string;
   variant?: 'primary' | 'outline' | 'ghost'; size?: 'sm' | 'md'; tone?: 'royal' | 'carolina';
   cornerRadius?: ForgeRadiusValue; className?: string;
+  /** Stable handle for tests; never shown to people. */
+  testID?: string;
 };
 export type StudioIconButtonProps = Omit<StudioButtonProps, 'title' | 'loading'> & { icon: ReactNode; 'aria-label': string };
 export type StudioBannerProps = { tone: 'info' | 'danger' | 'success' | 'neutral'; title: string; description?: string; action?: ReactNode; live?: 'status' | 'alert'; className?: string };
