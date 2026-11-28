@@ -2876,6 +2876,37 @@ Recorded at `80e5934`, run locally on Linux, node v22.23.5, pnpm 12.18.0.
   native iOS and Android; `vite build` and `verify-render.mjs`; `cargo test`
   (no Rust changed). No reviewer has signed this row.
 
+## Master merge and editor-controls radius migration (2026-11-28, `claude/blissful-faraday-5jovmd`)
+
+Master (#95 editor controls in `packages/editor-controls`, #96 strict TS)
+merged into this branch. Studio imports follow #95. The v1 scope derivation
+treats `@nitro-forge/editor-controls` as a component source mapped back to the
+Tron paths the ledger cites; the regenerated scope keeps 58 rows with the same
+hits. The editor controls' 151 radius violations were migrated (dated note in
+`design/radius-inventory-2026-11-23.md`).
+
+Local runs on Linux x64, node v22.23.5, pnpm 12.18.0, all exit 0:
+`pnpm install --frozen-lockfile` (lockfile unchanged);
+`pnpm --filter @nitro-forge/editor-controls build`;
+`node tooling/check-radius.mjs` 0 violations in 780 files, its tests 16 passed;
+`verify-nyc-tron-pin.mjs` (1281 source files) and its tests 9 passed;
+`validate-v1.test.mjs` 19 passed; `validate-v1.mjs --version 1.0.0-rc.1`;
+`v1-component-scope.test.mjs` 10 passed; `derive-v1-component-scope.mjs --check`;
+completion-plan checks; component-program tests 21 passed;
+`package-verify.test.mjs` 15 passed; `pnpm run check:packages` (8 tarballs);
+editor-controls typecheck and 628 tests; studio-workspace typecheck and 157
+tests; studio-preview typecheck, 34 node tests, `vitest run tests` 6 passed
+(nf-cli from `cargo build --locked -p nf-cli`) and `test:integration`;
+`pnpm run validate:v1:prerelease`. From the studio-layout workflow, also:
+`verify:released-ui`, `verify-nyc-tron.mjs`, `build:theme` (sheets unchanged),
+`verify-ui-boundary.mjs`, example typecheck, `test:ui-modules`, studio-preview
+`vite build`, and the Prism package's 39 tests.
+
+NOT RUN: the editor-controls browser suite and `verify-render.mjs` (Chromium
+could not be downloaded here), native iOS and Android, devices, `cargo test`
+(no Rust changed). Nothing was rendered or captured for the radius changes.
+No reviewer has signed this work.
+
 ## Dependency baseline F1 (2026-11-11, `deps/f1-baseline-20261111`)
 
 Bump list and holds: `docs/release/RELEASE_TRAIN.md`, "Dependency baseline, 2026-11-11".

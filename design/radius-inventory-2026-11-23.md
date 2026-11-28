@@ -230,3 +230,78 @@ These use a token, so the checker passes them, but their role is unclear:
 - NYC-Tron recipes under `node_modules/@nyc-tron/*/dist` use `rounded-full`
   and bare `rounded`. They are dependencies, so the checker does not scan them;
   a Tron-side review belongs to that repository.
+
+## 2026-11-28: editor controls after the master merge
+
+Merging master brought in #95, which moved the editor controls from NYC-Tron
+into `packages/editor-controls` (`@nitro-forge/editor-controls`). They are now
+Forge source under `packages/`, so the checker scans them. On the merged tree,
+before any change, `node tooling/check-radius.mjs` reported
+`check-radius: 151 violation(s) in 779 files`, all 151 in
+`packages/editor-controls` (64 files): 119 raw radii, 24 computed radii
+(`size/2` and the like), 7 `rounded-full` classes and 1 identifier. No other
+package had a violation.
+
+After the migration below it reports `check-radius: 0 violation(s) in 780
+files` and exits 0. The extra file is the token mirror.
+
+### Tokens in editor-controls
+
+`studio-workspace` depends on `editor-controls`, so `editor-controls` cannot
+import `theme.ts`. `packages/editor-controls/src/radius.ts` holds a copy of
+`forgeRadius` (sm 4, md 6) and `forgeHairlineRadius` (tick 1, needle 0.75).
+`checkTokens` now fails with `token-definition` if that copy differs from
+`theme.ts` (`TOKEN_MIRRORS` in `tooling/check-radius.mjs`, tested in
+`tooling/tests/check-radius.test.mjs`). No token value changed.
+
+### By role
+
+- Controls and inner views, to `forgeRadius.sm`: fader and pan thumbs, graph
+  and curve points (automation, EQ, velocity, curves, motion, step cells),
+  pucks (XY pad, point editor, surround pan), snap and transform-origin
+  handles, gradient handles and stops, port rings, metronome beat dots, the
+  presenter laser dot, the seek-bar thumb, the
+  playhead head, marker flags, toggle switches and their thumbs
+  (`switch-row.tsx`, `panel-button.tsx`; no longer pill-shaped), the compare
+  view's divider grip, the slide sorter's check badge, slide resize handles,
+  transition tiles and diamonds, glyph outlines of 10 px or more (eye, lock
+  shackle, power ring, ellipse-selection icon, failure mark), and the EQ and
+  dynamics hit areas that used `rounded-full` (now `rounded-sm`).
+- Outer views, to `forgeRadius.md`: one, the selection ring drawn 4 px
+  outside a gradient stop (`GradientOnCanvasHandles.tsx`, was 6).
+- Hairlines, to `forgeHairlineRadius.tick`: strokes and ticks 1 to 3 px
+  thick (meter segments, sparkline and chart segments, glyph bars, the knob
+  pointer, timeline and range handles 4 to 8 px wide, splitter grips, fader
+  and pan tracks 6 px wide, the routing meter bar and the level meter, whose
+  `rounded-full` class became a style radius), and dots of 8 px or less that
+  would still read as circles at 4 px (eye pupils, the stale-preview mark,
+  sparkline markers, the ink toolbar's switch indicator). The dynamics
+  threshold dot and its 4 px track had only a `rounded-full` class; they are
+  now square, following the status-dot ruling above.
+- Pen nodes (`PenNodeEditor.tsx`): smooth nodes and handles were circles and
+  corner nodes 1 px. They are now `sm` and `tick`, so the two still differ, but
+  a smooth node is no longer round.
+
+### Marked exemptions
+
+All use kinds DIRECTION.md lists. No other kind is used.
+
+- `knob` (1): `inputs/InstrumentKnob.tsx:95`, the knob face.
+- `radio` (2): `audio/PluginPresetBrowser.tsx:149`, `:151`, the preset radio
+  ring and its dot.
+- `colour-well` (29): swatches and wells that show a colour (`SheetTabs.tsx`
+  tab colour, `RichTextRibbon.tsx`, `InkToolbar.tsx`, `FillStrokeInspector.tsx`,
+  `ColorDropCanvasTarget.tsx`, `GradientMeshEditor.tsx` points,
+  `SVColorField.tsx`, `HsvPicker.tsx` and `ChannelTrack.tsx` thumbs), and the
+  hue wheel and colour disc with their thumbs (`ColorWheel.tsx`,
+  `ColorDiscPicker.tsx`, `wheel-layers.tsx`). The wheel and disc are round
+  because their hit testing is polar; marking them `colour-well` is a
+  judgement for R2.
+- `artwork` (4): ink and brush strokes drawn on the document
+  (`PresenterInkOverlay.tsx:44`, `PhotoBrushSurface.tsx:31`), the ink size
+  preview (`InkToolbar.tsx:148`) and the elliptical selection marquee
+  (`selection-overlay.tsx:31`). The marquee is selection chrome drawn on the
+  canvas in the shape of the selection; R2 should confirm it counts.
+
+Nothing here was rendered or captured. R2 has not reviewed or signed this
+migration; the 2026-11-23 signature covers the earlier slice only.
