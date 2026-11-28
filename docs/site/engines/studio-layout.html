@@ -27,7 +27,7 @@
 <h2>No provider needed</h2>
 <ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
 <h2>Engines and foundations</h2>
-<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html" aria-current="page">@nitro-forge/studio-layout</a></li></ul>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html" aria-current="page">@nitro-forge/studio-layout</a></li><li><a href="../engines/editor-controls.html">@nitro-forge/editor-controls</a></li></ul>
 </div></details></nav>
 <main id="main" class="main">
 <div class="cols">
@@ -37,22 +37,44 @@
 <h2 id="purpose">Purpose</h2>
 <p>The package has no description field. Not a registry item. Decision 3. Private workspace package with no tarball and no versioning scheme.</p>
 <h2 id="install">Install</h2>
-<ul><li>Package: <code>@nitro-forge/studio-layout</code></li><li>Import: <code>import {} from '@nitro-forge/studio-layout';</code></li><li>Peers: none</li><li>Requires: <code>@nitro-forge/ignition</code> (native host, install-order.md step 1)</li><li>Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by <code>workspace:*</code> inside this repo.</li><li>Installs: none</li><li>Files: <code>packages/studio-layout</code> in the repo; nothing is copied by shadcn</li></ul>
+<ul><li>Package: <code>@nitro-forge/studio-layout</code></li><li>Import: <code>import { collapsePanel, createWorkspace, dockPanel, parsePreset, serializePreset } from '@nitro-forge/studio-layout';</code></li><li>Peers: none</li><li>Requires: none; pure TypeScript with no runtime dependencies</li><li>Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by <code>workspace:*</code> inside this repo.</li><li>Installs: none</li><li>Files: <code>packages/studio-layout</code> in the repo; nothing is copied by shadcn</li></ul>
 <h2 id="props">Props</h2>
 <p>Not a component, so there are no props. 1 entry point: <code>@nitro-forge/studio-layout</code>. Top-level exports of <code>src/index.ts</code> (24): <code>STUDIOS</code>, <code>Studio</code>, <code>DOCKS</code>, <code>Dock</code>, <code>Rect</code>, <code>Geometry</code>, <code>DockSizes</code>, <code>Layout</code>, <code>Reason</code>, <code>Result</code>, <code>createWorkspace</code>, <code>parsePreset</code>, <code>serializePreset</code>, <code>stageFits</code>, <code>dockPanel</code>, <code>collapsePanel</code>, <code>floatPanel</code>, <code>resizeDock</code>, <code>DockAction</code>, <code>applyDockAction</code>, <code>Point</code>, <code>DockDropPreview</code>, <code>DockDropQuery</code>, <code>resolveDockDropPreview</code>.</p>
 <h2 id="variants">Variants</h2>
 <p>none</p>
 <h2 id="states">States</h2>
-<p>_Not documented._</p>
+<p>Pure functions over a <code>Layout</code> value. <code>dockPanel</code>, <code>collapsePanel</code>, <code>floatPanel</code> and <code>resizeDock</code> return <code>{ ok: true, layout }</code> or <code>{ ok: false, layout, reason }</code>, where a failed call returns the layout it was given. <code>parsePreset</code> returns <code>null</code> for a preset it rejects.</p>
 <h2 id="a11y">A11y</h2>
-<p>_Not documented._</p>
+<p>Not UI. The workspace chrome that renders a layout (<code>forge-workspace</code>) carries its own A11y section.</p>
 <h2 id="example">Example</h2>
-<p>_Not documented._</p>
+<p><code>pnpm test:docs-examples</code> runs this file (<code>tooling/docs/examples/studio-layout.ts</code>) in Node (<code>tooling/docs/examples.test.ts</code>).</p>
+<pre><code>import assert from 'node:assert/strict';
+import { collapsePanel, createWorkspace, dockPanel, parsePreset, serializePreset } from '@nitro-forge/studio-layout';
+
+export async function example() {
+  const known = new Set(['layers', 'inspector']);
+  const empty = createWorkspace('prism');
+
+  const docked = dockPanel(empty, 'layers', 'right', 0, known);
+  assert.equal(docked.ok, true);
+  assert.deepEqual(docked.layout.docks.right, ['layers']);
+
+  const unknown = dockPanel(docked.layout, 'history', 'left', 0, known);
+  assert.equal(unknown.ok, false);
+  assert.equal(unknown.ok ? undefined : unknown.reason, 'unknown-panel');
+
+  const collapsed = collapsePanel(docked.layout, 'layers', true);
+  assert.deepEqual(collapsed.layout.collapsed, ['layers']);
+
+  const saved = serializePreset(collapsed.layout, known);
+  assert.deepEqual(parsePreset(saved, known), collapsed.layout);
+  assert.equal(parsePreset('{&quot;schemaVersion&quot;:2}', known), null);
+}</code></pre>
 <h2 id="do-don-t">Do/Don't</h2>
 <h3 id="do">Do</h3>
-<ul><li>Follow the commands in docs/agent-native/install-order.md for <code>@nitro-forge/studio-layout</code>.</li><li>Check <code>registry-excluded.json</code> for the reason and the condition for returning.</li></ul>
+<ul><li>Validate saved presets with <code>parsePreset</code> before making them active.</li><li>Pass the set of panel ids the studio knows; unknown ids fail with <code>unknown-panel</code>.</li><li>Check <code>registry-excluded.json</code> for the reason and the condition for returning.</li></ul>
 <h3 id="don-t">Don't</h3>
-<ul><li>Do not run <code>shadcn add</code> for this package; Decision 3.</li><li>Do not publish or invent a release URL for it.</li></ul>
+<ul><li>Do not run <code>shadcn add</code> for this package; it is a private workspace package with no tarball (decision 3).</li><li>Do not mutate a <code>Layout</code> in place; use the returned layout.</li><li>Do not publish or invent a release URL for it.</li></ul>
 </article>
 
 </div>
@@ -60,8 +82,8 @@
 </div>
 <footer class="status" role="contentinfo">
 <span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
-<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
-<span>Generated from inputs <code>a38d6bc0</code></span>
+<span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
+<span>Generated from inputs <code>09b855b1</code></span>
 <span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
 </footer>
 <script src="../site.js"></script>

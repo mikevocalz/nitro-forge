@@ -21,11 +21,11 @@ The package has no description field. Not a registry item. Decision 3. Private w
 
 ## Install
 
-<!-- generated:begin install source=packages/studio-layout/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/studio-layout/package.json,compatibility.v1.json,tooling/docs/examples/studio-layout.ts -->
 - Package: `@nitro-forge/studio-layout`
-- Import: `import {} from '@nitro-forge/studio-layout';`
+- Import: `import { collapsePanel, createWorkspace, dockPanel, parsePreset, serializePreset } from '@nitro-forge/studio-layout';`
 - Peers: none
-- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Requires: none; pure TypeScript with no runtime dependencies
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
 - Installs: none
 - Files: `packages/studio-layout` in the repo; nothing is copied by shadcn
@@ -45,20 +45,45 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/studio-layout/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/studio-layout/package.json -->
+Pure functions over a `Layout` value. `dockPanel`, `collapsePanel`, `floatPanel` and `resizeDock` return `{ ok: true, layout }` or `{ ok: false, layout, reason }`, where a failed call returns the layout it was given. `parsePreset` returns `null` for a preset it rejects.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/studio-layout/package.json -->
-_Not documented._
+Not UI. The workspace chrome that renders a layout (`forge-workspace`) carries its own A11y section.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/studio-layout/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/studio-layout.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/studio-layout.ts`) in Node (`tooling/docs/examples.test.ts`).
+
+```ts example=studio-layout
+import assert from 'node:assert/strict';
+import { collapsePanel, createWorkspace, dockPanel, parsePreset, serializePreset } from '@nitro-forge/studio-layout';
+
+export async function example() {
+  const known = new Set(['layers', 'inspector']);
+  const empty = createWorkspace('prism');
+
+  const docked = dockPanel(empty, 'layers', 'right', 0, known);
+  assert.equal(docked.ok, true);
+  assert.deepEqual(docked.layout.docks.right, ['layers']);
+
+  const unknown = dockPanel(docked.layout, 'history', 'left', 0, known);
+  assert.equal(unknown.ok, false);
+  assert.equal(unknown.ok ? undefined : unknown.reason, 'unknown-panel');
+
+  const collapsed = collapsePanel(docked.layout, 'layers', true);
+  assert.deepEqual(collapsed.layout.collapsed, ['layers']);
+
+  const saved = serializePreset(collapsed.layout, known);
+  assert.deepEqual(parsePreset(saved, known), collapsed.layout);
+  assert.equal(parsePreset('{"schemaVersion":2}', known), null);
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -66,11 +91,13 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Follow the commands in docs/agent-native/install-order.md for `@nitro-forge/studio-layout`.
+- Validate saved presets with `parsePreset` before making them active.
+- Pass the set of panel ids the studio knows; unknown ids fail with `unknown-panel`.
 - Check `registry-excluded.json` for the reason and the condition for returning.
 
 ### Don't
 
-- Do not run `shadcn add` for this package; Decision 3.
+- Do not run `shadcn add` for this package; it is a private workspace package with no tarball (decision 3).
+- Do not mutate a `Layout` in place; use the returned layout.
 - Do not publish or invent a release URL for it.
 <!-- generated:end dont -->

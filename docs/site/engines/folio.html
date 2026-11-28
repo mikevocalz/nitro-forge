@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>@nitro-forge/folio | Nitro Forge</title>
-<meta name="description" content="Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.">
+<meta name="description" content="Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.">
 <link rel="stylesheet" href="../site.css">
 </head>
 <body>
@@ -27,32 +27,58 @@
 <h2>No provider needed</h2>
 <ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
 <h2>Engines and foundations</h2>
-<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html" aria-current="page">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li></ul>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html" aria-current="page">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li><li><a href="../engines/editor-controls.html">@nitro-forge/editor-controls</a></li></ul>
 </div></details></nav>
 <main id="main" class="main">
 <div class="cols">
 <article class="sheet">
 <h1>@nitro-forge/folio</h1>
-<div class="strip" role="note"><strong>Not a registry item</strong><p>Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary. Returns when the tarball versioning scheme is decided and the facade is installable (decision 3).</p></div>
+<div class="strip" role="note"><strong>Not a registry item</strong><p>Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary. Returns when the tarball versioning scheme is decided and the facade is installable (decision 3).</p></div>
 <h2 id="purpose">Purpose</h2>
-<p>Nitro-Forge folio document API. Studio task line (APP_MANIFESTS): &quot;Work with a PDF&quot;. Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.</p>
+<p>Nitro-Forge folio document API. Studio task line (APP_MANIFESTS): &quot;Work with a PDF&quot;. Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.</p>
 <h2 id="install">Install</h2>
-<ul><li>Package: <code>@nitro-forge/folio</code></li><li>Import: <code>import {} from '@nitro-forge/folio';</code></li><li>Peers: none</li><li>Requires: <code>@nitro-forge/ignition</code> (native host, install-order.md step 1)</li><li>Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by <code>workspace:*</code> inside this repo.</li><li>Installs: none</li><li>Files: <code>packages/folio</code> in the repo; nothing is copied by shadcn</li></ul>
+<ul><li>Package: <code>@nitro-forge/folio</code></li><li>Import: <code>import { FolioDocument } from '@nitro-forge/folio';</code></li><li>Peers: none</li><li>Requires: <code>@nitro-forge/ignition</code> (native host, install-order.md step 1)</li><li>Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by <code>workspace:*</code> inside this repo.</li><li>Installs: none</li><li>Files: <code>packages/folio</code> in the repo; nothing is copied by shadcn</li></ul>
 <h2 id="props">Props</h2>
 <p>Not a component, so there are no props. 4 entry points: <code>@nitro-forge/folio</code>, <code>@nitro-forge/folio/office-cluster</code>, <code>@nitro-forge/folio/render</code>, <code>@nitro-forge/folio/transfer</code>. Top-level exports of <code>src/index.ts</code> (27): <code>OPS</code>, <code>Rect</code>, <code>AnnotSubtype</code>, <code>InkStroke</code>, <code>InkPaths</code>, <code>FolioPermission</code>, <code>FolioImageFormat</code>, <code>FolioPageImage</code>, <code>FolioEncryptOptions</code>, <code>Annotation</code>, <code>FolioCommentMetadata</code>, <code>FolioCommentEntry</code>, <code>FolioCommentThread</code>, <code>FolioOutlineItem</code>, <code>FolioFormField</code>, <code>FolioSignature</code>, <code>FolioAttachmentInfo</code>, <code>FolioRedactRetainedReason</code>, <code>FolioRedactReport</code>, <code>FolioComparePageChange</code>, <code>FolioCompareAnnotEntry</code>, <code>FolioCompareField</code>, <code>FolioCompareOutlineItem</code>, <code>FolioCompareSignature</code>, <code>FolioCompareResult</code>, <code>FolioPageInfo</code>, <code>FolioDocument</code>.</p>
 <h2 id="variants">Variants</h2>
 <p>none</p>
 <h2 id="states">States</h2>
-<p>_Not documented._</p>
+<p>A document is live from <code>open</code>, <code>create</code>, <code>openPdf</code> or <code>openSnapshot</code> until <code>close</code>. After <code>close</code>, every call throws <code>document handle &lt;id&gt; is closed</code>. A failed op throws <code>EngineError</code> and leaves the document, its ids and its undo history unchanged. <code>save()</code> returns the NFD1 snapshot bytes that <code>openSnapshot</code> reads. <code>undo()</code> and <code>redo()</code> resolve <code>false</code> when there is nothing to move.</p>
 <h2 id="a11y">A11y</h2>
-<p>_Not documented._</p>
+<p>Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show folio state carry their own A11y sections in docs/components/.</p>
 <h2 id="example">Example</h2>
-<p>_Not documented._</p>
+<p><code>pnpm test:docs-examples</code> runs this file (<code>tooling/docs/examples/folio.ts</code>) against the real engine through nf-cli (<code>tooling/docs/examples.test.ts</code>). It fails if the example sends an op it does not declare, or declares one that is missing from the folio-engine section of docs/ENGINE_OPS.md or from the package source. Ops: <code>new</code>, <code>pageCount</code>, <code>addAnnotation</code>, <code>listAnnotations</code>.</p>
+<p>The example takes an <code>EngineHost</code>. In an app that is <code>createNitroHost()</code> from <code>@nitro-forge/ignition</code>; in Node it is <code>new CliHost()</code> from <code>@nitro-forge/ignition/cli</code>, after <code>cargo build --locked -p nf-cli</code>.</p>
+<pre><code>import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { FolioDocument } from '@nitro-forge/folio';
+
+export const ops = ['new', 'pageCount', 'addAnnotation', 'listAnnotations'];
+
+export async function example(host: EngineHost) {
+  const doc = await FolioDocument.create(host, 2);
+  assert.equal((await doc.pageCount()).data.pages, 2);
+  await doc.addAnnotation(0, [100, 700, 200, 20], 'Check this total');
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await FolioDocument.openSnapshot(host, bytes);
+  const notes = async () =&gt; (await reopened.listAnnotations(0)).data.annots.map((a) =&gt; a.contents);
+  assert.deepEqual(await notes(), ['Check this total']);
+  await reopened.addAnnotation(0, [100, 600, 200, 20], 'Second note');
+  assert.equal((await notes()).length, 2);
+  assert.equal(await reopened.undo(), true);
+  assert.deepEqual(await notes(), ['Check this total']);
+  assert.equal(await reopened.redo(), true);
+  assert.equal((await notes()).length, 2);
+  await reopened.close();
+}</code></pre>
 <h2 id="do-don-t">Do/Don't</h2>
 <h3 id="do">Do</h3>
-<ul><li>Read <code>docs/ENGINE_OPS.md</code> for the op names and payloads of <code>folio</code> before calling <code>apply</code>.</li><li>Treat <code>@nitro-forge/folio</code> as a monorepo dependency until a tarball release exists.</li></ul>
+<ul><li>Read the folio-engine section of <code>docs/ENGINE_OPS.md</code> for op names and payloads before calling <code>apply</code>.</li><li>Group several edits that must undo together with <code>handle.applyBatch</code> (one undo step).</li><li>Treat <code>@nitro-forge/folio</code> as a monorepo dependency until a tarball release exists.</li></ul>
 <h3 id="don-t">Don't</h3>
-<ul><li>Do not run <code>shadcn add</code> for this package; it has no registry item (@nitro-forge/folio needs the Rust binary).</li><li>Do not claim an npm install; <code>compatibility.v1.json</code> records npm as not used.</li></ul>
+<ul><li>Do not run <code>shadcn add</code> for this package; it has no registry item (@nitro-forge/folio needs the Rust binary).</li><li>Do not claim an npm install; <code>compatibility.v1.json</code> records npm as not used.</li><li>Do not keep your own undo stack; the engine records one entry per mutating op.</li></ul>
 </article>
 
 </div>
@@ -60,8 +86,8 @@
 </div>
 <footer class="status" role="contentinfo">
 <span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
-<span>Distribution: GitHub release tarballs, 0.0.0, npm not-used, status NOT RUN</span>
-<span>Generated from inputs <code>a38d6bc0</code></span>
+<span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
+<span>Generated from inputs <code>09b855b1</code></span>
 <span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
 </footer>
 <script src="../site.js"></script>

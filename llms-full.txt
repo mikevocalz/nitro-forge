@@ -1,62 +1,66 @@
 # Nitro Forge
 
-> Document studios on one Rust engine, with a shadcn registry (@nitro-forge) for the studio-workspace chrome, theme, provider and icons. Controls come from @nyc-tron. Nothing is on npm: the engines, ignition and studio-layout are monorepo packages at 0.0.0, and steps 1 to 3 of the install order cannot be reproduced outside this repo today. The links use the moving branch `master`, not a release tag, until the owner cuts one.
+> Document studios on 12 Rust engines, with a shadcn registry (@nitro-forge) for the studio-workspace chrome, theme, provider and icons. General controls come from @nyc-tron; the editor controls are @nitro-forge/editor-controls. Nothing is on npm and nothing is tagged: the engines, ignition, studio-layout and editor-controls are monorepo packages (version 0.1.0) with no release or tarball, so steps 1 to 3 of the install order cannot be reproduced outside this repo today. Links below are relative to this file.
 
-Start here: the provider prerequisite. Every studio component throws without StudioUIProvider (install studio-ui-provider and nyc-tron-host first). Install order has nine steps, numbered 0 to 8; a registry add covers steps 4 and 8 and the file parts of 5, 6 and 7.
+Start here: the provider prerequisite. Every studio component throws without StudioUIProvider (install studio-ui-provider and nyc-tron-host first). Install order has nine steps, numbered 0 to 8; a registry add covers steps 4 and 8 and the file parts of 5, 6 and 7. Each engine page has an example that CI runs against the real engine.
 
 ## Install and rules
 
-- [Install order](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/agent-native/install-order.md): The nine-step chain, which steps `shadcn add` covers, and the commands for the rest.
-- [Agent skill](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/SKILL.md): Provider first, install order, rebrand contract, token rules, what is deferred and why.
-- [Agent guide](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/AGENTS.md): Contracts, commands and contributor rules, plus the agent-native section.
-- [Not in the registry](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/registry-excluded.json): Four deferred adapters, 12 engines, ignition and studio-layout, each with a reason.
+- [Install order](docs/agent-native/install-order.md): The nine-step chain, which steps `shadcn add` covers, and the commands for the rest.
+- [Agent skill](SKILL.md): Provider first, install order, engines, editor controls, rebrand contract, token rules, what is deferred and why. A copy ships in packages/ignition/skills/nitro-forge, which skills.sh.json points `npx skills add mikevocalz/nitro-forge --skill nitro-forge` at.
+- [Agent guide](AGENTS.md): Contracts, commands and contributor rules, plus the agent-native section.
+- [Engine ops](docs/ENGINE_OPS.md): Authoritative op names and payloads per engine. The TS facades and the Rust engines follow it.
+- [Architecture](docs/ARCHITECTURE.md): Engine trait semantics, threading, ownership, undo, envelope format and error codes.
+- [Editor controls](packages/editor-controls/README.md): Where the controls came from, the import mapping from @nyc-tron/ui/components/forge, the rc.2 export patch.
+- [Not in the registry](registry-excluded.json): 4 deferred adapters, 12 engines and 3 foundations (ignition, studio-layout, editor-controls), each with a reason.
 
 ## Needs StudioUIProvider (8)
 
-- [Forge Document Stage](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-document-stage.md): Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout.
-- [Forge Workspace](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-workspace.md): Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout.
-- [NYC-Tron Host](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/nyc-tron-host.md): Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.
-- [Persona Composer](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/persona-composer.md): Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore.
-- [Persona Turret](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/persona-turret.md): Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions.
-- [Prism Canvas](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/prism-canvas.md): Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture.
-- [Prism Editor](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/prism-editor.md): Vector canvas editor: shape tools, layers panel, transforms, personas. Needs @nitro-forge/ignition first, StudioUIProvider, @nyc-tron.
-- [Quill Text Editor](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/quill-text-editor.md): Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload.
+- [Forge Document Stage](docs/components/forge-document-stage.md): Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout.
+- [Forge Workspace](docs/components/forge-workspace.md): Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout.
+- [NYC-Tron Host](docs/components/nyc-tron-host.md): Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.
+- [Persona Composer](docs/components/persona-composer.md): Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore.
+- [Persona Turret](docs/components/persona-turret.md): Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions.
+- [Prism Canvas](docs/components/prism-canvas.md): Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture.
+- [Prism Editor](docs/components/prism-editor.md): Vector canvas editor: shape tools, layers, transforms, personas. Needs ignition and editor-controls first, StudioUIProvider, @nyc-tron.
+- [Quill Text Editor](docs/components/quill-text-editor.md): Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload.
 
 ## No provider needed (10)
 
-- [Studio UI Provider](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/studio-ui-provider.md): Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.
-- [Studio Theme](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/studio-theme.md): Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both.
-- [Brand Theme](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/brand-theme.md): Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.
-- [Forge Directions](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-directions.md): Theme: workbench, optics and atelier palettes for Prism chrome and the persona turret, plus WCAG contrast helpers. Needs studio-theme.
-- [Forge Icon](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-icon.md): Icon: outline when idle, filled when selected. 47 glyphs drawn; 42 of 1,463 catalog ids resolve to one; 6 drawn glyphs are not catalog ids. A name with no glyph renders nothing. Needs react-native-svg.
-- [Forge Icon Button](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/forge-icon-button.md): Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.
-- [Instrument System](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/instrument-system.md): Instrument policy, not UI: 18 blueprints, precision scrubbing math, ruler ticks, motion budgets, overlay planner. No provider needed.
-- [Persona Model](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/persona-model.md): Persona data, not UI: 4 personas, 11 capabilities, 7 surfaces, compose, import, export, per-document store. No provider needed.
-- [Studio Gesture](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/studio-gesture.md): Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.
-- [Workspace Utilities](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/components/workspace-utilities.md): Helpers, not UI: APP_MANIFESTS (task line, glyph, category per studio), jsonProblem (JSON parse error as a sentence). Needs studio-layout.
+- [Studio UI Provider](docs/components/studio-ui-provider.md): Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.
+- [Studio Theme](docs/components/studio-theme.md): Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both.
+- [Brand Theme](docs/components/brand-theme.md): Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.
+- [Forge Directions](docs/components/forge-directions.md): Theme: workbench, optics and atelier palettes for Prism chrome and the persona turret, plus WCAG contrast helpers. Needs studio-theme.
+- [Forge Icon](docs/components/forge-icon.md): Icon: outline when idle, filled when selected. 47 glyphs drawn; 42 of 1,463 catalog ids resolve to one; 6 drawn glyphs are not catalog ids. A name with no glyph renders nothing. Needs react-native-svg.
+- [Forge Icon Button](docs/components/forge-icon-button.md): Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.
+- [Instrument System](docs/components/instrument-system.md): Instrument policy, not UI: 18 blueprints, precision scrubbing math, ruler ticks, motion budgets, overlay planner. No provider needed.
+- [Persona Model](docs/components/persona-model.md): Persona data, not UI: 4 personas, 11 capabilities, 7 surfaces, compose, import, export, per-document store. No provider needed.
+- [Studio Gesture](docs/components/studio-gesture.md): Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.
+- [Workspace Utilities](docs/components/workspace-utilities.md): Helpers, not UI: APP_MANIFESTS (task line, glyph, category per studio), jsonProblem (JSON parse error as a sentence). Needs studio-layout.
 
 ## Engines and foundations (docs only, no registry item)
 
-- [@nitro-forge/prism](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/prism.md): Decision 3.
-- [@nitro-forge/cadence](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/cadence.md): Decision 3.
-- [@nitro-forge/splice](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/splice.md): Decision 3.
-- [@nitro-forge/folio](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/folio.md): Decision 3.
-- [@nitro-forge/pitch](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/pitch.md): Decision 3.
-- [@nitro-forge/tally](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/tally.md): Decision 3.
-- [@nitro-forge/quill](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/quill.md): Decision 3.
-- [@nitro-forge/photo](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/photo.md): Decision 3.
-- [@nitro-forge/motion](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/motion.md): Decision 3.
-- [@nitro-forge/design](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/design.md): Decision 3.
-- [@nitro-forge/draft](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/draft.md): Decision 3.
-- [@nitro-forge/scene](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/scene.md): Decision 3.
-- [@nitro-forge/ignition](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/ignition.md): Decision 4.
-- [@nitro-forge/studio-layout](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/engines/studio-layout.md): Decision 3.
+- [@nitro-forge/prism](docs/engines/prism.md): Create an image Tested example (ops new, addRasterLayer, fillLayer, flatten).
+- [@nitro-forge/cadence](docs/engines/cadence.md): Make an audio project Tested example (ops new, addTrack, addClip, addNote, project).
+- [@nitro-forge/splice](docs/engines/splice.md): Edit a video timeline Tested example (ops new, addSource, addTrack, addClip, duration).
+- [@nitro-forge/folio](docs/engines/folio.md): Work with a PDF Tested example (ops new, pageCount, addAnnotation, listAnnotations).
+- [@nitro-forge/pitch](docs/engines/pitch.md): Build a presentation Tested example (ops new, addSlide, addText, deck).
+- [@nitro-forge/tally](docs/engines/tally.md): Open a spreadsheet Tested example (ops new, setCell, getCell).
+- [@nitro-forge/quill](docs/engines/quill.md): Write a document Tested example (ops new, insertText, text).
+- [@nitro-forge/photo](docs/engines/photo.md): Organize a photo catalog Tested example (ops new, addOriginal, setRating, readOriginal).
+- [@nitro-forge/motion](docs/engines/motion.md): Build a motion composition Tested example (ops new, addShapeLayer, describe).
+- [@nitro-forge/design](docs/engines/design.md): Design an interface Tested example (ops new, addShape, updateNode, describe).
+- [@nitro-forge/draft](docs/engines/draft.md): Draw a CAD document Tested example (ops new, addPoint, addSegment, updatePoint, describe).
+- [@nitro-forge/scene](docs/engines/scene.md): Bounded persistent 3D scene graph: TRS nodes, PBR-state materials, host-side deterministic rendering. Tested example (ops new, addMaterial, addMeshPrimitive, addNode, setTransform, bounds).
+- [@nitro-forge/ignition](docs/engines/ignition.md): Engine host and DocumentHandle: open, apply, applyBatch, snapshot, restore, undo, redo, close. Tested example (ops new, setCell, getCell, __batch).
+- [@nitro-forge/studio-layout](docs/engines/studio-layout.md): Dock and panel layout model behind the studio workspace. Pure functions, no UI. Tested example.
+- [@nitro-forge/editor-controls](docs/engines/editor-controls.md): The editor controls (audio, timeline, spreadsheet, layers, color, photo, motion, office). Import @nitro-forge/editor-controls/<path>, never @nyc-tron/ui/components/forge/*. Tested example.
 
 ## Optional
 
-- [Design system](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/agent-native/02-design-system.md): Token tiers, the rebrand contract and the five colour drift records.
-- [Accessibility review](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/docs/agent-native/05-accessibility-review.md): Source review of the 17 items; no item is verified.
-- [Full text](https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/llms-full.txt): Every page above in one file.
+- [Design system](docs/agent-native/02-design-system.md): Token tiers, the rebrand contract and the five colour drift records.
+- [Accessibility review](docs/agent-native/05-accessibility-review.md): Source review of the 17 items; no item is verified.
+- [Full text](llms-full.txt): Every page above in one file.
 
 
 ---
@@ -1533,7 +1537,7 @@ docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "forge"
 tokens: ["--border-width-hairline", "--border-width-strong", "--color-accent", "--color-danger", "--color-paper-text", "--color-scrim", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-weight-semibold", "--opacity-scrim", "--radius-card", "--radius-control", "--spacing-canvas-rail", "--spacing-element", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-stack", "--spacing-fixed-target", "--spacing-fixed-toolbar", "--spacing-group", "--spacing-inset", "--spacing-stack", "--spacing-target", "--swatch-amber", "--swatch-rose", "--swatch-teal", "--swatch-violet", "--text-label", "--text-micro", "--z-chrome", "--z-fill-bar", "--z-layer-row", "--z-overlay", "--z-panel", "--z-toast"]
-registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/persona-model", "@nitro-forge/persona-turret", "@nitro-forge/prism-canvas", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/forge/inputs/PrecisionScrubber", "@nyc-tron/forge/layers/LayerStack"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/persona-model", "@nitro-forge/persona-turret", "@nitro-forge/prism-canvas", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/shell/PrecisionScrubber"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -1543,18 +1547,20 @@ a11yStatus: "reviewed-fail"
 
 **Prerequisite.** Needs `StudioUIProvider`: install `studio-ui-provider` and `nyc-tron-host` first, and wrap the app once. Every studio component throws without it (install-order.md step 7).
 
+Needs `@nitro-forge/editor-controls` first (step 3). Private workspace package (packages/editor-controls) with no tarball. The editor controls moved there from NYC-Tron UI in #95. Do not take them from @nyc-tron/forge/*.
+
 Needs `@nitro-forge/ignition` first (step 1). Native host. shadcn copies files and cannot run nitrogen, pod install or CMake (decision 4).
 
 Needs `@nitro-forge/studio-layout` first (step 3). Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).
 
-A Prism canvas editor over real engine commands: bounded PNG composite of the engine render, shape tools, four fill chips, transform actions, a layers panel (NYC-Tron `LayerStack` with a `PrecisionScrubber` for opacity) and a persona panel. Selection and panel state are local. Every edit is one engine op, so one undo step.
+A Prism canvas editor over real engine commands: bounded PNG composite of the engine render, shape tools, four fill chips, transform actions, a layers panel (`LayerStack` from `@nitro-forge/editor-controls`, with NYC-Tron's `PrecisionScrubber` for opacity) and a persona panel. Selection and panel state are local. Every edit is one engine op, so one undo step.
 
 ## Install
 
 - Package: `@nitro-forge/prism-editor` (registry item)
 - Import: `import { PrismEditor } from '@/components/forge/prism-editor';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-model`; `@nitro-forge/persona-turret`; `@nitro-forge/prism-canvas`; `@nitro-forge/studio-gesture`; `@nyc-tron/forge/inputs/PrecisionScrubber`; `@nyc-tron/forge/layers/LayerStack`; `@nitro-forge/ignition` (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports `base64ToBytes` and `bytesToBase64` from the package index; Prism engine document supplying `apply` and `reload` (engine facade, deferred); NYC-Tron `layer-model` type
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-model`; `@nitro-forge/persona-turret`; `@nitro-forge/prism-canvas`; `@nitro-forge/studio-gesture`; `@nyc-tron/shell/PrecisionScrubber`; `@nitro-forge/editor-controls` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/ignition` (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports `base64ToBytes` and `bytesToBase64` from the package index; Prism engine document supplying `apply` and `reload` (engine facade, deferred); the `layer-model` type from `@nitro-forge/editor-controls`
 - Command: `npx shadcn@4.23.0 add @nitro-forge/prism-editor`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/prism-editor.tsx`, `components/forge/prism-layers.ts`, `components/forge/prism-layer-label.ts`, `components/forge/prism-layout.ts`, `components/forge/prism-transform.ts`, `components/forge/rgba-png.ts`
@@ -1952,14 +1958,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/prism/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Nitro-Forge prism document API. Studio task line (APP_MANIFESTS): "Create an image". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Nitro-Forge prism document API. Studio task line (APP_MANIFESTS): "Create an image". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/prism/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/prism/package.json,compatibility.v1.json,tooling/docs/examples/prism.ts -->
 - Package: `@nitro-forge/prism`
-- Import: `import {} from '@nitro-forge/prism';`
+- Import: `import { PrismDocument } from '@nitro-forge/prism';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -1981,20 +1987,50 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/prism/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/prism/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/prism/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show prism state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/prism/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/prism.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/prism.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the prism-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `addRasterLayer`, `fillLayer`, `flatten`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=prism
+import assert from 'node:assert/strict';
+import { base64ToBytes, type EngineHost } from '@nitro-forge/ignition';
+import { PrismDocument } from '@nitro-forge/prism';
+
+export const ops = ['new', 'addRasterLayer', 'fillLayer', 'flatten'];
+
+export async function example(host: EngineHost) {
+  const doc = await PrismDocument.open(host, 2, 2);
+  const layer = (await doc.addRasterLayer('Background')).data.layer_id;
+  await doc.fillLayer(layer, [0, 0, 255, 255]);
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await PrismDocument.openSnapshot(host, bytes);
+  const firstPixel = async () => [...base64ToBytes((await reopened.flatten()).data.pixels_b64).subarray(0, 4)];
+  assert.deepEqual(await firstPixel(), [0, 0, 255, 255]);
+  await reopened.fillLayer(layer, [255, 0, 0, 255]);
+  assert.deepEqual(await firstPixel(), [255, 0, 0, 255]);
+  assert.equal(await reopened.undo(), true);
+  assert.deepEqual(await firstPixel(), [0, 0, 255, 255]);
+  assert.equal(await reopened.redo(), true);
+  assert.deepEqual(await firstPixel(), [255, 0, 0, 255]);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2002,13 +2038,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `prism` before calling `apply`.
+- Read the prism-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/prism` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/prism needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2031,14 +2069,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/cadence/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Nitro-Forge cadence document API. Studio task line (APP_MANIFESTS): "Make an audio project". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Nitro-Forge cadence document API. Studio task line (APP_MANIFESTS): "Make an audio project". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/cadence/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/cadence/package.json,compatibility.v1.json,tooling/docs/examples/cadence.ts -->
 - Package: `@nitro-forge/cadence`
-- Import: `import {} from '@nitro-forge/cadence';`
+- Import: `import { CadenceDocument } from '@nitro-forge/cadence';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2060,20 +2098,52 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/cadence/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/cadence/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/cadence/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show cadence state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/cadence/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/cadence.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/cadence.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the cadence-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `addTrack`, `addClip`, `addNote`, `project`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=cadence
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { CadenceDocument } from '@nitro-forge/cadence';
+
+export const ops = ['new', 'addTrack', 'addClip', 'addNote', 'project'];
+
+export async function example(host: EngineHost) {
+  const doc = await CadenceDocument.open(host, 120);
+  const track = (await doc.addTrack('midi', 'Keys')).data.track_id;
+  const clip = (await doc.addClip(track, 0, 960)).data.clip_id;
+  await doc.addNote(clip, 69, 0, 960, 100);
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await CadenceDocument.openSnapshot(host, bytes);
+  const tracks = async () => (await reopened.project()).data.track_count;
+  assert.equal((await reopened.project()).data.tempo_bpm, 120);
+  assert.equal(await tracks(), 1);
+  await reopened.addTrack('midi', 'Bass');
+  assert.equal(await tracks(), 2);
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await tracks(), 1);
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await tracks(), 2);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2081,13 +2151,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `cadence` before calling `apply`.
+- Read the cadence-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/cadence` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/cadence needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2110,14 +2182,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/splice/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Nitro-Forge splice document API. Studio task line (APP_MANIFESTS): "Edit a video timeline". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Nitro-Forge splice document API. Studio task line (APP_MANIFESTS): "Edit a video timeline". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/splice/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/splice/package.json,compatibility.v1.json,tooling/docs/examples/splice.ts -->
 - Package: `@nitro-forge/splice`
-- Import: `import {} from '@nitro-forge/splice';`
+- Import: `import { SpliceDocument } from '@nitro-forge/splice';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2139,20 +2211,51 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/splice/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/splice/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/splice/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show splice state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/splice/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/splice.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/splice.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the splice-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `addSource`, `addTrack`, `addClip`, `duration`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=splice
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { SpliceDocument } from '@nitro-forge/splice';
+
+export const ops = ['new', 'addSource', 'addTrack', 'addClip', 'duration'];
+
+export async function example(host: EngineHost) {
+  const doc = await SpliceDocument.open(host, 30);
+  const source = (await doc.addSource(10, 'take1.mp4')).data.source_id;
+  const track = (await doc.addTrack('video')).data.track_id;
+  await doc.addClip({ track, source, in_s: 0, out_s: 4 });
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await SpliceDocument.openSnapshot(host, bytes);
+  const seconds = async () => (await reopened.duration()).data.seconds;
+  assert.equal(await seconds(), 4);
+  await reopened.addClip({ track, source, in_s: 4, out_s: 10 });
+  assert.equal(await seconds(), 10);
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await seconds(), 4);
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await seconds(), 10);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2160,13 +2263,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `splice` before calling `apply`.
+- Read the splice-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/splice` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/splice needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2189,14 +2294,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/folio/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Nitro-Forge folio document API. Studio task line (APP_MANIFESTS): "Work with a PDF". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Nitro-Forge folio document API. Studio task line (APP_MANIFESTS): "Work with a PDF". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/folio/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/folio/package.json,compatibility.v1.json,tooling/docs/examples/folio.ts -->
 - Package: `@nitro-forge/folio`
-- Import: `import {} from '@nitro-forge/folio';`
+- Import: `import { FolioDocument } from '@nitro-forge/folio';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2218,20 +2323,50 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/folio/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/folio/package.json -->
+A document is live from `open`, `create`, `openPdf` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/folio/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show folio state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/folio/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/folio.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/folio.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the folio-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `pageCount`, `addAnnotation`, `listAnnotations`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=folio
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { FolioDocument } from '@nitro-forge/folio';
+
+export const ops = ['new', 'pageCount', 'addAnnotation', 'listAnnotations'];
+
+export async function example(host: EngineHost) {
+  const doc = await FolioDocument.create(host, 2);
+  assert.equal((await doc.pageCount()).data.pages, 2);
+  await doc.addAnnotation(0, [100, 700, 200, 20], 'Check this total');
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await FolioDocument.openSnapshot(host, bytes);
+  const notes = async () => (await reopened.listAnnotations(0)).data.annots.map((a) => a.contents);
+  assert.deepEqual(await notes(), ['Check this total']);
+  await reopened.addAnnotation(0, [100, 600, 200, 20], 'Second note');
+  assert.equal((await notes()).length, 2);
+  assert.equal(await reopened.undo(), true);
+  assert.deepEqual(await notes(), ['Check this total']);
+  assert.equal(await reopened.redo(), true);
+  assert.equal((await notes()).length, 2);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2239,13 +2374,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `folio` before calling `apply`.
+- Read the folio-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/folio` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/folio needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2268,14 +2405,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/pitch/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Nitro-Forge pitch document API. Studio task line (APP_MANIFESTS): "Build a presentation". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Nitro-Forge pitch document API. Studio task line (APP_MANIFESTS): "Build a presentation". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/pitch/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/pitch/package.json,compatibility.v1.json,tooling/docs/examples/pitch.ts -->
 - Package: `@nitro-forge/pitch`
-- Import: `import {} from '@nitro-forge/pitch';`
+- Import: `import { PitchDocument } from '@nitro-forge/pitch';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2297,20 +2434,51 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/pitch/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/pitch/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/pitch/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show pitch state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/pitch/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/pitch.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/pitch.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the pitch-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `addSlide`, `addText`, `deck`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=pitch
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { PitchDocument } from '@nitro-forge/pitch';
+
+export const ops = ['new', 'addSlide', 'addText', 'deck'];
+
+export async function example(host: EngineHost) {
+  const doc = await PitchDocument.open(host, 'Q4 review');
+  const slide = (await doc.addSlide('titleBody')).data.slide_id;
+  await doc.addText(slide, 100, 60, 400, 60, 'Revenue', 44);
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await PitchDocument.openSnapshot(host, bytes);
+  const slides = async () => (await reopened.deck()).data.slide_count;
+  assert.equal((await reopened.deck()).data.title, 'Q4 review');
+  assert.equal(await slides(), 2);
+  await reopened.addSlide('blank');
+  assert.equal(await slides(), 3);
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await slides(), 2);
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await slides(), 3);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2318,13 +2486,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `pitch` before calling `apply`.
+- Read the pitch-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/pitch` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/pitch needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2347,14 +2517,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/tally/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Nitro-Forge tally document API. Studio task line (APP_MANIFESTS): "Open a spreadsheet". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Nitro-Forge tally document API. Studio task line (APP_MANIFESTS): "Open a spreadsheet". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/tally/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/tally/package.json,compatibility.v1.json,tooling/docs/examples/tally.ts -->
 - Package: `@nitro-forge/tally`
-- Import: `import {} from '@nitro-forge/tally';`
+- Import: `import { TallyDocument } from '@nitro-forge/tally';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2376,20 +2546,51 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/tally/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/tally/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/tally/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show tally state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/tally/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/tally.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/tally.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the tally-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `setCell`, `getCell`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=tally
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { TallyDocument } from '@nitro-forge/tally';
+
+export const ops = ['new', 'setCell', 'getCell'];
+
+export async function example(host: EngineHost) {
+  const doc = await TallyDocument.open(host);
+  await doc.setCell('A1', '10');
+  await doc.setCell('A2', '20');
+  const sum = await doc.setCell('A3', '=A1+A2');
+  assert.equal(sum.data.computed, 30);
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await TallyDocument.openSnapshot(host, bytes);
+  assert.equal((await reopened.getCell('A3')).data.computed, 30);
+  await reopened.setCell('A1', '15');
+  assert.equal((await reopened.getCell('A3')).data.computed, 35);
+  assert.equal(await reopened.undo(), true);
+  assert.equal((await reopened.getCell('A3')).data.computed, 30);
+  assert.equal(await reopened.redo(), true);
+  assert.equal((await reopened.getCell('A3')).data.computed, 35);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2397,13 +2598,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `tally` before calling `apply`.
+- Read the tally-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/tally` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/tally needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2426,14 +2629,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/quill/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Nitro-Forge quill document API. Studio task line (APP_MANIFESTS): "Write a document". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Nitro-Forge quill document API. Studio task line (APP_MANIFESTS): "Write a document". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/quill/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/quill/package.json,compatibility.v1.json,tooling/docs/examples/quill.ts -->
 - Package: `@nitro-forge/quill`
-- Import: `import {} from '@nitro-forge/quill';`
+- Import: `import { QuillDocument } from '@nitro-forge/quill';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2455,20 +2658,49 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/quill/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/quill/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/quill/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show quill state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/quill/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/quill.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/quill.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the quill-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `insertText`, `text`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=quill
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { QuillDocument } from '@nitro-forge/quill';
+
+export const ops = ['new', 'insertText', 'text'];
+
+export async function example(host: EngineHost) {
+  const doc = await QuillDocument.open(host);
+  await doc.insertText({ block: 0, offset: 0 }, 'Hello');
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await QuillDocument.openSnapshot(host, bytes);
+  const text = async () => (await reopened.text()).data.text;
+  assert.equal(await text(), 'Hello');
+  await reopened.insertText({ block: 0, offset: 5 }, ' world');
+  assert.equal(await text(), 'Hello world');
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await text(), 'Hello');
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await text(), 'Hello world');
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2476,13 +2708,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `quill` before calling `apply`.
+- Read the quill-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/quill` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/quill needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2505,14 +2739,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/photo/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Persistent photo catalog metadata and version identities. Studio task line (APP_MANIFESTS): "Organize a photo catalog". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Persistent photo catalog metadata and version identities. Studio task line (APP_MANIFESTS): "Organize a photo catalog". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/photo/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/photo/package.json,compatibility.v1.json,tooling/docs/examples/photo.ts -->
 - Package: `@nitro-forge/photo`
-- Import: `import {} from '@nitro-forge/photo';`
+- Import: `import { PhotoDocument } from '@nitro-forge/photo';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2534,20 +2768,56 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/photo/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/photo/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/photo/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show photo state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/photo/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/photo.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/photo.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the photo-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `addOriginal`, `setRating`, `readOriginal`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=photo
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { PhotoDocument } from '@nitro-forge/photo';
+
+export const ops = ['new', 'addOriginal', 'setRating', 'readOriginal'];
+
+export async function example(host: EngineHost) {
+  const doc = await PhotoDocument.open(host);
+  const { original_id } = (await doc.addOriginal({
+    sha256: 'a'.repeat(64),
+    asset_ref: 'library:IMG_0001.dng',
+    byte_length: 1024,
+    camera_make: 'Example',
+    camera_model: 'One',
+  })).data;
+  await doc.setRating(original_id, 3);
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await PhotoDocument.openSnapshot(host, bytes);
+  const rating = async () => (await reopened.readOriginal(original_id)).data.original.rating;
+  assert.equal(await rating(), 3);
+  await reopened.setRating(original_id, 5);
+  assert.equal(await rating(), 5);
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await rating(), 3);
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await rating(), 5);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2555,13 +2825,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `photo` before calling `apply`.
+- Read the photo-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/photo` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/photo needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2584,14 +2856,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/motion/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Bounded persistent 2D motion with Prism frame rendering. Studio task line (APP_MANIFESTS): "Build a motion composition". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Bounded persistent 2D motion with Prism frame rendering. Studio task line (APP_MANIFESTS): "Build a motion composition". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/motion/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/motion/package.json,compatibility.v1.json,tooling/docs/examples/motion.ts -->
 - Package: `@nitro-forge/motion`
-- Import: `import {} from '@nitro-forge/motion';`
+- Import: `import { MotionDocument } from '@nitro-forge/motion';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2613,20 +2885,49 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/motion/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/motion/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/motion/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show motion state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/motion/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/motion.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/motion.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the motion-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `addShapeLayer`, `describe`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=motion
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { MotionDocument } from '@nitro-forge/motion';
+
+export const ops = ['new', 'addShapeLayer', 'describe'];
+
+export async function example(host: EngineHost) {
+  const doc = await MotionDocument.open(host, { width: 64, height: 36, duration_s: 2 });
+  await doc.addShapeLayer({ kind: 'rect', x: 0, y: 0, w: 8, h: 8, fill: [255, 0, 0, 255] }, 'Box');
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await MotionDocument.openSnapshot(host, bytes);
+  const layerNames = async () => (await reopened.describe()).data.layers.map((l) => l.name);
+  assert.deepEqual(await layerNames(), ['Box']);
+  await reopened.addShapeLayer({ kind: 'rect', x: 8, y: 0, w: 8, h: 8, fill: [0, 0, 255, 255] }, 'Second box');
+  assert.deepEqual(await layerNames(), ['Box', 'Second box']);
+  assert.equal(await reopened.undo(), true);
+  assert.deepEqual(await layerNames(), ['Box']);
+  assert.equal(await reopened.redo(), true);
+  assert.deepEqual(await layerNames(), ['Box', 'Second box']);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2634,13 +2935,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `motion` before calling `apply`.
+- Read the motion-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/motion` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/motion needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2663,14 +2966,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/design/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Bounded persistent fixed-frame design layout with real Prism rendering. Studio task line (APP_MANIFESTS): "Design an interface". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Bounded persistent fixed-frame design layout with real Prism rendering. Studio task line (APP_MANIFESTS): "Design an interface". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/design/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/design/package.json,compatibility.v1.json,tooling/docs/examples/design.ts -->
 - Package: `@nitro-forge/design`
-- Import: `import {} from '@nitro-forge/design';`
+- Import: `import { DesignDocument } from '@nitro-forge/design';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2692,20 +2995,50 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/design/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/design/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/design/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show design state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/design/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/design.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/design.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the design-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `addShape`, `updateNode`, `describe`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=design
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { DesignDocument } from '@nitro-forge/design';
+
+export const ops = ['new', 'addShape', 'updateNode', 'describe'];
+
+export async function example(host: EngineHost) {
+  const doc = await DesignDocument.open(host, { width: 320, height: 200 });
+  const root = 1;
+  const card = (await doc.addShape(root, 'rect', { name: 'Card', x: 16, y: 16, width: 120, height: 80 })).data.node_id;
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await DesignDocument.openSnapshot(host, bytes);
+  const width = async () => (await reopened.describe()).data.nodes[String(card)]?.width;
+  assert.equal(await width(), 120);
+  await reopened.updateNode(card, { width: 200 });
+  assert.equal(await width(), 200);
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await width(), 120);
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await width(), 200);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2713,13 +3046,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `design` before calling `apply`.
+- Read the design-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/design` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/design needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2742,14 +3077,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/draft/package.json,packages/studio-workspace/src/app-manifest.ts -->
-Bounded persistent world-space 2D drafting and linear coordinate constraints. Studio task line (APP_MANIFESTS): "Draw a CAD document". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Bounded persistent world-space 2D drafting and linear coordinate constraints. Studio task line (APP_MANIFESTS): "Draw a CAD document". Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/draft/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/draft/package.json,compatibility.v1.json,tooling/docs/examples/draft.ts -->
 - Package: `@nitro-forge/draft`
-- Import: `import {} from '@nitro-forge/draft';`
+- Import: `import { DraftDocument } from '@nitro-forge/draft';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2771,20 +3106,51 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/draft/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/draft/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/draft/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show draft state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/draft/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/draft.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/draft.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the draft-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `addPoint`, `addSegment`, `updatePoint`, `describe`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=draft
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { DraftDocument } from '@nitro-forge/draft';
+
+export const ops = ['new', 'addPoint', 'addSegment', 'updatePoint', 'describe'];
+
+export async function example(host: EngineHost) {
+  const doc = await DraftDocument.open(host, 'mm');
+  const a = (await doc.addPoint(0, 0)).data.point_id;
+  const b = (await doc.addPoint(30, 0)).data.point_id;
+  await doc.addSegment(a, b, { name: 'Wall' });
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await DraftDocument.openSnapshot(host, bytes);
+  const endX = async () => (await reopened.describe()).data.points[String(b)]?.x;
+  assert.equal(await endX(), 30);
+  await reopened.updatePoint(b, { x: 45 });
+  assert.equal(await endX(), 45);
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await endX(), 30);
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await endX(), 45);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2792,13 +3158,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `draft` before calling `apply`.
+- Read the draft-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/draft` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/draft needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2821,14 +3189,14 @@ a11yStatus: "unverified"
 ## Purpose
 
 <!-- generated:begin purpose source=packages/scene/package.json -->
-Bounded persistent 3D scene graph: TRS nodes, PBR-state materials, host-side deterministic rendering. No studio manifest names this engine. Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition and ships as a GitHub release tarball at 0.0.0. A source copy cannot carry the binary.
+Bounded persistent 3D scene graph: TRS nodes, PBR-state materials, host-side deterministic rendering. No studio manifest names this engine. Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.
 <!-- generated:end purpose -->
 
 ## Install
 
-<!-- generated:begin install source=packages/scene/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/scene/package.json,compatibility.v1.json,tooling/docs/examples/scene.ts -->
 - Package: `@nitro-forge/scene`
-- Import: `import {} from '@nitro-forge/scene';`
+- Import: `import { SceneDocument } from '@nitro-forge/scene';`
 - Peers: none
 - Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2850,20 +3218,51 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/scene/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/scene/package.json -->
+A document is live from `open` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed op throws `EngineError` and leaves the document, its ids and its undo history unchanged. `save()` returns the NFD1 snapshot bytes that `openSnapshot` reads. `undo()` and `redo()` resolve `false` when there is nothing to move.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/scene/package.json -->
-_Not documented._
+Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show scene state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/scene/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/scene.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/scene.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the scene-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `addMaterial`, `addMeshPrimitive`, `addNode`, `setTransform`, `bounds`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=scene
+import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { SceneDocument } from '@nitro-forge/scene';
+
+export const ops = ['new', 'addMaterial', 'addMeshPrimitive', 'addNode', 'setTransform', 'bounds'];
+
+export async function example(host: EngineHost) {
+  const doc = await SceneDocument.open(host, 'Demo');
+  const material = (await doc.addMaterial({ name: 'Paint', color: '#FF0000' })).data.material_id;
+  const mesh = (await doc.addMeshPrimitive({ kind: 'box', size: [2, 2, 2], material })).data.mesh_id;
+  const box = (await doc.addNode({ kind: 'mesh', name: 'Box', mesh })).data.node_id;
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await SceneDocument.openSnapshot(host, bytes);
+  const minX = async () => (await reopened.bounds()).data.bounds?.min[0];
+  assert.equal(await minX(), -1);
+  await reopened.setTransform(box, { translation: [10, 0, 0] });
+  assert.equal(await minX(), 9);
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await minX(), -1);
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await minX(), 9);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2871,13 +3270,15 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Read `docs/ENGINE_OPS.md` for the op names and payloads of `scene` before calling `apply`.
+- Read the scene-engine section of `docs/ENGINE_OPS.md` for op names and payloads before calling `apply`.
+- Group several edits that must undo together with `handle.applyBatch` (one undo step).
 - Treat `@nitro-forge/scene` as a monorepo dependency until a tarball release exists.
 
 ### Don't
 
 - Do not run `shadcn add` for this package; it has no registry item (@nitro-forge/scene needs the Rust binary).
 - Do not claim an npm install; `compatibility.v1.json` records npm as not used.
+- Do not keep your own undo stack; the engine records one entry per mutating op.
 <!-- generated:end dont -->
 
 
@@ -2905,9 +3306,9 @@ Nitro-Forge native integration layer: engine session contracts, Nitro HybridObje
 
 ## Install
 
-<!-- generated:begin install source=packages/ignition/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/ignition/package.json,compatibility.v1.json,tooling/docs/examples/ignition.ts -->
 - Package: `@nitro-forge/ignition`
-- Import: `import {} from '@nitro-forge/ignition';`
+- Import: `import { DocumentHandle, EngineError, type EngineHost } from '@nitro-forge/ignition';`
 - Peers: `react-native-nitro-modules`, `nitro-core`
 - Requires: Rust, Xcode or the Android NDK; see docs/agent-native/install-order.md steps 0 and 1
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
@@ -2918,7 +3319,7 @@ Nitro-Forge native integration layer: engine session contracts, Nitro HybridObje
 ## Props
 
 <!-- generated:begin props source=packages/ignition/package.json,packages/ignition/src/index.ts -->
-Not a component, so there are no props. 13 entry points: `@nitro-forge/ignition`, `@nitro-forge/ignition/cli`, `@nitro-forge/ignition/nitro`, `@nitro-forge/ignition/v1-host`, `@nitro-forge/ignition/workspace`, `@nitro-forge/ignition/transfer`, `@nitro-forge/ignition/workspace-ui`, `@nitro-forge/ignition/transfer-ui`, `@nitro-forge/ignition/autosave`, `@nitro-forge/ignition/transactions`, `@nitro-forge/ignition/collaboration`, `@nitro-forge/ignition/collaboration-http`, `@nitro-forge/ignition/collaboration-checkpoint`. 
+Not a component, so there are no props. 13 entry points: `@nitro-forge/ignition`, `@nitro-forge/ignition/cli`, `@nitro-forge/ignition/nitro`, `@nitro-forge/ignition/v1-host`, `@nitro-forge/ignition/workspace`, `@nitro-forge/ignition/transfer`, `@nitro-forge/ignition/workspace-ui`, `@nitro-forge/ignition/transfer-ui`, `@nitro-forge/ignition/autosave`, `@nitro-forge/ignition/transactions`, `@nitro-forge/ignition/collaboration`, `@nitro-forge/ignition/collaboration-http`, `@nitro-forge/ignition/collaboration-checkpoint`.
 <!-- generated:end props -->
 
 ## Variants
@@ -2929,20 +3330,58 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/ignition/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/ignition/package.json -->
+A `DocumentHandle` is live from `open`, `openInitialized` or `openSnapshot` until `close`. After `close`, every call throws `document handle <id> is closed`. A failed `apply` throws `EngineError` and leaves the document, its ids and both history stacks unchanged; `applyBatch` takes 1 to 64 commands and commits them as one undo step. `undo` and `redo` resolve `false` when there is nothing to move. Contract: docs/ARCHITECTURE.md.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/ignition/package.json -->
-_Not documented._
+Not UI. Nothing in this package renders, so there is nothing to review. The studio components that render engine state carry their own A11y sections in docs/components/.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/ignition/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/ignition.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/ignition.ts`) against the real engine through nf-cli (`tooling/docs/examples.test.ts`). It fails if the example sends an op it does not declare, or declares one that is missing from the tally-engine section of docs/ENGINE_OPS.md or from the package source. Ops: `new`, `setCell`, `getCell`, `__batch`.
+
+The example takes an `EngineHost`. In an app that is `createNitroHost()` from `@nitro-forge/ignition`; in Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, after `cargo build --locked -p nf-cli`.
+
+```ts example=ignition
+import assert from 'node:assert/strict';
+import { DocumentHandle, EngineError, type EngineHost } from '@nitro-forge/ignition';
+
+export const engine = 'tally';
+export const ops = ['new', 'setCell', 'getCell', '__batch'];
+
+export async function example(host: EngineHost) {
+  const doc = await DocumentHandle.openInitialized(host, 'tally', (d) => d.apply('new', {}));
+  await doc.apply('setCell', { addr: 'A1', value: '2' });
+  await doc.applyBatch([
+    { op: 'setCell', payload: { addr: 'A2', value: '3' } },
+    { op: 'setCell', payload: { addr: 'A3', value: '=A1*A2' } },
+  ]);
+  const cell = async (addr: string) => (await doc.apply<{ computed: unknown }>('getCell', { addr })).data.computed;
+  assert.equal(await cell('A3'), 6);
+
+  await assert.rejects(doc.apply('setCell', { addr: '!!', value: 'x' }), EngineError);
+  assert.equal(await cell('A3'), 6);
+
+  const bytes = await doc.snapshot();
+  await doc.close();
+
+  const reopened = await DocumentHandle.openSnapshot(host, 'tally', bytes);
+  const value = async (addr: string) => (await reopened.apply<{ computed: unknown }>('getCell', { addr })).data.computed;
+  assert.equal(await value('A3'), 6);
+  await reopened.apply('setCell', { addr: 'A1', value: '5' });
+  assert.equal(await value('A3'), 15);
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await value('A3'), 6);
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await value('A3'), 15);
+  await reopened.close();
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -2950,12 +3389,14 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Follow the commands in docs/agent-native/install-order.md for `@nitro-forge/ignition`.
+- Create the host once per app with `createNitroHost()`; in Node tests use `new CliHost()` from `@nitro-forge/ignition/cli` after `cargo build --locked -p nf-cli`.
+- Prefer an engine facade (`TallyDocument`, `PrismDocument` and the rest) over raw `apply` calls; the facades carry the payload types from docs/ENGINE_OPS.md.
 - Check `registry-excluded.json` for the reason and the condition for returning.
 
 ### Don't
 
-- Do not run `shadcn add` for this package; Decision 4.
+- Do not call `__undo`, `__redo` or `__snapshot` through `apply`; they are host ops. Use `undo()`, `redo()` and `snapshot()`.
+- Do not run `shadcn add` for this package; shadcn cannot run nitrogen, pod install or CMake (decision 4).
 - Do not publish or invent a release URL for it.
 <!-- generated:end dont -->
 
@@ -2984,11 +3425,11 @@ The package has no description field. Not a registry item. Decision 3. Private w
 
 ## Install
 
-<!-- generated:begin install source=packages/studio-layout/package.json,compatibility.v1.json -->
+<!-- generated:begin install source=packages/studio-layout/package.json,compatibility.v1.json,tooling/docs/examples/studio-layout.ts -->
 - Package: `@nitro-forge/studio-layout`
-- Import: `import {} from '@nitro-forge/studio-layout';`
+- Import: `import { collapsePanel, createWorkspace, dockPanel, parsePreset, serializePreset } from '@nitro-forge/studio-layout';`
 - Peers: none
-- Requires: `@nitro-forge/ignition` (native host, install-order.md step 1)
+- Requires: none; pure TypeScript with no runtime dependencies
 - Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
 - Installs: none
 - Files: `packages/studio-layout` in the repo; nothing is copied by shadcn
@@ -3008,20 +3449,45 @@ none
 
 ## States
 
-<!-- generated:begin states source=packages/studio-layout/package.json -->
-_Not documented._
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/studio-layout/package.json -->
+Pure functions over a `Layout` value. `dockPanel`, `collapsePanel`, `floatPanel` and `resizeDock` return `{ ok: true, layout }` or `{ ok: false, layout, reason }`, where a failed call returns the layout it was given. `parsePreset` returns `null` for a preset it rejects.
 <!-- generated:end states -->
 
 ## A11y
 
 <!-- generated:begin a11y source=packages/studio-layout/package.json -->
-_Not documented._
+Not UI. The workspace chrome that renders a layout (`forge-workspace`) carries its own A11y section.
 <!-- generated:end a11y -->
 
 ## Example
 
-<!-- generated:begin example source=packages/studio-layout/package.json -->
-_Not documented._
+<!-- generated:begin example source=tooling/docs/examples/studio-layout.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/studio-layout.ts`) in Node (`tooling/docs/examples.test.ts`).
+
+```ts example=studio-layout
+import assert from 'node:assert/strict';
+import { collapsePanel, createWorkspace, dockPanel, parsePreset, serializePreset } from '@nitro-forge/studio-layout';
+
+export async function example() {
+  const known = new Set(['layers', 'inspector']);
+  const empty = createWorkspace('prism');
+
+  const docked = dockPanel(empty, 'layers', 'right', 0, known);
+  assert.equal(docked.ok, true);
+  assert.deepEqual(docked.layout.docks.right, ['layers']);
+
+  const unknown = dockPanel(docked.layout, 'history', 'left', 0, known);
+  assert.equal(unknown.ok, false);
+  assert.equal(unknown.ok ? undefined : unknown.reason, 'unknown-panel');
+
+  const collapsed = collapsePanel(docked.layout, 'layers', true);
+  assert.deepEqual(collapsed.layout.collapsed, ['layers']);
+
+  const saved = serializePreset(collapsed.layout, known);
+  assert.deepEqual(parsePreset(saved, known), collapsed.layout);
+  assert.equal(parsePreset('{"schemaVersion":2}', known), null);
+}
+```
 <!-- generated:end example -->
 
 ## Do/Don't
@@ -3029,12 +3495,116 @@ _Not documented._
 <!-- generated:begin dont source=registry-excluded.json -->
 ### Do
 
-- Follow the commands in docs/agent-native/install-order.md for `@nitro-forge/studio-layout`.
+- Validate saved presets with `parsePreset` before making them active.
+- Pass the set of panel ids the studio knows; unknown ids fail with `unknown-panel`.
 - Check `registry-excluded.json` for the reason and the condition for returning.
 
 ### Don't
 
-- Do not run `shadcn add` for this package; Decision 3.
+- Do not run `shadcn add` for this package; it is a private workspace package with no tarball (decision 3).
+- Do not mutate a `Layout` in place; use the returned layout.
+- Do not publish or invent a release URL for it.
+<!-- generated:end dont -->
+
+
+<!-- foundation: editor-controls -->
+---
+name: "EditorControls"
+namespace: "@nitro-forge"
+subpath: "@nitro-forge/editor-controls"
+tier: 2
+docs: "generated"
+platforms: []
+category: "primitive"
+tokens: []
+registryDependencies: []
+a11yStatus: "unverified"
+---
+
+# EditorControls
+
+## Purpose
+
+<!-- generated:begin purpose source=packages/editor-controls/package.json -->
+Nitro Forge editor controls (audio, timeline, spreadsheet, canvas, color, photo, motion, office and more) built on NYC-Tron UI primitives. Moved here from @nyc-tron/ui/components/forge. The editor controls (audio and MIDI, timeline, spreadsheet, canvas and layers, color, photo, motion, vector, office, PDF) moved here unchanged from NYC-Tron UI's `packages/ui/src/components/forge/` at commit `5a1ea4db`. Import them as `@nitro-forge/editor-controls/<path>`: the export `./<path>` is the old `@nyc-tron/ui/components/forge/<path>`, except three precision helpers that now come from `@nyc-tron/ui/components/shell/`. Nothing in Forge may import `@nyc-tron/ui/components/forge/*`; `node tooling/verify-nyc-tron-pin.mjs` fails if anything does. Not a registry item. Decision 3. Private workspace package with no tarball and no versioning scheme. Forge owns the editor controls since #95; they moved here unchanged from NYC-Tron UI, and nothing in Forge imports @nyc-tron/ui/components/forge/*.
+<!-- generated:end purpose -->
+
+## Install
+
+<!-- generated:begin install source=packages/editor-controls/package.json,compatibility.v1.json,tooling/docs/examples/editor-controls.ts -->
+- Package: `@nitro-forge/editor-controls`
+- Import: `import { formatOpacity, moveLayer, stepOpacity, validateLayers, type LayerRow } from '@nitro-forge/editor-controls/layers/layer-model';`
+- Peers: `@expo/ui`, `expo-linear-gradient`, `react`, `react-native`, `react-native-gesture-handler`, `react-native-skia`
+- Requires: `@nyc-tron/ui` from the release pinned in `tooling/nyc-tron.json`, with `patches/@nyc-tron__ui@1.0.0-rc.2.patch` adding 20 export-map entries rc.2 lacks (packages/editor-controls/README.md)
+- Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by `workspace:*` inside this repo.
+- Installs: none
+- Files: `packages/editor-controls` in the repo; nothing is copied by shadcn
+<!-- generated:end install -->
+
+## Props
+
+<!-- generated:begin props source=packages/editor-controls/package.json,packages/editor-controls/src/index.ts -->
+Not a component, so there are no props. 450 entry points: `@nitro-forge/editor-controls/WaveformLane`, `@nitro-forge/editor-controls/NativeSeekBar`, `@nitro-forge/editor-controls/ColorChannels`, `@nitro-forge/editor-controls/waveform`, `@nitro-forge/editor-controls/timebase`, `@nitro-forge/editor-controls/audio/level`, `@nitro-forge/editor-controls/audio/LevelFader`, `@nitro-forge/editor-controls/color`, `@nitro-forge/editor-controls/color/HsvPicker`, `@nitro-forge/editor-controls/color/fieldGeometry`, `@nitro-forge/editor-controls/color/fieldGesture`, `@nitro-forge/editor-controls/color/AlphaSlider`, `@nitro-forge/editor-controls/color/ColorWheel`, `@nitro-forge/editor-controls/color/ColorDiscPicker`, `@nitro-forge/editor-controls/color/ColorChannelFields`, `@nitro-forge/editor-controls/color/ForegroundBackgroundChips`, and 434 more in `packages/editor-controls/package.json`.
+<!-- generated:end props -->
+
+## Variants
+
+<!-- generated:begin variants source=packages/editor-controls/package.json -->
+none
+<!-- generated:end variants -->
+
+## States
+
+<!-- generated:begin states source=packages/ignition/src/document.ts,packages/editor-controls/package.json -->
+Controlled components: the caller passes values and callbacks. The controls own no persistence, file I/O, engine state or undo; the engine adapters (`@nitro-forge/cadence`, `@nitro-forge/tally` and the rest) supply those.
+<!-- generated:end states -->
+
+## A11y
+
+<!-- generated:begin a11y source=packages/editor-controls/package.json -->
+Not part of the agent-native source review, so nothing here is verified (decision 34). The package has its own render tests, including `packages/editor-controls/tests/render/screen-reader-audit.render.test.mjs`; this page does not restate their results.
+<!-- generated:end a11y -->
+
+## Example
+
+<!-- generated:begin example source=tooling/docs/examples/editor-controls.ts,docs/ENGINE_OPS.md -->
+`pnpm test:docs-examples` runs this file (`tooling/docs/examples/editor-controls.ts`) in Node (`tooling/docs/examples.test.ts`).
+
+```ts example=editor-controls
+import assert from 'node:assert/strict';
+import { formatOpacity, moveLayer, stepOpacity, validateLayers, type LayerRow } from '@nitro-forge/editor-controls/layers/layer-model';
+
+export async function example() {
+  const rows: LayerRow[] = [
+    { id: 'title', name: 'Title', kind: 'text', visible: true, opacity: 1 },
+    { id: 'photo', name: 'Photo', kind: 'raster', visible: true, opacity: 0.8 },
+    { id: 'paper', name: 'Paper', kind: 'raster', visible: false, opacity: 1 },
+  ];
+  validateLayers(rows);
+
+  const reordered = moveLayer(rows, 'paper', 0);
+  assert.deepEqual(reordered.map((row) => row.id), ['paper', 'title', 'photo']);
+
+  assert.equal(stepOpacity(0.8, 1), 0.85);
+  assert.equal(formatOpacity(0.85), '85%');
+}
+```
+<!-- generated:end example -->
+
+## Do/Don't
+
+<!-- generated:begin dont source=registry-excluded.json -->
+### Do
+
+- Add `"@nitro-forge/editor-controls": "workspace:*"` to the consuming package and import `@nitro-forge/editor-controls/<path>`.
+- Run `pnpm --filter @nitro-forge/editor-controls build` before typechecking a consumer on its own; consumers typecheck against `dist/`.
+- Extend the control that exists here (knob, graph, crop overlay and the rest) instead of writing a second one in another package.
+- Check `registry-excluded.json` for the reason and the condition for returning.
+
+### Don't
+
+- Do not import `@nyc-tron/ui/components/forge/*` or depend on `@nyc-tron/forge/*` registry items; the controls live here now.
+- Do not run `shadcn add` for this package; it is a private workspace package with no tarball (decision 3).
 - Do not publish or invent a release URL for it.
 <!-- generated:end dont -->
 
@@ -3044,7 +3614,7 @@ _Not documented._
 
 Status: read from `package.json` files, `tooling/`, `packages/ignition/scripts/`, `docs/native/NITRO_V1_HOST_INTEGRATION.md`, `.github/workflows/` and `apps/example`. No command here was run on this machine (4.9 GB free, no install allowed). Where a command comes from CI or a script, the source is named. UNVERIFIED marks a step the files do not settle.
 
-Nothing here is published to npm. `compatibility.v1.json` records `distribution: github-release-tarballs`, `npm: not-used`, and no tag or release exists for the Forge packages. Every `@nitro-forge/*` package is `0.0.0` at the root or `0.1.0` per package and resolves through `workspace:*`. A consumer outside this monorepo has no installable `@nitro-forge/ignition`, engine or `studio-layout` today.
+Nothing here is published to npm. `compatibility.v1.json` records `distribution: github-release-tarballs`, `npm: not-used`, and no tag or release exists for the Forge packages. The engines, `ignition`, `studio-layout`, `editor-controls`, `studio-workspace` and `icons` are version `0.1.0` (`adaptive-layout` is `0.1.0-alpha.0` and `agpl-speed-curve` is `0.0.0-experimental`; the private root `package.json` says `0.0.0`). They resolve through `workspace:*`. A consumer outside this monorepo has no installable `@nitro-forge/ignition`, engine, `studio-layout` or `editor-controls` today.
 
 ## The chain
 
@@ -3055,7 +3625,7 @@ Each step needs the one above it. Step 7 fails at first render if step 6 is skip
 | 0 | Toolchain | Node >=24.3.0, pnpm 12.18.0 (`packageManager`), Rust with `cargo`, Xcode for Apple, Android NDK and `cargo-ndk` for Android | No |
 | 1 | `@nitro-forge/ignition` (native host) | see below | No (decision 4) |
 | 2 | Engine package, for example `@nitro-forge/tally` | `workspace:*` dependency, Rust crate linked through `nf-sys` | No (decision 3) |
-| 3 | `@nitro-forge/studio-layout` | `workspace:*` dependency, private package | No (decision 3) |
+| 3 | `@nitro-forge/studio-layout` and `@nitro-forge/editor-controls` | `workspace:*` dependencies, private packages | No (decision 3) |
 | 4 | `@nitro-forge/icons` | registry item `forge-icon` | Yes, plus peers |
 | 5 | NYC-Tron tarballs | URL dependencies from `tooling/nyc-tron.json` | No for the packages, yes for registry items that wrap them |
 | 6 | Theme CSS | generated `theme.css` or `theme.native.css`, plus an import | Files yes, build step no |
@@ -3106,9 +3676,11 @@ Add the package as a `workspace:*` dependency, for example `"@nitro-forge/tally"
 
 Engine contract tests need `@nyc-tron/ui` as a devDependency (URL tarball); apps do not.
 
-### Step 3. `@nitro-forge/studio-layout`
+### Step 3. `@nitro-forge/studio-layout` and `@nitro-forge/editor-controls`
 
-Private, pure TypeScript, no build step (`"exports": {".": "./src/index.ts"}`). Used by `studio-workspace` (`model.ts`, `index.tsx`, `stage.tsx`, `app-manifest.ts`). Add `"@nitro-forge/studio-layout": "workspace:*"`. No tarball exists. Distribution is blocked on the versioning scheme in decision 3.
+`studio-layout` is private, pure TypeScript, no build step (`"exports": {".": "./src/index.ts"}`). Used by `studio-workspace` (`model.ts`, `index.tsx`, `stage.tsx`, `app-manifest.ts`). Add `"@nitro-forge/studio-layout": "workspace:*"`. No tarball exists. Distribution is blocked on the versioning scheme in decision 3.
+
+`editor-controls` holds the editor controls (audio, timeline, spreadsheet, layers, color, photo, motion, office and the rest), moved unchanged from NYC-Tron UI in #95. It is private and has 450 exports, one per file: import `@nitro-forge/editor-controls/<path>`, for example `@nitro-forge/editor-controls/layers/LayerStack`. Add `"@nitro-forge/editor-controls": "workspace:*"`. It needs `@nyc-tron/ui` from step 5 and the rc.2 export patch described in `packages/editor-controls/README.md`. Never import `@nyc-tron/ui/components/forge/*`; `pnpm verify:nyc-tron` fails on it. `prism-editor` needs this step for its layers panel.
 
 ### Step 4. `@nitro-forge/icons`
 
@@ -3201,15 +3773,17 @@ Only now do the registry items for studio chrome work: `forge-workspace`, `prism
 | `@nitro-forge/ignition`: Nitrogen codegen, `ForgeRust.xcframework`, Android static archives, CMake, podspec, Swift package | | Yes (decision 4) |
 | Engine packages and their Rust crates | | Yes (decision 3) |
 | `@nitro-forge/studio-layout` | | Yes (decision 3) |
+| `@nitro-forge/editor-controls` | | Yes (decision 3) |
 | Quill, Tally, Splice and Prism binding adapters | Deferred | Need the engine facade first |
 | Expo config plugin for brand identity (`tooling/brand/plugin.cjs`) | | Yes, not in registry scope |
 
-Two items need a native prerequisite even though their own files are plain TypeScript. `prism-editor` imports `base64ToBytes` and `bytesToBase64` from the `@nitro-forge/ignition` package index, so a copy of it resolves only after step 1. `forge-workspace`, `forge-document-stage` and `studio-layout` consumers need `@nitro-forge/studio-layout` from step 3 for the `Studio` type and the dock model.
+Two items need a native prerequisite even though their own files are plain TypeScript. `prism-editor` imports `base64ToBytes` and `bytesToBase64` from the `@nitro-forge/ignition` package index, so a copy of it resolves only after step 1. `prism-editor` also imports `LayerStack` and the `LayerRow` type from `@nitro-forge/editor-controls` (step 3). `forge-workspace`, `forge-document-stage` and `studio-layout` consumers need `@nitro-forge/studio-layout` from step 3 for the `Studio` type and the dock model.
 
 ## Known gaps in the chain
 
 - No document today gives these steps in order. This file is the first.
-- Steps 1 to 3 cannot be reproduced outside the monorepo: no tarball or release exists for `ignition`, the engines or `studio-layout`.
+- Steps 1 to 3 cannot be reproduced outside the monorepo: no tarball or release exists for `ignition`, the engines, `studio-layout` or `editor-controls`.
+- NYC-Tron's published `registry.json` (on its `agent-native-20261119` branch) still lists `forge/inputs/PrecisionScrubber` and has no `shell/PrecisionScrubber`, so `prism-editor`'s `@nyc-tron/shell/PrecisionScrubber` dependency does not resolve until NYC-Tron rebuilds its registry. `check-imports.mjs` reports it.
 - The Apple archive script and the integration doc disagree on Intel simulator support (step 1).
 - Seven NYC-Tron packages are pinned; the example installs four. Which of the other three a new studio needs is not stated in the repo. UNVERIFIED.
 
@@ -3217,12 +3791,12 @@ Two items need a native prerequisite even though their own files are plain TypeS
 <!-- file: SKILL.md -->
 ---
 name: nitro-forge
-description: Install and use the Nitro Forge studio components (workspace chrome, persona turret, Prism editor, theme, StudioUIProvider, icons) through the @nitro-forge shadcn registry. Use when adding a Forge item, wiring StudioUIProvider, rebranding the accent, checking a token, or deciding why an engine or ignition cannot be installed with shadcn.
+description: Install and use the Nitro Forge studio components (workspace chrome, persona turret, Prism editor, theme, StudioUIProvider, icons) through the @nitro-forge shadcn registry, drive the 12 Rust engines through @nitro-forge/ignition, and import the editor controls from @nitro-forge/editor-controls. Use when adding a Forge item, wiring StudioUIProvider, opening or editing an engine document, importing an editor control, rebranding the accent, checking a token, or deciding why an engine, ignition or editor-controls cannot be installed with shadcn.
 ---
 
 # Nitro Forge
 
-Nitro Forge is a set of document studios on one Rust engine. The `@nitro-forge` registry ships the studio UI as source files. The engines, `@nitro-forge/ignition` and `@nitro-forge/studio-layout` are not in it. Controls such as Button and TabBar come from the `@nyc-tron` registry, which owns them.
+Nitro Forge is a set of document studios on one Rust engine. The `@nitro-forge` registry ships the studio UI as source files. The engines, `@nitro-forge/ignition`, `@nitro-forge/studio-layout` and `@nitro-forge/editor-controls` are not in it. General controls such as Button and TabBar come from the `@nyc-tron` registry, which owns them. The editor controls (layers, timeline, spreadsheet, color and the rest) belong to Forge and come from `@nitro-forge/editor-controls`.
 
 ## Provider prerequisite: do this first
 
@@ -3251,7 +3825,7 @@ Nine steps, numbered 0 to 8. A registry add covers step 4 and step 8, plus the f
 | 0 | Toolchain: Node >=24.3.0, pnpm 12.18.0, Rust, Xcode or Android NDK with `cargo-ndk` | no |
 | 1 | `@nitro-forge/ignition` native host | no (decision 4) |
 | 2 | An engine package, for example `@nitro-forge/tally` | no (decision 3) |
-| 3 | `@nitro-forge/studio-layout` | no (decision 3) |
+| 3 | `@nitro-forge/studio-layout` and `@nitro-forge/editor-controls` | no (decision 3) |
 | 4 | `@nitro-forge/icons` as item `forge-icon` | yes |
 | 5 | NYC-Tron tarballs from `tooling/nyc-tron.json` | packages no, wrapper items yes |
 | 6 | Theme CSS from `studio-theme` | files yes, the generator and CSS import no |
@@ -3260,7 +3834,7 @@ Nine steps, numbered 0 to 8. A registry add covers step 4 and step 8, plus the f
 
 Steps 1 to 3 cannot be reproduced outside this monorepo today. No tag, release or tarball exists for them, nothing is on npm, and `compatibility.v1.json` records distribution as not run. Stop and ask rather than invent a release URL. The commands for steps 0 to 3, 5 and 6 are in `docs/agent-native/install-order.md`. They were read from the repo and were not run on the machine that wrote this skill.
 
-Items that name a prerequisite shadcn cannot install list it in `meta.prerequisites` and in the `docs` text the CLI prints after an add. `prism-editor` needs `@nitro-forge/ignition` (it imports `base64ToBytes` and `bytesToBase64`). `forge-workspace`, `forge-document-stage` and `workspace-utilities` need `@nitro-forge/studio-layout`, and so does everything that depends on them.
+Items that name a prerequisite shadcn cannot install list it in `meta.prerequisites` and in the `docs` text the CLI prints after an add. `prism-editor` needs `@nitro-forge/ignition` (it imports `base64ToBytes` and `bytesToBase64`). `prism-editor` also needs `@nitro-forge/editor-controls` for its layers panel. `forge-workspace`, `forge-document-stage` and `workspace-utilities` need `@nitro-forge/studio-layout`, and so does everything that depends on them.
 
 ## Commands
 
@@ -3275,9 +3849,49 @@ npx shadcn@4.23.0 mcp
 
 `components.json` at the repo root points the two namespaces at `https://raw.githubusercontent.com/mikevocalz/<repo>/<ref>/r/{name}.json`. `<ref>` is `nitroForgeRef` (`master`) for `@nitro-forge` and `nycTronRef` (`main`) for `@nyc-tron`, both in `tooling/registry/config.json`. They are moving branches, not release tags, until the owner cuts tags: what an install fetches changes with each push, and the `@nyc-tron` items resolve only once NYC-Tron's `r/` is on its `main` branch. To pin, run `node tooling/registry/set-ref.mjs <nitroForgeRef> [nycTronRef]`; it rewrites the config and regenerates every generated file. The install proof against a local server accepted `text/plain` responses, which is what raw.githubusercontent.com serves. A live fetch from raw GitHub has not been done. `.mcp.json` runs `npx shadcn@latest mcp` because the mission specifies it. Pin it to `shadcn@4.23.0`, the version the registry is built with, if you want a reproducible tool version.
 
-Item names keep slashes: `@nyc-tron/forge/layers/LayerStack`. The `@nyc-tron` item names are the export keys after `./components/`. All 22 that Forge depends on exist in NYC-Tron's built `registry.json`; `check-imports` reads that registry on every run.
+Item names keep slashes: `@nyc-tron/shell/PrecisionScrubber`. The `@nyc-tron` item names are the export keys after `./components/`. Forge items depend on 21 of them. `check-imports` reads NYC-Tron's built `registry.json` on every run and fails on any that is missing. A dependency under the old editor-control path is invalid, and `validate-registry` rejects it.
 
 Installed files land in `components/forge/` (icons in `components/forge/icons/`). Imports between them are relative. Imports of NYC-Tron files are written as `@/components/nyc-tron/ui/components/<key>`, which is where the `@nyc-tron` items install (their `files[].target` is `@components/nyc-tron/ui/components/<key>.tsx`, and `@components` expands to your `components` alias).
+
+## Editor controls
+
+`@nitro-forge/editor-controls` holds the editor controls: audio and MIDI, timeline, spreadsheet, canvas and layers, color, photo, motion, vector, office and PDF. They moved unchanged from NYC-Tron UI (`packages/ui/src/components/forge/`) in #95. They take controlled values and callbacks; the engine packages supply persistence and undo.
+
+Import a control by its path. The package has 450 exports, one per file:
+
+```ts
+import { LayerStack } from '@nitro-forge/editor-controls/layers/LayerStack';
+import { moveLayer, validateLayers } from '@nitro-forge/editor-controls/layers/layer-model';
+```
+
+Never import `@nyc-tron/ui/components/forge/*`. NYC-Tron `v1.0.0-rc.2` still ships those files, but Forge does not use them. `node tooling/verify-nyc-tron-pin.mjs` fails on any such import and names the file and line. The old path `forge/<path>` is now `@nitro-forge/editor-controls/<path>`, except three precision helpers that NYC-Tron kept: `@nyc-tron/ui/components/shell/precision`, `shell/precision-scrubber-model` and `shell/PrecisionScrubber`. `packages/editor-controls/README.md` has the mapping and the rc.2 export patch.
+
+It is a private workspace package with no tarball. A package in this monorepo adds `"@nitro-forge/editor-controls": "workspace:*"`. There is no way to install it outside the repo today.
+
+## Engines
+
+Each engine is a package with a document facade (`TallyDocument`, `PrismDocument`, ...) over `@nitro-forge/ignition`. Every facade has `open` (or `create` for folio), `openSnapshot`, `save`, `undo`, `redo` and `close`, plus engine ops. In an app the host is `createNitroHost()` from `@nitro-forge/ignition`. In Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, which spawns `target/debug/nf-cli` (build it with `cargo build --locked -p nf-cli`, or set `NF_CLI`).
+
+```ts
+import { createNitroHost } from '@nitro-forge/ignition';
+import { TallyDocument } from '@nitro-forge/tally';
+
+const host = createNitroHost();
+const doc = await TallyDocument.open(host);
+await doc.setCell('A1', '10');
+await doc.setCell('A2', '20');
+const sum = await doc.setCell('A3', '=A1+A2'); // sum.data.computed === 30
+const bytes = await doc.save();
+await doc.close();
+
+const again = await TallyDocument.openSnapshot(host, bytes);
+await again.setCell('A1', '15');
+await again.undo(); // A3 is 30 again
+await again.redo(); // A3 is 35
+await again.close();
+```
+
+Op names and payloads are in `docs/ENGINE_OPS.md`; use only ops listed there. Each page in `docs/engines/` has a full example for its engine. `corepack pnpm test:docs-examples` runs every one against the real engines through nf-cli, and checks that each op it uses is in `ENGINE_OPS.md` and the package source.
 
 ## Rebrand contract
 
@@ -3323,9 +3937,9 @@ Values are `reviewed-pass`, `reviewed-fail` and `unverified`. Nothing was render
 ## Not in the registry, and why
 
 - Four binding adapters (`quill-office-binding`, `tally-sheet-binding`, `splice-timeline-binding`, `prism-canvas-binding`): each imports its engine facade, which a registry add cannot install (decision 30).
-- Twelve engines (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene): they need the Rust binary through ignition and ship as release tarballs at 0.0.0 (decision 3).
+- Twelve engines (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene): they need the Rust binary through ignition. They are version 0.1.0 in the monorepo, and no tag, release or tarball has been cut (decision 3).
 - `ignition`: shadcn cannot run nitrogen, pod install or CMake (decision 4).
-- `studio-layout`: private workspace package with no tarball.
+- `studio-layout` and `editor-controls`: private workspace packages with no tarball.
 
 `registry-excluded.json` holds each reason and the condition for returning. Engine and foundation pages are in `docs/engines/`.
 
@@ -3337,12 +3951,17 @@ node tooling/registry/check-imports.mjs
 node tooling/registry/validate-registry.mjs
 node tooling/docs/build-docs.mjs
 node tooling/docs/check-docs.mjs
+corepack pnpm test:docs-examples
 ```
 
-`build.mjs` runs `shadcn build` through `npx` unless `SHADCN_BIN` points at a local shadcn 4.23.0 binary. Never edit `r/`, `registry.json`, `docs/components/` or `llms.txt` by hand. CI fails when a rebuild changes them.
+`build.mjs` runs `shadcn build` through `npx` unless `SHADCN_BIN` points at a local shadcn 4.23.0 binary. Never edit `r/`, `registry.json`, `docs/components/`, `docs/engines/`, `llms.txt` or `packages/ignition/skills/` by hand. CI fails when a rebuild changes them.
 
 ## Where to read more
 
 - `llms.txt` for the page index and `llms-full.txt` for all pages in one file.
 - `docs/components/<item>.md` for props, states, accessibility and examples.
+- `docs/engines/<package>.md` for each engine, ignition, studio-layout and editor-controls.
+- `docs/ENGINE_OPS.md` for op names and payloads.
 - `docs/agent-native/install-order.md` and `docs/agent-native/02-design-system.md`.
+
+This file is the source. `build-docs.mjs` copies it to `packages/ignition/skills/nitro-forge/SKILL.md`, and `skills.sh.json` points at that folder, so `npx skills add mikevocalz/nitro-forge --skill nitro-forge` installs it.
