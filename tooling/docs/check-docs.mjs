@@ -133,6 +133,20 @@ for (const n of engNames) if (!engFiles.includes(`${n}.md`)) bad(`docs/engines/$
 for (const f of engFiles) if (!engNames.includes(f.slice(0, -3))) bad(`docs/engines/${f}`, 'orphan page: not in registry-excluded.json');
 for (const f of engFiles) checkPage(`docs/engines/${f}`, readFileSync(join(engDir, f), 'utf8'));
 for (const n of names) if (engNames.includes(n)) bad(n, 'is both a registry item and excluded');
+// Each engine page carries its tested example verbatim. tooling/docs/examples.test.ts runs those files against
+// the real engines; this check only needs the files, so it runs without cargo.
+for (const n of engNames) {
+  const file = `docs/engines/${n}.md`;
+  const src = join(ROOT, 'tooling/docs/examples', `${n}.ts`);
+  if (!existsSync(join(ROOT, file))) continue;
+  const text = readFileSync(join(ROOT, file), 'utf8');
+  if (!existsSync(src)) { bad(file, `no tested example at tooling/docs/examples/${n}.ts`); continue; }
+  const ex = text.match(new RegExp('```ts example=' + n + '\\n([\\s\\S]*?)```'))?.[1];
+  if (ex === undefined) bad(file, `no \`\`\`ts example=${n} block`);
+  else if (ex !== readFileSync(src, 'utf8')) bad(file, `example block differs from tooling/docs/examples/${n}.ts; run build-docs`);
+  if (/import \{\s*\}/.test(text)) bad(file, 'has an empty import');
+  if (/_Not documented\._/.test(text.split(/^## Example$/m)[1]?.split(/^## /m)[0] ?? '')) bad(file, 'Example section is the placeholder');
+}
 
 // llms.txt.
 if (!existsSync(join(ROOT, 'llms.txt'))) bad('llms.txt', 'missing');
@@ -143,7 +157,12 @@ else {
   for (const n of names) if (!llms.includes(`docs/components/${n}.md`)) bad('llms.txt', `does not list ${n}`);
   for (const n of engNames) if (!llms.includes(`docs/engines/${n}.md`)) bad('llms.txt', `does not list engine page ${n}`);
   if (llms.length > 12000) bad('llms.txt', `${llms.length} bytes is larger than the 12,000 byte budget`);
-  for (const m of llms.matchAll(/\]\((https:\/\/raw\.githubusercontent\.com\/[^/]+\/nitro-forge\/[^/]+\/([^)]+))\)/g)) if (!existsSync(join(ROOT, m[2]))) bad('llms.txt', `link target ${m[2]} does not exist in the repo`);
+  // Repo links are relative to llms.txt so they follow whatever ref it was fetched from.
+  for (const m of llms.matchAll(/\]\(([^)\s]+)\)/g)) {
+    const target = m[1];
+    if (/nitro-forge\/(blob|tree|raw)\/|githubusercontent\.com\/[^/]+\/nitro-forge\//.test(target)) bad('llms.txt', `absolute link ${target} into this repo; use a relative path`);
+    else if (!/^(https?:|mailto:|#)/.test(target) && !existsSync(join(ROOT, target.split('#')[0]))) bad('llms.txt', `link target ${target} does not exist in the repo`);
+  }
   if (/—/.test(llms)) bad('llms.txt', 'em dash');
 }
 // SKILL.md.
@@ -169,6 +188,24 @@ else {
   }
   for (const m of skill.matchAll(/@nitro-forge\/([a-z-]+)/g)) {
     if (!names.includes(m[1]) && !engNames.includes(m[1]) && !['studio-workspace', 'icons'].includes(m[1])) bad('SKILL.md', `mentions @nitro-forge/${m[1]}, which is neither an item nor a known package`);
+  }
+  if (/@nyc-tron\/forge\//.test(skill)) bad('SKILL.md', 'names @nyc-tron/forge/*; editor controls come from @nitro-forge/editor-controls');
+  if (!/@nyc-tron\/ui\/components\/forge/.test(skill) || !/@nitro-forge\/editor-controls\//.test(skill)) bad('SKILL.md', 'must give the @nitro-forge/editor-controls/<path> import and the rule against @nyc-tron/ui/components/forge/*');
+  if (/\b0\.0\.0\b/.test(skill)) bad('SKILL.md', 'says 0.0.0; the packages are 0.1.0');
+  // The shipped copy, the way vercel-labs/ui ships its skill inside a package for `npx skills add`.
+  const copy = join(ROOT, 'packages/ignition/skills/nitro-forge/SKILL.md');
+  if (!existsSync(copy) || readFileSync(copy, 'utf8') !== skill) bad('packages/ignition/skills/nitro-forge/SKILL.md', 'differs from SKILL.md; run build-docs');
+}
+// skills.sh.json and package files.
+{
+  const sk = existsSync(join(ROOT, 'skills.sh.json')) ? readJson(join(ROOT, 'skills.sh.json')) : null;
+  if (!sk || !Array.isArray(sk.paths) || !sk.paths.length) bad('skills.sh.json', 'missing or has no paths');
+  else for (const p of sk.paths) if (!existsSync(join(ROOT, p, 'nitro-forge/SKILL.md'))) bad('skills.sh.json', `path ${p} holds no nitro-forge/SKILL.md`);
+  for (const d of readdirSync(join(ROOT, 'packages'))) {
+    const pj = join(ROOT, 'packages', d, 'package.json');
+    if (!existsSync(pj)) continue;
+    const { name, files } = readJson(pj);
+    if (name === '@nitro-forge/ignition' && Array.isArray(files) && !files.some((f) => f.replace(/^\.\//, '').replace(/\/$/, '') === 'skills')) bad(pj.slice(ROOT.length + 1), 'declares files without skills, so the skill would not ship');
   }
 }
 // AGENTS.md.
