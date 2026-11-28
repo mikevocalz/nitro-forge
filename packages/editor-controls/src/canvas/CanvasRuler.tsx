@@ -6,6 +6,7 @@ import {webKey} from "@nyc-tron/ui/components/forms/choice-keys";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import type {LocalStore} from "@nyc-tron/ui/components/local-store";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
+import {forgeType} from "../type-scale.ts";
 import {docToScreen,screenPointToDoc,tidy,validateViewport,type CanvasViewport,type DocPoint} from "./canvas-viewport.ts";
 import {
   DEFAULT_DPI,RULER_THICKNESS,RULER_TOUCH_BAND,centerGuidePosition,formatLength,guideAccessibilityLabel,guideAxis,
@@ -326,7 +327,7 @@ function Corner({ctx}:{ctx:Ctx}){
       className:joinClasses(styled&&"bg-surface-raised border-border border-b border-r focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus")}}
       style={{width:thickness,height:thickness,alignItems:"center",justifyContent:"center"}}>
       <Text numberOfLines={1} {...{className:joinClasses(styled&&(moved?"text-accent":"text-text-muted"))}}
-        style={{fontSize:9,fontWeight:"600"}}>{unit}</Text>
+        style={{fontSize:forgeType.caption,fontWeight:"600"}}>{unit}</Text>
     </View>
   </View>;
 }

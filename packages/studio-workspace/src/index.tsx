@@ -187,13 +187,13 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     <View style={{ alignItems: 'center', gap: scale.space.inset, paddingBottom: scale.space.group }}>
       {PANEL_IDS.filter(id => id !== 'history').map(id => <View key={id} style={{ alignItems: 'center', gap: 4 }}>
         {button(panelNames[id]!, () => action(id, layout.collapsed.includes(id) ? 'activate' : 'collapse'), !layout.collapsed.includes(id), false, false, true, panelIcons[id])}
-        <Text style={{ color: !layout.collapsed.includes(id) ? colors.accent : colors.muted, fontSize: 9, fontWeight: !layout.collapsed.includes(id) ? '600' : '400' }}>{id === 'properties' ? 'Inspect' : id === 'actions' ? 'Commands' : 'Document'}</Text>
+        <Text style={{ color: !layout.collapsed.includes(id) ? colors.accent : colors.muted, fontSize: scale.type.caption, fontWeight: !layout.collapsed.includes(id) ? '600' : '400' }}>{id === 'properties' ? 'Inspect' : id === 'actions' ? 'Commands' : 'Document'}</Text>
       </View>)}
     </View>
     <View style={{ width: 28, height: 1, backgroundColor: colors.line }} />
     <View style={{ alignItems: 'center', gap: scale.space.stack, paddingTop: scale.space.group }}>
       {button('History', () => action('history', layout.collapsed.includes('history') ? 'activate' : 'collapse'), !layout.collapsed.includes('history'), false, false, true, panelIcons.history)}
-      <Text style={{ color: layout.collapsed.includes('history') ? colors.muted : colors.accent, fontSize: 9 }}>History</Text>
+      <Text style={{ color: layout.collapsed.includes('history') ? colors.muted : colors.accent, fontSize: scale.type.caption }}>History</Text>
     </View>
   </View>;
   return <View {...keyboardProps} onLayout={event => {
@@ -265,7 +265,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     {compact && !canvasStudio && <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.base, paddingBottom: 6 }}>
       {PANEL_IDS.map(id => <View key={id} style={{ flex: 1, alignItems: 'center' }}>
         {button(panelNames[id]!, () => action(id, layout.collapsed.includes(id) ? 'activate' : 'collapse'), !layout.collapsed.includes(id), false, true, true, panelIcons[id])}
-        <Text style={{ color: layout.collapsed.includes(id) ? colors.muted : colors.accent, fontSize: scale.type.micro }}>{id === 'properties' ? 'Inspect' : id === 'actions' ? 'Tools' : panelNames[id]}</Text>
+        <Text style={{ color: layout.collapsed.includes(id) ? colors.muted : colors.accent, fontSize: scale.type.caption }}>{id === 'properties' ? 'Inspect' : id === 'actions' ? 'Tools' : panelNames[id]}</Text>
       </View>)}
     </View>}
     {(!canvasStudio || props.error || layoutError || /complete|generated|failed|…/.test(status)) && <View style={{ minHeight: scale.size.status, paddingHorizontal: scale.space.group, paddingVertical: scale.space.element / 2 + 2, borderTopWidth: 1, borderTopColor: colors.line, ...(canvasStudio ? { position: 'absolute', left: 76, right: 76, bottom: 84, zIndex: 20, backgroundColor: colors.raised, borderRadius: scale.radius.control, borderWidth: 1, borderColor: colors.controlBorder, boxShadow: '0 4px 16px #00000030' } : {}) }}>

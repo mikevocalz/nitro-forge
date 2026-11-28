@@ -27,7 +27,10 @@ export const workspaceScale = {
   /** Role names over the two radii: `control` and inner views take `sm`;
    * `panel` (outer views) and `paper` (document frames) take `md`. */
   radius: { control: forgeRadius.sm, panel: forgeRadius.md, paper: forgeRadius.md },
-  type: { micro: 10, label: 12, body: 14, title: 20, display: 32, manuscript: 20 },
+  /** `caption` (11 px) is the smallest size for words: rail and tab-bar labels,
+   * ruler units. `micro` is for numerals that sit beside larger text. The
+   * editor controls mirror this ramp in packages/editor-controls/src/type-scale.ts. */
+  type: { micro: 10, caption: 11, label: 12, body: 14, title: 20, display: 32, manuscript: 20 },
   font: { serif: 'Georgia', mono: 'monospace' },
   size: { target: 44, rail: 72, header: 60, toolbar: 52, status: 28 },
 } as const;
