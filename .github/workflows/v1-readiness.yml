@@ -11,6 +11,7 @@ on:
       - 'docs/completion/v1-component-scope.json'
       - 'tooling/derive-v1-component-scope.mjs'
       - 'tooling/check-radius.mjs'
+      - 'tooling/check-token-mirror.mjs'
       - 'tooling/source-roots.mjs'
       - 'package.json'
       - 'design/DIRECTION.md'
@@ -63,3 +64,5 @@ jobs:
           node-version: '24.19.0'
       - run: node --test tooling/tests/check-radius.test.mjs
       - run: node tooling/check-radius.mjs
+      - run: node --test tooling/tests/check-token-mirror.test.mjs
+      - run: node tooling/check-token-mirror.mjs

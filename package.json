@@ -26,6 +26,8 @@
     "test:completion": "node --test tooling/verify-completion-plan.test.mjs",
     "check:radius": "node tooling/check-radius.mjs",
     "test:check-radius": "node --test tooling/tests/check-radius.test.mjs",
+    "check:token-mirror": "node tooling/check-token-mirror.mjs",
+    "test:check-token-mirror": "node --test tooling/tests/check-token-mirror.test.mjs",
     "validate:v1": "node tooling/validate-v1-all.mjs",
     "validate:v1:prerelease": "node tooling/validate-v1-all.mjs --radius-report --version 1.0.0-rc.1",
     "test:validate-v1": "node --test tooling/validate-v1.test.mjs",
