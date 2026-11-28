@@ -14,7 +14,9 @@ import { CadenceDocument } from "../src/index";
 import { CADENCE_EXPORT_FORMATS, CADENCE_IMPORT_FORMATS, songEndTicks } from "../src/transfer";
 
 describe("cadence WAV export (real Rust via nf-cli)", () => {
-  it("renders the whole song into a valid float WAV, continuously", async () => {
+  // A 30 s render through the debug nf-cli takes about 3 s on an idle 4-core
+  // runner; the default 5 s timeout fails it when CI runs packages in parallel.
+  it("renders the whole song into a valid float WAV, continuously", { timeout: 60_000 }, async () => {
     const song = await CadenceDocument.open(host, 120);
     const t = (await song.addTrack("midi")).data.track_id;
     // 30 s at 120 bpm, ppq 960 = 60 beats = 57,600 ticks; crosses the former 10-second chunk boundary.
@@ -68,7 +70,7 @@ describe("cadence WAV export (real Rust via nf-cli)", () => {
   });
 });
 
-it('WAV keeps stateful insert output continuous across ten seconds',async()=>{
+it('WAV keeps stateful insert output continuous across ten seconds',{timeout:60_000},async()=>{
  const song=await CadenceDocument.open(host,120);try{
  const t=(await song.addTrack('midi')).data.track_id;const c=(await song.addClip(t,0,21120)).data.clip_id;await song.addNote(c,69,0,21120);await song.addInsert(t,'eq',{params:{bands:[{type:'low_pass',freq_hz:40,q:1}]}});
  const out=await runExport(song.handle,CADENCE_EXPORT_FORMATS,{formatId:'wav',filename:'continuous'});const expected=await song.render(0,21120,48000);

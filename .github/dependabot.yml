@@ -1,0 +1,44 @@
+# Dependency update proposals only. Dependabot opens pull requests; nothing
+# here merges them. Every proposal must pass the required `ci-required` check
+# and a human review (docs/release/RELEASE_TRAIN.md, "npm audit nuances").
+version: 2
+updates:
+  # Root pnpm workspace (packages/* and apps/*) and its pnpm-lock.yaml.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # Skia v3 Graphite and WebGPU share one Dawn build and move together in
+      # one reviewed PR (RELEASE_TRAIN.md). Both are patched in
+      # pnpm-workspace.yaml, so a bump also needs its patch moved.
+      skia-webgpu:
+        patterns:
+          - react-native-skia
+          - react-native-webgpu
+      # The Nitro v1 trio is pinned to one nightly across the graph.
+      nitro-v1:
+        patterns:
+          - react-native-nitro-modules
+          - nitro-core
+          - nitrogen
+      # The Metro family is overridden to one version in pnpm-workspace.yaml
+      # (docs/native/METRO_FILE_MAP_PORT.md).
+      metro:
+        patterns:
+          - metro
+          - metro-*
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  # Actions stay pinned by full commit SHA; Dependabot updates the SHA and
+  # its version comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

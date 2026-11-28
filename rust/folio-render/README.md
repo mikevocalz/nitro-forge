@@ -59,6 +59,11 @@ cargo test -p folio-render   # real pdfium tests run when the lib resolves
   `21a1567b397b571f4f77f21ca91eac7b892774219c3c715a5127a20950ccb18b`
 - Extracted `lib/libpdfium.dylib` SHA-256:
   `626077b6d77845796aef2fff15049cdab0c176b4531433f090cfcbab4de1db59`
+- Linux x64 (CI, `tooling/ci/pinned-sources.sh`): artifact
+  `pdfium-linux-x64.tgz` from the same release, tarball SHA-256
+  `d6b1e28950a0392590d79bbdbb7eb19686872b688f8a36f170acb19e41473113`,
+  extracted `lib/libpdfium.so` SHA-256
+  `655e831208783f38dc187ad424bdfdae39858cfbfcf3a9a2cb9dd0694b5abcad`.
 - `pdfium-render` crate feature pin is `pdfium_8125` (its newest
   bindings generation); it loads the 8138 dylib because binding is by
   symbol name at run time and the FPDF API is backward compatible.
@@ -71,7 +76,8 @@ cargo test -p folio-render   # real pdfium tests run when the lib resolves
 | Target | Status |
 |---|---|
 | macOS arm64 dev host | **RUN** — open/renderPage/textPage/search/pageInfo verified |
-| macOS x64, iOS, Android, Linux, Windows | NOT-RUN (upstream prebuilt artifacts exist) |
+| Linux x64 | **RUN** — `cargo test -p folio-render` and the folio `render.e2e` suite pass against `pdfium-linux-x64.tgz` (chromium/8138); the required `CI` workflow runs both |
+| macOS x64, iOS, Android, Windows | NOT-RUN (upstream prebuilt artifacts exist) |
 | WASM | NOT-RUN — pdfium Emscripten build unverified; hayro hedge not started |
 
 Cancellation: none mid-render in this slice — the host processes one

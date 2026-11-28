@@ -9,7 +9,16 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "passThroughEnv": [
+        "NF_CLI",
+        "FOLIO_RENDER",
+        "FOLIO_PDFIUM_LIBRARY",
+        "FOLIO_PDFIUM_DIR",
+        "RAW_DECODE",
+        "NF_RAW_TEST_FIXTURE",
+        "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
+      ]
     },
     "lint": {}
   }

@@ -2,8 +2,7 @@ name: Studio workspace and dock contract
 
 on:
   push:
-    branches:
-      - docs/studio-snaprails-mobbin-workspace-2026-11-02
+    branches: [master]
   pull_request:
     paths:
       - 'packages/prism/**'
