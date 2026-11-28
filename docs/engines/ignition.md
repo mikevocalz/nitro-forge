@@ -34,7 +34,7 @@ Nitro-Forge native integration layer: engine session contracts, Nitro HybridObje
 ## Props
 
 <!-- generated:begin props source=packages/ignition/package.json,packages/ignition/src/index.ts -->
-Not a component, so there are no props. 13 entry points: `@nitro-forge/ignition`, `@nitro-forge/ignition/cli`, `@nitro-forge/ignition/nitro`, `@nitro-forge/ignition/v1-host`, `@nitro-forge/ignition/workspace`, `@nitro-forge/ignition/transfer`, `@nitro-forge/ignition/workspace-ui`, `@nitro-forge/ignition/transfer-ui`, `@nitro-forge/ignition/autosave`, `@nitro-forge/ignition/transactions`, `@nitro-forge/ignition/collaboration`, `@nitro-forge/ignition/collaboration-http`, `@nitro-forge/ignition/collaboration-checkpoint`.
+Not a component, so there are no props. 14 entry points: `@nitro-forge/ignition`, `@nitro-forge/ignition/cli`, `@nitro-forge/ignition/nitro`, `@nitro-forge/ignition/v1-host`, `@nitro-forge/ignition/workspace`, `@nitro-forge/ignition/transfer`, `@nitro-forge/ignition/workspace-ui`, `@nitro-forge/ignition/transfer-ui`, `@nitro-forge/ignition/autosave`, `@nitro-forge/ignition/transactions`, `@nitro-forge/ignition/collaboration`, `@nitro-forge/ignition/collaboration-http`, `@nitro-forge/ignition/collaboration-checkpoint`, `@nitro-forge/ignition/app.plugin.cjs`.
 <!-- generated:end props -->
 
 ## Variants

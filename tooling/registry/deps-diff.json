@@ -17,9 +17,7 @@
       "addedByImports": [
         "@nitro-forge/forge-directions"
       ],
-      "inHandoffOnly": [
-        "@nitro-forge/studio-theme"
-      ]
+      "inHandoffOnly": []
     },
     "quill-text-editor": {
       "addedByImports": [
@@ -29,13 +27,15 @@
     },
     "prism-editor": {
       "addedByImports": [
-        "@nitro-forge/studio-gesture"
+        "@nitro-forge/studio-gesture",
+        "@nyc-tron/shell/MenuButton"
       ],
       "inHandoffOnly": []
     },
     "prism-canvas": {
       "addedByImports": [
-        "@nitro-forge/forge-directions"
+        "@nitro-forge/forge-directions",
+        "@nitro-forge/studio-theme"
       ],
       "inHandoffOnly": []
     },
@@ -72,11 +72,15 @@
       "inHandoffOnly": []
     },
     "studio-ui-provider": {
-      "addedByImports": [],
+      "addedByImports": [
+        "@nitro-forge/studio-theme"
+      ],
       "inHandoffOnly": []
     },
     "nyc-tron-host": {
-      "addedByImports": [],
+      "addedByImports": [
+        "@nitro-forge/studio-theme"
+      ],
       "inHandoffOnly": []
     },
     "studio-theme": {

@@ -261,6 +261,10 @@
      "target": "prism-transform.ts"
     },
     {
+     "from": "packages/studio-workspace/src/prism-blend.ts",
+     "target": "prism-blend.ts"
+    },
+    {
      "from": "packages/studio-workspace/src/rgba-png.ts",
      "target": "rgba-png.ts"
     }
