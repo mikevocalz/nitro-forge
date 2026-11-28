@@ -1,4 +1,5 @@
-import { defineConfig, type Plugin } from 'vite';
+import { defaultClientConditions, defineConfig, type Plugin } from 'vite';
+import { SOURCE_CONDITION } from '../../tooling/source-condition.mjs';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -138,6 +139,9 @@ export default defineConfig({
   // Listed up front: a late discovery re-optimizes mid-session and mixes dependency versions.
   optimizeDeps: { include: nycTronEntries, rolldownOptions: { resolve: { extensions: webExtensions }, plugins: [reanimatedCompiledSubpaths(), nycTronClassName()] } },
   resolve: {
+    // Workspace packages export built lib/ files; this repo's own condition
+    // serves their src/ so the app runs without building them first.
+    conditions: [SOURCE_CONDITION, ...defaultClientConditions],
     // React Native packages publish platform siblings without browser exports.
     extensions: webExtensions,
     alias: [

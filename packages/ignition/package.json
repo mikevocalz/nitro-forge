@@ -3,24 +3,112 @@
   "version": "0.1.0",
   "description": "Nitro-Forge native integration layer: engine session contracts, Nitro HybridObject spec, and host transports.",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "react-native": "./lib/index.native.js",
   "exports": {
-    ".": "./src/index.ts",
-    "./cli": "./src/host-cli.ts",
-    "./nitro": "./src/specs/ForgeFactory.nitro.ts",
-    "./v1-host": "./src/v1-host.ts",
-    "./workspace": "./src/workspace.ts",
-    "./transfer": "./src/transfer.ts",
-    "./workspace-ui": "./src/workspace-ui.ts",
-    "./transfer-ui": "./src/transfer-ui.ts",
-    "./autosave": "./src/autosave.ts",
-    "./transactions": "./src/transactions.ts",
-    "./collaboration": "./src/collaboration.ts",
-    "./collaboration-http": "./src/collaboration-http.ts",
-    "./collaboration-checkpoint": "./src/collaboration-checkpoint.ts"
+    ".": {
+      "@nitro-forge/source": {
+        "react-native": "./src/index.native.ts",
+        "default": "./src/index.ts"
+      },
+      "types": "./lib/index.d.ts",
+      "react-native": "./lib/index.native.js",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./cli": {
+      "@nitro-forge/source": {
+        "node": "./src/host-cli.ts",
+        "types": "./src/host-cli.ts"
+      },
+      "types": "./lib/host-cli.d.ts",
+      "node": "./lib/host-cli.js"
+    },
+    "./nitro": {
+      "@nitro-forge/source": {
+        "react-native": "./src/specs/ForgeFactory.nitro.ts",
+        "types": "./src/specs/ForgeFactory.nitro.ts"
+      },
+      "types": "./lib/specs/ForgeFactory.nitro.d.ts",
+      "react-native": "./lib/specs/ForgeFactory.nitro.js"
+    },
+    "./v1-host": {
+      "@nitro-forge/source": "./src/v1-host.ts",
+      "types": "./lib/v1-host.d.ts",
+      "react-native": "./lib/v1-host.js",
+      "import": "./lib/v1-host.js",
+      "default": "./lib/v1-host.js"
+    },
+    "./workspace": {
+      "@nitro-forge/source": "./src/workspace.ts",
+      "types": "./lib/workspace.d.ts",
+      "react-native": "./lib/workspace.js",
+      "import": "./lib/workspace.js",
+      "default": "./lib/workspace.js"
+    },
+    "./transfer": {
+      "@nitro-forge/source": "./src/transfer.ts",
+      "types": "./lib/transfer.d.ts",
+      "react-native": "./lib/transfer.js",
+      "import": "./lib/transfer.js",
+      "default": "./lib/transfer.js"
+    },
+    "./workspace-ui": {
+      "@nitro-forge/source": "./src/workspace-ui.ts",
+      "types": "./lib/workspace-ui.d.ts",
+      "react-native": "./lib/workspace-ui.js",
+      "import": "./lib/workspace-ui.js",
+      "default": "./lib/workspace-ui.js"
+    },
+    "./transfer-ui": {
+      "@nitro-forge/source": "./src/transfer-ui.ts",
+      "types": "./lib/transfer-ui.d.ts",
+      "react-native": "./lib/transfer-ui.js",
+      "import": "./lib/transfer-ui.js",
+      "default": "./lib/transfer-ui.js"
+    },
+    "./autosave": {
+      "@nitro-forge/source": "./src/autosave.ts",
+      "types": "./lib/autosave.d.ts",
+      "react-native": "./lib/autosave.js",
+      "import": "./lib/autosave.js",
+      "default": "./lib/autosave.js"
+    },
+    "./transactions": {
+      "@nitro-forge/source": "./src/transactions.ts",
+      "types": "./lib/transactions.d.ts",
+      "react-native": "./lib/transactions.js",
+      "import": "./lib/transactions.js",
+      "default": "./lib/transactions.js"
+    },
+    "./collaboration": {
+      "@nitro-forge/source": "./src/collaboration.ts",
+      "types": "./lib/collaboration.d.ts",
+      "react-native": "./lib/collaboration.js",
+      "import": "./lib/collaboration.js",
+      "default": "./lib/collaboration.js"
+    },
+    "./collaboration-http": {
+      "@nitro-forge/source": "./src/collaboration-http.ts",
+      "types": "./lib/collaboration-http.d.ts",
+      "react-native": "./lib/collaboration-http.js",
+      "import": "./lib/collaboration-http.js",
+      "default": "./lib/collaboration-http.js"
+    },
+    "./collaboration-checkpoint": {
+      "@nitro-forge/source": "./src/collaboration-checkpoint.ts",
+      "types": "./lib/collaboration-checkpoint.d.ts",
+      "react-native": "./lib/collaboration-checkpoint.js",
+      "import": "./lib/collaboration-checkpoint.js",
+      "default": "./lib/collaboration-checkpoint.js"
+    },
+    "./package.json": "./package.json"
   },
+  "sideEffects": false,
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "codegen": "nitrogen"

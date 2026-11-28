@@ -1,1 +1,32 @@
-{"name":"@nitro-forge/draft","version":"0.1.0","description":"Bounded persistent world-space 2D drafting and linear coordinate constraints.","type":"module","main":"./src/index.ts","types":"./src/index.ts","exports":{".":"./src/index.ts"},"scripts":{"test": "vitest run --config ../../tooling/completion-backends.vitest.config.mjs packages/draft/tests", "typecheck":"tsc --noEmit -p tsconfig.json"},"dependencies":{"@nitro-forge/ignition":"workspace:*"},"devDependencies":{"typescript":"7.0.2"}}
+{
+  "name": "@nitro-forge/draft",
+  "version": "0.1.0",
+  "description": "Bounded persistent world-space 2D drafting and linear coordinate constraints.",
+  "type": "module",
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "react-native": "./lib/index.js",
+  "exports": {
+    ".": {
+      "@nitro-forge/source": "./src/index.ts",
+      "types": "./lib/index.d.ts",
+      "react-native": "./lib/index.js",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run --config ../../tooling/completion-backends.vitest.config.mjs packages/draft/tests",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nitro-forge/ignition": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

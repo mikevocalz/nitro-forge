@@ -8,8 +8,8 @@
     "nf-console": "./src/main.ts"
   },
   "scripts": {
-    "demo": "tsx src/main.ts",
-    "test": "tsx src/main.ts"
+    "demo": "tsx --conditions=@nitro-forge/source src/main.ts",
+    "test": "tsx --conditions=@nitro-forge/source src/main.ts"
   },
   "devDependencies": {
     "tsx": "4.23.15"

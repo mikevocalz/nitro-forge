@@ -3,14 +3,37 @@
   "version": "0.1.0",
   "description": "Nitro-Forge splice document API.",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "react-native": "./lib/index.js",
   "exports": {
-    ".": "./src/index.ts",
-    "./timeline-cluster": "./src/timeline-cluster.ts",
-    "./transfer": "./src/transfer.ts"
+    ".": {
+      "@nitro-forge/source": "./src/index.ts",
+      "types": "./lib/index.d.ts",
+      "react-native": "./lib/index.js",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./timeline-cluster": {
+      "@nitro-forge/source": "./src/timeline-cluster.ts",
+      "types": "./lib/timeline-cluster.d.ts",
+      "react-native": "./lib/timeline-cluster.js",
+      "import": "./lib/timeline-cluster.js",
+      "default": "./lib/timeline-cluster.js"
+    },
+    "./transfer": {
+      "@nitro-forge/source": "./src/transfer.ts",
+      "types": "./lib/transfer.d.ts",
+      "react-native": "./lib/transfer.js",
+      "import": "./lib/transfer.js",
+      "default": "./lib/transfer.js"
+    },
+    "./package.json": "./package.json"
   },
+  "sideEffects": false,
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },

@@ -3,15 +3,45 @@
   "version": "0.1.0",
   "description": "Nitro-Forge folio document API.",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "react-native": "./lib/index.js",
   "exports": {
-    ".": "./src/index.ts",
-    "./office-cluster": "./src/office-cluster.ts",
-    "./render": "./src/render.ts",
-    "./transfer": "./src/transfer.ts"
+    ".": {
+      "@nitro-forge/source": "./src/index.ts",
+      "types": "./lib/index.d.ts",
+      "react-native": "./lib/index.js",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./office-cluster": {
+      "@nitro-forge/source": "./src/office-cluster.ts",
+      "types": "./lib/office-cluster.d.ts",
+      "react-native": "./lib/office-cluster.js",
+      "import": "./lib/office-cluster.js",
+      "default": "./lib/office-cluster.js"
+    },
+    "./render": {
+      "@nitro-forge/source": {
+        "node": "./src/render.ts",
+        "types": "./src/render.ts"
+      },
+      "types": "./lib/render.d.ts",
+      "node": "./lib/render.js"
+    },
+    "./transfer": {
+      "@nitro-forge/source": "./src/transfer.ts",
+      "types": "./lib/transfer.d.ts",
+      "react-native": "./lib/transfer.js",
+      "import": "./lib/transfer.js",
+      "default": "./lib/transfer.js"
+    },
+    "./package.json": "./package.json"
   },
+  "sideEffects": false,
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },

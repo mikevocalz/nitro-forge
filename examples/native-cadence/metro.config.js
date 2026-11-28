@@ -19,6 +19,9 @@ config.watchFolders = [
   path.join(forgeRoot, "packages/media-ui"),
   path.join(forgeRoot, "packages/editor-controls"),
 ];
+// Forge packages export built lib/ files; their `@nitro-forge/source`
+// condition serves src/ so the lab bundles without building them first.
+config.resolver.unstable_conditionNames = [...new Set([...(config.resolver.unstable_conditionNames ?? []), "@nitro-forge/source"])];
 
 // Explicit lab mode serves a separate acceptance entry. Normal consumers keep
 // their released dependency graph; candidate-only exports are isolated here.
