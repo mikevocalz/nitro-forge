@@ -128,8 +128,8 @@ function SpectrogramViewBody({actionError,disabledReason,visibleRange={start:0,e
         {timeTicks(duration).map((t, i, all) => <Text key={t.label} {...{ className: muted }}
           style={{ position: "absolute", fontSize: tokens.text.off11, fontVariant: ["tabular-nums"],
             ...(i === 0 ? { left: 0 } : i === all.length - 1 && t.position > 0.92
-              ? { right: ((1 - t.position) * 96) + "%" }
-              : { left: (t.position * 96) + "%", transform: [{ translateX: "-50%" }] }) }}>{t.label}</Text>)}
+              ? { right: ((1 - t.position) * 100) + "%" }
+              : { left: (t.position * 100) + "%", transform: [{ translateX: "-50%" }] }) }}>{t.label}</Text>)}
       </View>
       <View aria-hidden style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.off6, marginLeft: AXIS, flexWrap: "wrap" }}>
         <Text {...{ className: muted }} style={{ fontSize: tokens.text.off11 }}>Quiet</Text>

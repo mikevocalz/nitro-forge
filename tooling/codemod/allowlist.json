@@ -503,15 +503,15 @@
       "file": "packages/editor-controls/src/audio/SpectrogramView.tsx",
       "kind": "number",
       "property": "right",
-      "value": "96",
-      "reason": "Percentage, not a length: the end marker sits at (1 - position) * 96 percent of the strip, a string ending in %."
+      "value": "100",
+      "reason": "Percentage, not a length: the end marker sits at (1 - position) * 100 percent of the strip, a string ending in %."
     },
     {
       "file": "packages/editor-controls/src/audio/SpectrogramView.tsx",
       "kind": "number",
       "property": "left",
-      "value": "96",
-      "reason": "Percentage, not a length: the marker sits at position * 96 percent of the strip, a string ending in %."
+      "value": "100",
+      "reason": "Percentage, not a length: the marker sits at position * 100 percent of the strip, a string ending in %."
     },
     {
       "file": "packages/editor-controls/src/audio/eq-graph.ts",
