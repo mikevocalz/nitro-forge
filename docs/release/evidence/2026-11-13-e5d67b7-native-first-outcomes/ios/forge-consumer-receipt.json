@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "cd75fc235cfbf2345c63d30efb3368cfa40d2779",
+  "manifestSha256": "a168f747b63ead5a1f88e9aeaef5aa6c0f13e23c8854119d9e85714516ac9ea4",
+  "stages": [
+    "prepare",
+    "install:ios",
+    "verify:ios",
+    "prebuild:ios"
+  ],
+  "nativeRuntime": "NOT RUN"
+}

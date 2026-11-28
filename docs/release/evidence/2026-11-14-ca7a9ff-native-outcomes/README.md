@@ -1,0 +1,29 @@
+# Source-bound native outcomes: ca7a9ff
+
+PR head ca7a9ffb3244b1eee39e884281b9989bbf1d2a42; executed merge ed82495361f21407d27adf970374c8f79cb4822d. [Clean consumer run 43565621971](https://github.com/mikevocalz/nitro-forge/actions/runs/43565621971) completed with Android success and iOS failure. The gate remains incomplete.
+
+Source checks passed 52/52. Both native producers, required license/source closure, eight-tarball assembly, external install/verification/typecheck/Metro, ordinary frozen prebuild and both Release compilations passed. Candidate ZIP artifact 14103264992 SHA256 d277b56a19ce2426eb20c705b8bf83432f58a04aec5a8defe2bf26a4753d56ce; candidate manifest SHA256 f555e5ab3c99ab5b41f7579f30b5a6d7d705a40ee832f133d9b6991ff6db8cef.
+
+## Android: actual installed workflows
+
+Job 132369793531 passed the picker and two unchanged complete seven-studio OS-touch flows. Each JUnit case executed once with zero failures/skips. Each full pass retained 49 original PNGs and all seven OS-sandbox NFD/expected-state pairs. Author verification checked every planned PNG hash and 320x800 dimensions plus all 14 NFD envelopes, lengths, hashes and expected-record identities. Direct raw semantic state comparison applies to the six JSON-native studios; Folio's pdf_b64 snapshot differs from its engine-derived PDF metadata record, so Folio semantic equality is native UI callback evidence, not independent raw PDF interpretation. Both full-flow SHA256 values are cb0216986db74e129c9305d893b73460871503c36b14cc851ddf1ce76a2ab084. Real native callbacks performed edit, durable save, new-host reopen, fresh undo/redo, rejected restore preserving the document, and process termination/relaunch plus disk reopen.
+
+Runtime artifact 14103988815 is 6172877 bytes, ZIP SHA256 043ad0ddfb92c83863a5b8e5cf7aa7e26f3a87630e94ac80a3618c60541696a5. APK SHA256 0ed212e2a2f3e1b85fef2b931d16b182b7c1a005143758dd688023262dc0b745; embedded bundle SHA256 13b731a37baff54f5ed72bf24cf589b5aa2fff5006d2ca6eb2e582ca0566c993; app ID dev.nitroforge.f6.consumer. Archive/app/lock/installed-graph/workspace/config identities are retained in the proof and application metadata. The APK uses the ordinary Expo acceptance-template debug signing; no publication claim.
+
+Author visual inspection of the actual unchanged pass-2 persistence PNG for every studio found readable dark text, square controls and the visible successful new-host disk-reopen state. This is a limited author review, not independent R2 visual acceptance or a product-design claim. The picker proof records all seven option bounds inside the 320x800 viewport. Full independent source, execution and visual review remains pending. Original screenshots and OS files remain in the source-bound runtime artifact; this directory preserves their inventory/hashes and executed proof, not replacement images.
+
+## iOS: failed OS migration before application launch
+
+Job 132369793479 compiled and retained the Release app, then failed before launch. The available-device query took about 1.7 seconds. The preseeded iPhone Duo profile's bootstatus process exited zero after 52 seconds, but its retained combined output states Status=3, isTerminal=YES and Data Migration Failed. Installation subsequently timed out after 90 seconds. No iOS full flow or product-runtime result exists for this source. Runtime failure artifact 14104436595 is 127197 bytes, ZIP SHA256 80010f86663315a867f784018316201eebb324f16cf1a948109afb9c7d6eaf82. The raw failure, commands, chosen device/runtime and boot log are retained alongside the original complete job log.
+
+The next harness candidate creates a fresh, uniquely owned iPhone18Pro profile using an already installed available generic iOS runtime, checks the retained combined bootstatus file for failure even when exit status is zero, and deletes only that new UUID. It preserves existing profiles, app/window/orientation/ABI contracts, strict state checks and both complete-flow requirements. It records actual SDK create help, before/after full device inventories and ownership/runtime identity. Creation is guarded by the 10GB floor plus a 2GiB allocation budget. Its three new source regressions and fresh native execution are NOT RUN at this receipt; scoped independent source review accepted preview 603de21b637f45368f43a329365e03ec822dfc47 after correcting combined-output handling. A successful future run cannot retroactively pass this original failure.
+
+## Tally engine checks
+
+[Run 43565622022](https://github.com/mikevocalz/nitro-forge/actions/runs/43565622022), job 132358710179, passed typechecking, 22 contract/mock tests, 234 actual Rust tests including all three new allocator regressions, real nf-cli compilation and nine live Rust adapter tests. The actual hosted default test profile was unoptimized with debuginfo. The repair follows the existing ENGINE_OPS prior-counter undo contract; no schema/API or equality-check relaxation. These checks and Android execution do not establish iOS acceptance.
+
+## Limits
+
+No gate/status/validator changes; F6 remains incomplete. Graph remains Expo58.0.24 / React19.3.1 / RN0.88.1 / Nitro nightly136, pending separate reviewed F1 reconciliation and fresh final-source proof. Full release/legal acceptance, independent R2 review and final graph execution remain required. Local Argent NOT RUN. No local heavy install/build/test, physical iPhone, app/store injection, guessed engine result, merge/readiness/tag/publication operation. Local disk remained below the owner's 10,000,000,000-byte floor; receipt/source commits use leased GitHub API updates and the local checkout is stale.
+
+Clarification (2026-11-14): the previous narrative overstated independent raw semantic comparison for Folio. This wording correction preserves all original byte identities, logs and native results; it changes no comparator or gate claim.

@@ -1,0 +1,61 @@
+{
+  "artifacts": [
+    {
+      "id": 14093605639,
+      "name": "forge-native-apple",
+      "size_in_bytes": 51289160,
+      "url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14093605639",
+      "archive_download_url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14093605639/zip",
+      "expired": false,
+      "created_at": "2026-11-14T02:02:26Z",
+      "expires_at": "2026-11-21T02:02:20Z",
+      "updated_at": "2026-11-14T02:02:26Z",
+      "digest": "sha256:5266ac5882a74e558d4dac415239441fcca7ba73095731fbd6b886f5018646ce",
+      "workflow_run": {
+        "id": 43542781547,
+        "repository_id": 1442983723,
+        "head_repository_id": 1442983723,
+        "head_branch": "feat/f6-clean-consumer-20261113",
+        "head_sha": "ba5ceb96ab3de00d1fac6f4513fb57c69c3f9049"
+      }
+    },
+    {
+      "id": 14093376699,
+      "name": "forge-license-materials",
+      "size_in_bytes": 18434736,
+      "url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14093376699",
+      "archive_download_url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14093376699/zip",
+      "expired": false,
+      "created_at": "2026-11-14T02:06:59Z",
+      "expires_at": "2026-11-28T02:06:56Z",
+      "updated_at": "2026-11-14T02:06:59Z",
+      "digest": "sha256:3555ed93c1126252a60df7360c5a0900f2f93b169ce672f2f937b0c4e896283b",
+      "workflow_run": {
+        "id": 43542781547,
+        "repository_id": 1442983723,
+        "head_repository_id": 1442983723,
+        "head_branch": "feat/f6-clean-consumer-20261113",
+        "head_sha": "ba5ceb96ab3de00d1fac6f4513fb57c69c3f9049"
+      }
+    },
+    {
+      "id": 14093376494,
+      "name": "forge-native-android",
+      "size_in_bytes": 74706089,
+      "url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14093376494",
+      "archive_download_url": "https://api.github.com/repos/mikevocalz/nitro-forge/actions/artifacts/14093376494/zip",
+      "expired": false,
+      "created_at": "2026-11-14T02:05:21Z",
+      "expires_at": "2026-11-21T02:05:14Z",
+      "updated_at": "2026-11-14T02:05:21Z",
+      "digest": "sha256:98bc6c79305c06480af792f22f4a7df8878365995c36148d7140612d57086f5f",
+      "workflow_run": {
+        "id": 43542781547,
+        "repository_id": 1442983723,
+        "head_repository_id": 1442983723,
+        "head_branch": "feat/f6-clean-consumer-20261113",
+        "head_sha": "ba5ceb96ab3de00d1fac6f4513fb57c69c3f9049"
+      }
+    }
+  ]
+}

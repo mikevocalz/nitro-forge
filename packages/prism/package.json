@@ -21,5 +21,11 @@
     "@nitro-forge/editor-controls": "workspace:*",
     "typescript": "7.0.2",
     "vitest": "5.1.0"
-  }
+  },
+  "files": [
+    "src",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE"
+  ],
+  "license": "MIT"
 }

@@ -1,0 +1,14 @@
+packages:
+  - "."
+minimumReleaseAge: 0
+nodeLinker: isolated
+enableGlobalVirtualStore: false
+overrides:
+  "@nitro-forge/ignition": "file:./artifacts/nitro-forge-ignition-1.0.0-f6.43576021743.1.tgz"
+  "@nitro-forge/prism": "file:./artifacts/nitro-forge-prism-1.0.0-f6.43576021743.1.tgz"
+  "@nitro-forge/cadence": "file:./artifacts/nitro-forge-cadence-1.0.0-f6.43576021743.1.tgz"
+  "@nitro-forge/splice": "file:./artifacts/nitro-forge-splice-1.0.0-f6.43576021743.1.tgz"
+  "@nitro-forge/folio": "file:./artifacts/nitro-forge-folio-1.0.0-f6.43576021743.1.tgz"
+  "@nitro-forge/pitch": "file:./artifacts/nitro-forge-pitch-1.0.0-f6.43576021743.1.tgz"
+  "@nitro-forge/tally": "file:./artifacts/nitro-forge-tally-1.0.0-f6.43576021743.1.tgz"
+  "@nitro-forge/quill": "file:./artifacts/nitro-forge-quill-1.0.0-f6.43576021743.1.tgz"

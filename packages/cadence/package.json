@@ -28,5 +28,10 @@
     "react": "19.3.1",
     "react-native": "0.88.1",
     "@nitro-forge/editor-controls": "workspace:*"
-  }
+  },
+  "files": [
+    "src",
+    "LICENSE"
+  ],
+  "license": "MIT"
 }

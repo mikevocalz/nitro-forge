@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="Forge F6 ea8d09f-52762 - iOS 27.2 - 0263B476-D4CD-4065-930D-286428D1F648" tests="1" failures="1" time="212.369" timestamp="2026-11-14T13:02:41">
+    <testcase id="Forge seven-studio durable document workflows" name="Forge seven-studio durable document workflows" classname="Forge seven-studio durable document workflows" file="/Users/runner/work/_temp/runtime-ui/pass-1/flow.yaml" time="201.861" timestamp="2026-11-14T13:02:51" status="ERROR">
+      <failure>Assertion is false: "^Studio: cadence · Document: closed$", id: f6-selected is visible</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

@@ -1,0 +1,13 @@
+{
+  "sourceCommit": "a0c7f23c36128f4a4589309bcb7c44cf3bef2dae",
+  "manifestSha256": "064c3639dad19ce2b9ca0aab542aa17804089fa519b88c707c09553aee64370a",
+  "stages": [
+    "prepare",
+    "install:ios",
+    "verify:ios",
+    "prebuild:ios",
+    "compile:ios"
+  ],
+  "nativeRuntime": "NOT RUN",
+  "configuration": "Release"
+}

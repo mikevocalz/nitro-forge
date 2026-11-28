@@ -1,0 +1,377 @@
+Timestamp               Ty Process[PID:TID]
+2026-11-14 09:01:28.273 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager registerPromise:]: Registered promise <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]> for UUID 92D35895-90CA-4DD4-820A-10086FB2B646
+2026-11-14 09:01:28.284 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSPlaceholder setAttributes:]: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>: setting placeholder attributes to <IXPlaceholderAttributes<0x1054c4000> : {
+    CFBundleShortVersionString = "0.1.0";
+    CFBundleSupportedPlatforms =     (
+        iPhoneSimulator
+    );
+    CFBundleVersion = 1;
+    DTPlatformName = iphonesimulator;
+    LSRequiresIPhoneOS = 1;
+    MinimumOSVersion = "16.4";
+    UIDeviceFamily =     (
+        1,
+        2
+    );
+    UIRequiredDeviceCapabilities =     {
+        arm64 = 1;
+    };
+}>
+2026-11-14 09:01:28.296 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager registerPromise:]: Registered promise <IXSPromisedTransferToPath(0x10550cd80) Name:Icon resources for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:633881B1-37DC-4669-BE10-18EE34796EB4 Location:[system-defined]> for UUID 633881B1-37DC-4669-BE10-18EE34796EB4
+2026-11-14 09:01:28.312 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSDataPromise _setPercentComplete:saveStateIfNeeded:]: Progress: <IXSPromisedTransferToPath(0x10550cd80) Name:Icon resources for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:633881B1-37DC-4669-BE10-18EE34796EB4 Location:[system-defined]>
+2026-11-14 09:01:28.313 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promiseDidBegin:]: Unowned promise began: <IXSPromisedTransferToPath(0x10550cd80) Name:Icon resources for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:633881B1-37DC-4669-BE10-18EE34796EB4 Location:[system-defined]>
+2026-11-14 09:01:28.313 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promise:didUpdateProgress:]: Unowned promise update progress to 1.000000 : <IXSPromisedTransferToPath(0x10550cd80) Name:Icon resources for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:633881B1-37DC-4669-BE10-18EE34796EB4 Location:[system-defined]>
+2026-11-14 09:01:28.313 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promiseDidComplete:]: Unowned promise completed: <IXSPromisedTransferToPath(0x10550cd80) Name:Icon resources for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:633881B1-37DC-4669-BE10-18EE34796EB4 Location:[system-defined]>
+2026-11-14 09:01:28.314 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSDataPromise _setPercentComplete:saveStateIfNeeded:]: Progress: <IXSPromisedInMemoryDictionary(0x10550cf00) Name:Info.plist icon content for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E25638ED-4604-4B20-9845-5D46E3E3F1A3 Location:[system-defined]>
+2026-11-14 09:01:28.315 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager registerPromise:]: Registered promise <IXSPromisedInMemoryDictionary(0x10550cf00) Name:Info.plist icon content for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E25638ED-4604-4B20-9845-5D46E3E3F1A3 Location:[system-defined]> for UUID E25638ED-4604-4B20-9845-5D46E3E3F1A3
+2026-11-14 09:01:28.316 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promiseDidBegin:]: Unowned promise began: <IXSPromisedInMemoryDictionary(0x10550cf00) Name:Info.plist icon content for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E25638ED-4604-4B20-9845-5D46E3E3F1A3 Location:[system-defined]>
+2026-11-14 09:01:28.316 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promise:didUpdateProgress:]: Unowned promise update progress to 1.000000 : <IXSPromisedInMemoryDictionary(0x10550cf00) Name:Info.plist icon content for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E25638ED-4604-4B20-9845-5D46E3E3F1A3 Location:[system-defined]>
+2026-11-14 09:01:28.316 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promiseDidComplete:]: Unowned promise completed: <IXSPromisedInMemoryDictionary(0x10550cf00) Name:Info.plist icon content for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E25638ED-4604-4B20-9845-5D46E3E3F1A3 Location:[system-defined]>
+2026-11-14 09:01:28.318 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSPlaceholder setIconResourcesPromise:]: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>: setting icon resources promise to <IXSPromisedTransferToPath(0x10550cd80) Name:Icon resources for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:633881B1-37DC-4669-BE10-18EE34796EB4 Location:[system-defined]>
+2026-11-14 09:01:28.318 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSPlaceholder setInfoPlistIconContentPromise:]: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>: setting Info.plist icon content promise to <IXSPromisedInMemoryDictionary(0x10550cf00) Name:Info.plist icon content for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E25638ED-4604-4B20-9845-5D46E3E3F1A3 Location:[system-defined]>
+2026-11-14 09:01:28.319 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promiseDidBegin:]: Unowned promise began: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>
+2026-11-14 09:01:28.320 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promise:didUpdateProgress:]: Unowned promise update progress to 0.000000 : <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>
+2026-11-14 09:01:28.320 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promise:didUpdateProgress:]: Unowned promise update progress to 0.000000 : <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>
+2026-11-14 09:01:28.326 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSDataPromise _setPercentComplete:saveStateIfNeeded:]: Progress: <IXSPromisedInMemoryDictionary(0x10550d080) Name:Localizations for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E0978517-843D-41D2-9301-924D22B44605 Location:[system-defined]>
+2026-11-14 09:01:28.327 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager registerPromise:]: Registered promise <IXSPromisedInMemoryDictionary(0x10550d080) Name:Localizations for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E0978517-843D-41D2-9301-924D22B44605 Location:[system-defined]> for UUID E0978517-843D-41D2-9301-924D22B44605
+2026-11-14 09:01:28.328 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promiseDidBegin:]: Unowned promise began: <IXSPromisedInMemoryDictionary(0x10550d080) Name:Localizations for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E0978517-843D-41D2-9301-924D22B44605 Location:[system-defined]>
+2026-11-14 09:01:28.328 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promise:didUpdateProgress:]: Unowned promise update progress to 1.000000 : <IXSPromisedInMemoryDictionary(0x10550d080) Name:Localizations for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E0978517-843D-41D2-9301-924D22B44605 Location:[system-defined]>
+2026-11-14 09:01:28.328 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promiseDidComplete:]: Unowned promise completed: <IXSPromisedInMemoryDictionary(0x10550d080) Name:Localizations for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E0978517-843D-41D2-9301-924D22B44605 Location:[system-defined]>
+2026-11-14 09:01:28.329 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSPlaceholder setLocalizationDictionaryPromise:]: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>: setting localization dict promise to <IXSPromisedInMemoryDictionary(0x10550d080) Name:Localizations for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E0978517-843D-41D2-9301-924D22B44605 Location:[system-defined]>
+2026-11-14 09:01:28.330 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promise:didUpdateProgress:]: Unowned promise update progress to 0.000000 : <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>
+2026-11-14 09:01:28.331 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSPlaceholder setConfigurationComplete:]: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>: setting configuration complete to Y
+2026-11-14 09:01:28.332 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSPlaceholder _materialize]: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>: Materializing placeholder at /Users/runner/Library/Developer/CoreSimulator/Devices/1433EBEF-B3F6-496F-84EA-12DA3DAEBFB0/data/Containers/Shared/SystemGroup/systemgroup.com.apple.installcoordinationd/Library/InstallCoordination/PromiseStaging/92D35895-90CA-4DD4-820A-10086FB2B646/ForgeConsumerSmoke.app
+2026-11-14 09:01:28.332 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSPlaceholder _materialize]: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>: Using Info.plist icon content: {
+    CFBundleIcons =     {
+        CFBundlePrimaryIcon =         {
+            CFBundleIconName = AppIcon;
+        };
+    };
+    "CFBundleIcons~ipad" =     {
+        CFBundlePrimaryIcon =         {
+            CFBundleIconName = AppIcon;
+        };
+    };
+    ISIconPlatform = iPhoneOS;
+}
+2026-11-14 09:01:28.335 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSPlaceholder _materialize]_block_invoke: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>: Using icon resource Assets.car
+2026-11-14 09:01:28.335 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSPlaceholder _materialize]: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>: Including lproj localizations for (
+)
+2026-11-14 09:01:28.335 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager promiseDidComplete:]: Unowned promise completed: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>
+2026-11-14 09:01:28.337 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSDataPromiseManager registerPromise:]: Registered promise <IXSPromisedTransferToPath(0x10550d200) Name:App Asset: dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:C64BF5A0-55FE-44F7-BBFA-B7568CB891AF Location:[system-defined]> for UUID C64BF5A0-55FE-44F7-BBFA-B7568CB891AF
+2026-11-14 09:01:28.351 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSCoordinatorManager coordinatorForIdentity:connection:error:creatingIfNotExisting:]_block_invoke: Registered coordinator: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:Background state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:01234>
+2026-11-14 09:01:28.360 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall setPriorityBoostCompletion:withSourceInfo:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:Background state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:01234>: Retaining completion from CoreSimulatorBridge (67908), QOS_CLASS_DEFAULT (0x15)
+2026-11-14 09:01:28.361 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall setImportance:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:01234>: set importance to UserWaiting
+2026-11-14 09:01:28.363 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall setPriorityBoostCompletion:withSourceInfo:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:01234>: Disposing of completion from CoreSimulatorBridge (67908), QOS_CLASS_DEFAULT (0x15)
+2026-11-14 09:01:28.363 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall setPriorityBoostCompletion:withSourceInfo:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:01234>: Retaining completion from CoreSimulatorBridge (67908), QOS_CLASS_DEFAULT (0x15)
+2026-11-14 09:01:28.429 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall _onQueue_fireObserversForClient:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:01234>: Firing applicable observers for client <IXSClientConnection<0x10544cea0> client:CoreSimulatorBridge (pid 67908) uuid:A88FEB7E-F46A-46F4-A2BB-3D978008AD39>
+2026-11-14 09:01:28.452 Df installcoordinationd[68705:28853] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall _internal_setInstallOptionsPromise:performExternalActions:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:012I4> : install options set: <IXSPromisedInMemoryData(0x10550d680) Name:MIInstallOptions data Creator:Install Coordination Internal UUID:AB0B7D82-89B5-46F6-A695-9C8A7C22A62C Location:[system-defined]>
+2026-11-14 09:01:28.452 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall promiseDidComplete:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:012I4> : Promise completed: <IXSPromisedInMemoryData(0x10550d680) Name:MIInstallOptions data Creator:Install Coordination Internal UUID:AB0B7D82-89B5-46F6-A695-9C8A7C22A62C Location:[system-defined]>
+2026-11-14 09:01:28.599 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall _internal_setAppAssetPromise:performExternalActions:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:0a2I4> : App Asset Promise set: <IXSPromisedTransferToPath(0x10550d200) Name:App Asset: dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:C64BF5A0-55FE-44F7-BBFA-B7568CB891AF Location:[system-defined]>
+2026-11-14 09:01:28.600 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall setInitialODRAssetPromises:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:0a2I4> : Initial ODR Asset Promises set: (
+)
+2026-11-14 09:01:28.851 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSDataPromise _setPercentComplete:saveStateIfNeeded:]: Progress: <IXSPromisedTransferToPath(0x10550d200) Name:App Asset: dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:C64BF5A0-55FE-44F7-BBFA-B7568CB891AF Location:[system-defined]>
+2026-11-14 09:01:28.852 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall promiseDidComplete:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStatePlaceholderPromiseNotSet promise-state:0A2I4> : Promise completed: <IXSPromisedTransferToPath(0x10550d200) Name:App Asset: dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:C64BF5A0-55FE-44F7-BBFA-B7568CB891AF Location:[system-defined]>
+2026-11-14 09:01:28.852 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall setPlaceholderPromise:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateReadyForPlaceholderInstall promise-state:PA2I4> : Placeholder Promise set: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>
+2026-11-14 09:01:28.852 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall promiseDidComplete:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateReadyForPlaceholderInstall promise-state:PA2I4> : Promise completed: <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>
+2026-11-14 09:01:28.853 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall _onQueue_acquireAssertionAndInstallPlaceholder]: Acquiring termination assertion to install placeholder for [dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:01:28.853 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSPendingOperationsTracker beginPendingOperationForIdentity:]_block_invoke: Beginning pending operation for [dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:01:28.861 Df runningboardd[67881:280f7] [com.apple.runningboard:connection] Received termination request from [osservice<com.apple.installcoordinationd>:68705] on <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">> with context <RBSTerminateContext| explanation:installcoordinationd app:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 isPlaceholder:Y reportType:None maxTerminationResistance:Absolute attrs:[
+	<RBSPreventLaunchLimitation| <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">> allow:(null)>
+	]>
+2026-11-14 09:01:28.862 Df runningboardd[67881:280f7] [com.apple.runningboard:connection] skipping plugin hold for uninstalled proxy dev.nitroforge.f6.consumer
+2026-11-14 09:01:28.862 Df runningboardd[67881:280f7] [com.apple.runningboard:ttl] Acquiring assertion targeting system from originator [osservice<com.apple.installcoordinationd>:68705] with description <RBSAssertionDescriptor| "installcoordinationd app:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 isPlaceholder:Y" ID:67881-68705-3003 target:system attributes:[
+	<RBSPreventLaunchLimitation| <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">> allow:(null)>
+	]>
+2026-11-14 09:01:28.862 Df runningboardd[67881:280f7] [com.apple.runningboard:process] Executing termination request for: <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+2026-11-14 09:01:28.863 Df SpringBoard[67878:27303] [com.apple.SpringBoard:Common] termination assertion acquired for dev.nitroforge.f6.consumer (app not found)
+2026-11-14 09:01:28.863 Df installcoordinationd[68705:2815a] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall assertionAcquiredCallback]: RBS termination assertion observer called for <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateWaitingForPlaceholderAssertion promise-state:PA2I4>
+2026-11-14 09:01:28.863 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSCoordinatorProgress setTotalUnitsCompleted:]: Progress for coordinator: [dev.nitroforge.f6.consumer/Invalid/[system-defined]], Phase: IXCoordinatorProgressPhaseLoading, Percentage: 100.000000: Attempt to set units completed on finished progress: 100
+2026-11-14 09:01:28.864 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall _onQueue_installPlaceholder]: Acquired termination assertion for placeholder [dev.nitroforge.f6.consumer/Invalid/[system-defined]]; proceeding with install.
+2026-11-14 09:01:28.864 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSPowerAssertion initWithAssertionName:details:]: Acquired power assertion IXPowerAssertion-12-[dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:01:32.918 Df runningboardd[67881:27a25] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:32.937 Df runningboardd[67881:27ad0] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:34.005 Df runningboardd[67881:280f7] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:34.773 Df runningboardd[67881:2829a] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:37.065 Df runningboardd[67881:27a44] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:37.083 Df runningboardd[67881:27a44] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:37.120 Df runningboardd[67881:27a44] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:37.135 Df runningboardd[67881:27a44] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:37.856 Df runningboardd[67881:27a44] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:37.872 Df runningboardd[67881:280f7] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:39.306 Df runningboardd[67881:27f41] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:40.464 Df runningboardd[67881:27a25] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:43.947 Df runningboardd[67881:27a25] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:45.151 Df runningboardd[67881:2870c] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:45.205 Df runningboardd[67881:2870c] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:47.920 Df runningboardd[67881:27f41] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:48.125 Df runningboardd[67881:27f41] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:48.874 Df runningboardd[67881:2870c] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:49.471 Df runningboardd[67881:27f41] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:50.223 Df runningboardd[67881:280f7] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:50.915 Df runningboardd[67881:2870c] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:51.599 Df runningboardd[67881:27f41] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:53.146 Df runningboardd[67881:27a25] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:54.071 Df runningboardd[67881:2768f] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:56.636 Df runningboardd[67881:27a29] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:57.545 Df runningboardd[67881:27a29] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:59.320 Df runningboardd[67881:27a25] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:01:59.680 Df runningboardd[67881:280f7] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:03.657 Df runningboardd[67881:280f7] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:03.851 Df runningboardd[67881:280f7] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:03.857 Df runningboardd[67881:280f7] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:05.167 Df runningboardd[67881:280f7] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:05.192 Df runningboardd[67881:27a29] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:06.587 Df runningboardd[67881:27f41] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:06.614 Df runningboardd[67881:27a29] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:06.651 Df runningboardd[67881:27a29] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:06.679 Df runningboardd[67881:27f41] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:06.712 Df runningboardd[67881:27a25] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:08.368 Df runningboardd[67881:2870c] [com.apple.runningboard:process] Checking PreventLaunch: global:0 exPath:(null) predicates:{(
+    <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+)} allow:(null)
+2026-11-14 09:02:20.106 Df SpringBoard[67878:27303] [com.apple.SpringBoard:Common] termination assertion released for dev.nitroforge.f6.consumer (app not found)
+2026-11-14 09:02:20.334 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSPowerAssertion invalidate]: Released power assertion IXPowerAssertion-12-[dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:02:20.336 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSPendingOperationsTracker endPendingOperationForIdentity:]_block_invoke: Ending pending operation for [dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:02:20.336 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall setPlaceholderInstallState:withLSRecordPromiseForCompletion:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateReadyForInstall promise-state:PA2I4>: Placeholder install completed.
+2026-11-14 09:02:20.337 Df installcoordinationd[68705:28554] [com.apple.installprogress:server] initiating progress for [dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:02:20.370 Df installcoordinationd[68705:28554] [com.apple.installprogress:default] Created published identity progress for [dev.nitroforge.f6.consumer/Invalid/[system-defined]], observer 0x105484ec0
+2026-11-14 09:02:20.423 Df SpringBoard[67878:27303] [com.apple.frontboard.ApplicationLibrary:sb.placeholder] App placeholder proxies added: (
+    "<SBApplicationPlaceholderProxy: 0x10f3aa780; dev.nitroforge.f6.consumer (Forge Consumer Smoke); LSInstallType: StoreDownload>"
+), currentlyKnownExistingPlaceholders: {
+}
+2026-11-14 09:02:20.433 Df dmd[68096:27769] Received xpc stream event (trusted distributed notification matching) with name: com.apple.LaunchServices.applicationRegistered user info: {
+    bundleIDs =     (
+        "dev.nitroforge.f6.consumer"
+    );
+    isPlaceholder = 1;
+}
+2026-11-14 09:02:20.506 Df tccd[67890:2751b] [com.apple.TCC:access] Handling Application Installed event for {
+    bundleIDs =     (
+        "dev.nitroforge.f6.consumer"
+    );
+    isPlaceholder = 1;
+}.
+2026-11-14 09:02:20.532 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSCoordinatorProgress setTotalUnitsCompleted:]: Progress for coordinator: [dev.nitroforge.f6.consumer/Invalid/[system-defined]], Phase: IXCoordinatorProgressPhaseLoading, Percentage: 100.000000: Attempt to set units completed on finished progress: 100
+2026-11-14 09:02:20.532 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall _onQueue_acquireAssertionAndDoInstall]: Acquiring termination assertion to install [dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:02:20.533 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSPendingOperationsTracker beginPendingOperationForIdentity:]_block_invoke: Beginning pending operation for [dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:02:20.535 Df runningboardd[67881:27a25] [com.apple.runningboard:connection] Received termination request from [osservice<com.apple.installcoordinationd>:68705] on <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">> with context <RBSTerminateContext| explanation:installcoordinationd app:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 isPlaceholder:N reportType:None maxTerminationResistance:Absolute attrs:[
+	<RBSPreventLaunchLimitation| <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">> allow:(null)>
+	]>
+2026-11-14 09:02:20.633 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall _limitedConcurrency_fetchLoadingProgressForPlaceholderInstallType:progressHint:andRun:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateWaitingForInstallAssertion promise-state:PA2I4>: initiating loading progress with install type 1
+2026-11-14 09:02:20.705 Df runningboardd[67881:27a25] [com.apple.runningboard:connection] skipping plugin hold for uninstalled proxy dev.nitroforge.f6.consumer
+2026-11-14 09:02:20.714 Df runningboardd[67881:27a25] [com.apple.runningboard:ttl] Acquiring assertion targeting system from originator [osservice<com.apple.installcoordinationd>:68705] with description <RBSAssertionDescriptor| "installcoordinationd app:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 isPlaceholder:N" ID:67881-68705-3311 target:system attributes:[
+	<RBSPreventLaunchLimitation| <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">> allow:(null)>
+	]>
+2026-11-14 09:02:20.714 Df runningboardd[67881:27a25] [com.apple.runningboard:process] Executing termination request for: <RBSProcessPredicate <RBSProcessBundleIdentifierPredicate "dev.nitroforge.f6.consumer">>
+2026-11-14 09:02:20.731 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall assertionAcquiredCallback]: RBS termination assertion observer called for <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateWaitingForInstallAssertion promise-state:PA2I4>
+2026-11-14 09:02:20.731 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall _onQueue_doInstall]: Acquired termination assertion for [dev.nitroforge.f6.consumer/Invalid/[system-defined]]; proceeding with install.
+2026-11-14 09:02:20.732 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSPowerAssertion initWithAssertionName:details:]: Acquired power assertion IXPowerAssertion-12-[dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:02:20.843 Df siriactionsd[67993:28b8a] [com.apple.shortcuts:Daemon] Dispatching XPC event: <distributed notification: com.apple.LaunchServices.applicationRegistered, userInfo: [AnyHashable("bundleIDs"): <__NSSingleObjectArrayI 0x1025e0030>(
+dev.nitroforge.f6.consumer
+)
+, AnyHashable("isPlaceholder"): 1]>
+2026-11-14 09:02:20.843 Df siriactionsd[67993:28b8a] [com.apple.shortcuts:Daemon] Firing event: <distributed notification: com.apple.LaunchServices.applicationRegistered, userInfo: [AnyHashable("bundleIDs"): <__NSSingleObjectArrayI 0x1025e0030>(
+dev.nitroforge.f6.consumer
+)
+, AnyHashable("isPlaceholder"): 1]>
+2026-11-14 09:02:20.852 Df dmd[68096:27769] Received xpc stream event (trusted distributed notification matching) with name: com.apple.LaunchServices.applicationRegistered user info: {
+    bundleIDs =     (
+        "dev.nitroforge.f6.consumer"
+    );
+    isPlaceholder = 1;
+}
+2026-11-14 09:02:20.876 Df linkd[68221:27976] [com.apple.appintents:IndexCoordinator] Ignoring isPlaceholder for dev.nitroforge.f6.consumer
+2026-11-14 09:02:20.878 Df siriactionsd[67993:27ed4] [com.apple.shortcuts:Daemon] Dispatching XPC event: <distributed notification: com.apple.LaunchServices.applicationRegistered, userInfo: [AnyHashable("bundleIDs"): <__NSSingleObjectArrayI 0x1025e0030>(
+dev.nitroforge.f6.consumer
+)
+, AnyHashable("isPlaceholder"): 1]>
+2026-11-14 09:02:20.878 Df siriactionsd[67993:27ed4] [com.apple.shortcuts:Daemon] Firing event: <distributed notification: com.apple.LaunchServices.applicationRegistered, userInfo: [AnyHashable("bundleIDs"): <__NSSingleObjectArrayI 0x1025e0030>(
+dev.nitroforge.f6.consumer
+)
+, AnyHashable("isPlaceholder"): 1]>
+2026-11-14 09:02:20.879 Df tccd[67890:2751b] [com.apple.TCC:access] Handling Application Installed event for {
+    bundleIDs =     (
+        "dev.nitroforge.f6.consumer"
+    );
+    isPlaceholder = 1;
+}.
+2026-11-14 09:02:20.889 Df SpringBoard[67878:27303] [com.apple.frontboard.ApplicationLibrary:sb.placeholder] Placeholders added: (
+    "<SBApplicationPlaceholder: 0x122dc0900; bundleIdentifier: dev.nitroforge.f6.consumer; displayName: Forge Consumer Smoke>"
+), modified: (
+), removed: (null)
+2026-11-14 09:02:21.024 Df installcoordinationd[68705:2884d] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall _limitedConcurrency_setUpLSProgressForInstallType:progressHint:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateWaitingForInstall promise-state:PA2I4>: Set progress proportions to {
+    0 = "0.6";
+    1 = "0.4";
+    4 = 0;
+}
+2026-11-14 09:02:21.086 Df linkd[68221:28b6a] [com.apple.appintents:IndexCoordinator] Ignoring isPlaceholder for dev.nitroforge.f6.consumer
+2026-11-14 09:02:21.122 Df installcoordinationd[68705:28554] [com.apple.installcoordination:daemon] -[IXSClientConnection _remote_removabilityForAppWithIdentity:completion:]: Returning removability PossibleAndAllowed for dev.nitroforge.f6.consumer to client SpringBoard (pid 67878)
+2026-11-14 09:02:21.134 Df SpringBoard[67878:27303] [com.apple.SpringBoard:Common] termination assertion acquired for dev.nitroforge.f6.consumer (app not found)
+2026-11-14 09:02:21.595 Df installcoordinationd[68705:28e66] [com.apple.installcoordination:daemon] -[IXSCoordinatorProgress setTotalUnitsCompleted:]: Progress for coordinator: [dev.nitroforge.f6.consumer/Invalid/[system-defined]], Phase: IXCoordinatorProgressPhaseInstalling, Percentage: 20.000000: Attempt to set units completed on finished progress: 20
+2026-11-14 09:02:22.031 Df SpringBoard[67878:27303] [com.apple.SpringBoard:Common] termination assertion released for dev.nitroforge.f6.consumer (app not found)
+2026-11-14 09:02:22.046 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSPendingOperationsTracker endPendingOperationForIdentity:]_block_invoke: Ending pending operation for [dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:02:22.047 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall setComplete:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateComplete promise-state:PA2I4> complete!
+2026-11-14 09:02:22.047 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSPowerAssertion invalidate]: Released power assertion IXPowerAssertion-12-[dev.nitroforge.f6.consumer/Invalid/[system-defined]]
+2026-11-14 09:02:22.078 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSDataPromise decommission]: Decommissioning <IXSPromisedTransferToPath(0x10550cd80) Name:Icon resources for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:633881B1-37DC-4669-BE10-18EE34796EB4 Location:[system-defined]>
+2026-11-14 09:02:22.080 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSDataPromise decommission]: Decommissioning <IXSPromisedInMemoryDictionary(0x10550cf00) Name:Info.plist icon content for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E25638ED-4604-4B20-9845-5D46E3E3F1A3 Location:[system-defined]>
+2026-11-14 09:02:22.080 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSDataPromise decommission]: Decommissioning <IXSPromisedInMemoryDictionary(0x10550d080) Name:Localizations for dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:E0978517-843D-41D2-9301-924D22B44605 Location:[system-defined]>
+2026-11-14 09:02:22.081 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSDataPromise decommission]: Decommissioning <IXSPlaceholder(0x1055683c0) Name:App Placeholder: Forge Consumer Smoke (dev.nitroforge.f6.consumer) Creator:InstallCoordination Simple SPI UUID:92D35895-90CA-4DD4-820A-10086FB2B646 Location:[system-defined]>
+2026-11-14 09:02:22.082 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSDataPromise decommission]: Decommissioning <IXSPromisedTransferToPath(0x10550d200) Name:App Asset: dev.nitroforge.f6.consumer Creator:InstallCoordination Simple SPI UUID:C64BF5A0-55FE-44F7-BBFA-B7568CB891AF Location:[system-defined]>
+2026-11-14 09:02:22.088 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSCoordinatorManager unregisterCoordinator:]: Unregistered coordinator: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateComplete promise-state:PA2I4>
+2026-11-14 09:02:22.088 Df installcoordinationd[68705:28861] [com.apple.installcoordination:daemon] -[IXSCoordinatedAppInstall setPriorityBoostCompletion:withSourceInfo:]: <IXSCoordinatedAppInstall<0x105628000> [P=CoreSimulatorBridge (pid 67908)] identifier:[dev.nitroforge.f6.consumer/Invalid/[system-defined]] uuid:71E77EEE-B8D0-4940-8C56-651055C5B0D2 intent:IXCoordinatorIntentInitiating creator/appDRI:InstallCoordination Simple SPI importance:UserWaiting state:IXAppCoordinationStateComplete promise-state:PA2I4>: Disposing of completion from CoreSimulatorBridge (67908), QOS_CLASS_DEFAULT (0x15)
+2026-11-14 09:02:22.110 Df siriactionsd[67993:28b8a] [com.apple.shortcuts:Daemon] Dispatching XPC event: <distributed notification: com.apple.LaunchServices.applicationRegistered, userInfo: [AnyHashable("bundleIDs"): <__NSSingleObjectArrayI 0x1025e0030>(
+dev.nitroforge.f6.consumer
+)
+, AnyHashable("isPlaceholder"): 0]>
+2026-11-14 09:02:22.110 Df siriactionsd[67993:28b8a] [com.apple.shortcuts:Daemon] Firing event: <distributed notification: com.apple.LaunchServices.applicationRegistered, userInfo: [AnyHashable("bundleIDs"): <__NSSingleObjectArrayI 0x1025e0030>(
+dev.nitroforge.f6.consumer
+)
+, AnyHashable("isPlaceholder"): 0]>
+2026-11-14 09:02:22.118 Df dmd[68096:27769] Received xpc stream event (trusted distributed notification matching) with name: com.apple.LaunchServices.applicationRegistered user info: {
+    bundleIDs =     (
+        "dev.nitroforge.f6.consumer"
+    );
+    isPlaceholder = 0;
+}
+2026-11-14 09:02:22.121 Df appleaccountd[68053:2761b] [com.apple.appleaccount:daemon] Dataclass App Install Observer - Ignoring ["dev.nitroforge.f6.consumer"]
+2026-11-14 09:02:22.122 Df tccd[67890:2751b] [com.apple.TCC:access] Handling Application Installed event for {
+    bundleIDs =     (
+        "dev.nitroforge.f6.consumer"
+    );
+    isPlaceholder = 0;
+}.
+2026-11-14 09:02:22.129 Df linkd[68221:28b6a] [com.apple.appintents:IndexCoordinator] Auditing metadata, received XPC event com.apple.LaunchServices.applicationRegistered ["isPlaceholder": 0, "bundleIDs": <__NSSingleObjectArrayI 0x104a2eae0>(
+dev.nitroforge.f6.consumer
+)
+]
+2026-11-14 09:02:22.143 Df locationd[67902:2768e] [com.apple.locationd.Core:Core] {"msg":"#Warning #ClientResolution the passed keyPath is not registered. Resolving to #nullCKP", "InputCKP":idev.nitroforge.f6.consumer:}
+2026-11-14 09:02:22.143 Df locationd[67902:2768e] [com.apple.locationd.Core:Core] {"msg":"#Warning #ClientResolution the passed keyPath is not registered. Resolving to #nullCKP", "InputCKP":idev.nitroforge.f6.consumer:}
+2026-11-14 09:02:22.143 Df locationd[67902:2768e] [com.apple.locationd.Core:Core] {"msg":"AppMonitor - application (un)installation notification", "notification":Installation, "BundleId":dev.nitroforge.f6.consumer, "BundlePath":/Users/runner/Library/Developer/CoreSimulator/Devices/1433EBEF-B3F6-496F-84EA-12DA3DAEBFB0/data/Containers/Bundle/Application/EC412CF3-7612-441D-97E7-167ED3201EAA/ForgeConsumerSmoke.app, "ExecutablePath":/Users/runner/Library/Developer/CoreSimulator/Devices/1433EBEF-B3F6-496F-84EA-12DA3DAEBFB0/data/Containers/Bundle/Application/EC412CF3-7612-441D-97E7-167ED3201EAA/ForgeConsumerSmoke.app/ForgeConsumerSmoke, "registeredCkp":!:}
+2026-11-14 09:02:22.158 Df appstored[68202:28cba] [com.apple.appstored:ODR] Handling application installation: {bundleID = dev.nitroforge.f6.consumer; version = 1; shortVersion = 0.1.0; variantID = (null)}
+2026-11-14 09:02:22.158 Df appstored[68202:28164] [com.apple.appstored:ODR] Handling application installation: {bundleID = dev.nitroforge.f6.consumer; version = 1; shortVersion = 0.1.0; variantID = (null)}
+2026-11-14 09:02:22.159 Df linkd[68221:27976] [com.apple.appintents:IndexCoordinator] Starting task: Audit: Bundles: dev.nitroforge.f6.consumer
+2026-11-14 09:02:22.160 Df appstored[68202:28164] [com.apple.appstored:ODR] Ignoring installation for {bundleID = dev.nitroforge.f6.consumer; version = 1; shortVersion = 0.1.0; variantID = (null)} as it does not appear to support ODR
+2026-11-14 09:02:22.168 Df appstored[68202:28cba] [com.apple.appstored:ODR] Ignoring installation for {bundleID = dev.nitroforge.f6.consumer; version = 1; shortVersion = 0.1.0; variantID = (null)} as it does not appear to support ODR
+2026-11-14 09:02:22.168 Df appstored[68202:28cba] [com.apple.appstored:General] Checking to see if apps need to be migrated to managed: [dev.nitroforge.f6.consumer]
+2026-11-14 09:02:22.168 Df appstored[68202:28164] [com.apple.appstored:General] Checking to see if apps need to be migrated to managed: [dev.nitroforge.f6.consumer]
+2026-11-14 09:02:22.233 Df linkd[68221:27976] [com.apple.appintents:Indexing] Looking for bundle: dev.nitroforge.f6.consumer
+2026-11-14 09:02:22.318 Df linkd[68221:27976] [com.apple.appintents:Indexing] Collating specified bundles: dev.nitroforge.f6.consumer
+2026-11-14 09:02:22.319 E  linkd[68221:27976] [com.apple.appintents:Indexing] Logging [app] audit error Bundle did not provide any metadata sources, check for previous errors for dev.nitroforge.f6.consumer
+2026-11-14 09:02:22.323 Df linkd[68221:27976] [com.apple.appintents:IndexCoordinator] Finished task: Audit: Bundles: dev.nitroforge.f6.consumer
+2026-11-14 09:02:22.897 Df SpringBoard[67878:28d32] [com.apple.UserNotifications:DataProviderFactory] [dev.nitroforge.f6.consumer] Application installed using default data provider
+2026-11-14 09:02:22.898 Df SpringBoard[67878:28d32] [com.apple.UserNotifications:Settings] Getting sectionInfos for section identifiers: {(
+    "dev.nitroforge.f6.consumer"
+)}
+2026-11-14 09:02:23.057 Df SpringBoard[67878:28997] [com.apple.SpringBoard:Common] dev.nitroforge.f6.consumer updated restrictionReason: 0
+2026-11-14 09:02:23.057 Df SpringBoard[67878:28997] [com.apple.SplashBoard:FileManifest] Applications were added. Updating launch images for: (
+    "dev.nitroforge.f6.consumer"
+)
+2026-11-14 09:02:23.057 Df SpringBoard[67878:27303] [com.apple.frontboard.ApplicationLibrary:sb.placeholder] App placeholder proxies installed: (
+    "<SBApplicationPlaceholderProxy: 0x10f3aa780; dev.nitroforge.f6.consumer (Forge Consumer Smoke); LSInstallType: StoreDownload>"
+)
+2026-11-14 09:02:23.077 Df SpringBoard[67878:27303] [com.apple.SpringBoard:Common] Installed apps did change.
+Added: {(
+    "dev.nitroforge.f6.consumer"
+)}
+Removed: {(
+)}
+Replaced: {(
+)}
+Updated: (null)
+2026-11-14 09:02:23.081 Df SpringBoard[67878:27303] [com.apple.frontboard.ApplicationLibrary:sb.placeholder] Placeholders added: (null), modified: (null), removed: (
+    "<SBApplicationPlaceholder: 0x122dc0900; bundleIdentifier: dev.nitroforge.f6.consumer; displayName: Forge Consumer Smoke; progress: 72%; state: Installing; canPromote?: YES>"
+)
+2026-11-14 09:02:23.229 Df SpringBoard[67878:28997] [com.apple.SplashBoard:FileManifest] dev.nitroforge.f6.consumer Manifest is empty; purging everything at /Users/runner/Library/Developer/CoreSimulator/Devices/1433EBEF-B3F6-496F-84EA-12DA3DAEBFB0/data/Containers/Data/Application/0AAEB227-6569-49F0-ACFA-ADCE47FE3C60/Library/SplashBoard/Snapshots
+2026-11-14 09:02:23.243 Df SpringBoard[67878:28997] [com.apple.SplashBoard:Capture] Processing launch request <XBLaunchStateRequest: 0x122d90930> for app: dev.nitroforge.f6.consumer.
+2026-11-14 09:02:23.243 Df SpringBoard[67878:28997] [com.apple.SplashBoard:Capture] Processing launch request <XBLaunchStateRequest: 0x122d90850> for app: dev.nitroforge.f6.consumer.
+2026-11-14 09:02:23.245 Df SpringBoard[67878:28e05] [com.apple.SplashBoard:Capture] Asynchronously generating image data for request: <XBLaunchStateRequest: 0x122d90930; groupID: dev.nitroforge.f6.consumer - {DEFAULT GROUP}; statusBar: normal; refSize: {402, 874}; orientation: Portrait; userInterfaceStyle: Light>
+2026-11-14 09:02:23.268 E  SpringBoard[67878:28e05] [com.apple.SplashBoard:Capture] Resource validation error: Security error -67056 reading resource from bundle: file:///Users/runner/Library/Developer/CoreSimulator/Devices/1433EBEF-B3F6-496F-84EA-12DA3DAEBFB0/data/Containers/Bundle/Application/EC412CF3-7612-441D-97E7-167ED3201EAA/ForgeConsumerSmoke.app/SplashScreen.storyboardc/EXPO-VIEWCONTROLLER-1-view-EXPO-ContainerView.nib, dev.nitroforge.f6.consumer v1
+2026-11-14 09:02:23.269 E  SpringBoard[67878:28e05] [com.apple.SplashBoard:Capture] Snapshot generation resulted in an error with code: 11 for app bundleID: dev.nitroforge.f6.consumer
+2026-11-14 09:02:23.269 E  SpringBoard[67878:28e05] [com.apple.SplashBoard:Capture] Noting that the application dev.nitroforge.f6.consumer has a bad launch image until it is updated.
+2026-11-14 09:02:23.269 Df SpringBoard[67878:28e05] [com.apple.SplashBoard:Capture] Asynchronously generating image data for request: <XBLaunchStateRequest: 0x122d90850; groupID: dev.nitroforge.f6.consumer - {DEFAULT GROUP}; statusBar: hidden; refSize: {402, 874}; naturalSize: {874, 402}; orientation: LandscapeLeft; userInterfaceStyle: Light>
+2026-11-14 09:02:23.269 E  SpringBoard[67878:28e05] [com.apple.SplashBoard:Capture] Skipping launch request <XBLaunchStateRequest: 0x122d90850> due to denied app: dev.nitroforge.f6.consumer.
+2026-11-14 09:02:23.517 Df SpringBoard[67878:27969] [com.apple.UserNotifications:Settings] [{(
+    "dev.nitroforge.f6.consumer"
+)}] Got section infos [ hasResult: 1 ]
+2026-11-14 09:02:24.270 Df SpringBoard[67878:28e14] [com.apple.SplashBoard:FileManifest] <XBApplicationSnapshotManifestImpl: 0x10f370d80> [dev.nitroforge.f6.consumer] We don't have any snapshots, so we're clearing our manifest data.
+2026-11-14 09:03:03.688 Df storekitd[68240:27c7f] [com.apple.storekit:Default] [storekitd.LaunchServicesObserver] Handling installed event for ["dev.nitroforge.f6.consumer"]
+2026-11-14 09:03:20.715 Df storekitd[68240:27c7f] [com.apple.storekit:Default] [4e6e8d86] Clearing app transactions for ["dev.nitroforge.f6.consumer"]
+2026-11-14 09:03:25.057 Df log[70089:0] [com.apple.log:] log run noninteractively, parent: 67873 (launchd_sim), args: 'log' 'show' '--last' '10m' '--style' 'compact' '--predicate' 'eventMessage CONTAINS "dev.nitroforge.f6.consumer"'
+getpwuid_r did not find a match for uid 501

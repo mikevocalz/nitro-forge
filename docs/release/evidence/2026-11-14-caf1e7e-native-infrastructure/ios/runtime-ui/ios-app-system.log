@@ -1,0 +1,3 @@
+Timestamp               Ty Process[PID:TID]
+2026-11-14 08:20:43.129 Df log[62470:0] [com.apple.log:] log run noninteractively, parent: 58481 (launchd_sim), args: 'log' 'show' '--last' '10m' '--style' 'compact' '--predicate' 'eventMessage CONTAINS "dev.nitroforge.f6.consumer"'
+getpwuid_r did not find a match for uid 501

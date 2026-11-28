@@ -1,0 +1,36 @@
+✔ optionless CJS entry preserves config identity and all platform metadata, without runtime loading (14.678042ms)
+✔ requires explicit initial SwiftPM opt-in for iOS and preserves the rejected input (12.067625ms)
+✔ omitted platforms includes iOS and therefore needs explicit SwiftPM (11.10625ms)
+✔ rejects options, missing project root and disabled architecture rather than mutating configuration (9.521ms)
+✔ reports actual and supported dependency versions (10.832084ms)
+✔ missing dependency fails without fallback to a runtime (9.830959ms)
+✔ metadata resolution handles package exports that hide package.json, without executing the exported module (12.016959ms)
+✔ absent or malformed native manifest is an actionable package error (14.818958ms)
+✔ retains exact declared architecture sets, including legacy Android ABIs (11.779333ms)
+✔ rejects incomplete assets and missing files instead of compiling Rust (10.825875ms)
+✔ rejects malformed source/runtime identities (10.062833ms)
+✔ rejects traversal, duplicate entries and malformed hashes (14.600959ms)
+✔ rejects a symlinked asset escaping the installed package (12.94675ms)
+✔ rejects a native manifest symlink outside the package before reading it (11.323875ms)
+✔ candidate refuses stale native/source identity before consumption (6.390833ms)
+✔ candidate refuses tampered archive bytes (3.894542ms)
+✔ candidate refuses expanded or incomplete public inventory (2.859625ms)
+✔ candidate rejects escape and duplicate content paths (3.951667ms)
+✔ source staging and extraction reject symlink fallback (24.595958ms)
+✔ extraction validates package-only names before writing (13.972458ms)
+✔ headless package cannot leave a workspace dependency or missing export (1.003791ms)
+✔ rooted package paths reject absolute paths and traversal (0.094625ms)
+✔ per-package source closure cannot borrow an undeclared sibling from the all-studio app (1.627583ms)
+✔ incomplete producer output cannot be consumed even if candidate.json exists (3.046042ms)
+✔ bundle check requires actual archive/runtime instances and rejects duplicates (488.224541ms)
+✔ prepare keeps archive specifiers and hashes portable across distinct consumer and candidate roots (773.301834ms)
+✔ required original and native license materials fail closed before packing/consumption (1.565917ms)
+✔ resolved native closure excludes dev-only/unrelated roots and refuses unknown license declarations (8.545542ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1506.534916

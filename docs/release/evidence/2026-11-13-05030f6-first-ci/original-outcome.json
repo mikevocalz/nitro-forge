@@ -1,0 +1,13 @@
+{
+  "head": "05030f6439f6928d084cc47fae828d604da9ade5",
+  "executedMerge": "65fe6dad5567c3ebd02e233ed4eda30ac162012e",
+  "run": 43537901544,
+  "rawArtifactScratch": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f6-first-ci/forge-native-android.zip",
+  "artifactZipSha256": "b3aadbcb35c0c3c02618f163ba007b06740180a8746a73b35997220fa25f14ab",
+  "bytes": 74706088,
+  "allFourPayloadHashesVerified": true,
+  "appleRustBuild": "PASS per original log",
+  "appleFragment": "FAIL: multi-architecture lipo argument parsing",
+  "archivesBundleNativeCompile": "SKIPPED",
+  "newCandidateEvidence": false
+}

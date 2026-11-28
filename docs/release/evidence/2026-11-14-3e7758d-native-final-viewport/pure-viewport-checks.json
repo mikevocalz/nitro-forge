@@ -1,0 +1,16 @@
+{
+  "sourcePreview": "f2b2a2d6a6d825882bc6eb2aa2687ce6be166c8d",
+  "checks": {
+    "passed": [
+      "all action PNGs require exact post-wait centered result assertions; picker-only frames remain separate",
+      "actual native six-pixel clipping is rejected despite reported visibility1.0 and synthetic centering completion",
+      "native capture binding requires a completed exact centered result, immediately followed by assertion and PNG",
+      "final refreshed native geometry must match the actual viewport and avoid all clipped edges",
+      "each action PNG recenters the exact FINAL result after its wait and before capture",
+      "full pass restores the actual heading and closed final studio before host identity/file audits"
+    ],
+    "commands": 817,
+    "plans": 42
+  },
+  "scope": "Six trusted pure assertion cases executed in memory through VM after module/CLI wrapper transformation. Not Node:test/full64-test CI or new native execution."
+}

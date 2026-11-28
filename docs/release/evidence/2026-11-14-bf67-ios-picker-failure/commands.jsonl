@@ -1,0 +1,24 @@
+{"startedAt":"2026-11-14T12:50:11.485Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--version"],"elapsedMs":3868,"status":0}
+{"startedAt":"2026-11-14T12:50:16.512Z","file":"xcrun","args":["simctl","list","devices","--json"],"elapsedMs":3298,"status":0}
+{"startedAt":"2026-11-14T12:50:19.824Z","file":"xcrun","args":["simctl","help","create"],"elapsedMs":316,"status":0}
+{"startedAt":"2026-11-14T12:50:20.141Z","file":"xcrun","args":["simctl","create","Forge F6 ea8d09f-52762","com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro","com.apple.CoreSimulator.SimRuntime.iOS-27-2"],"elapsedMs":545,"status":0}
+{"startedAt":"2026-11-14T12:50:20.689Z","file":"xcrun","args":["simctl","list","devices","--json"],"elapsedMs":257,"status":0}
+{"startedAt":"2026-11-14T12:50:20.949Z","file":"xcrun","args":["simctl","boot","0263B476-D4CD-4065-930D-286428D1F648"],"elapsedMs":7490,"status":0}
+{"startedAt":"2026-11-14T12:50:28.521Z","file":"xcrun","args":["simctl","bootstatus","0263B476-D4CD-4065-930D-286428D1F648","-b"],"elapsedMs":175873,"status":0}
+{"startedAt":"2026-11-14T12:53:24.558Z","file":"ps","args":["-eo","pid,ppid,etime,comm"],"elapsedMs":11819,"status":null,"error":"spawnSync ps ETIMEDOUT"}
+{"startedAt":"2026-11-14T12:53:36.463Z","file":"sysctl","args":["hw.memsize","hw.ncpu"],"elapsedMs":6591,"status":0}
+{"startedAt":"2026-11-14T12:53:43.294Z","file":"vm_stat","args":[],"elapsedMs":4077,"status":0}
+{"startedAt":"2026-11-14T12:53:47.470Z","file":"xcrun","args":["simctl","spawn","0263B476-D4CD-4065-930D-286428D1F648","launchctl","list"],"elapsedMs":10941,"status":null,"error":"spawnSync xcrun ETIMEDOUT"}
+{"startedAt":"2026-11-14T12:53:58.918Z","file":"xcrun","args":["simctl","install","0263B476-D4CD-4065-930D-286428D1F648","/Users/runner/work/_temp/runtime-ui/unpacked-app/ForgeConsumerSmoke.app"],"elapsedMs":250248,"status":0}
+{"startedAt":"2026-11-14T12:58:09.376Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","0263B476-D4CD-4065-930D-286428D1F648","--platform","ios","--no-ansi","test","--no-reinstall-driver","--format","junit","--output","/Users/runner/work/_temp/runtime-ui/picker/report.xml","--test-output-dir","/Users/runner/work/_temp/runtime-ui/picker/artifacts","--debug-output","/Users/runner/work/_temp/runtime-ui/picker/debug","/Users/runner/work/_temp/runtime-ui/picker/flow.yaml"],"elapsedMs":107048,"status":0}
+{"startedAt":"2026-11-14T12:59:56.554Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","0263B476-D4CD-4065-930D-286428D1F648","--platform","ios","--no-ansi","hierarchy","--no-reinstall-driver"],"elapsedMs":42242,"status":0}
+{"startedAt":"2026-11-14T13:00:38.859Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","0263B476-D4CD-4065-930D-286428D1F648","--platform","ios","--no-ansi","test","--no-reinstall-driver","--format","junit","--output","/Users/runner/work/_temp/runtime-ui/pass-1/report.xml","--test-output-dir","/Users/runner/work/_temp/runtime-ui/pass-1/artifacts","--debug-output","/Users/runner/work/_temp/runtime-ui/pass-1/debug","/Users/runner/work/_temp/runtime-ui/pass-1/flow.yaml"],"elapsedMs":337180,"status":1}
+{"startedAt":"2026-11-14T13:06:16.061Z","file":"ps","args":["-eo","pid,ppid,etime,comm"],"elapsedMs":272,"status":0}
+{"startedAt":"2026-11-14T13:06:16.335Z","file":"sysctl","args":["hw.memsize","hw.ncpu"],"elapsedMs":61,"status":0}
+{"startedAt":"2026-11-14T13:06:16.397Z","file":"vm_stat","args":[],"elapsedMs":15,"status":0}
+{"startedAt":"2026-11-14T13:06:16.416Z","file":"xcrun","args":["simctl","spawn","0263B476-D4CD-4065-930D-286428D1F648","launchctl","list"],"elapsedMs":3309,"status":0}
+{"startedAt":"2026-11-14T13:06:19.763Z","file":"xcrun","args":["simctl","io","0263B476-D4CD-4065-930D-286428D1F648","screenshot","/Users/runner/work/_temp/runtime-ui/failure.png"],"elapsedMs":7591,"status":0}
+{"startedAt":"2026-11-14T13:06:27.356Z","file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","0263B476-D4CD-4065-930D-286428D1F648","--platform","ios","--no-ansi","hierarchy","--no-reinstall-driver"],"elapsedMs":105118,"status":0}
+{"startedAt":"2026-11-14T13:08:12.499Z","file":"xcrun","args":["simctl","spawn","0263B476-D4CD-4065-930D-286428D1F648","log","show","--last","10m","--style","compact","--predicate","eventMessage CONTAINS \"dev.nitroforge.f6.consumer\""],"elapsedMs":32873,"status":0}
+{"startedAt":"2026-11-14T13:08:45.498Z","file":"xcrun","args":["simctl","shutdown","0263B476-D4CD-4065-930D-286428D1F648"],"elapsedMs":14638,"status":0}
+{"startedAt":"2026-11-14T13:09:00.138Z","file":"xcrun","args":["simctl","delete","0263B476-D4CD-4065-930D-286428D1F648"],"elapsedMs":2114,"status":0}

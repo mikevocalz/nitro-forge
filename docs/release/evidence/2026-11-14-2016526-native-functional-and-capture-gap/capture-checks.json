@@ -1,0 +1,29 @@
+{
+  "sourcePreview": "4b2747399bbef7b13fe3269e68a51b1d66d5599b",
+  "pureVM": {
+    "passed": [
+      "all action PNGs require exact post-wait centered result assertions; picker-only frames remain separate",
+      "actual native six-pixel clipping is rejected despite reported visibility1.0 and synthetic centering completion",
+      "native capture binding requires a completed exact centered result, immediately followed by assertion and PNG",
+      "final refreshed native geometry must match the actual viewport and avoid all clipped edges",
+      "each action PNG recenters the exact FINAL result after its wait and before capture"
+    ],
+    "plans": 42,
+    "commands": 814
+  },
+  "actualTrace": {
+    "android": {
+      "events": 732,
+      "matched": 42
+    },
+    "ios": {
+      "events": 732,
+      "matched": 42,
+      "viewportLines": [
+        "DeviceWidth: 402, DeviceWidth: 874"
+      ]
+    },
+    "clippedRejection": "Result touches a viewport edge or is clipped/empty; screenshot is not acceptable visible evidence"
+  },
+  "method": "Trusted pure module/test bodies executed through built-in VM with import/export/CLI wrappers removed. Five assertion cases exercised, including actual verbatim clipped trace and synthetic rejection cases. This is not Node:test execution or native acceptance; full63-test CI and new frames NOT RUN at receipt."
+}

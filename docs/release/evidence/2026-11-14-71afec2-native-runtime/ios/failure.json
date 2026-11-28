@@ -1,0 +1,23 @@
+{
+  "sourceCommit": "fcdc6dfb200f0c3cca123fb46c948e08bb329dd3",
+  "platform": "ios",
+  "appId": "dev.nitroforge.f6.consumer",
+  "device": "C898E3E4-5033-4085-B886-963EE2D0C478",
+  "error": "Error: xcrun failed: Detected file type from extension: PNG\nAn error was encountered processing the command (domain=NSPOSIXErrorDomain, code=22):\nCannot choose between 2 displays. Specify one with --display:\n    --display=3  LCD-1 (primary-1) 2007x2853\n    --display=1  LCD (primary) 1398x2034\nInvalid argument\n\n    at run (file:///Users/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:32:11)\n    at screenshot (file:///Users/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:43:27)\n    at file:///Users/runner/work/nitro-forge/nitro-forge/tooling/release/native-ui/run.mjs:153:41\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)",
+  "completedStages": [
+    {
+      "name": "picker",
+      "executed": 1,
+      "failures": 0,
+      "skipped": 0,
+      "flowSha256": "80cd8336cd547b8f27907bee20f61a20d053d99c8c60a1a9cc8ace8be765f7ff",
+      "reportSha256": "3895d44ab7ab07f8220a8dd2ac9ab3632b28d4617fa92227c26a9ff88471b39a",
+      "screenshots": [
+        {
+          "path": "picker/artifacts/2026-11-14_045959/Forge native studio picker/takeScreenshot/picker-picker.png",
+          "sha256": "3a8376b1e5f88723c8e9764bd6d6662d31d176f145c33bc43f5bdee491725820"
+        }
+      ]
+    }
+  ]
+}

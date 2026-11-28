@@ -1,0 +1,13 @@
+{"file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--version"],"elapsedMs":4639,"status":0}
+{"file":"xcrun","args":["simctl","list","devices","--json"],"elapsedMs":3475,"status":0}
+{"file":"xcrun","args":["simctl","help","create"],"elapsedMs":364,"status":0}
+{"file":"xcrun","args":["simctl","create","Forge F6 a0c7f23-57588","com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro","com.apple.CoreSimulator.SimRuntime.iOS-27-2"],"elapsedMs":621,"status":0}
+{"file":"xcrun","args":["simctl","list","devices","--json"],"elapsedMs":379,"status":0}
+{"file":"xcrun","args":["simctl","boot","E5912B64-59B1-4283-A4D7-C12890F42140"],"elapsedMs":5296,"status":0}
+{"file":"xcrun","args":["simctl","bootstatus","E5912B64-59B1-4283-A4D7-C12890F42140","-b"],"elapsedMs":115339,"status":0}
+{"file":"xcrun","args":["simctl","install","E5912B64-59B1-4283-A4D7-C12890F42140","/Users/runner/work/_temp/runtime-ui/unpacked-app/ForgeConsumerSmoke.app"],"elapsedMs":90895,"status":null,"error":"spawnSync xcrun ETIMEDOUT"}
+{"file":"xcrun","args":["simctl","io","E5912B64-59B1-4283-A4D7-C12890F42140","screenshot","/Users/runner/work/_temp/runtime-ui/failure.png"],"elapsedMs":90242,"status":null,"error":"spawnSync xcrun ETIMEDOUT"}
+{"file":"/Users/runner/work/_temp/forge-maestro/maestro/bin/maestro","args":["--device","E5912B64-59B1-4283-A4D7-C12890F42140","--platform","ios","--no-ansi","hierarchy","--no-reinstall-driver"],"elapsedMs":242061,"status":143,"error":"spawnSync /Users/runner/work/_temp/forge-maestro/maestro/bin/maestro ETIMEDOUT"}
+{"file":"xcrun","args":["simctl","spawn","E5912B64-59B1-4283-A4D7-C12890F42140","log","show","--last","10m","--style","compact","--predicate","eventMessage CONTAINS \"dev.nitroforge.f6.consumer\""],"elapsedMs":37668,"status":0}
+{"file":"xcrun","args":["simctl","shutdown","E5912B64-59B1-4283-A4D7-C12890F42140"],"elapsedMs":7616,"status":0}
+{"file":"xcrun","args":["simctl","delete","E5912B64-59B1-4283-A4D7-C12890F42140"],"elapsedMs":4090,"status":0}

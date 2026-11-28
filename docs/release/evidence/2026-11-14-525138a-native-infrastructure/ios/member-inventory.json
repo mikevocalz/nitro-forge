@@ -1,0 +1,86 @@
+[
+  {
+    "path": "runtime-ui/actual-simulator-runtimes.json",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/candidate.json",
+    "bytes": 168222
+  },
+  {
+    "path": "runtime-ui/chosen-simulator.json",
+    "bytes": 436
+  },
+  {
+    "path": "runtime-ui/commands.jsonl",
+    "bytes": 1358
+  },
+  {
+    "path": "runtime-ui/failure-hierarchy.json",
+    "bytes": 351191
+  },
+  {
+    "path": "runtime-ui/failure-hierarchy-command.log",
+    "bytes": 239349
+  },
+  {
+    "path": "runtime-ui/failure-screenshot.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/failure.json",
+    "bytes": 674
+  },
+  {
+    "path": "runtime-ui/forge-consumer-receipt.json",
+    "bytes": 322
+  },
+  {
+    "path": "runtime-ui/installed-packages.json",
+    "bytes": 13686
+  },
+  {
+    "path": "runtime-ui/ios-app-system.log",
+    "bytes": 321
+  },
+  {
+    "path": "runtime-ui/maestro-version.log",
+    "bytes": 7
+  },
+  {
+    "path": "runtime-ui/owned-simulator-shutdown.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/pnpm-effective-config.json",
+    "bytes": 1199
+  },
+  {
+    "path": "runtime-ui/pnpm-lock.yaml",
+    "bytes": 208912
+  },
+  {
+    "path": "runtime-ui/pnpm-workspace.yaml",
+    "bytes": 819
+  },
+  {
+    "path": "runtime-ui/runtime-artifact.json",
+    "bytes": 1067
+  },
+  {
+    "path": "runtime-ui/simulator-boot.log",
+    "bytes": 0
+  },
+  {
+    "path": "runtime-ui/simulator-bootstatus.log",
+    "bytes": 117
+  },
+  {
+    "path": "runtime-ui/simulators.log",
+    "bytes": 19412
+  },
+  {
+    "path": "forge-maestro/provenance.json",
+    "bytes": 266
+  }
+]

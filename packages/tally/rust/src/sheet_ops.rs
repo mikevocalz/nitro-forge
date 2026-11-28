@@ -85,6 +85,95 @@ mod tests {
         engine.apply(Command::new(op, payload)).unwrap();
     }
 
+
+    #[test]
+    fn reopened_add_sheet_undo_redo_restores_complete_snapshot_and_allocator() {
+        let mut engine = TallyEngine::new();
+        apply(&mut engine, "setCell", json!({"addr":"A1","value":"retained"}));
+        apply(&mut engine, "addSheet", json!({"name":"Saved"}));
+        let saved = engine.snapshot().unwrap();
+        let mut reopened = TallyEngine::new();
+        reopened.restore(&saved).unwrap();
+        assert_eq!(reopened.doc.next_sheet, 2);
+        let before = reopened.snapshot().unwrap();
+
+        apply(&mut reopened, "addSheet", json!({"name":"Fresh"}));
+        let after = reopened.snapshot().unwrap();
+        assert_eq!(reopened.doc.next_sheet, 3);
+        assert_ne!(after, before);
+        for _ in 0..3 {
+            assert!(reopened.undo().unwrap());
+            assert_eq!(reopened.doc.next_sheet, 2);
+            assert_eq!(reopened.snapshot().unwrap(), before);
+            assert!(reopened.redo().unwrap());
+            assert_eq!(reopened.doc.next_sheet, 3);
+            assert_eq!(reopened.snapshot().unwrap(), after);
+        }
+
+        assert!(reopened.undo().unwrap());
+        for name in ["", "Sheet1"] {
+            assert!(reopened.apply(Command::new("addSheet", json!({"name":name}))).is_err());
+            assert_eq!(reopened.snapshot().unwrap(), before);
+        }
+        assert!(reopened.redo().unwrap(), "Rejected adds must retain the redo entry");
+        assert_eq!(reopened.snapshot().unwrap(), after);
+    }
+
+    #[test]
+    fn add_sheet_allocator_branches_and_remove_sheet_inverses_are_reversible() {
+        let mut engine = TallyEngine::new();
+        let base = engine.snapshot().unwrap();
+        apply(&mut engine, "addSheet", json!({"name":"A"}));
+        let with_a = engine.snapshot().unwrap();
+        apply(&mut engine, "addSheet", json!({"name":"B"}));
+        assert!(engine.undo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), with_a);
+        apply(&mut engine, "addSheet", json!({"name":"C"}));
+        let with_c = engine.snapshot().unwrap();
+        assert_eq!(engine.doc.sheets[2].id, 2);
+        assert_eq!(engine.doc.next_sheet, 3);
+        assert!(!engine.redo().unwrap(), "A new branch must clear the removed B redo entry");
+        assert!(engine.undo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), with_a);
+        assert!(engine.undo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), base);
+        assert!(engine.redo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), with_a);
+        assert!(engine.redo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), with_c);
+
+        apply(&mut engine, "setActive", json!({"sheet":2}));
+        let active = engine.snapshot().unwrap();
+        apply(&mut engine, "removeSheet", json!({"sheet":1}));
+        let removed = engine.snapshot().unwrap();
+        assert_eq!(engine.doc.next_sheet, 3, "Removing an existing sheet does not allocate");
+        assert!(engine.undo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), active);
+        assert!(engine.redo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), removed);
+        assert!(engine.undo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), active);
+        assert!(engine.undo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), with_c);
+        assert!(engine.undo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), with_a);
+        assert!(engine.redo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), with_c);
+        assert!(engine.redo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), active);
+        assert!(engine.redo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), removed);
+    }
+
+    #[test]
+    fn missing_add_sheet_inverse_does_not_change_allocator() {
+        let mut engine = TallyEngine::new();
+        let before = engine.snapshot().unwrap();
+        let inverse = engine.invert(UndoEntry::AddSheet { sheet_id: u64::MAX, prev_next_sheet: 0 });
+        assert!(matches!(inverse, UndoEntry::SetActive { .. }));
+        assert_eq!(engine.snapshot().unwrap(), before);
+    }
+
     #[test]
     fn exhausted_ids_reject_without_snapshot_or_history_changes() {
         let mut engine = TallyEngine::new();

@@ -1,0 +1,37 @@
+{
+  "artifactId": 14097534202,
+  "zipSha256": "26ebdd7c65856ac40ff81dd0b88f5f9954e193bc7f680e3fb0dac2e3a438acd8",
+  "receipt": {
+    "sourceCommit": "cd75fc235cfbf2345c63d30efb3368cfa40d2779",
+    "manifestSha256": "a168f747b63ead5a1f88e9aeaef5aa6c0f13e23c8854119d9e85714516ac9ea4",
+    "stages": [
+      "prepare",
+      "install",
+      "verify",
+      "bundle"
+    ],
+    "nativeRuntime": "NOT RUN"
+  },
+  "effectiveConfig": {
+    "sourceCommit": "cd75fc235cfbf2345c63d30efb3368cfa40d2779",
+    "manifestSha256": "a168f747b63ead5a1f88e9aeaef5aa6c0f13e23c8854119d9e85714516ac9ea4",
+    "workspaceSha256": "7923f3994f23fff8f161ca60236b8f5f11a7ffc37c8f832b3ce5ca3afdae968a",
+    "pnpmVersion": "12.18.0",
+    "installMode": "first-resolution",
+    "config": {
+      "overrides": {
+        "@nitro-forge/ignition": "file:./artifacts/nitro-forge-ignition-1.0.0-f6.43554300143.1.tgz",
+        "@nitro-forge/prism": "file:./artifacts/nitro-forge-prism-1.0.0-f6.43554300143.1.tgz",
+        "@nitro-forge/cadence": "file:./artifacts/nitro-forge-cadence-1.0.0-f6.43554300143.1.tgz",
+        "@nitro-forge/splice": "file:./artifacts/nitro-forge-splice-1.0.0-f6.43554300143.1.tgz",
+        "@nitro-forge/folio": "file:./artifacts/nitro-forge-folio-1.0.0-f6.43554300143.1.tgz",
+        "@nitro-forge/pitch": "file:./artifacts/nitro-forge-pitch-1.0.0-f6.43554300143.1.tgz",
+        "@nitro-forge/tally": "file:./artifacts/nitro-forge-tally-1.0.0-f6.43554300143.1.tgz",
+        "@nitro-forge/quill": "file:./artifacts/nitro-forge-quill-1.0.0-f6.43554300143.1.tgz"
+      },
+      "nodeLinker": "isolated",
+      "enableGlobalVirtualStore": false,
+      "minimumReleaseAge": 0
+    }
+  }
+}

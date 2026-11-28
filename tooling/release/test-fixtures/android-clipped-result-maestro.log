@@ -1,0 +1,7 @@
+10:07:39.944 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Scrolling DOWN until id: f6-result is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled RUNNING
+10:07:40.014 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Scrolling try count: 0, DeviceWidth: 320, DeviceWidth: 800
+10:07:40.014 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Element bounds: Bounds(x=20, y=794, width=280, height=6)
+10:07:40.014 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Visibility Percent: 1.0
+10:07:40.014 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Command centerElement: ScrollUntilVisibleCommand(selector=ElementSelector(textRegex=null, idRegex=f6-result, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), direction=DOWN, scrollDuration=601, visibilityPercentage=100, timeout=30000, waitToSettleTimeoutMs=null, centerElement=false, originalSpeedValue=40, label=null, optional=false).centerElement
+10:07:40.014 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: visibilityPercentageNormalized: 1.0
+10:07:40.015 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Scrolling DOWN until id: f6-result is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering disabled COMPLETED
