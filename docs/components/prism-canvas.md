@@ -7,7 +7,7 @@ docs: "handwritten"
 platforms: []
 category: "forge"
 tokens: ["--border-width-strong", "--color-artboard-checker-a", "--color-artboard-checker-b", "--color-on-overlay-chip", "--color-overlay-chip", "--shadow-artboard", "--spacing-fixed-stack"]
-registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-gesture", "@nitro-forge/studio-ui-provider"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -24,7 +24,7 @@ The Prism artboard: a transparency checker, the engine composite as children, an
 - Package: `@nitro-forge/prism-canvas` (registry item)
 - Import: `import { PrismCanvas, ARTBOARD_CHECKER } from '@/components/forge/prism-canvas';`  (the original line carried a note; see Notes)
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-gesture`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/studio-gesture`
 - Command: `npx shadcn@4.23.0 add @nitro-forge/prism-canvas`
 - Installs: `react-native-svg@15.16.0`, `zustand@5.1.0` (the CLI adds them when they are absent)
 - Files: `components/forge/prism-canvas.tsx`, `components/forge/prism-canvas-model.ts`

@@ -207,7 +207,7 @@ tier: 1
 docs: "handwritten"
 platforms: []
 category: "display"
-tokens: ["--border-width-hairline", "--color-stage-caption", "--color-stage-cell-text", "--color-stage-clip-audio", "--color-stage-clip-video", "--color-stage-empty-hint", "--color-stage-fill-fallback", "--color-stage-grid-head", "--color-stage-grid-head-text", "--color-stage-grid-line", "--color-stage-heading", "--color-stage-on-clip", "--color-stage-paper", "--color-stage-paper-text", "--color-stage-paper-text-muted", "--color-stage-paper-title", "--color-stage-quote-rule", "--color-stage-slide-text", "--color-stage-track", "--color-stage-track-border", "--color-stage-track-label", "--font-weight-medium", "--radius-control", "--radius-paper", "--spacing-fixed-canvas", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-section", "--spacing-fixed-stack", "--text-body", "--text-label", "--text-micro"]
+tokens: ["--border-width-hairline", "--color-stage-caption", "--color-stage-cell-text", "--color-stage-clip-audio", "--color-stage-clip-video", "--color-stage-empty-hint", "--color-stage-fill-fallback", "--color-stage-grid-head", "--color-stage-grid-head-text", "--color-stage-grid-line", "--color-stage-heading", "--color-stage-on-clip", "--color-stage-paper", "--color-stage-paper-text", "--color-stage-paper-text-muted", "--color-stage-paper-title", "--color-stage-quote-rule", "--color-stage-slide-text", "--color-stage-track", "--color-stage-track-border", "--color-stage-track-label", "--font-weight-medium", "--radius-control", "--radius-md", "--spacing-fixed-canvas", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-section", "--spacing-fixed-stack", "--text-body", "--text-label", "--text-micro"]
 registryDependencies: ["@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "unverified"
 ---
@@ -293,7 +293,7 @@ tier: 1
 docs: "handwritten"
 platforms: ["android"]
 category: "input"
-tokens: ["--color-accent", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-text-muted", "--font-editorial", "--radius-control", "--radius-paper", "--shadow-page", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-page", "--spacing-group", "--spacing-target"]
+tokens: ["--color-accent", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-text-muted", "--font-editorial", "--radius-control", "--radius-md", "--shadow-page", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-page", "--spacing-group", "--spacing-target"]
 registryDependencies: ["@nitro-forge/forge-icon", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "declared"
 ---
@@ -1388,7 +1388,7 @@ tier: 1
 docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "primitive"
-tokens: ["--color-accent", "--color-border", "--color-danger", "--color-focus", "--color-info", "--color-on-danger", "--color-on-primary", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-primary", "--color-primary-tint", "--color-success", "--color-surface-base", "--color-surface-raised", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-editorial", "--font-mono-plain", "--radius-card", "--radius-control", "--radius-paper", "--spacing-canvas", "--spacing-canvas-header", "--spacing-canvas-rail", "--spacing-canvas-toolbar", "--spacing-element", "--spacing-group", "--spacing-header", "--spacing-inset", "--spacing-page", "--spacing-rail", "--spacing-section", "--spacing-stack", "--spacing-status", "--spacing-target", "--spacing-toolbar", "--text-body", "--text-display", "--text-label", "--text-manuscript", "--text-micro", "--text-title"]
+tokens: ["--color-accent", "--color-border", "--color-danger", "--color-focus", "--color-info", "--color-on-danger", "--color-on-primary", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-primary", "--color-primary-tint", "--color-success", "--color-surface-base", "--color-surface-raised", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-editorial", "--font-mono-plain", "--radius-card", "--radius-control", "--radius-md", "--spacing-canvas", "--spacing-canvas-header", "--spacing-canvas-rail", "--spacing-canvas-toolbar", "--spacing-element", "--spacing-group", "--spacing-header", "--spacing-inset", "--spacing-page", "--spacing-rail", "--spacing-section", "--spacing-stack", "--spacing-status", "--spacing-target", "--spacing-toolbar", "--text-body", "--text-display", "--text-label", "--text-manuscript", "--text-micro", "--text-title"]
 registryDependencies: []
 a11yStatus: "unverified"
 ---

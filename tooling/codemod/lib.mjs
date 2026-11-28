@@ -69,10 +69,57 @@ export async function loadTokenIndex() {
 }
 
 /** Token modules by package: what a reference expression resolves to when read at run time. */
-export async function loadTokenModules() {
-  const ws = await import(pathToFileURL(join(repoRoot, 'packages/studio-workspace/src/tokens.ts')).href);
-  const icons = await import(pathToFileURL(join(repoRoot, 'packages/icons/src/tokens.js')).href);
+/** Load the token modules under `root` (the checkout, or a tree extracted from another ref). */
+export async function loadTokenModules(root = repoRoot) {
+  const ws = await import(pathToFileURL(join(root, 'packages/studio-workspace/src/tokens.ts')).href);
+  const icons = await import(pathToFileURL(join(root, 'packages/icons/src/tokens.js')).href);
   return { 'packages/studio-workspace/src': { tokens: ws.tokens }, 'packages/icons/src': icons };
 }
 
 export const canonNumber = text => String(Number(text));
+
+/** Style properties whose numeric values check-no-hardcoded.mjs reports (and tokenize-editor-controls.mjs rewrites). */
+export const STYLE_PROPS = new Set([
+  'left', 'right', 'top', 'bottom', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight',
+  'margin', 'marginTop', 'marginBottom', 'marginLeft', 'marginRight', 'marginHorizontal', 'marginVertical',
+  'padding', 'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'paddingHorizontal', 'paddingVertical',
+  'marginStart', 'marginEnd', 'paddingStart', 'paddingEnd', 'borderStartWidth', 'borderEndWidth',
+  'gap', 'rowGap', 'columnGap', 'borderWidth', 'borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth',
+  'borderRadius', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius',
+  'fontSize', 'lineHeight', 'letterSpacing', 'zIndex', 'opacity', 'hitSlop', 'outlineWidth', 'outlineOffset',
+  'shadowRadius', 'shadowOpacity', 'elevation', 'flexBasis', 'fontWeight',
+]);
+export const JSX_NUMERIC_PROPS = new Set(['size', 'width', 'height', 'strokeWidth', 'fontSize', 'r', 'rx', 'ry']);
+
+/** Numeric literals that are the value, or a ternary or arithmetic branch of the value. Pass ts-morph's `Node` and `SyntaxKind`. */
+export function numericPartsOf({ Node, SyntaxKind }) {
+  const unwrap = node => (Node.isParenthesizedExpression(node) ? unwrap(node.getExpression()) : node);
+  const isOne = node => Node.isNumericLiteral(node) && Number(node.getLiteralText()) === 1;
+  const isAddOrSubtract = node => Node.isBinaryExpression(node) && [SyntaxKind.PlusToken, SyntaxKind.MinusToken].includes(node.getOperatorToken().getKind());
+  // In `(1 - t) * length`, `(x + 1) / 2` or `(last - first + 1) * rowHeight` the 1 is a unit: the
+  // complement of a fraction, a shift of a normalised value, or a count. It is not a length, so it
+  // is not a finding. Any other literal in the same expression still is.
+  function* unitOperand(node) {
+    const inner = unwrap(node);
+    if (!isAddOrSubtract(inner)) { yield* numericParts(node); return; }
+    const left = unwrap(inner.getLeft()), right = unwrap(inner.getRight());
+    if (isOne(right)) { yield* unitOperand(left); return; }
+    if (isOne(left) && inner.getOperatorToken().getKind() === SyntaxKind.MinusToken) { yield* numericParts(right); return; }
+    yield* numericParts(node);
+  }
+  function* numericParts(node) {
+    if (Node.isNumericLiteral(node)) yield node;
+    else if (Node.isPrefixUnaryExpression(node) && Node.isNumericLiteral(node.getOperand())) yield node.getOperand();
+    else if (Node.isParenthesizedExpression(node)) yield* numericParts(node.getExpression());
+    else if (Node.isAsExpression(node)) yield* numericParts(node.getExpression());
+    else if (Node.isConditionalExpression(node)) { yield* numericParts(node.getWhenTrue()); yield* numericParts(node.getWhenFalse()); }
+    else if (Node.isBinaryExpression(node)) {
+      // `x / 2` and `x % 3` are ratios, not lengths: only the left side can carry a literal length.
+      const operator = node.getOperatorToken().getKind();
+      const scales = operator === SyntaxKind.AsteriskToken || operator === SyntaxKind.SlashToken;
+      yield* (scales ? unitOperand(node.getLeft()) : numericParts(node.getLeft()));
+      if (operator !== SyntaxKind.SlashToken && operator !== SyntaxKind.PercentToken) yield* (scales ? unitOperand(node.getRight()) : numericParts(node.getRight()));
+    }
+  }
+  return numericParts;
+}

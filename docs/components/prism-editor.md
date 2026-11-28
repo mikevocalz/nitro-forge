@@ -7,7 +7,7 @@ docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "forge"
 tokens: ["--border-width-hairline", "--border-width-strong", "--color-accent", "--color-danger", "--color-paper-text", "--color-scrim", "--color-surface-sunken", "--color-text", "--color-text-muted", "--font-weight-semibold", "--opacity-scrim", "--radius-card", "--radius-control", "--spacing-canvas-rail", "--spacing-element", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-stack", "--spacing-fixed-target", "--spacing-fixed-toolbar", "--spacing-group", "--spacing-inset", "--spacing-stack", "--spacing-target", "--swatch-amber", "--swatch-rose", "--swatch-teal", "--swatch-violet", "--text-label", "--text-micro", "--z-chrome", "--z-fill-bar", "--z-layer-row", "--z-overlay", "--z-panel", "--z-toast"]
-registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/persona-model", "@nitro-forge/persona-turret", "@nitro-forge/prism-canvas", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/shell/PrecisionScrubber"]
+registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/persona-model", "@nitro-forge/persona-turret", "@nitro-forge/prism-canvas", "@nitro-forge/studio-gesture", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider", "@nyc-tron/shell/MenuButton", "@nyc-tron/shell/PrecisionScrubber"]
 a11yStatus: "reviewed-fail"
 ---
 
@@ -30,10 +30,10 @@ A Prism canvas editor over real engine commands: bounded PNG composite of the en
 - Package: `@nitro-forge/prism-editor` (registry item)
 - Import: `import { PrismEditor } from '@/components/forge/prism-editor';`
 - Peers: `react` >=19, `react-native` >=0.81, `react-native-svg` 15.16.0, `zustand` 5.1.0
-- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-model`; `@nitro-forge/persona-turret`; `@nitro-forge/prism-canvas`; `@nitro-forge/studio-gesture`; `@nyc-tron/shell/PrecisionScrubber`; `@nitro-forge/editor-controls` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/ignition` (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports `base64ToBytes` and `bytesToBase64` from the package index; Prism engine document supplying `apply` and `reload` (engine facade, deferred); the `layer-model` type from `@nitro-forge/editor-controls`
+- Requires: `@nitro-forge/studio-ui-provider`; `@nitro-forge/studio-theme`; `@nitro-forge/forge-directions`; `@nitro-forge/forge-icon`; `@nitro-forge/persona-model`; `@nitro-forge/persona-turret`; `@nitro-forge/prism-canvas`; `@nitro-forge/studio-gesture`; `@nyc-tron/shell/MenuButton`; `@nyc-tron/shell/PrecisionScrubber`; `@nitro-forge/editor-controls` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/ignition` (step 1 of docs/agent-native/install-order.md; shadcn cannot install it); `@nitro-forge/studio-layout` (step 3 of docs/agent-native/install-order.md; shadcn cannot install it); the file imports `base64ToBytes` and `bytesToBase64` from the package index; Prism engine document supplying `apply` and `reload` (engine facade, deferred); the `layer-model` type from `@nitro-forge/editor-controls`
 - Command: `npx shadcn@4.23.0 add @nitro-forge/prism-editor`
 - Installs: `zustand@5.1.0` (the CLI adds them when they are absent)
-- Files: `components/forge/prism-editor.tsx`, `components/forge/prism-layers.ts`, `components/forge/prism-layer-label.ts`, `components/forge/prism-layout.ts`, `components/forge/prism-transform.ts`, `components/forge/rgba-png.ts`
+- Files: `components/forge/prism-editor.tsx`, `components/forge/prism-layers.ts`, `components/forge/prism-layer-label.ts`, `components/forge/prism-layout.ts`, `components/forge/prism-transform.ts`, `components/forge/prism-blend.ts`, `components/forge/rgba-png.ts`
 
 ## Props
 

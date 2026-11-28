@@ -13,6 +13,7 @@ import {
 import {availabilityReason,type BooleanOp} from "./vector-types.ts";
 import {GroupLabel,NoticeLine,VECTOR_TOUCH_TARGET,VectorButton} from "./vector-controls.tsx";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ShapeBuilder}. Selection and the boolean group come from the host's document. */
 export interface ShapeBuilderProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -74,10 +75,10 @@ function ShapeBuilderBody({
     style={[{minWidth:0},style]}>
     <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Applying change"}</Text>:null}
-    <View style={{gap:6}}>
+    <View style={{gap:tokens.spacing.off6}}>
       <GroupLabel styled={styled}>Combine shapes</GroupLabel>
       <Text {...{className:muted}}>{selection.length===1?"1 layer selected":`${selection.length} layers selected`}</Text>
-      <View accessibilityRole="toolbar" aria-label="Boolean operations" style={{flexDirection:"row",flexWrap:"wrap",gap:6}}>
+      <View accessibilityRole="toolbar" aria-label="Boolean operations" style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.off6}}>
         {BOOLEAN_OPS.map(op=><VectorButton key={op.value} label={op.label} styled={styled} reason={combineReason}
           testID={"combine-"+op.value} onBlocked={block}
           onPress={ok(()=>onBoolean({ids:booleanIds(selection),op:op.value}))}>
@@ -85,10 +86,10 @@ function ShapeBuilderBody({
         </VectorButton>)}
       </View>
     </View>
-    {group?<View style={{gap:6}} testID="boolean-group">
+    {group?<View style={{gap:tokens.spacing.off6}} testID="boolean-group">
       <GroupLabel styled={styled}>{`Boolean: ${group.name}`}</GroupLabel>
       <Text {...{className:muted}}>{BOOLEAN_OPS.find(o=>o.value===group.op)!.description}</Text>
-      <View role="radiogroup" aria-label="Operation" style={{flexDirection:"row",flexWrap:"wrap",gap:6}}>
+      <View role="radiogroup" aria-label="Operation" style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.off6}}>
         {BOOLEAN_OPS.map(op=><VectorButton key={op.value} role="radio" checked={group.op===op.value} label={op.label}
           styled={styled} reason={groupReason} onBlocked={block}
           onPress={ok(()=>{if(group.op!==op.value)onSetBooleanOp({id:group.id,op:op.value});})}>
@@ -97,16 +98,16 @@ function ShapeBuilderBody({
       </View>
       <View role="list" aria-label={`Operands of ${group.name}`}
         {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-sunken")}}>
-        {group.operands.length===0?<Text {...{className:muted}} style={{padding:12}}>No operands</Text>
+        {group.operands.length===0?<Text {...{className:muted}} style={{padding:tokens.spacing.fixedInset}}>No operands</Text>
           :group.operands.map((operand,i)=>{
             const body=<>
-              <Text numberOfLines={1} {...{className:text}} style={{fontWeight:"500"}}>{operand.name}</Text>
+              <Text numberOfLines={1} {...{className:text}} style={{fontWeight:tokens.fontWeight.medium}}>{operand.name}</Text>
               <Text numberOfLines={1} {...{className:muted}}>
                 {[layerKindName(operand.kind),i===group.operands.length-1?"bottom":i===0?"top":undefined,operand.locked?"locked":undefined]
                   .filter(Boolean).join(", ")}
               </Text>
             </>;
-            const rowStyle={minHeight:VECTOR_TOUCH_TARGET,justifyContent:"center" as const,paddingHorizontal:12,paddingVertical:4};
+            const rowStyle={minHeight:VECTOR_TOUCH_TARGET,justifyContent:"center" as const,paddingHorizontal:tokens.spacing.fixedInset,paddingVertical:tokens.spacing.fixedStack};
             const divider=joinClasses(styled&&i>0&&"border-t border-border");
             return onSelectOperand
               ?<Pressable key={operand.id} role="listitem" accessibilityLabel={operandAccessibilityLabel(operand,i,group.operands.length)}
@@ -119,7 +120,7 @@ function ShapeBuilderBody({
                 {...{className:divider}} style={rowStyle}>{body}</View>;
           })}
       </View>
-      <View style={{flexDirection:"row",flexWrap:"wrap",gap:6}}>
+      <View style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.off6}}>
         <VectorButton label="Release" styled={styled} reason={groupReason} onBlocked={block}
           onPress={ok(()=>onRelease({id:group.id}))}/>
         <VectorButton label="Expand to pixels" styled={styled} reason={groupReason} onBlocked={block}
@@ -142,10 +143,10 @@ function OpGlyph({op,styled,inverse}:{op:BooleanOp;styled:boolean;inverse:boolea
   const paper=joinClasses(styled&&(inverse?"bg-primary":"bg-surface-raised"));
   const square=(left:number,top:number,filled:boolean)=><View
     {...{className:joinClasses(filled?ink:paper,inkBorder)}}
-    style={{position:"absolute",left,top,width:12,height:12,borderWidth:1.5}}/>;
-  const overlap=(cls:string)=><View {...{className:cls}} style={{position:"absolute",left:7,top:5,width:6,height:8}}/>;
+    style={{position:"absolute",left,top,width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset,borderWidth:tokens.borderWidth.off1_5}}/>;
+  const overlap=(cls:string)=><View {...{className:cls}} style={{position:"absolute",left:tokens.spacing.off7,top:tokens.spacing.off5,width:tokens.spacing.off6,height:tokens.spacing.fixedElement}}/>;
   return <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
-    {...{"aria-hidden":true}} style={{width:20,height:17}}>
+    {...{"aria-hidden":true}} style={{width:tokens.spacing.off20,height:tokens.spacing.fixedGroup}}>
     {square(0,0,op!=="intersect")}
     {square(7,5,op==="union"||op==="exclude")}
     {op==="intersect"?overlap(ink):op==="exclude"?overlap(paper):null}

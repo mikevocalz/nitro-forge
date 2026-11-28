@@ -15,6 +15,7 @@ import {audioTargetSize,audioCopy} from './audio-chrome.ts';
 import { Platform, Pressable, Text, View, type ViewProps } from "react-native";
 import { joinClasses } from "@nyc-tron/ui/components/styles";
 import type { MixGroup, mixGroups } from "./mix-groups.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 
 export interface MixGroupLabels {
@@ -85,8 +86,8 @@ export function MixGroupBar({
       onPress={() => { void (kind === "Solo" ? onGroupSoloCommit : onGroupMutedCommit)(group.name, !on); }}
       {...{ className: joinClasses(styled && "rounded-control items-center justify-center focus-visible:ring-2 focus-visible:ring-focus active:opacity-80",
         styled && (on ? fill : state === "mixed" ? "border-accent bg-surface-raised" : "border-border bg-surface-raised")) }}
-      style={{ minWidth: HIT + 8, minHeight: HIT, paddingHorizontal: 8, borderWidth: 2,
-        borderStyle: state === "mixed" ? "dashed" : "solid", opacity: disabled ? 0.45 : 1 }}>
+      style={{ minWidth: HIT + tokens.spacing.fixedElement, minHeight: HIT, paddingHorizontal: tokens.spacing.fixedElement, borderWidth: tokens.borderWidth.strong,
+        borderStyle: state === "mixed" ? "dashed" : "solid", opacity: disabled ? tokens.opacity.disabled : 1 }}>
       <Text {...{ className: joinClasses(styled && "font-semibold", styled && (on ? onText : "text-text")) }}>{kind==="Solo"?copy.solo:copy.mute}</Text>
     </Pressable>;
   };
@@ -96,8 +97,8 @@ export function MixGroupBar({
       const count = copy.memberCount(group.memberIds.length);
       return <View key={group.name} {...{ role: "group", "aria-label": copy.groupName(group.name,count) }}
         {...{ className: joinClasses("flex-row items-center gap-2", styled && "rounded-control border border-border bg-surface-sunken") }}
-        style={{ flexWrap:"wrap", maxWidth:"100%", paddingVertical: 4, paddingStart: 10, paddingEnd: 4 }}>
-        <View style={{ minWidth: 56, maxWidth: 140 }}>
+        style={{ flexWrap:"wrap", maxWidth:"100%", paddingVertical: tokens.spacing.fixedStack, paddingStart: tokens.spacing.off10, paddingEnd: tokens.spacing.fixedStack }}>
+        <View style={{ minWidth: tokens.spacing.fixedToolbar, maxWidth: controlTokens.extent.fieldWide }}>
           <Text numberOfLines={1} {...{ className: joinClasses(styled && "font-semibold text-text") }}>{group.name}</Text>
           <Text numberOfLines={1} {...{ className: joinClasses(styled && "text-xs text-text-muted") }}>{count}</Text>
         </View>

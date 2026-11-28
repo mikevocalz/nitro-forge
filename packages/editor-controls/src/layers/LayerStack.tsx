@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {useEffect,useLayoutEffect,useRef,type ReactNode} from "react";
 import {I18nManager,Platform,PanResponder,Pressable,ScrollView,Text,TextInput,View,type PressableProps,type ViewProps} from "react-native";
 import {createStore,type StoreApi} from "zustand/vanilla";
@@ -19,6 +20,7 @@ import {
  dragTargetIndex,formatOpacity,layerAccessibilityLabel,layerDetail,layerOpacityMode,normalizeOpacity,opacityFromDrag,
  resolveRename,stepOpacity,validateLayers,type LayerOpacityMode,type LayerRow,type LayerThumbnail,
 } from "./layer-model.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 type OpacityPreview={id:string;value:number};
 type Drag={id:string;from:number;to:number;dy:number};
@@ -112,10 +114,10 @@ export function LayerStack({scope='layers',revision=0,disabled=false,expandedIds
   onSelect={id=>{const p=current();if(p)p.props.onSelect(id);}} onToggleVisible={id=>{const p=current();if(p&&!p.busy)void mutate(id,()=>p.props.onToggleVisible(id));}}
   onOpacityPreview={(id,value)=>{const p=allowed(id);if(p)p.props.onOpacityPreview?.(id,value);}} onOpacityCommit={(id,value)=>{const p=allowed(id);if(p)return mutate(id,()=>p.props.onOpacityCommit(id,value));}}
   onMove={move} onRename={(id,name)=>{const p=allowed(id);if(p)return mutate(id,()=>p.props.onRename(id,name));}} {...(props.onRemove?{onRemove:(id:string)=>{const p=allowed(id);if(p)return mutate(id,()=>p.props.onRemove!(id));}}:{})}
-  {...(controls?{renderControls:(layer:LayerRow)=>{const row=rows.find(value=>value.layer.id===layer.id)!,original=row.layer;const groups=props.layers.filter(item=>item.kind==='group');return <View style={{height:44,flexDirection:'row',alignItems:'center',gap:4,paddingStart:Math.min(row.depth,6)*8}}>
-   {original.kind==='group'?<Button title={expandedIds.includes(layer.id)?'−':'+'} accessibilityLabel={(expandedIds.includes(layer.id)?'Collapse ':'Expand ')+layer.name} disabled={disabled||busy||!row.hasChildren||!onExpandedChange} {...exact({unstyled:props.unstyled})} style={{minWidth:44,minHeight:44}} onPress={()=>{const p=current();if(p&&!p.busy)p.onExpandedChange?.(expandedIds.includes(layer.id)?expandedIds.filter(id=>id!==layer.id):[...expandedIds,layer.id]);}}/>:<View style={{width:44}}/>}
-   <Button title={original.locked?'Unlock':'Lock'} accessibilityLabel={(original.locked?'Unlock ':'Lock ')+layer.name} disabled={disabled||busy||row.inheritedLock||!onToggleLocked} {...exact({unstyled:props.unstyled})} style={{minWidth:44,minHeight:44}} onPress={()=>{const p=current();if(p&&!p.busy&&!row.inheritedLock)void mutate(layer.id,()=>p.onToggleLocked?.(layer.id));}}/>
-   {nested||onReparent?<View style={{flex:1,minWidth:80}}><MenuButton label={'Group for '+layer.name} editScope={JSON.stringify([scope,revision,layer.id,original.parentId,original.locked,row.inheritedLock,disabled])} disabled={disabled||busy||!!original.locked||row.inheritedLock||!onReparent} {...exact({unstyled:props.unstyled})} items={[{id:'root',label:'Document root'},...groups.map(group=>{let unavailable=false;try{validateLayerTreeMove(props.layers,layer.id,group.id,0);}catch{unavailable=true;}return {id:'group:'+group.id,label:group.name,disabled:unavailable};})]} onSelect={value=>{const p=allowed(layer.id);if(!p?.onReparent)return;const parent=value==='root'?null:value.slice(6);if(parent===(original.parentId??null))return;const toIndex=p.props.layers.filter(item=>item.id!==layer.id&&(item.parentId??null)===parent).length;validateLayerTreeMove(p.props.layers,layer.id,parent,toIndex);void mutate(layer.id,()=>p.onReparent!(layer.id,parent,toIndex));}}><Text numberOfLines={1} {...{className:joinClasses(!props.unstyled&&'text-text')}}>{original.parentId?props.layers.find(item=>item.id===original.parentId)?.name:'Document root'}</Text></MenuButton></View>:null}
+  {...(controls?{renderControls:(layer:LayerRow)=>{const row=rows.find(value=>value.layer.id===layer.id)!,original=row.layer;const groups=props.layers.filter(item=>item.kind==='group');return <View style={{height:tokens.spacing.fixedTarget,flexDirection:'row',alignItems:'center',gap:tokens.spacing.fixedStack,paddingStart:Math.min(row.depth,6)*tokens.spacing.fixedElement}}>
+   {original.kind==='group'?<Button title={expandedIds.includes(layer.id)?'−':'+'} accessibilityLabel={(expandedIds.includes(layer.id)?'Collapse ':'Expand ')+layer.name} disabled={disabled||busy||!row.hasChildren||!onExpandedChange} {...exact({unstyled:props.unstyled})} style={{minWidth:tokens.spacing.fixedTarget,minHeight:tokens.spacing.fixedTarget}} onPress={()=>{const p=current();if(p&&!p.busy)p.onExpandedChange?.(expandedIds.includes(layer.id)?expandedIds.filter(id=>id!==layer.id):[...expandedIds,layer.id]);}}/>:<View style={{width:tokens.spacing.fixedTarget}}/>}
+   <Button title={original.locked?'Unlock':'Lock'} accessibilityLabel={(original.locked?'Unlock ':'Lock ')+layer.name} disabled={disabled||busy||row.inheritedLock||!onToggleLocked} {...exact({unstyled:props.unstyled})} style={{minWidth:tokens.spacing.fixedTarget,minHeight:tokens.spacing.fixedTarget}} onPress={()=>{const p=current();if(p&&!p.busy&&!row.inheritedLock)void mutate(layer.id,()=>p.onToggleLocked?.(layer.id));}}/>
+   {nested||onReparent?<View style={{flex:1,minWidth:tokens.spacing.off76}}><MenuButton label={'Group for '+layer.name} editScope={JSON.stringify([scope,revision,layer.id,original.parentId,original.locked,row.inheritedLock,disabled])} disabled={disabled||busy||!!original.locked||row.inheritedLock||!onReparent} {...exact({unstyled:props.unstyled})} items={[{id:'root',label:'Document root'},...groups.map(group=>{let unavailable=false;try{validateLayerTreeMove(props.layers,layer.id,group.id,0);}catch{unavailable=true;}return {id:'group:'+group.id,label:group.name,disabled:unavailable};})]} onSelect={value=>{const p=allowed(layer.id);if(!p?.onReparent)return;const parent=value==='root'?null:value.slice(6);if(parent===(original.parentId??null))return;const toIndex=p.props.layers.filter(item=>item.id!==layer.id&&(item.parentId??null)===parent).length;validateLayerTreeMove(p.props.layers,layer.id,parent,toIndex);void mutate(layer.id,()=>p.onReparent!(layer.id,parent,toIndex));}}><Text numberOfLines={1} {...{className:joinClasses(!props.unstyled&&'text-text')}}>{original.parentId?props.layers.find(item=>item.id===original.parentId)?.name:'Document root'}</Text></MenuButton></View>:null}
    <Text numberOfLines={1} {...{className:joinClasses(!props.unstyled&&'text-text-muted')}}>{'Level '+(row.depth+1)}</Text>
   </View>;}}:{})}/>;
 }
@@ -149,7 +151,7 @@ function LayerStackBody({
   {/* Scrolling is paused while a row is dragged so the handle keeps the gesture. */}
   <ScrollView scrollEnabled={drag===null} nestedScrollEnabled>
    {layers.length===0
-    ?<Text {...{className:joinClasses(styled&&"text-text-muted")}} style={{padding:12}}>{emptyLabel}</Text>
+    ?<Text {...{className:joinClasses(styled&&"text-text-muted")}} style={{padding:tokens.spacing.fixedInset}}>{emptyLabel}</Text>
     :layers.map((layer,index)=><LayerStackRow key={layer.id} store={store} layer={layer} index={index}
       count={layers.length} rowHeight={height} primaryHeight={primaryHeight} controls={renderControls?.(layer)} disabled={disabled} canReorder={canReorder} thumbnailSlot={thumbnailSlot} mode={mode} selected={layer.id===selectedId} styled={styled}
       accentColor={accentColor} onSelect={onSelect} onToggleVisible={onToggleVisible}
@@ -287,19 +289,19 @@ function LayerStackRow(props:RowProps){
  const text=joinClasses(styled&&(layer.visible?"text-text":"text-text-muted"));
  const muted=joinClasses(styled&&"text-text-muted");
  const percent=Math.round(opacity*100);
- const dimmed={opacity:locked?0.45:1};
+ const dimmed={opacity:locked?tokens.opacity.disabled:1};
 
  return <View testID={"layer-row-"+layer.id}
    {...{className:joinClasses(styled&&"border-b border-border",styled&&(selected||drag)&&"bg-surface-raised")}}
-   style={{height:rowHeight,zIndex:drag?1:0,transform:drag?[{translateY:drag.dy}]:undefined}}>
+   style={{height:rowHeight,zIndex:drag?controlTokens.layer.resting:0,transform:drag?[{translateY:drag.dy}]:undefined}}>
   <View style={{height:props.primaryHeight,flexDirection:"row",alignItems:"center"}}>
   <View pointerEvents="none" {...{className:joinClasses(styled&&selected&&!accentColor&&"bg-accent")}}
-   style={{position:"absolute",start:0,top:0,bottom:0,width:3,...(selected?accent:null)}}/>
+   style={{position:"absolute",start:0,top:0,bottom:0,width:tokens.spacing.off3,...(selected?accent:null)}}/>
   {/* Screen readers reorder through the row's move actions instead of this handle. */}
   <View testID={"layer-reorder-"+layer.id} {...dragPan.current.panHandlers} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
-   style={{width:LAYER_TOUCH_TARGET,height:LAYER_TOUCH_TARGET,alignItems:"center",justifyContent:"center",gap:3,...dimmed}}>
+   style={{width:LAYER_TOUCH_TARGET,height:LAYER_TOUCH_TARGET,alignItems:"center",justifyContent:"center",gap:tokens.spacing.off3,...dimmed}}>
    {[0,1,2].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}}
-    style={{width:16,height:2,borderRadius:1}}/>)}
+    style={{width:tokens.spacing.fixedGroup,height:tokens.spacing.off2,borderRadius:forgeHairlineRadius.tick}}/>)}
   </View>
   <Pressable accessibilityRole="switch" accessibilityLabel={"Show "+layer.name}
    accessibilityState={{checked:layer.visible,disabled:props.disabled}} disabled={props.disabled} onPress={()=>latest.current.onToggleVisible(layer.id)}
@@ -309,7 +311,7 @@ function LayerStackRow(props:RowProps){
   </Pressable>
   {layer.clippedTo?<ClipIndicator unstyled={!styled}/>:null}
   {layer.thumbnail?<Thumbnail thumbnail={layer.thumbnail} styled={styled} dimmed={!layer.visible}/>
-   :props.thumbnailSlot?<View pointerEvents="none" style={{width:LAYER_THUMBNAIL_SIZE,marginEnd:4}}/>:null}
+   :props.thumbnailSlot?<View pointerEvents="none" style={{width:LAYER_THUMBNAIL_SIZE,marginEnd:tokens.spacing.fixedStack}}/>:null}
   {/* The name keeps 96pt beside the slider. With the readout it may shrink as a last resort, so remove never clips. */}
   <View style={{flex:1,minWidth:props.mode==="slider"?LAYER_NAME_MIN_WIDTH:0,height:LAYER_TOUCH_TARGET,justifyContent:"center"}}>
    {rename
@@ -319,7 +321,7 @@ function LayerStackRow(props:RowProps){
       onSubmitEditing={finishRename} onBlur={finishRename}
       onKeyPress={e=>{if(e.nativeEvent.key==="Escape")store.setState({rename:null});}}
       {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-sunken text-text")}}
-      style={{minHeight:LAYER_TOUCH_TARGET,paddingHorizontal:8}}/>
+      style={{minHeight:LAYER_TOUCH_TARGET,paddingHorizontal:tokens.spacing.fixedElement}}/>
     :<Pressable accessibilityRole="button" accessibilityLabel={layerAccessibilityLabel(layer,index,count)}
       accessibilityHint={locked?undefined:"Double tap to select. Long press to rename."}
       accessibilityState={{selected,disabled:props.disabled}} disabled={props.disabled} accessibilityActions={rowActions}
@@ -334,9 +336,9 @@ function LayerStackRow(props:RowProps){
       onPress={()=>latest.current.onSelect(layer.id)} onLongPress={startRename}
       {...{onKeyDown:onRowKey}}
       {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
-      style={{minHeight:LAYER_TOUCH_TARGET,justifyContent:"center",paddingHorizontal:4}}>
+      style={{minHeight:LAYER_TOUCH_TARGET,justifyContent:"center",paddingHorizontal:tokens.spacing.fixedStack}}>
       <Text numberOfLines={1} {...{className:text}} style={{fontWeight:selected?"700":"500"}}>{layer.name}</Text>
-      <Text numberOfLines={1} {...{className:muted}} style={{fontSize:12}}>
+      <Text numberOfLines={1} {...{className:muted}} style={{fontSize:tokens.text.label}}>
        {layerDetail(layer)+(locked?", locked":"")}
       </Text>
      </Pressable>}
@@ -352,15 +354,15 @@ function LayerStackRow(props:RowProps){
     if(e.nativeEvent.actionName==="increment")stepActions(1);
     if(e.nativeEvent.actionName==="decrement")stepActions(-1);
    }}
-   style={{width:LAYER_OPACITY_SLIDER_WIDTH,minWidth:88,flexShrink:1,height:LAYER_TOUCH_TARGET,flexDirection:"row",alignItems:"center",gap:8,
-    paddingEnd:props.onRemove?4:12,...dimmed}}>
+   style={{width:LAYER_OPACITY_SLIDER_WIDTH,minWidth:controlTokens.extent.field,flexShrink:1,height:LAYER_TOUCH_TARGET,flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedElement,
+    paddingEnd:props.onRemove?tokens.spacing.fixedStack:tokens.spacing.fixedInset,...dimmed}}>
    <View onLayout={e=>{trackWidth.current=e.nativeEvent.layout.width;}}
     {...{className:joinClasses(styled&&"bg-surface-raised")}}
-    style={{flex:1,height:4,borderRadius:2,overflow:"hidden"}}>
+    style={{flex:1,height:tokens.spacing.fixedStack,borderRadius:forgeHairlineRadius.tick,overflow:"hidden"}}>
     <View {...{className:joinClasses(styled&&!accentColor&&"bg-accent")}}
-     style={{width:percent+"%",height:4,...accent}}/>
+     style={{width:percent+"%",height:tokens.spacing.fixedStack,...accent}}/>
    </View>
-   <Text {...{className:muted}} style={{width:40,textAlign:"right",fontVariant:["tabular-nums"],fontSize:12}}>
+   <Text {...{className:muted}} style={{width:tokens.spacing.off40,textAlign:"right",fontVariant:["tabular-nums"],fontSize:tokens.text.label}}>
     {formatOpacity(opacity)}
    </Text>
   </View>
@@ -391,7 +393,7 @@ function OpacityReadout({store,layer,styled,opacity,dimmed,onOpacityPreview,comm
  // Closing drops any preview, so the readout shows the committed value again.
  const setOpen=(next:boolean)=>store.setState(next?{editing:layer.id}:{editing:null,opacity:null});
  return <View style={{width:LAYER_OPACITY_READOUT_WIDTH,height:LAYER_TOUCH_TARGET,alignItems:"center",justifyContent:"center"}}>
-  <AnchoredPopover open={open&&!locked} onOpenChange={setOpen} accessibilityLabel={layer.name+" opacity"} width={300}
+  <AnchoredPopover open={open&&!locked} onOpenChange={setOpen} accessibilityLabel={layer.name+" opacity"} width={controlTokens.extent.list}
    trigger={({toggle,triggerProps})=><Pressable {...triggerProps} accessibilityRole="button"
     accessibilityLabel={layer.name+" opacity, "+formatOpacity(opacity)}
     accessibilityHint={locked?undefined:"Opens a scrubber to change opacity."}
@@ -400,11 +402,11 @@ function OpacityReadout({store,layer,styled,opacity,dimmed,onOpacityPreview,comm
     {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus",
       styled&&!locked&&"hover:bg-surface-raised")}}
     style={{minWidth:LAYER_OPACITY_READOUT_WIDTH,height:LAYER_TOUCH_TARGET,alignItems:"center",justifyContent:"center",
-     paddingHorizontal:4,...dimmed}}>
+     paddingHorizontal:tokens.spacing.fixedStack,...dimmed}}>
     <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text-muted")}}
-     style={{fontVariant:["tabular-nums"],fontSize:12}}>{formatOpacity(opacity)}</Text>
+     style={{fontVariant:["tabular-nums"],fontSize:tokens.text.label}}>{formatOpacity(opacity)}</Text>
    </Pressable>}>
-   <View style={{padding:12}}>
+   <View style={{padding:tokens.spacing.fixedInset}}>
     <PrecisionScrubber label={layer.name+" opacity"} value={Math.round(layer.opacity*100)} min={0} max={100} step={1}
      unit="%" disabled={locked}
      onPreview={value=>{
@@ -426,8 +428,8 @@ function Thumbnail({thumbnail,styled,dimmed}:{thumbnail:LayerThumbnail;styled:bo
  const fill="fill" in thumbnail?{backgroundColor:thumbnail.fill}:null;
  return <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
   {...{"aria-hidden":true,className:joinClasses(styled&&"rounded-control border border-border",styled&&!fill&&"bg-surface-sunken")}}
-  style={{width:LAYER_THUMBNAIL_SIZE,height:LAYER_THUMBNAIL_SIZE,marginEnd:4,overflow:"hidden",
-   alignItems:"center",justifyContent:"center",opacity:dimmed?0.45:1,...fill}}>
+  style={{width:LAYER_THUMBNAIL_SIZE,height:LAYER_THUMBNAIL_SIZE,marginEnd:tokens.spacing.fixedStack,overflow:"hidden",
+   alignItems:"center",justifyContent:"center",opacity:dimmed?tokens.opacity.disabled:1,...fill}}>
   {"node" in thumbnail?thumbnail.node:null}
  </View>;
 }
@@ -435,20 +437,20 @@ function Thumbnail({thumbnail,styled,dimmed}:{thumbnail:LayerThumbnail;styled:bo
 /** Two crossed bars drawn with views in the muted text token, matching the row's other glyphs. */
 function RemoveGlyph({styled}:{styled:boolean}){
  const bar=joinClasses(styled&&"bg-text-muted");
- return <View pointerEvents="none" style={{width:14,height:14,alignItems:"center",justifyContent:"center"}}>
-  <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:1,transform:[{rotate:"45deg"}]}}/>
-  <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:1,transform:[{rotate:"-45deg"}]}}/>
+ return <View pointerEvents="none" style={{width:tokens.spacing.off14,height:tokens.spacing.off14,alignItems:"center",justifyContent:"center"}}>
+  <View {...{className:bar}} style={{position:"absolute",width:tokens.spacing.fixedGroup,height:tokens.spacing.off1_5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"45deg"}]}}/>
+  <View {...{className:bar}} style={{position:"absolute",width:tokens.spacing.fixedGroup,height:tokens.spacing.off1_5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"-45deg"}]}}/>
  </View>;
 }
 
 /** Eye-like ring: filled pupil when visible, struck through when hidden. */
 function VisibilityGlyph({visible,styled}:{visible:boolean;styled:boolean}){
- return <View pointerEvents="none" style={{width:20,height:12,alignItems:"center",justifyContent:"center"}}>
+ return <View pointerEvents="none" style={{width:tokens.spacing.off20,height:tokens.spacing.fixedInset,alignItems:"center",justifyContent:"center"}}>
   <View {...{className:joinClasses(styled&&(visible?"border-text":"border-text-muted"))}}
-   style={{width:20,height:12,borderRadius:6,borderWidth:1.5,alignItems:"center",justifyContent:"center"}}>
-   {visible?<View {...{className:joinClasses(styled&&"bg-text")}} style={{width:5,height:5,borderRadius:2.5}}/>:null}
+   style={{width:tokens.spacing.off20,height:tokens.spacing.fixedInset,borderRadius:forgeRadius.sm,borderWidth:tokens.borderWidth.off1_5,alignItems:"center",justifyContent:"center"}}>
+   {visible?<View {...{className:joinClasses(styled&&"bg-text")}} style={{width:tokens.spacing.off5,height:tokens.spacing.off5,borderRadius:forgeHairlineRadius.tick}}/>:null}
   </View>
   {visible?null:<View {...{className:joinClasses(styled&&"bg-text-muted")}}
-   style={{position:"absolute",width:24,height:1.5,transform:[{rotate:"-30deg"}]}}/>}
+   style={{position:"absolute",width:tokens.spacing.fixedSection,height:tokens.spacing.off1_5,transform:[{rotate:"-30deg"}]}}/>}
  </View>;
 }

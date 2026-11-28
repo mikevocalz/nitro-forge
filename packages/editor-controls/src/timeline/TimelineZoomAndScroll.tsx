@@ -17,6 +17,7 @@ import {
   type FrameRange,type TimelineViewport,
 } from "./viewport.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode TimelineZoomAndScroll}. */
 export interface TimelineZoomAndScrollProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -93,7 +94,7 @@ function TimelineZoomAndScrollBody({
   const percent=Math.round(Math.min(1,visibleFrames(viewport)/Math.max(1,durationFrames))*100);
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
     <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
-    <View style={{flexDirection:"row",flexWrap:"wrap",gap:8,alignItems:"center"}}>
+    <View style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.fixedElement,alignItems:"center"}}>
       <Button title="Zoom out" variant="secondary" size="sm" {...id("zoom-out")}
         disabled={disabled||viewport.pxPerFrame<=limits.min} onPress={()=>change(zoomAt(viewport,anchor,1/STEP,durationFrames,rate))}/>
       <Button title="Zoom in" variant="secondary" size="sm" {...id("zoom-in")}
@@ -113,11 +114,11 @@ function TimelineZoomAndScrollBody({
       aria-valuetext={`Showing ${percent} percent of the timeline`} aria-disabled={disabled}
       accessibilityActions={[{name:"increment",label:"Scroll later"},{name:"decrement",label:"Scroll earlier"}]}
       onAccessibilityAction={e=>{if(e.nativeEvent.actionName==="increment")scrollQuarter(1);if(e.nativeEvent.actionName==="decrement")scrollQuarter(-1);}}
-      style={{height:44,direction:"ltr",opacity:disabled?0.45:1,...NO_SELECT}}>
+      style={{height:tokens.spacing.fixedTarget,direction:"ltr",opacity:disabled?tokens.opacity.disabled:1,...NO_SELECT}}>
       {mini.width>0?<View pointerEvents="none" {...{className:joinClasses(styled&&"rounded-control border-2 border-accent bg-accent/10")}}
-        style={{position:"absolute",top:4,bottom:4,left:win.left,width:win.width}}/>:null}
+        style={{position:"absolute",top:tokens.spacing.fixedStack,bottom:tokens.spacing.fixedStack,left:win.left,width:win.width}}/>:null}
       {mini.width>0&&durationFrames>0?<View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}}
-        style={{position:"absolute",top:0,bottom:0,width:2,left:Math.min(mini.width-2,playheadFrame/total*mini.width)}}/>:null}
+        style={{position:"absolute",top:0,bottom:0,width:tokens.spacing.off2,left:Math.min(mini.width-2,playheadFrame/total*mini.width)}}/>:null}
     </View>
   </View>;
 }

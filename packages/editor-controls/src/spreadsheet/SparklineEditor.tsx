@@ -10,6 +10,7 @@ import { PanelCheckbox, PanelChoices, PanelField, PanelHeading } from "./panel-c
 import { Sparkline } from "./Sparkline.tsx";
 import { SPARKLINE_KINDS, sparklineSpecProblem, type SparklineKind, type SparklineSpec } from "./sparkline-model.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /**
  * Controlled sparkline editor: type, data range, target cell, high/low and
@@ -72,12 +73,12 @@ function SparklineEditorBody({actionError,disabledReason,disabled=false,
   const selectionIsLine = selection && (selection.startRow === selection.endRow || selection.startColumn === selection.endColumn);
 
   return <View {...props} {...{ className: joinClasses(!unstyled && "rounded-card border border-border bg-surface-raised", className) }}
-    style={[{ padding: 16, gap: 16 }, props.style]}>
+    style={[{ padding: tokens.spacing.fixedGroup, gap: tokens.spacing.fixedGroup }, props.style]}>
     <PanelHeading title="Sparkline" unstyled={unstyled} />
     <PanelChoices disabled={disabled} label="Type" value={spec.kind} unstyled={unstyled}
       choices={SPARKLINE_KINDS.map(kind => ({ value: kind, label: KIND_LABEL[kind] }))}
       onChange={kind => set({ kind })} />
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.fixedInset, alignItems: "flex-end" }}>
       <PanelField disabled={disabled} label="Data range" value={spec.dataRange} placeholder="B2:M2" unstyled={unstyled}
         error={problem?.field === "dataRange" ? problem.message : undefined}
         onChange={dataRange => set({ dataRange })} />
@@ -96,10 +97,10 @@ function SparklineEditorBody({actionError,disabledReason,disabled=false,
     {spec.kind !== "winloss" ? <PanelChoices disabled={disabled} label="Axis starts at" value={spec.axisMin} unstyled={unstyled}
       choices={[{ value: "auto", label: "Lowest value" }, { value: "zero", label: "Zero" }]}
       onChange={axisMin => set({ axisMin })} /> : null}
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.fixedInset }}>
       <View {...{ className: joinClasses(!unstyled && "rounded-control border border-border bg-surface-sunken") }}
-        style={{ paddingHorizontal: 8, paddingVertical: 6 }}>
-        <Sparkline values={values} kind={spec.kind} width={112} height={28} axisMin={spec.axisMin}
+        style={{ paddingHorizontal: tokens.spacing.fixedElement, paddingVertical: tokens.spacing.off6 }}>
+        <Sparkline values={values} kind={spec.kind} width={tokens.spacing.off104} height={tokens.spacing.fixedStatus} axisMin={spec.axisMin}
           showHigh={spec.showHigh} showLow={spec.showLow} showNegative={spec.showNegative} unstyled={unstyled} />
       </View>
       <Text accessibilityLiveRegion="polite" {...{ className: muted }} style={{ flexShrink: 1 }}>
@@ -108,11 +109,11 @@ function SparklineEditorBody({actionError,disabledReason,disabled=false,
           : `${numeric} of ${values.length} cells have numbers.`}
       </Text>
     </View>
-    {onApply || onRemove ? <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
+    {onApply || onRemove ? <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: tokens.spacing.fixedElement }}>
       {onRemove ? <Button disabled={disabled} title="Remove sparkline" variant="secondary" unstyled={unstyled} onPress={() => onRemove(spec)} /> : null}
       {onApply ? <Button title="Apply" disabled={disabled||Boolean(problem)} unstyled={unstyled} onPress={() => onApply(spec)} /> : null}
     </View> : null}
-    {range && !problem ? <Text {...{ className: muted }} style={{ fontSize: 12 }}>
+    {range && !problem ? <Text {...{ className: muted }} style={{ fontSize: tokens.text.label }}>
       {`Draws ${rangeAddress(range)} in ${spec.location.toUpperCase()}.`}
     </Text> : null}
   <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;

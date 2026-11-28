@@ -8,6 +8,9 @@
       "type": "registry:lib",
       "title": "Studio UI Provider",
       "description": "Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.",
+      "registryDependencies": [
+        "@nitro-forge/studio-theme"
+      ],
       "files": [
         {
           "path": "tooling/registry/stage/studio-ui-provider/ui.tsx",
@@ -158,6 +161,7 @@
       "description": "Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout.",
       "registryDependencies": [
         "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/studio-theme",
         "@nitro-forge/forge-directions"
       ],
       "files": [
@@ -398,6 +402,7 @@
       "description": "Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.",
       "registryDependencies": [
         "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/studio-theme",
         "@nyc-tron/Button",
         "@nyc-tron/Card",
         "@nyc-tron/FieldGroup",
@@ -640,6 +645,7 @@
       ],
       "registryDependencies": [
         "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/studio-theme",
         "@nitro-forge/forge-directions",
         "@nitro-forge/studio-gesture"
       ],
@@ -689,6 +695,7 @@
         "@nitro-forge/persona-turret",
         "@nitro-forge/prism-canvas",
         "@nitro-forge/studio-gesture",
+        "@nyc-tron/shell/MenuButton",
         "@nyc-tron/shell/PrecisionScrubber"
       ],
       "files": [
@@ -718,6 +725,11 @@
           "target": "@components/forge/prism-transform.ts"
         },
         {
+          "path": "tooling/registry/stage/prism-editor/prism-blend.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/prism-blend.ts"
+        },
+        {
           "path": "tooling/registry/stage/prism-editor/rgba-png.ts",
           "type": "registry:lib",
           "target": "@components/forge/rgba-png.ts"
@@ -737,6 +749,7 @@
           "packages/studio-workspace/src/prism-layer-label.ts",
           "packages/studio-workspace/src/prism-layout.ts",
           "packages/studio-workspace/src/prism-transform.ts",
+          "packages/studio-workspace/src/prism-blend.ts",
           "packages/studio-workspace/src/rgba-png.ts"
         ],
         "platforms": [

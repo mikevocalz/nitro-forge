@@ -2,11 +2,15 @@
 // Static equivalence proof for the tokenization rewrite (decision 40).
 //
 // For every source file in packages/studio-workspace/src and packages/icons/src:
-//   1. take the file as it was on the base ref (default origin/master),
-//   2. take the file as it is now, replace every token reference with the
-//      literal value that token holds (tokens.ts and icons tokens.js are
-//      loaded and read, not copied), and drop the token import the rewrite added,
+//   1. take the file as it was on the base ref (default origin/master) and as
+//      it is now,
+//   2. on both sides, replace every token reference with the literal value
+//      that token holds on that side (each side's tokens.ts and icons tokens.js
+//      are loaded and read, not copied) and drop the token-root imports,
 //   3. print both syntax trees with the TypeScript printer and compare them.
+// Substituting both sides matters once the base is itself tokenized (a PR into
+// a branch that already holds the rewrite): a reference that is the same on
+// both sides then reads as the same literal instead of a false difference.
 // A file passes when the two printed trees are identical. Comments are not
 // part of the comparison; literal spelling is normalised (`.4` and `0.4`,
 // single and double quotes) because it does not change the value.
@@ -17,7 +21,9 @@
 // (tokens.ts against tokens.map.json is checked by check-token-map.mjs).
 //
 //   node tooling/codemod/prove-equivalence.mjs [--base origin/master] [--json out.json] [--verbose]
-import { readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PACKAGES, TOKEN_FILES, git, listSources, loadTokenModules, loadTsMorph, packageOf, repoRoot } from './lib.mjs';
 
@@ -29,6 +35,20 @@ const jsonOut = flag('--json');
 const verbose = args.includes('--verbose');
 
 const modules = await loadTokenModules();
+/** The base ref's token modules, read from a copy of its two source trees. */
+const baseTree = mkdtempSync(join(tmpdir(), 'prove-equivalence-'));
+let baseModules;
+try {
+  const archive = execFileSync('git', ['archive', base, 'packages/studio-workspace/src', 'packages/icons/src'], { cwd: repoRoot, maxBuffer: 1 << 28 });
+  execFileSync('tar', ['-x', '-C', baseTree], { input: archive });
+  baseModules = await loadTokenModules(baseTree);
+} catch (error) {
+  // A base without the token modules (before the rewrite) has no references to read back.
+  console.error(`base ${base}: no token modules loaded (${error.message.split("\n")[0]}); comparing its references as written`);
+  baseModules = null;
+} finally {
+  rmSync(baseTree, { recursive: true, force: true });
+}
 /** Names a package's token module exports that code reads as `name.a.b`. */
 const ROOTS = {
   'packages/studio-workspace/src': new Set(['tokens']),
@@ -37,6 +57,19 @@ const ROOTS = {
 const MODULE_SPECIFIER = { 'packages/studio-workspace/src': './tokens', 'packages/icons/src': './tokens.js' };
 
 const f = ts.factory;
+const FOLD = new Map([
+  [ts.SyntaxKind.PlusToken, (a, b) => a + b],
+  [ts.SyntaxKind.MinusToken, (a, b) => a - b],
+  [ts.SyntaxKind.AsteriskToken, (a, b) => a * b],
+  [ts.SyntaxKind.SlashToken, (a, b) => a / b],
+]);
+/** The number a literal (or a negated literal) holds, or null. */
+const numberOf = node => {
+  if (ts.isParenthesizedExpression(node)) return numberOf(node.expression);
+  if (ts.isNumericLiteral(node)) return Number(node.text);
+  if (ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.MinusToken && ts.isNumericLiteral(node.operand)) return -Number(node.operand.text);
+  return null;
+};
 const literalFor = value => {
   if (typeof value === 'string') return f.createStringLiteral(value, true);
   if (typeof value === 'number') {
@@ -58,7 +91,8 @@ function importedNames(sourceFile, specifier) {
 }
 
 /** Parse, optionally substitute token references, normalise literal spelling, print. */
-function render(text, file, { substitute, baseNames }) {
+function render(text, file, { modules }) {
+  const substitute = modules !== null;
   const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { allowJs: true, jsx: ts.JsxEmit.Preserve } });
   const sourceFile = project.createSourceFile(file, text, { overwrite: true }).compilerNode;
   const pkg = packageOf(file);
@@ -73,7 +107,7 @@ function render(text, file, { substitute, baseNames }) {
       if (substitute && ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text === specifier) {
         const bindings = node.importClause?.namedBindings;
         if (bindings && ts.isNamedImports(bindings)) {
-          const keep = bindings.elements.filter(element => !(roots.has(element.name.text) && !baseNames.has(element.name.text)));
+          const keep = bindings.elements.filter(element => !roots.has(element.name.text));
           if (keep.length === 0) return undefined;
           if (keep.length !== bindings.elements.length) {
             return f.updateImportDeclaration(node, node.modifiers, f.updateImportClause(node.importClause, node.importClause.isTypeOnly, node.importClause.name, f.updateNamedImports(bindings, keep)), f.createStringLiteral(node.moduleSpecifier.text, true), node.attributes);
@@ -106,6 +140,19 @@ function render(text, file, { substitute, baseNames }) {
             return node;
           }
         }
+      }
+      // Arithmetic on two numbers folds to its result on both sides, so `tokens.spacing.off16 / 2`
+      // and a base `8` compare equal. Only + - * / with numeric operands fold; anything else stays.
+      if (ts.isBinaryExpression(node) && FOLD.has(node.operatorToken.kind)) {
+        const left = visit(node.left);
+        const right = visit(node.right);
+        const a = numberOf(left);
+        const b = numberOf(right);
+        if (a !== null && b !== null) {
+          const value = FOLD.get(node.operatorToken.kind)(a, b);
+          if (Number.isFinite(value)) return literalFor(value);
+        }
+        return f.updateBinaryExpression(node, left, node.operatorToken, right);
       }
       if (ts.isNumericLiteral(node)) return f.createNumericLiteral(String(Number(node.text)));
       if (ts.isStringLiteral(node)) return f.createStringLiteral(node.text, true);
@@ -141,13 +188,12 @@ for (const file of files) {
   if (baseText === null) { rows.push({ file, status: 'new-file', changed: true }); continue; }
   if (baseText === head) { rows.push({ file, status: 'unchanged', changed: false }); continue; }
   const pkg = packageOf(file);
-  const baseNames = importedNames(ts.createSourceFile(file, baseText, ts.ScriptTarget.Latest, true), MODULE_SPECIFIER[pkg]);
-  const before = render(baseText, file, { substitute: false, baseNames });
-  const after = render(head, file, { substitute: true, baseNames });
+  const before = render(baseText, file, { modules: baseModules });
+  const after = render(head, file, { modules });
   substitutions += after.substitutions;
-  const equal = before.out === after.out && after.problems.length === 0;
+  const equal = before.out === after.out && before.problems.length === 0 && after.problems.length === 0;
   if (!equal) diffs += 1;
-  rows.push({ file, status: equal ? 'equivalent' : 'DIFF', changed: true, substitutions: after.substitutions, problems: after.problems, detail: equal ? undefined : firstDifference(before.out, after.out) });
+  rows.push({ file, status: equal ? 'equivalent' : 'DIFF', changed: true, substitutions: after.substitutions, problems: [...before.problems.map(problem => `base: ${problem}`), ...after.problems], detail: equal ? undefined : firstDifference(before.out, after.out) });
 }
 
 const changed = rows.filter(row => row.changed && row.status !== 'token-file-exempt');

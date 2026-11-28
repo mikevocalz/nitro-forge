@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {Select} from '@nyc-tron/ui/components/Select';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -30,6 +31,7 @@ import {
   type RouteId, type RoutingBus, type RoutingSource,
 } from "./routing.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 const HIT = 44;
 const SLOP = 4;
@@ -140,13 +142,13 @@ function BusAndRoutingMatrixBody({actionError,disabledReason,
   return <View {...rest} onLayout={measure} accessibilityLabel={label} {...{ role: "group" }}
     {...{ className: frame }} style={[{ opacity: width === 0 ? 0 : 1 }, rest.style]}>
     {buses.length===0?<EmptyState title="No buses yet" description="Add a bus to send tracks to a shared output or effect." {...exact({exitAction:disabled?undefined:emptyAction})} unstyled={unstyled}/>:null}
-    {ioBindings.map(binding=><View key={String(binding.sourceId)} style={{gap:8,padding:8}}>
+    {ioBindings.map(binding=><View key={String(binding.sourceId)} style={{gap:tokens.spacing.fixedElement,padding:tokens.spacing.fixedElement}}>
      <Text {...{className:muted}}>{sources.find(s=>s.id===binding.sourceId)?.name} input and sidechain</Text>
      {onInputCommit?<Select label="Track input" value={binding.inputId===null?'none':'source:'+binding.inputId} options={[{value:'none',label:'No input'},...binding.inputs.map(v=>({value:'source:'+v.id,label:v.label}))]} disabled={disabled} unstyled={unstyled} onValueChange={id=>onInputCommit(binding.sourceId,id==='none'?null:id.slice(7))}/>:null}
      {onSidechainCommit?<Select label="Sidechain source" value={binding.sidechainId===null?'none':'source:'+binding.sidechainId} options={[{value:'none',label:'No sidechain'},...binding.sidechains.map(v=>({value:'source:'+v.id,label:v.label}))]} disabled={disabled} unstyled={unstyled} onValueChange={id=>onSidechainCommit(binding.sourceId,id==='none'?null:id.slice(7))}/>:null}
     </View>)}
     {layout === "grid" ? <View>
-      <View style={{ flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10 }}
+      <View style={{ flexDirection: "row", paddingHorizontal: tokens.spacing.fixedInset, paddingVertical: tokens.spacing.off10 }}
         {...{ className: joinClasses(styled && "border-b border-border") }}>
         <Text {...{ className: muted }} style={{ width: ROUTING_COLUMNS.name }}>Track</Text>
         <Text {...{ className: muted }} style={{ width: ROUTING_COLUMNS.output }}>Output</Text>
@@ -154,7 +156,7 @@ function BusAndRoutingMatrixBody({actionError,disabledReason,
           style={{ flex: 1, minWidth: ROUTING_COLUMNS.send }}>{"Send to " + bus.name}</Text>)}
       </View>
       {sources.map((source, i) => <GridRow key={source.id} {...rowProps(source)} last={i === sources.length - 1} />)}
-    </View> : <View style={{ padding: 12, gap: 12 }}>
+    </View> : <View style={{ padding: tokens.spacing.fixedInset, gap: tokens.spacing.fixedInset }}>
       {sources.map(source => <SourceCard key={source.id} {...rowProps(source)} />)}
     </View>}
   <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
@@ -174,12 +176,12 @@ type RowProps = {
 function GridRow({ last, ...p }: RowProps & { last: boolean }) {
   const { source, buses, styled } = p;
   return <View accessibilityLabel={source.name} {...{ role: "group" }}
-    style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10 }}
+    style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: tokens.spacing.fixedInset, paddingVertical: tokens.spacing.off10 }}
     {...{ className: joinClasses(styled && !last && "border-b border-border") }}>
     <Text numberOfLines={2} {...{ className: joinClasses(styled && "text-text font-semibold") }}
-      style={{ width: ROUTING_COLUMNS.name, paddingEnd: 8 }}>{source.name}</Text>
-    <View style={{ width: ROUTING_COLUMNS.output, paddingEnd: 12 }}><OutputGroup {...p} /></View>
-    {buses.map(bus => <View key={bus.id} style={{ flex: 1, minWidth: ROUTING_COLUMNS.send, paddingEnd: 8 }}>
+      style={{ width: ROUTING_COLUMNS.name, paddingEnd: tokens.spacing.fixedElement }}>{source.name}</Text>
+    <View style={{ width: ROUTING_COLUMNS.output, paddingEnd: tokens.spacing.fixedInset }}><OutputGroup {...p} /></View>
+    {buses.map(bus => <View key={bus.id} style={{ flex: 1, minWidth: ROUTING_COLUMNS.send, paddingEnd: tokens.spacing.fixedElement }}>
       <SendControl {...p} bus={bus} />
     </View>)}
   </View>;
@@ -188,19 +190,19 @@ function GridRow({ last, ...p }: RowProps & { last: boolean }) {
 function SourceCard(p: RowProps) {
   const { source, buses, styled } = p;
   const caption = joinClasses(styled && "text-text-muted text-sm");
-  return <View accessibilityLabel={source.name} {...{ role: "group" }} style={{ padding: 12, gap: 12 }}
+  return <View accessibilityLabel={source.name} {...{ role: "group" }} style={{ padding: tokens.spacing.fixedInset, gap: tokens.spacing.fixedInset }}
     {...{ className: joinClasses(styled && "rounded-control border border-border bg-surface-sunken") }}>
     <Text role="heading" {...{ "aria-level": 3 }}
       {...{ className: joinClasses(styled && "text-text font-semibold text-base") }}>{source.name}</Text>
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: tokens.spacing.off6 }}>
       <Text {...{ className: caption }}>Output</Text>
       <OutputGroup {...p} />
     </View>
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: tokens.spacing.off6 }}>
       <Text {...{ className: caption }}>Sends</Text>
-      {buses.map(bus => <View key={bus.id} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      {buses.map(bus => <View key={bus.id} style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.fixedElement }}>
         <Text numberOfLines={1} {...{ className: joinClasses(styled && "text-text") }}
-          style={{ width: 88 }}>{bus.name}</Text>
+          style={{ width: controlTokens.extent.field }}>{bus.name}</Text>
         <View style={{ flex: 1 }}><SendControl {...p} bus={bus} /></View>
       </View>)}
     </View>
@@ -227,9 +229,9 @@ function OutputGroup({ source, buses, disabled, styled, onOutputCommit }: RowPro
     choose(target);
     refs.current.get(target ?? "master")?.focus?.();
   };
-  return <View style={{ gap: 6 }}>
+  return <View style={{ gap: tokens.spacing.off6 }}>
     <View accessibilityLabel={source.name + " output"} {...{ role: "radiogroup" }}
-      style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+      style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.off6 }}>
       {options.map(option => {
         const checked = option.id === source.output;
         // Roving focus: only the checked option (or Master when the output is missing) is in the tab order.
@@ -241,7 +243,7 @@ function OutputGroup({ source, buses, disabled, styled, onOutputCommit }: RowPro
           onPress={() => choose(option.id)} onKeyDown={onKeyDown}
           {...{ className: joinClasses(styled && "rounded-control border focus-visible:ring-2 focus-visible:ring-focus active:opacity-80",
             styled && (checked ? "bg-primary border-primary" : "bg-surface-raised border-border")) }}
-          style={{ minHeight: HIT, minWidth: HIT, paddingHorizontal: 12, justifyContent: "center", alignItems: "center", opacity: disabled ? 0.45 : 1 }}>
+          style={{ minHeight: HIT, minWidth: HIT, paddingHorizontal: tokens.spacing.fixedInset, justifyContent: "center", alignItems: "center", opacity: disabled ? tokens.opacity.disabled : 1 }}>
           <Text numberOfLines={1} {...{ className: joinClasses(styled && (checked ? "text-on-primary font-semibold" : "text-text")) }}>{option.name}</Text>
         </Pressable>;
       })}
@@ -311,12 +313,12 @@ function SendControl({ source, bus, disabled, styled, onSendCommit, onSendRemove
     onShouldBlockNativeResponder: () => true,
   });
 
-  const box = { minHeight: HIT, opacity: disabled ? 0.45 : 1 };
+  const box = { minHeight: HIT, opacity: disabled ? tokens.opacity.disabled : 1 };
   if (level === undefined) {
     return <Pressable role="button" accessibilityLabel={"Add " + name} disabled={disabled}
       onPress={() => { void onSendCommit(source.id, bus.id, DEFAULT_SEND_LEVEL); }}
       {...{ className: joinClasses(styled && "rounded-control border border-dashed border-border bg-surface-raised items-center justify-center focus-visible:ring-2 focus-visible:ring-focus active:opacity-80") }}
-      style={[box, { paddingHorizontal: 12 }]}>
+      style={[box, { paddingHorizontal: tokens.spacing.fixedInset }]}>
       <Text {...{ className: joinClasses(styled && "text-text-muted") }}>Add send</Text>
     </Pressable>;
   }
@@ -351,7 +353,7 @@ function SendControl({ source, bus, disabled, styled, onSendCommit, onSendRemove
     step(delta);
   };
   const webTrack = Platform.OS === "web" ? { touchAction: "pan-y" } as unknown as ViewStyle : undefined;
-  return <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+  return <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.off6 }}>
     <View {...responder.current.panHandlers}
       onLayout={e => { trackWidth.current = Math.max(1, e.nativeEvent.layout.width); }}
       accessible focusable={!disabled} accessibilityRole="adjustable" accessibilityLabel={name}
@@ -364,15 +366,15 @@ function SendControl({ source, bus, disabled, styled, onSendCommit, onSendRemove
       }}
       onKeyDown={onKeyDown}
       {...{ className: joinClasses(styled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus") }}
-      style={{ flex: 1, height: HIT, justifyContent: "center", opacity: disabled ? 0.45 : 1, ...webTrack }}>
-      <View pointerEvents="none" style={{ height: 8, borderRadius: 4, overflow: "hidden" }}
+      style={{ flex: 1, height: HIT, justifyContent: "center", opacity: disabled ? tokens.opacity.disabled : 1, ...webTrack }}>
+      <View pointerEvents="none" style={{ height: tokens.spacing.fixedElement, borderRadius: forgeHairlineRadius.tick, overflow: "hidden" }}
         {...{ className: joinClasses(styled && "bg-surface-sunken border border-border") }}>
         <View style={{ position: "absolute", top: 0, bottom: 0, start: 0, width: `${shown * 100}%` }}
           {...{ className: joinClasses(styled && "bg-accent") }} />
       </View>
     </View>
     <Text {...{ className: joinClasses(styled && "text-text text-sm") }}
-      style={{ width: 40, textAlign: "right", fontVariant: ["tabular-nums"] }}>{formatSendLevel(shown)}</Text>
+      style={{ width: tokens.spacing.off40, textAlign: "right", fontVariant: ["tabular-nums"] }}>{formatSendLevel(shown)}</Text>
     <Pressable role="button" accessibilityLabel={"Remove " + name} disabled={disabled}
       onPress={() => { void onSendRemove(source.id, bus.id); }}
       {...{ className: joinClasses(styled && "rounded-control items-center justify-center focus-visible:ring-2 focus-visible:ring-focus active:opacity-80") }}
@@ -384,9 +386,9 @@ function SendControl({ source, bus, disabled, styled, onSendCommit, onSendRemove
 
 /** Remove mark drawn with two rotated bars; the app has no icon dependency here. */
 function CloseGlyph({ styled }: { styled: boolean }) {
-  const bar = { position: "absolute" as const, width: 14, height: 2, borderRadius: 1 };
+  const bar = { position: "absolute" as const, width: tokens.spacing.off14, height: tokens.spacing.off2, borderRadius: forgeHairlineRadius.tick };
   const cls = { className: joinClasses(styled && "bg-text-muted") };
-  return <View pointerEvents="none" style={{ width: 14, height: 14, alignItems: "center", justifyContent: "center" }}>
+  return <View pointerEvents="none" style={{ width: tokens.spacing.off14, height: tokens.spacing.off14, alignItems: "center", justifyContent: "center" }}>
     <View {...cls} style={[bar, { transform: [{ rotate: "45deg" }] }]} />
     <View {...cls} style={[bar, { transform: [{ rotate: "-45deg" }] }]} />
   </View>;

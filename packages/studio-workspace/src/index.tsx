@@ -113,7 +113,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     const shared = { onPress, disabled, targetSize: scale.size.target, ...(toggled === undefined ? {} : { selected: toggled }), cornerRadius: scale.radius.control,
       variant: primary ? 'primary' as const : 'ghost' as const, tone: 'carolina' as const,
       // A transparent edge keeps each button's shape under Windows High Contrast.
-      className: (selected && !primary ? 'rounded-[4px] border border-transparent bg-ink-800' : 'rounded-[4px] border border-transparent') + (props.density === 'comfortable' ? ' min-h-12 min-w-12' : '') };
+      className: (selected && !primary ? 'rounded-sm border border-transparent bg-ink-800' : 'rounded-sm border border-transparent') + (props.density === 'comfortable' ? ' min-h-12 min-w-12' : '') };
     return iconOnly ? <IconButton key={label} {...shared} size={primary ? 'md' : 'sm'} aria-label={label} icon={icon} />
       : <Button key={label} {...shared} size={small ? 'sm' : 'md'} title={label} icon={icon} />;
   };
@@ -130,7 +130,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
           <View style={{ flexDirection: 'row', gap: scale.space.element + tokens.spacing.off2, alignItems: 'center', padding: scale.space.inset, backgroundColor: colors.base, borderRadius: scale.radius.control }}><ForgeIcon name={appIcons[props.studioId]} size={tokens.size.iconToolbar} color={colors.accent} reducedMotion={reducedMotion} /><Text style={{ color: colors.text, fontSize: scale.type.body, fontWeight: tokens.fontWeight.medium, flex: 1 }}>{props.documentTitle}</Text></View>
           <List tone="carolina">{props.rows.map((row, index) => <ListItem key={`${index}:${row.label}`} supportingText={row.value || 'Empty paragraph'}>{row.label}</ListItem>)}</List>
         </>}
-        {id === 'properties' && <View style={{ borderRadius: scale.radius.panel, overflow: 'hidden' }}><FieldGroup>
+        {id === 'properties' && <View style={{ borderRadius: scale.radius.control, overflow: 'hidden' }}><FieldGroup>
           <FieldGroup.Section title="Document details" tone="carolina">
             <KeyValueList columns={1} surface="night" items={props.rows.map((row, index) => ({ key: `${index}:${row.label}`, label: row.label, value: row.value || 'Empty' }))} />
           </FieldGroup.Section>
@@ -151,7 +151,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
           <SegmentedControl aria-label={`Dock position for ${panelNames[id] ?? id}`} value={dock ?? ''}
             options={DOCKS.map(zone => ({ value: zone, label: zone[0]!.toUpperCase() + zone.slice(1) }))}
             onChange={zone => { if (DOCKS.includes(zone as Dock)) action(id, `move-${zone as Dock}`); }}
-            tone="royal" className="w-full rounded-[4px]" segmentClassName="rounded-[4px]" />
+            tone="royal" className="w-full rounded-sm" segmentClassName="rounded-sm" />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {button('Move before', () => action(id, 'move-before'), false, false, true)}
             {button('Move after', () => action(id, 'move-after'), false, false, true)}
@@ -170,7 +170,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
       <View style={{ flex: 1, minHeight: 0, borderColor: colors.line, borderWidth: tokens.borderWidth.hairline, borderRadius: scale.radius.panel, overflow: 'hidden', backgroundColor: colors.raised }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: scale.space.stack + 1, borderBottomWidth: tokens.borderWidth.hairline, borderBottomColor: colors.line }}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <TabBar semantics="tabs" density="compact" aria-label={`${dock} dock panels`} tone="royal" className="rounded-[4px] overflow-hidden" tabs={panels.map(id => ({
+            <TabBar semantics="tabs" density="compact" aria-label={`${dock} dock panels`} tone="royal" className="rounded-sm overflow-hidden" tabs={panels.map(id => ({
               key: id, label: panelNames[id] ?? id, active: active === id,
               onPress: () => action(id, 'activate'),
               icon: <ForgeIcon name={panelIcons[id] ?? 'file'} size={17} color={active === id ? tokens.color.iconOnActive : colors.muted} reducedMotion={reducedMotion} />,
@@ -203,7 +203,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   }} testID="forge-workspace" style={{ flex: 1, minHeight: 0, backgroundColor: canvasStudio ? colors.deep : colors.base }}>
     <View style={{ paddingHorizontal: compact ? scale.space.inset : scale.space.group + scale.space.stack, borderBottomWidth: canvasStudio ? 0 : tokens.borderWidth.hairline, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: compact ? scale.space.element : scale.space.group, minHeight: canvasStudio ? scale.size.canvasHeader : scale.size.header, ...(canvasStudio ? { backgroundColor: colors.base, margin: scale.space.element, marginBottom: 0, borderRadius: scale.radius.control, boxShadow: tokens.shadow.floatSm } : {}) }}>
       {props.headerLeading}
-      <View style={{ width: separateHostControls ? tokens.spacing.fixedCanvas : 38, height: separateHostControls ? tokens.spacing.fixedCanvas : 38, backgroundColor: colors.soft, borderRadius: scale.radius.panel, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: separateHostControls ? tokens.spacing.fixedCanvas : 38, height: separateHostControls ? tokens.spacing.fixedCanvas : 38, backgroundColor: colors.soft, borderRadius: scale.radius.control, alignItems: 'center', justifyContent: 'center' }}>
         <ForgeIcon name={appIcons[props.studioId]} size={separateHostControls ? tokens.size.iconToolbar : 23} selected color={colors.accent} selectedColor={colors.accent} surfaceColor={colors.soft} reducedMotion={reducedMotion} />
       </View>
       <View style={{ flex: 1, minWidth: tokens.spacing.off40, gap: tokens.spacing.fixedStack }}>

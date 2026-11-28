@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import { useRef } from "react";
@@ -10,6 +11,7 @@ import {
   type SheetTab, type SheetTabTone,
 } from "./sheet-tabs-model.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /**
  * Controlled worksheet tab strip. The app owns the workbook (for Forge, the
@@ -57,9 +59,9 @@ const toneName: Record<SheetTabTone, string> = {
 /** A padlock drawn with views, so forced colors and every platform keep it. */
 function LockMark({ unstyled }: { unstyled: boolean }) {
   const line = !unstyled ? "border-text-muted" : undefined;
-  return <View aria-hidden style={{ width: 10, height: 12, alignItems: "center" }}>
-    <View {...{ className: line }} style={{ width: 6, height: 6, borderWidth: 1.5, borderBottomWidth: 0, borderTopLeftRadius: 3, borderTopRightRadius: 3 }} />
-    <View {...{ className: !unstyled ? "bg-text-muted" : undefined }} style={{ width: 10, height: 6, borderRadius: 1 }} />
+  return <View aria-hidden style={{ width: tokens.spacing.off10, height: tokens.spacing.fixedInset, alignItems: "center" }}>
+    <View {...{ className: line }} style={{ width: tokens.spacing.off6, height: tokens.spacing.off6, borderWidth: tokens.borderWidth.off1_5, borderBottomWidth: 0, borderTopLeftRadius: forgeHairlineRadius.tick, borderTopRightRadius: forgeHairlineRadius.tick }} />
+    <View {...{ className: !unstyled ? "bg-text-muted" : undefined }} style={{ width: tokens.spacing.off10, height: tokens.spacing.off6, borderRadius: forgeHairlineRadius.tick }} />
   </View>;
 }
 
@@ -70,7 +72,7 @@ function ActionButton({ label, text, onPress, disabled, unstyled, hint }: {
     aria-disabled={disabled} disabled={disabled} onPress={onPress}
     {...{ className: joinClasses(!unstyled && "rounded-control border border-border bg-surface-raised focus-visible:ring-2 focus-visible:ring-focus",
       !unstyled && disabled && "opacity-50") }}
-    style={{ minHeight: 44, minWidth: 44, paddingHorizontal: 12, justifyContent: "center" }}>
+    style={{ minHeight: tokens.spacing.fixedTarget, minWidth: tokens.spacing.fixedTarget, paddingHorizontal: tokens.spacing.fixedInset, justifyContent: "center" }}>
     <Text {...{ className: !unstyled ? "text-text" : undefined }}>{text ?? label}</Text>
   </Pressable>;
 }
@@ -178,7 +180,7 @@ function SheetTabsBody({actionError,disabledReason,disabled=false,
                 onSubmitEditing={submitRename}
                 onBlur={() => { if (store.getState().renaming === tab.id && !store.getState().pending) submitRename(); }}
                 {...{ className: joinClasses(!unstyled && "rounded-control border border-focus bg-surface-raised text-text") }}
-                style={{ minHeight: 44, minWidth: 120, paddingHorizontal: 12, marginHorizontal: 4 }} />;
+                style={{ minHeight: tokens.spacing.fixedTarget, minWidth: controlTokens.extent.fieldWide, paddingHorizontal: tokens.spacing.fixedInset, marginHorizontal: tokens.spacing.fixedStack }} />;
             }
             return <Pressable key={tab.id} role="tab" aria-selected={selected}
               ref={node => { if (node) tabRefs.current.set(tab.id, node as never); else tabRefs.current.delete(tab.id); }}
@@ -189,9 +191,9 @@ function SheetTabsBody({actionError,disabledReason,disabled=false,
               {...{ className: joinClasses(
                 !unstyled && "border-e border-border focus-visible:ring-2 focus-visible:ring-focus",
                 !unstyled && (selected ? "bg-surface-raised" : "bg-transparent"),
-                !unstyled && tab.tone && "border-b-[3px]", !unstyled && tab.tone && stripe[tab.tone],
+                !unstyled && tab.tone && "border-b-3", !unstyled && tab.tone && stripe[tab.tone],
               ) }}
-              style={{ minHeight: 44, minWidth: 64, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 6 }}>
+              style={{ minHeight: tokens.spacing.fixedTarget, minWidth: tokens.spacing.fixedPage, paddingHorizontal: tokens.spacing.fixedGroup, flexDirection: "row", alignItems: "center", gap: tokens.spacing.off6 }}>
               {tab.isProtected ? <LockMark unstyled={unstyled} /> : null}
               <Text numberOfLines={1} {...{ className: joinClasses(selected ? textClass : mutedClass, selected && "font-semibold") }}>
                 {tab.name}
@@ -206,13 +208,13 @@ function SheetTabsBody({actionError,disabledReason,disabled=false,
         onPress={() => store.setState(s => ({ actionsOpen: !s.actionsOpen, confirmRemove: false }))}
         {...{ className: joinClasses(!unstyled && "border-s border-border focus-visible:ring-2 focus-visible:ring-focus",
           !unstyled && actionsOpen && "bg-surface-raised") }}
-        style={{ minHeight: 44, minWidth: 44, paddingHorizontal: 12, justifyContent: "center" }}>
+        style={{ minHeight: tokens.spacing.fixedTarget, minWidth: tokens.spacing.fixedTarget, paddingHorizontal: tokens.spacing.fixedInset, justifyContent: "center" }}>
         <Text {...{ className: textClass }}>{actionsOpen ? "Done" : "Edit"}</Text>
       </Pressable> : null}
     </View>
     {actionsOpen && active ? <View role="toolbar" aria-label={`Actions for ${active.name}`}
       {...{ className: joinClasses(!unstyled && "border-t border-border bg-surface-raised") }}
-      style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, padding: 8 }}>
+      style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.fixedElement, padding: tokens.spacing.fixedElement }}>
       {onRename && !locked ? <ActionButton unstyled={unstyled} label="Rename" disabled={pending} onPress={() => startRename(active.id)} /> : null}
       {onDuplicate ? <ActionButton unstyled={unstyled} label="Duplicate" disabled={pending} onPress={() => void run(() => onDuplicate(active.id))} /> : null}
       {onMove && !locked ? <>
@@ -224,7 +226,7 @@ function SheetTabsBody({actionError,disabledReason,disabled=false,
       {onProtectedChange ? <ActionButton unstyled={unstyled} label={locked ? "Unprotect" : "Protect"} disabled={pending}
         onPress={() => void run(() => onProtectedChange(active.id, !locked))} /> : null}
       {onRemove && !locked ? (confirmRemove
-        ? <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+        ? <View style={{ flexDirection: "row", gap: tokens.spacing.fixedElement, alignItems: "center" }}>
           <Text {...{ className: textClass }}>{`Remove ${active.name}?`}</Text>
           <ActionButton unstyled={unstyled} label="Remove" disabled={pending}
             onPress={() => void run(() => onRemove(active.id), { confirmRemove: false })} />
@@ -236,7 +238,7 @@ function SheetTabsBody({actionError,disabledReason,disabled=false,
       {locked && (onRename || onRemove || onMove) ? <Text {...{ className: mutedClass }} style={{ alignSelf: "center" }}>
         Unprotect this sheet to rename, move or remove it.
       </Text> : null}
-      {onToneChange ? <View role="radiogroup" aria-label="Tab color" style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+      {onToneChange ? <View role="radiogroup" aria-label="Tab color" style={{ flexDirection: "row", gap: tokens.spacing.fixedStack, alignItems: "center" }}>
         {[undefined, ...SHEET_TAB_TONES].map(tone => {
           const checked = active.tone === tone;
           return <Pressable key={tone ?? "none"} role="radio" aria-checked={checked}
@@ -244,14 +246,14 @@ function SheetTabsBody({actionError,disabledReason,disabled=false,
             onPress={() => void run(() => onToneChange(active.id, tone))}
             {...{ className: joinClasses(!unstyled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus",
               !unstyled && checked && "border-2 border-focus") }}
-            style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            style={{ width: tokens.spacing.fixedTarget, height: tokens.spacing.fixedTarget, alignItems: "center", justifyContent: "center" }}>
             <View {...{ className: joinClasses(!unstyled && (tone ? swatch[tone] : "border border-border bg-surface-sunken")) }}
-              style={{ width: 20, height: 20, borderRadius: 10 }} />
+              style={{ width: tokens.spacing.off20, height: tokens.spacing.off20, borderRadius: tokens.spacing.off20 / 2 /* radius-exempt: colour-well */ }} />
           </Pressable>;
         })}
       </View> : null}
     </View> : null}
-    {activeIndex < 0 && tabs.length > 0 ? <Text {...{ className: mutedClass }} style={{ paddingHorizontal: 12 }}>
+    {activeIndex < 0 && tabs.length > 0 ? <Text {...{ className: mutedClass }} style={{ paddingHorizontal: tokens.spacing.fixedInset }}>
       No sheet is selected.
     </Text> : null}
   <ErrorMessage {...exact({message:actionError??error??disabledReason,unstyled:unstyled})}/></View>;

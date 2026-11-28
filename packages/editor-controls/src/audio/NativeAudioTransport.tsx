@@ -4,6 +4,7 @@ import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export type AudioTransportAction='play'|'pause'|'stop'|'record'|'punch-in'|'punch-out'|'request-permission';
 export interface NativeAudioTransportProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  playing:boolean;recording:boolean;punching:boolean;supportsPunch:boolean;canRecord:boolean;
@@ -17,8 +18,8 @@ export function NativeAudioTransport({scope='audio-transport',revision=0,...prop
  if(![positionSamples,durationSamples].every(n=>Number.isSafeInteger(n)&&n>=0)||!Number.isSafeInteger(sampleRate)||sampleRate<1||sampleRate>768000||!['unknown','granted','denied'].includes(permission)||latencyMs!==undefined&&(!Number.isFinite(latencyMs)||latencyMs<0))throw new RangeError('Invalid audio transport state');
  const identity=JSON.stringify(controlIdentity(scope,revision)),guard=useScopedControl(JSON.stringify([identity,disabledReason]),props,disabledReason!==undefined),stopGuard=useScopedControl(identity,props),off=guard.pending||disabledReason!==undefined;
  const action=(name:AudioTransportAction)=>guard.run(name,(host,signal)=>host.onAction(name,signal));
- return <View {...rest} style={[{gap:8,minWidth:0},style]} accessibilityLabel="Native audio transport">
-  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement,minWidth:0},style]} accessibilityLabel="Native audio transport">
+  <View style={{flexDirection:'row',flexWrap:'wrap',gap:tokens.spacing.fixedElement}}>
    <Button title={playing?'Pause audio':'Play audio'} disabled={off||recording} unstyled={unstyled} onPress={()=>guard.run('play',(host,signal)=>!host.recording?host.onAction(host.playing?'pause':'play',signal):undefined)}/>
    <Button title={recording?'Recording':'Record audio'} disabled={off||recording||!canRecord||permission!=='granted'} unstyled={unstyled} onPress={()=>guard.run('record',(host,signal)=>host.canRecord&&host.permission==='granted'?host.onAction('record',signal):undefined)}/>
    <Button title="Stop audio and save recording" disabled={stopGuard.pending||!playing&&!recording&&!guard.pending} unstyled={unstyled} onPress={()=>{guard.cancel();return stopGuard.run('stop',(host,signal)=>host.onAction('stop',signal));}}/>

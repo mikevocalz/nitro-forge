@@ -15,6 +15,7 @@
  * Native component; colors come from theme tokens, and loading, empty,
  * couldn't-render and stale-while-revalidate states were added.
  */
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {useEffect,useLayoutEffect,useMemo,useRef,useSyncExternalStore} from "react";
 import {Image,PixelRatio,Platform,Pressable,Text,View,type ViewProps} from "react-native";
 import {webKey,isModified} from "@nyc-tron/ui/components/forms/choice-keys";
@@ -23,6 +24,7 @@ import {
   checkerCells,fitContain,rasterToImage,sharedThumbnailCache,thumbnailAccessibilityLabel,thumbnailRequestMax,thumbnailCacheId,
   type ThumbnailCache,type ThumbnailImage,type ThumbnailSource,type ThumbnailState,
 } from "./layer-thumbnail-model.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode LayerThumbnail}. */
 export interface LayerThumbnailProps extends Omit<ViewProps,"children"> {
@@ -121,7 +123,7 @@ function Checker({box,styled}:{box:{x:number;y:number;width:number;height:number
   const {cell,cells}=checkerCells(box.width,box.height);
   return <View pointerEvents="none" style={{position:"absolute",left:box.x,top:box.y,width:box.width,height:box.height,overflow:"hidden"}}>
     {cells.map(c=><View key={c.x+","+c.y} {...{className:joinClasses(styled&&"bg-border")}}
-      style={{position:"absolute",left:c.x,top:c.y,width:cell,height:cell,opacity:0.6}}/>)}
+      style={{position:"absolute",left:c.x,top:c.y,width:cell,height:cell,opacity:controlTokens.opacity.muted}}/>)}
   </View>;
 }
 
@@ -129,8 +131,8 @@ function Checker({box,styled}:{box:{x:number;y:number;width:number;height:number
 function Skeleton({width,height,styled}:{width:number;height:number;styled:boolean}){
   const bar=Math.max(4,Math.round(Math.min(width,height)/6));
   return <View pointerEvents="none" style={{width:"70%",gap:bar/2,alignItems:"flex-start"}}>
-    <View {...{className:joinClasses(styled&&"bg-border")}} style={{width:"100%",height:bar,borderRadius:bar/2,opacity:0.7}}/>
-    {height>=40?<View {...{className:joinClasses(styled&&"bg-border")}} style={{width:"60%",height:bar,borderRadius:bar/2,opacity:0.7}}/>:null}
+    <View {...{className:joinClasses(styled&&"bg-border")}} style={{width:"100%",height:bar,borderRadius:forgeHairlineRadius.tick,opacity:controlTokens.opacity.muted}}/>
+    {height>=40?<View {...{className:joinClasses(styled&&"bg-border")}} style={{width:"60%",height:bar,borderRadius:forgeHairlineRadius.tick,opacity:controlTokens.opacity.muted}}/>:null}
   </View>;
 }
 
@@ -138,17 +140,17 @@ function Skeleton({width,height,styled}:{width:number;height:number;styled:boole
 function Failure({width,height,styled,onRetry}:{width:number;height:number;styled:boolean;onRetry:(()=>void)|undefined}){
   const roomy=width>=96&&height>=84;
   const mark=<View pointerEvents="none" {...{className:joinClasses(styled&&"border-danger")}}
-    style={{width:16,height:16,borderRadius:8,borderWidth:1.5,alignItems:"center",justifyContent:"center",gap:1.5}}>
-    <View {...{className:joinClasses(styled&&"bg-danger")}} style={{width:2,height:6,borderRadius:1}}/>
-    <View {...{className:joinClasses(styled&&"bg-danger")}} style={{width:2,height:2,borderRadius:1}}/>
+    style={{width:tokens.spacing.fixedGroup,height:tokens.spacing.fixedGroup,borderRadius:forgeRadius.sm,borderWidth:tokens.borderWidth.off1_5,alignItems:"center",justifyContent:"center",gap:tokens.spacing.off1_5}}>
+    <View {...{className:joinClasses(styled&&"bg-danger")}} style={{width:tokens.spacing.off2,height:tokens.spacing.off6,borderRadius:forgeHairlineRadius.tick}}/>
+    <View {...{className:joinClasses(styled&&"bg-danger")}} style={{width:tokens.spacing.off2,height:tokens.spacing.off2,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
   if(!roomy)return mark;
-  return <View style={{alignItems:"center",gap:4,paddingHorizontal:6}}>
+  return <View style={{alignItems:"center",gap:tokens.spacing.fixedStack,paddingHorizontal:tokens.spacing.off6}}>
     {mark}
     <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text text-xs")}}>Couldn't render</Text>
     {onRetry?<Pressable accessibilityRole="button" accessibilityLabel="Retry preview" onPress={onRetry}
       {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
-      style={{minHeight:44,minWidth:44,paddingHorizontal:8,alignItems:"center",justifyContent:"center"}}>
+      style={{minHeight:tokens.spacing.fixedTarget,minWidth:tokens.spacing.fixedTarget,paddingHorizontal:tokens.spacing.fixedElement,alignItems:"center",justifyContent:"center"}}>
       <Text {...{className:joinClasses(styled&&"text-text-muted text-xs font-semibold")}}>Retry</Text>
     </Pressable>:null}
   </View>;
@@ -157,5 +159,5 @@ function Failure({width,height,styled,onRetry}:{width:number;height:number;style
 /** Corner dot on a stale preview whose newer revision failed, so the old picture is not mistaken for current. */
 function StaleMark({styled}:{styled:boolean}){
   return <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-danger")}}
-    style={{position:"absolute",top:2,end:2,width:7,height:7,borderRadius:3.5}}/>;
+    style={{position:"absolute",top:tokens.spacing.off2,end:tokens.spacing.off2,width:tokens.spacing.off7,height:tokens.spacing.off7,borderRadius:forgeHairlineRadius.tick}}/>;
 }

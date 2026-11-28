@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {audioTargetSize,audioCopy} from './audio-chrome.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -12,6 +13,7 @@ import {
   addTap, clampBpm, formatTimeSignature, isValidTimeSignature, tapTempo, type TimeSignature,
 } from "./tempo.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 
 export interface TempoLabels {
@@ -115,7 +117,7 @@ function TempoAndMetronomeBody({actionError,disabledReason,
   const chip = (on: boolean) => joinClasses(styled && "rounded-control items-center justify-center border focus-visible:ring-2 focus-visible:ring-focus active:opacity-80",
     styled && (on ? "bg-primary border-primary" : "bg-surface-sunken border-border"));
   const chipText = (on: boolean) => joinClasses(styled && "font-semibold", styled && (on ? "text-on-primary" : "text-text"));
-  const box = { minWidth: HIT, minHeight: HIT, paddingHorizontal: 10, opacity: disabled ? 0.45 : 1 };
+  const box = { minWidth: HIT, minHeight: HIT, paddingHorizontal: tokens.spacing.off10, opacity: disabled ? tokens.opacity.disabled : 1 };
   const muted = joinClasses(styled && "text-text-muted");
   const setNumerator = (n: number) => {
     if (disabled || n < 1 || n > MAX_NUMERATOR || n === numerator) return;
@@ -129,7 +131,7 @@ function TempoAndMetronomeBody({actionError,disabledReason,
   return <View {...rest} {...{ className: joinClasses("gap-4", styled && "rounded-card border border-border bg-surface-raised p-4", className) }}>
     <PrecisionScrubber targetSize={HIT} {...(copy.precision===undefined?{}:{labels:copy.precision})} label={copy.tempo} value={clampBpm(bpm)} min={MIN_BPM} max={MAX_BPM} step={1} unit=" BPM"
       disabled={disabled} unstyled={unstyled} onCommit={onTempoCommit} />
-    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.spacing.fixedElement }}>
       <Pressable accessibilityRole="button" accessibilityLabel={copy.tapName}
         accessibilityHint={copy.tapHint}
         accessibilityValue={estimate === undefined ? undefined : { text: estimate.toFixed(1) + " BPM" }}
@@ -142,27 +144,27 @@ function TempoAndMetronomeBody({actionError,disabledReason,
           : taps.length === 1 ? copy.keepTapping : ""}
       </Text>
     </View>
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: tokens.spacing.fixedElement }}>
       <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>{copy.timeSignature}</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.spacing.fixedElement }}>
         <View accessible accessibilityRole="adjustable" accessibilityLabel={copy.beatsPerBar}
           accessibilityValue={{ min: 1, max: MAX_NUMERATOR, now: numerator }}
           accessibilityActions={[{ name: "increment",label:copy.moreBeats }, { name: "decrement",label:copy.fewerBeats }]}
           onAccessibilityAction={e => setNumerator(numerator + (e.nativeEvent.actionName === "increment" ? 1 : -1))}
-          style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.fixedStack }}>
           <Pressable accessibilityRole="button" accessibilityLabel={copy.fewerBeats}
             disabled={disabled || numerator <= 1} onPress={() => setNumerator(numerator - 1)}
             {...{ className: chip(false) }} style={box}><Text {...{ className: chipText(false) }}>−</Text></Pressable>
           <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}
-            style={{ minWidth: 28, textAlign: "center", fontVariant: ["tabular-nums"] }}>{numerator}</Text>
+            style={{ minWidth: tokens.spacing.fixedStatus, textAlign: "center", fontVariant: ["tabular-nums"] }}>{numerator}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel={copy.moreBeats}
             disabled={disabled || numerator >= MAX_NUMERATOR} onPress={() => setNumerator(numerator + 1)}
             {...{ className: chip(false) }} style={box}><Text {...{ className: chipText(false) }}>+</Text></Pressable>
         </View>
         {/* The slash travels with the unit chips so a wrap never strands it. */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.fixedElement }}>
         <Text {...{ className: muted }}>/</Text>
-        <View accessibilityRole="radiogroup" accessibilityLabel={copy.beatUnit} style={{ flexDirection: "row", flexWrap:"wrap", gap: 4 }}>
+        <View accessibilityRole="radiogroup" accessibilityLabel={copy.beatUnit} style={{ flexDirection: "row", flexWrap:"wrap", gap: tokens.spacing.fixedStack }}>
           {TIME_SIG_DENOMINATORS.map(d => <Pressable key={d} accessibilityRole="radio"
             accessibilityLabel={copy.unitName(d)} accessibilityState={{ checked: d === denominator, disabled }}
             disabled={disabled} onPress={() => { if (d !== denominator) void onTimeSignatureCommit([numerator, d]); }}
@@ -173,7 +175,7 @@ function TempoAndMetronomeBody({actionError,disabledReason,
         </View>
       </View>
     </View>
-    {metronome || beat !== undefined ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+    {metronome || beat !== undefined ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.spacing.fixedInset }}>
       {metronome ? <Pressable accessibilityRole="switch" accessibilityLabel={copy.metronome}
         accessibilityState={{ checked: metronome.enabled, disabled }} disabled={disabled}
         onPress={() => { void metronome.onChange(!metronome.enabled); }}
@@ -182,11 +184,11 @@ function TempoAndMetronomeBody({actionError,disabledReason,
       </Pressable> : null}
       {beat !== undefined ? <View accessible accessibilityRole="text"
         accessibilityLabel={copy.beatName((beat % numerator)+1,numerator)}
-        style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+        style={{ flexDirection: "row", gap: tokens.spacing.off6, alignItems: "center" }}>
         {Array.from({ length: Math.min(numerator, 16) }, (_, i) => {
           const on = i === beat % numerator;
           return <View key={i} {...{ className: joinClasses(styled && (on ? (i === 0 ? "bg-primary" : "bg-accent") : "bg-surface-sunken border border-border")) }}
-            style={{ width: i === 0 ? 14 : 10, height: i === 0 ? 14 : 10, borderRadius: 7 }} />;
+            style={{ width: i === 0 ? tokens.spacing.off14 : tokens.spacing.off10, height: i === 0 ? tokens.spacing.off14 : tokens.spacing.off10, borderRadius: forgeRadius.sm }} />;
         })}
       </View> : null}
     </View> : null}

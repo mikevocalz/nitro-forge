@@ -19,6 +19,7 @@ import {
 } from "./vector-types.ts";
 import {GroupLabel,NoticeLine,VECTOR_TOUCH_TARGET,VectorButton} from "./vector-controls.tsx";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** A color the host offers as a swatch. */
 export interface PaintSwatch {
@@ -130,7 +131,7 @@ function FillStrokeInspectorBody({
     style={[{minWidth:0},style]}>
     <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Applying change"}</Text>:null}
-    <View style={{gap:8}} testID="fill-section">
+    <View style={{gap:tokens.spacing.fixedElement}} testID="fill-section">
       <GroupLabel styled={styled}>Fill</GroupLabel>
       <SegmentedControl aria-label="Fill type" unstyled={unstyled} value={fillType}
         options={FILL_TYPES.map(o=>({...o,disabled:(o.value==="linear"||o.value==="radial")&&gradientReason!==undefined}))}
@@ -147,8 +148,8 @@ function FillStrokeInspectorBody({
       {availabilityReason(support.fillRule)&&!gradientReason?<Text {...{className:muted}}>{availabilityReason(support.fillRule)}</Text>:null}
     </View>
 
-    <View style={{gap:8}} testID="stroke-section">
-      <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+    <View style={{gap:tokens.spacing.fixedElement}} testID="stroke-section">
+      <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:tokens.spacing.fixedElement,flexWrap:"wrap"}}>
         <GroupLabel styled={styled}>Stroke</GroupLabel>
         <VectorButton role="switch" label="Stroke" checked={stroke!==null} styled={styled} reason={strokeReason}
           onBlocked={reason=>store.setState({notice:reason})}
@@ -179,14 +180,14 @@ function FillStrokeInspectorBody({
             if(next==="custom"){store.setState({dashDraft:formatDash(stroke.dash.length?stroke.dash:dashForPreset("dash",stroke.width))});return;}
             commitStroke({...stroke,dash:dashForPreset(next,stroke.width)});
           }}/>
-        {preset==="custom"||dashDraft!==undefined?<View style={{gap:4}}>
+        {preset==="custom"||dashDraft!==undefined?<View style={{gap:tokens.spacing.fixedStack}}>
           <TextInput accessibilityLabel="Custom dash pattern" placeholder="6 3"
             value={dashDraft??formatDash(stroke.dash)} returnKeyType="done"
             onChangeText={text=>store.setState({dashDraft:text,dashError:undefined})}
             onSubmitEditing={applyDashDraft} onBlur={applyDashDraft}
             {...{className:joinClasses(styled&&"rounded-control border bg-surface-sunken text-text",
               styled&&(dashError?"border-danger":"border-border"))}}
-            style={{minHeight:VECTOR_TOUCH_TARGET,paddingHorizontal:10,fontVariant:["tabular-nums"]}}/>
+            style={{minHeight:VECTOR_TOUCH_TARGET,paddingHorizontal:tokens.spacing.off10,fontVariant:["tabular-nums"]}}/>
           <Text {...{className:dashError?joinClasses(styled&&"text-danger text-xs"):muted}}
             accessibilityLiveRegion={dashError?"assertive":"none"}>
             {dashError??"Dash and gap lengths in points, separated by spaces"}</Text>
@@ -210,10 +211,10 @@ function SwatchRow({label,swatches,current,styled,onPick,onCustom}:{
   label:string;swatches:readonly PaintSwatch[];current:Rgba;styled:boolean;onPick:(color:Rgba)=>void;onCustom:(()=>void)|undefined;
 }){
   const matched=swatches.find(s=>sameColor(s.color,current));
-  return <View style={{gap:4}}>
+  return <View style={{gap:tokens.spacing.fixedStack}}>
     <Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}}>
       {`${label}: ${matched?.label??describeRgba(current)}`}</Text>
-    <View role="radiogroup" aria-label={label} style={{flexDirection:"row",flexWrap:"wrap",gap:2}}>
+    <View role="radiogroup" aria-label={label} style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.off2}}>
       {swatches.map(s=>{
         const on=matched?.id===s.id;
         return <Pressable key={s.id} role="radio" aria-checked={on} aria-label={s.label}
@@ -222,13 +223,13 @@ function SwatchRow({label,swatches,current,styled,onPick,onCustom}:{
             styled&&"border-2",styled&&(on?"border-primary":"border-transparent"))}}
           style={{width:VECTOR_TOUCH_TARGET,height:VECTOR_TOUCH_TARGET,alignItems:"center",justifyContent:"center"}}>
           <View pointerEvents="none" {...{className:joinClasses(styled&&"border border-border")}}
-            style={{width:28,height:28,borderRadius:14,backgroundColor:rgbaToCss(s.color)}}/>
+            style={{width:tokens.spacing.fixedStatus,height:tokens.spacing.fixedStatus,borderRadius:tokens.spacing.fixedStatus / 2, /* radius-exempt: colour-well */backgroundColor:rgbaToCss(s.color)}}/>
         </Pressable>;
       })}
       {onCustom?<Pressable role="button" aria-label={"Custom "+label.toLowerCase()} onPress={onCustom}
         {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-raised focus-visible:ring-2 focus-visible:ring-focus")}}
-        style={{minWidth:VECTOR_TOUCH_TARGET,height:VECTOR_TOUCH_TARGET,paddingHorizontal:10,alignItems:"center",justifyContent:"center"}}>
-        <Text {...{className:joinClasses(styled&&"text-text")}} style={{fontSize:13}}>Custom</Text>
+        style={{minWidth:VECTOR_TOUCH_TARGET,height:VECTOR_TOUCH_TARGET,paddingHorizontal:tokens.spacing.off10,alignItems:"center",justifyContent:"center"}}>
+        <Text {...{className:joinClasses(styled&&"text-text")}} style={{fontSize:tokens.text.off13}}>Custom</Text>
       </Pressable>:null}
     </View>
   </View>;

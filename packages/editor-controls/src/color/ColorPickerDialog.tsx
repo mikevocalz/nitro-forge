@@ -18,6 +18,7 @@ import {
   colorChanged,colorDialogTitle,comparisonContrast,comparisonLabel,describeColor,dialogKeyIntent,
   draftFromRgba,draftWithAlpha,revertDraft,type DialogKeyTarget,
 } from "./color-picker-dialog-model.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ColorPickerDialog}. Every color is controlled by the host. */
 export interface ColorPickerDialogProps {
@@ -145,7 +146,7 @@ export function ColorPickerDialog({
       </View>:null}
       <View pointerEvents="none" style={{position:"absolute",left:0,right:0,top:0,bottom:0,backgroundColor:rgbaToHex(hsvToRgb(color))}}/>
     </>;
-    const caption=<View style={{flexDirection:"row",justifyContent:"space-between",gap:6,paddingTop:6}}>
+    const caption=<View style={{flexDirection:"row",justifyContent:"space-between",gap:tokens.spacing.off6,paddingTop:tokens.spacing.off6}}>
       <Text {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}}>{side==="original"?"Original":"New"}</Text>
       <Text {...{className:muted}} style={{fontVariant:["tabular-nums"]}}>{rgbaToHex(hsvToRgb(color),color.alpha<1)}</Text>
     </View>;
@@ -164,19 +165,19 @@ export function ColorPickerDialog({
   };
 
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={cancel} statusBarTranslucent>
-    <View style={{flex:1,alignItems:"center",justifyContent:"center",padding:16}}>
+    <View style={{flex:1,alignItems:"center",justifyContent:"center",padding:tokens.spacing.fixedGroup}}>
       {/* The backdrop is a mouse and touch target only; Cancel and Escape are the accessible ways out. */}
       <Pressable accessible={false} importantForAccessibility="no" aria-hidden onPress={cancel} {...id("backdrop")}
         {...{className:styled?"bg-text/50":undefined}} style={{position:"absolute",left:0,right:0,top:0,bottom:0}}/>
       <View accessibilityViewIsModal role="dialog" aria-label={heading} aria-modal
         {...(testID?{testID}:{})}
         {...{onKeyDown,className:joinClasses("w-full",styled&&"rounded-control border border-border bg-surface-raised",className)}}
-        style={{maxWidth:440,maxHeight:"92%"}}>
+        style={{maxWidth:tokens.spacing.off480,maxHeight:"92%"}}>
         <Text accessibilityRole="header" {...{className:joinClasses("text-start",styled&&"text-lg font-semibold text-text")}}
-          style={{paddingHorizontal:16,paddingTop:16,paddingBottom:12}}>{heading}</Text>
-        <ScrollView contentContainerStyle={{paddingHorizontal:16,paddingBottom:16,gap:16}} keyboardShouldPersistTaps="handled">
-          <View style={{gap:6}}>
-            <View style={{flexDirection:"row",gap:8}} onLayout={e=>store.setState(s=>({...s,width:e.nativeEvent.layout.width}))}>
+          style={{paddingHorizontal:tokens.spacing.fixedGroup,paddingTop:tokens.spacing.fixedGroup,paddingBottom:tokens.spacing.fixedInset}}>{heading}</Text>
+        <ScrollView contentContainerStyle={{paddingHorizontal:tokens.spacing.fixedGroup,paddingBottom:tokens.spacing.fixedGroup,gap:tokens.spacing.fixedGroup}} keyboardShouldPersistTaps="handled">
+          <View style={{gap:tokens.spacing.off6}}>
+            <View style={{flexDirection:"row",gap:tokens.spacing.fixedElement}} onLayout={e=>store.setState(s=>({...s,width:e.nativeEvent.layout.width}))}>
               {half("original",original)}
               {half("new",value)}
             </View>
@@ -195,8 +196,8 @@ export function ColorPickerDialog({
             onSelect={swatch=>change(draftFromRgba(swatch.color,value))} {...id("swatches")}/>:null}
         </ScrollView>
         <View {...{className:joinClasses(styled&&"border-t border-border")}}
-          style={{flexDirection:"row",justifyContent:"flex-end",flexWrap:"wrap",gap:8,padding:12}}>
-          <Text accessibilityLiveRegion="polite" {...{className:muted}} style={{flex:1,minWidth:120,alignSelf:"center"}}>
+          style={{flexDirection:"row",justifyContent:"flex-end",flexWrap:"wrap",gap:tokens.spacing.fixedElement,padding:tokens.spacing.fixedInset}}>
+          <Text accessibilityLiveRegion="polite" {...{className:muted}} style={{flex:1,minWidth:controlTokens.extent.fieldWide,alignSelf:"center"}}>
             {changed?describeColor(value):"No change yet"}
           </Text>
           <Button title="Cancel" variant="secondary" onPress={cancel} {...id("cancel")}/>

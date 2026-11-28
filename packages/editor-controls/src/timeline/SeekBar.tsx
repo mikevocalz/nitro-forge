@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useScopedControl,controlIdentity,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {Platform,Text,View,type ViewProps} from "react-native";
@@ -9,6 +10,7 @@ import type {FrameRange} from "./viewport.ts";
 import {frameForKey} from "./frame-keys.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode SeekBar}. */
 export interface SeekBarProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -82,16 +84,16 @@ function SeekBarBody({
       aria-valuetext={`${tc(scrub.shown)} of ${tc(durationFrames)}`} aria-disabled={off}
       accessibilityActions={[{name:"increment",label:"Next frame"},{name:"decrement",label:"Previous frame"}]}
       onAccessibilityAction={e=>{if(e.nativeEvent.actionName==="increment")step(1);if(e.nativeEvent.actionName==="decrement")step(-1);}}
-      style={{height:44,justifyContent:"center",direction:"ltr",opacity:off?0.45:1,...NO_SELECT}}>
+      style={{height:tokens.spacing.fixedTarget,justifyContent:"center",direction:"ltr",opacity:off?tokens.opacity.disabled:1,...NO_SELECT}}>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"rounded-control bg-surface-sunken border border-border")}}
-        style={{position:"absolute",left:THUMB/2,right:THUMB/2,height:8,overflow:"hidden"}}>
+        style={{position:"absolute",left:THUMB/2,right:THUMB/2,height:tokens.spacing.fixedElement,overflow:"hidden"}}>
         {buffered.map((r,i)=><View key={i} {...{className:joinClasses(styled&&"bg-border")}}
           style={{position:"absolute",top:0,bottom:0,left:`${pos(Math.max(0,r.start))*100}%`,
             width:`${Math.max(0,pos(Math.min(durationFrames,r.end))-pos(Math.max(0,r.start)))*100}%`}}/>)}
         <View {...{className:joinClasses(styled&&"bg-accent")}} style={{position:"absolute",top:0,bottom:0,left:0,width:`${pos(scrub.shown)*100}%`}}/>
       </View>
       {layout.width>0?<View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised border-2 border-accent")}}
-        style={{position:"absolute",left:pos(scrub.shown)*usable,width:THUMB,height:THUMB,borderRadius:THUMB/2}}/>:null}
+        style={{position:"absolute",left:pos(scrub.shown)*usable,width:THUMB,height:THUMB,borderRadius:forgeRadius.sm}}/>:null}
     </View>
     <View style={{flexDirection:"row",justifyContent:"space-between",direction:"ltr"}}>
       <Text {...{className:joinClasses(styled&&(scrub.active?"text-text":"text-text-muted"),styled&&"text-xs")}} style={{fontVariant:["tabular-nums"]}}>{tc(scrub.shown)}</Text>

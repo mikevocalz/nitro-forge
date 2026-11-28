@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useEffect,useLayoutEffect,useRef,type ReactNode} from 'react';
 import {Text,View,type ViewProps} from 'react-native';
 import {GestureDetector,PointerType,usePanGesture} from 'react-native-gesture-handler';
@@ -11,6 +12,7 @@ import type {InkSize} from '../ink/ink-model.ts';
 import {INK_SIZES} from '../ink/ink-model.ts';
 import {appendPoint,createStrokeIdFactory,normalizePoint,resolvePresenterInkKey,strokeSegments,strokesUnderEraser,validatePresenterStrokes,presenterModeStatus,HIGHLIGHTER_OPACITY,LASER_TRAIL_MS,type PresenterInkMode,type PresenterInkPoint,type PresenterInkStroke} from './presenter-ink-model.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 export interface PresenterInkFrame {strokes:readonly PresenterInkStroke[];laser:PresenterInkPoint|undefined;width:number;height:number;frame:number}
 export interface PresenterInkOverlayProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  mode:PresenterInkMode;color:string;size:InkSize;strokes:readonly PresenterInkStroke[];
@@ -40,7 +42,7 @@ export function PresenterInkOverlay({scope='presenter-ink',revision=0,...props}:
  return <GestureDetector gesture={gesture} touchAction="none"><View {...rest} collapsable={false} pointerEvents={mode==='off'||off?'none':'auto'} focusable={mode!=='off'&&!off} accessibilityLabel={presenterModeStatus(mode)}
  {...{onKeyDown:(event:unknown)=>{const h=guard.current();if(!h)return;const k=webKey(event),command=resolvePresenterInkKey(k);if(!command)return;k.preventDefault();if(command.type==='exit'){cancel();h.onModeChange('off');}else if(command.type==='tool')h.onModeChange(command.tool);else{const last=h.strokes.at(-1);if(last)void guard.run('undo',(p,signal)=>p.onRemoveStrokes([last.id],signal));}}}}
  onLayout={e=>{store.setState({width:e.nativeEvent.layout.width,height:e.nativeEvent.layout.height});rest.onLayout?.(e);}} style={[{position:'absolute',left:0,top:0,right:0,bottom:0,overflow:'hidden',direction:'ltr'},style]}>
- {renderInk?renderInk(frame):<>{frame.strokes.map(stroke=><View key={stroke.id} pointerEvents="none" needsOffscreenAlphaCompositing={stroke.tool==='highlighter'} style={{position:'absolute',left:0,right:0,top:0,bottom:0,opacity:stroke.tool==='highlighter'?HIGHLIGHTER_OPACITY:1}}>{strokeSegments(stroke,frame).map((segment,index)=><View key={index} style={{position:'absolute',left:segment.left,top:segment.top,width:segment.length,height:segment.thickness,borderRadius:segment.thickness/2,backgroundColor:stroke.color,transform:[{rotate:segment.angle+'deg'}]}}/>)}</View>)}{s.laser?<View pointerEvents="none" {...{className:unstyled?undefined:'bg-danger'}} style={{position:'absolute',left:s.laser.x*s.width-5,top:s.laser.y*s.height-5,width:10,height:10,borderRadius:5}}/>:null}</>}
+ {renderInk?renderInk(frame):<>{frame.strokes.map(stroke=><View key={stroke.id} pointerEvents="none" needsOffscreenAlphaCompositing={stroke.tool==='highlighter'} style={{position:'absolute',left:0,right:0,top:0,bottom:0,opacity:stroke.tool==='highlighter'?HIGHLIGHTER_OPACITY:1}}>{strokeSegments(stroke,frame).map((segment,index)=><View key={index} style={{position:'absolute',left:segment.left,top:segment.top,width:segment.length,height:segment.thickness,borderRadius:segment.thickness/2, /* radius-exempt: artwork */backgroundColor:stroke.color,transform:[{rotate:segment.angle+'deg'}]}}/>)}</View>)}{s.laser?<View pointerEvents="none" {...{className:unstyled?undefined:'bg-danger'}} style={{position:'absolute',left:s.laser.x*s.width-tokens.spacing.off5,top:s.laser.y*s.height-tokens.spacing.off5,width:tokens.spacing.off10,height:tokens.spacing.off10,borderRadius:forgeRadius.sm}}/>:null}</>}
  {s.notice?<Text {...{className:unstyled?undefined:'text-text bg-surface-raised'}}>{s.notice}</Text>:null}<ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/>
  </View></GestureDetector>;
 }

@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {validateSlideSummary} from './slide-model.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
@@ -11,6 +12,7 @@ import {OFFICE_TOUCH_TARGET,PlusGlyph,officeKey,type OfficeKeyEvent} from "../of
 import {SlideThumbnail} from "./SlideThumbnail.tsx";
 import {SLIDE_DEFAULT_SIZE,slideLabel,type SlideObject,type SlideSize,type SlideSummary} from "./slide-model.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode SlideFilmstrip}. Each action renders only when its callback is passed. */
 export interface SlideFilmstripProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -70,19 +72,19 @@ function SlideFilmstripBody({boundary,actionError,disabledReason,disabled=false,
   // Each slide's extent along the strip: what a drag distance is divided by to find the drop index.
   const rowHeight=(horizontal?thumbnailWidth+40:thumbnailWidth*size.height/size.width+16)+(sections.length?32:0);
   return <View {...rest} accessibilityLabel="Slides" {...{className:joinClasses("min-w-0",styled&&"bg-surface-sunken",className)}}
-    style={[{gap:8,flexDirection:horizontal?"row":"column",alignItems:horizontal?"center":"stretch"},rest.style as object]}>
+    style={[{gap:tokens.spacing.fixedElement,flexDirection:horizontal?"row":"column",alignItems:horizontal?"center":"stretch"},rest.style as object]}>
     <FlatList data={slides} keyExtractor={slide=>slide.id} horizontal={horizontal} scrollEnabled={state.drag===null} style={{flexShrink:1,maxHeight:viewportHeight}}
       initialNumToRender={6} windowSize={5} removeClippedSubviews={false} getItemLayout={(_data,index)=>({length:rowHeight,offset:rowHeight*index,index})} extraData={[state.drag,selectedId,disabled,sections]}
-      contentContainerStyle={horizontal?{paddingHorizontal:4}:{paddingVertical:4}} renderItem={({item:slide,index})=><FilmstripRow key={slide.id} disabled={disabled} sectionLabel={sections.find(s=>s.startSlideId===slide.id)?.label} reserveSection={sections.length>0} slide={slide} index={index} count={slides.length}
+      contentContainerStyle={horizontal?{paddingHorizontal:tokens.spacing.fixedStack}:{paddingVertical:tokens.spacing.fixedStack}} renderItem={({item:slide,index})=><FilmstripRow key={slide.id} disabled={disabled} sectionLabel={sections.find(s=>s.startSlideId===slide.id)?.label} reserveSection={sections.length>0} slide={slide} index={index} count={slides.length}
         selected={slide.id===selectedId} drag={state.drag?.id===slide.id?state.drag:null} store={store} rowHeight={rowHeight}
         thumbnailWidth={thumbnailWidth} size={size} renderImage={renderImage} styled={styled} horizontal={horizontal}
         onSelect={onSelect} onMove={onMove} onRemove={onRemove}/>}/>
 
     {onAdd?<Pressable accessibilityRole="button" accessibilityLabel="New slide" onPress={()=>void onAdd()}
       {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-raised focus-visible:ring-2 focus-visible:ring-focus")}}
-      style={{minHeight:OFFICE_TOUCH_TARGET,minWidth:OFFICE_TOUCH_TARGET,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8,
-        marginHorizontal:horizontal?4:8,paddingHorizontal:horizontal?10:0}}>
-      <PlusGlyph styled={styled} size={12}/>
+      style={{minHeight:OFFICE_TOUCH_TARGET,minWidth:OFFICE_TOUCH_TARGET,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:tokens.spacing.fixedElement,
+        marginHorizontal:horizontal?tokens.spacing.fixedStack:tokens.spacing.fixedElement,paddingHorizontal:horizontal?tokens.spacing.off10:0}}>
+      <PlusGlyph styled={styled} size={tokens.size.iconXs}/>
       {horizontal?null:<Text {...{className:joinClasses(styled&&"text-text text-sm")}}>New slide</Text>}
     </Pressable>:null}
   <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
@@ -144,15 +146,15 @@ function FilmstripRow(props:RowProps){
     ...(removable?[{name:"remove",label:"Delete slide"}]:[]),
   ];
   const shift=drag?(horizontal?[{translateX:I18nManager.isRTL?-drag.dy:drag.dy}]:[{translateY:drag.dy}]):undefined;
-  return <View style={{...(horizontal?{width:rowHeight,flexDirection:"column-reverse",paddingVertical:4}:{height:rowHeight,flexDirection:"row",paddingHorizontal:4}),
-    alignItems:"center",zIndex:drag?1:0,transform:shift,...(reserveSection?{paddingTop:32}:{})}}>
-    {sectionLabel?<Text accessibilityRole="header" {...{className:joinClasses(styled&&"text-text font-semibold")}} style={{position:"absolute",top:0,start:8,end:8,height:28}}>{sectionLabel}</Text>:null}
-    <View style={{...(horizontal?{flexDirection:"row",height:OFFICE_TOUCH_TARGET}:{width:44}),alignItems:"center",gap:6}}>
+  return <View style={{...(horizontal?{width:rowHeight,flexDirection:"column-reverse",paddingVertical:tokens.spacing.fixedStack}:{height:rowHeight,flexDirection:"row",paddingHorizontal:tokens.spacing.fixedStack}),
+    alignItems:"center",zIndex:drag?controlTokens.layer.resting:0,transform:shift,...(reserveSection?{paddingTop:tokens.spacing.fixedCanvas}:{})}}>
+    {sectionLabel?<Text accessibilityRole="header" {...{className:joinClasses(styled&&"text-text font-semibold")}} style={{position:"absolute",top:0,start:tokens.spacing.fixedElement,end:tokens.spacing.fixedElement,height:tokens.spacing.fixedStatus}}>{sectionLabel}</Text>:null}
+    <View style={{...(horizontal?{flexDirection:"row",height:OFFICE_TOUCH_TARGET}:{width:tokens.spacing.fixedTarget}),alignItems:"center",gap:tokens.spacing.off6}}>
       <Text {...{className:joinClasses(styled&&(selected?"text-text":"text-text-muted"))}}
-        style={{fontVariant:["tabular-nums"],fontSize:12,fontWeight:selected?"700":"400"}}>{index+1}</Text>
+        style={{fontVariant:["tabular-nums"],fontSize:tokens.text.label,fontWeight:selected?"700":"400"}}>{index+1}</Text>
       {props.onMove?<View {...pan.current.panHandlers} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
-        style={{width:OFFICE_TOUCH_TARGET,height:OFFICE_TOUCH_TARGET,alignItems:"center",justifyContent:"center",gap:3}}>
-        {[0,1,2].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}} style={{width:12,height:2,borderRadius:1}}/>)}
+        style={{width:OFFICE_TOUCH_TARGET,height:OFFICE_TOUCH_TARGET,alignItems:"center",justifyContent:"center",gap:tokens.spacing.off3}}>
+        {[0,1,2].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}} style={{width:tokens.spacing.fixedInset,height:tokens.spacing.off2,borderRadius:forgeHairlineRadius.tick}}/>)}
       </View>:null}
     </View>
     <Pressable disabled={disabled} accessibilityRole="button" accessibilityLabel={slideLabel(slide,index,count)} accessibilityState={{selected,disabled}}
@@ -168,7 +170,7 @@ function FilmstripRow(props:RowProps){
       onPress={()=>latest.current.onSelect(slide.id)} {...{onKeyDown,"aria-current":selected?"true":undefined}}
       {...{className:joinClasses(styled&&"rounded-control border-2 focus-visible:ring-2 focus-visible:ring-focus",
         styled&&(selected||drag?"border-accent":"border-border"))}}
-      style={{padding:2,overflow:"hidden"}}>
+      style={{padding:tokens.spacing.off2,overflow:"hidden"}}>
       <SlideThumbnail slide={slide} width={thumbnailWidth} size={size} renderImage={renderImage} styled={styled}/>
     </Pressable>
   </View>;

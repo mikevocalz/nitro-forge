@@ -6,6 +6,7 @@ import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface VideoEffectsBrowserProps extends EffectStackAndInspectorProps {
  clipId:string;preview:ReactNode;appearance:{intensity:number;maskId:string|null};masks:readonly {id:string;label:string}[];
  onAppearanceChange:(value:{intensity:number;maskId:string|null},signal?:AbortSignal)=>void|Promise<unknown>;
@@ -16,7 +17,7 @@ export function VideoEffectsBrowser({clipId,preview,appearance,masks,onAppearanc
  const host={...props,appearance,onAppearanceChange:_appearance},owner=JSON.stringify([...controlIdentity(props.scope,props.revision),clipId,props.disabled]);
  const guard=useScopedControl(owner,host,!!props.disabled),off=!!props.disabled||guard.pending;
  const set=(patch:Partial<typeof appearance>)=>guard.run('appearance',(current,signal)=>current.onAppearanceChange({...current.appearance,...patch},signal));
- return <View style={{gap:8,minWidth:0}} accessibilityLabel="Video effects">
+ return <View style={{gap:tokens.spacing.fixedElement,minWidth:0}} accessibilityLabel="Video effects">
   {preview}<Text {...{className:props.unstyled?undefined:'text-text'}}>Clip: {clipId}</Text>
   <EffectStackAndInspector key={owner} {...props} disabled={off} onSelect={id=>guard.current()?.onSelect(id)}
    onMutation={(mutation,signal)=>{const current=guard.current();return current?.onMutation(mutation,signal);}}/>

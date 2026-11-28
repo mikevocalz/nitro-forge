@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {PropertyInspector} from '../inputs/PropertyInspector.tsx';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
@@ -13,6 +14,7 @@ import {
 } from "./chart-model.ts";
 import { PanelCheckbox, PanelChoices, PanelField, PanelHeading } from "./panel-controls.tsx";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /**
  * Controlled chart builder: type gallery, data range, series orientation,
@@ -49,21 +51,21 @@ const KIND_LABEL: Record<SheetChartKind, string> = { line: "Line", column: "Colu
 function KindGlyph({ kind, unstyled }: { kind: SheetChartKind; unstyled: boolean }) {
   const ink = !unstyled ? "bg-primary" : undefined;
   if (kind === "column") {
-    return <View aria-hidden style={{ width: 36, height: 24, flexDirection: "row", alignItems: "flex-end", gap: 4 }}>
-      {[10, 20, 14, 24].map((h, i) => <View key={i} {...{ className: ink }} style={{ width: 6, height: h, borderRadius: 1 }} />)}
+    return <View aria-hidden style={{ width: tokens.spacing.off33, height: tokens.spacing.fixedSection, flexDirection: "row", alignItems: "flex-end", gap: tokens.spacing.fixedStack }}>
+      {[10, 20, 14, 24].map((h, i) => <View key={i} {...{ className: ink }} style={{ width: tokens.spacing.off6, height: h, borderRadius: forgeHairlineRadius.tick }} />)}
     </View>;
   }
   if (kind === "area") {
-    return <View aria-hidden style={{ width: 36, height: 24, flexDirection: "row", alignItems: "flex-end" }}>
+    return <View aria-hidden style={{ width: tokens.spacing.off33, height: tokens.spacing.fixedSection, flexDirection: "row", alignItems: "flex-end" }}>
       {[8, 12, 18, 14, 20, 24].map((h, i) => <View key={i} {...{ className: !unstyled ? "bg-primary/40 border-t-2 border-t-primary" : undefined }}
-        style={{ width: 6, height: h }} />)}
+        style={{ width: tokens.spacing.off6, height: h }} />)}
     </View>;
   }
   // Line: three rotated strokes.
   const strokes = [{ x: 0, y: 14, len: 14, deg: -30 }, { x: 12, y: 10, len: 13, deg: 25 }, { x: 23, y: 8, len: 15, deg: -45 }];
-  return <View aria-hidden style={{ width: 36, height: 24 }}>
+  return <View aria-hidden style={{ width: tokens.spacing.off33, height: tokens.spacing.fixedSection }}>
     {strokes.map((s, i) => <View key={i} {...{ className: ink }}
-      style={{ position: "absolute", left: s.x, top: s.y, width: s.len, height: 2, borderRadius: 1, transform: [{ rotate: `${s.deg}deg` }] }} />)}
+      style={{ position: "absolute", left: s.x, top: s.y, width: s.len, height: tokens.spacing.off2, borderRadius: forgeHairlineRadius.tick, transform: [{ rotate: `${s.deg}deg` }] }} />)}
   </View>;
 }
 
@@ -104,12 +106,12 @@ function ChartBuilderBody({actionError,disabledReason,disabled=false,scope='char
     (data.skippedCells ? `; ${data.skippedCells} ${data.skippedCells === 1 ? "cell has" : "cells have"} no number and ${data.skippedCells === 1 ? "is" : "are"} left out.` : ".");
 
   return <View {...props} {...{ className: joinClasses(!unstyled && "rounded-card border border-border bg-surface-raised", className) }}
-    style={[{ padding: 16, gap: 16 }, props.style]}>
+    style={[{ padding: tokens.spacing.fixedGroup, gap: tokens.spacing.fixedGroup }, props.style]}>
     <PanelHeading title="Chart" unstyled={unstyled} />
     <PanelChoices disabled={disabled} label="Chart type" value={spec.kind} unstyled={unstyled}
       choices={SHEET_CHART_KINDS.map(kind => ({ value: kind, label: KIND_LABEL[kind], glyph: <KindGlyph kind={kind} unstyled={unstyled} /> }))}
       onChange={kind => set({ kind })} />
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.fixedInset, alignItems: "flex-end" }}>
       <PanelField disabled={disabled} label="Data range" value={spec.range} placeholder="A1:C12" unstyled={unstyled}
         hint={`Up to ${MAX_CHART_CELLS} cells on this sheet`} error={rangeError}
         onChange={range => set({ range })} />
@@ -125,7 +127,7 @@ function ChartBuilderBody({actionError,disabledReason,disabled=false,scope='char
       <PanelCheckbox disabled={disabled} unstyled={unstyled} checked={spec.hasXValues} onChange={hasXValues => set({ hasXValues })}
         label={byColumns ? "First column holds x values" : "First row holds x values"} />
     </View>
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.fixedInset }}>
       <PanelField disabled={disabled} label="Title" value={spec.title ?? ""} unstyled={unstyled} autoCapitalize="sentences"
         onChange={title => set({ title })} />
       <PanelField disabled={disabled} label="X axis title" value={spec.xAxisLabel ?? ""} unstyled={unstyled} autoCapitalize="sentences"
@@ -135,7 +137,7 @@ function ChartBuilderBody({actionError,disabledReason,disabled=false,scope='char
     </View>
     {data && points > 0 && renderPreview ? <View accessibilityLabel={spec.title || `${KIND_LABEL[spec.kind]} chart preview`}
       {...{ className: joinClasses(!unstyled && "rounded-control border border-border bg-surface-sunken") }}
-      style={{ padding: 8 }}>
+      style={{ padding: tokens.spacing.fixedElement }}>
       {renderPreview(spec, data)}
     </View> : null}
     <Text accessibilityLiveRegion="polite" {...{ className: muted }}>{summary}</Text>

@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "scope": "Paired direct-link, original-byte, full-row and status preservation. No runtime or recursive link acceptance is inferred.",
+  "tronSourceRevision": "0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44",
+  "forgeHomeCommit": "5902e64d6ad01090f5e9a40f8402ec0cbcb39a71",
+  "canonicalRowsOut": 341,
+  "canonicalRowsIn": 341,
+  "additionsOut": 5,
+  "additionsIn": 5,
+  "idNameOrderAndAllRowFieldsEqual": true,
+  "acceptance": {
+    "unverified": 346
+  },
+  "forgeCompletion": {
+    "unverified": 35,
+    "in-progress": 274,
+    "blocked": 32
+  },
+  "directReferenceCount": 774,
+  "uniqueSourcePathsResolved": 452,
+  "referencesByField": {
+    "sourceCandidates": 379,
+    "evidence": 381,
+    "platformEvidence.ios": 4,
+    "decision": 5,
+    "platformEvidence.web": 1,
+    "platformEvidence.macos": 2,
+    "platformEvidence.windows": 2
+  },
+  "sourceAndEvidenceBytesEqualPinnedGitTree": true,
+  "consumerPinAndGateStatusesAndOwnerReviewUnchanged": true,
+  "nestedReportHyperlinksAndRuntimeAcceptance": "NOT RUN"
+}

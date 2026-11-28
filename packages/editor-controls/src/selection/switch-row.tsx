@@ -1,5 +1,7 @@
+import {forgeRadius} from "../radius.ts";
 import {Pressable,Text,View} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode SwitchRow}. */
 export interface SwitchRowProps {
@@ -24,15 +26,15 @@ export function SwitchRow({label,detail,value,onValueChange,disabledReason,unsty
     accessibilityState={{disabled:off,checked:value}} accessibilityHint={disabledReason??detail}
     onPress={()=>{if(!off)onValueChange(!value);}}
     {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
-    style={{minHeight:44,flexDirection:"row",alignItems:"center",gap:12,paddingVertical:6,paddingHorizontal:4}}>
-    <View style={{flex:1,minWidth:0,opacity:off?0.6:1}}>
+    style={{minHeight:tokens.spacing.fixedTarget,flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedInset,paddingVertical:tokens.spacing.off6,paddingHorizontal:tokens.spacing.fixedStack}}>
+    <View style={{flex:1,minWidth:0,opacity:off?tokens.opacity.disabled:1}}>
       <Text {...{className:joinClasses(styled&&"text-text text-sm font-medium")}}>{label}</Text>
       {disabledReason??detail?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}}>{disabledReason??detail}</Text>:null}
     </View>
     <View pointerEvents="none" {...{className:joinClasses(styled&&"border",styled&&(value?"bg-primary border-primary":"bg-surface-sunken border-border"))}}
-      style={{width:44,height:26,borderRadius:13,justifyContent:"center",paddingHorizontal:3,opacity:off?0.5:1}}>
+      style={{width:tokens.spacing.fixedTarget,height:tokens.spacing.off26,borderRadius:forgeRadius.sm,justifyContent:"center",paddingHorizontal:tokens.spacing.off3,opacity:off?tokens.opacity.disabled:1}}>
       <View {...{className:joinClasses(styled&&(value?"bg-on-primary":"bg-text-muted"))}}
-        style={{width:18,height:18,borderRadius:9,alignSelf:value?"flex-end":"flex-start"}}/>
+        style={{width:tokens.spacing.off18,height:tokens.spacing.off18,borderRadius:forgeRadius.sm,alignSelf:value?"flex-end":"flex-start"}}/>
     </View>
   </Pressable>;
 }

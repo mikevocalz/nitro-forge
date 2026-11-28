@@ -7,6 +7,7 @@ import { columnName, parseCellAddress } from "../sheet-window.ts";
 import { freezeFor, type FreezeCommand, type FreezeState, type SplitAxis, type SplitState } from "./freeze-split-model.ts";
 import { PanelHeading } from "./panel-controls.tsx";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /**
  * Controlled freeze-panes and split-view commands. Frozen panes and the split
@@ -58,10 +59,10 @@ function FreezeSplitControlsBody({actionError,disabledReason,disabled=false,
     onPress={() => onSplitChange!({ axis, ratio: split?.ratio ?? 0.5 })} />;
 
   return <View {...props} {...{ className: joinClasses(!unstyled && "rounded-card border border-border bg-surface-raised", className) }}
-    style={[{ padding: 16, gap: 12 }, props.style]}>
+    style={[{ padding: tokens.spacing.fixedGroup, gap: tokens.spacing.fixedInset }, props.style]}>
     <PanelHeading title="Freeze panes" unstyled={unstyled} />
     <Text accessibilityLiveRegion="polite" {...{ className: muted }}>{describeFreeze(freeze)}</Text>
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.fixedElement }}>
       <Button disabled={disabled} title="Top row" unstyled={unstyled} variant={same({ frozenRows: 1, frozenColumns: 0 }) ? "primary" : "secondary"}
         aria-pressed={same({ frozenRows: 1, frozenColumns: 0 })} onPress={() => apply("top-row")} />
       <Button disabled={disabled} title="First column" unstyled={unstyled} variant={same({ frozenRows: 0, frozenColumns: 1 }) ? "primary" : "secondary"}
@@ -77,7 +78,7 @@ function FreezeSplitControlsBody({actionError,disabledReason,disabled=false,
         {split ? `Two ${split.axis === "horizontal" ? "stacked" : "side-by-side"} panes scroll the same sheet on their own.`
           : "Show the sheet twice to compare distant rows or columns."}
       </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.fixedElement }}>
         {splitButton("horizontal", "Stacked")}
         {splitButton("vertical", "Side by side")}
         <Button title="Remove split" unstyled={unstyled} variant="ghost" disabled={disabled||!split} onPress={() => onSplitChange(undefined)} />

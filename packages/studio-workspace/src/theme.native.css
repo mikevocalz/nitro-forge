@@ -2,9 +2,10 @@
 @theme {
   --spacing-forge-target: 44px;
   --radius-sm: 4px;
+  --radius-md: 6px;
   --radius-forge-control: 4px;
   --radius-control: 4px;
-  --radius-card: 4px;
+  --radius-card: 6px;
   --font-forge-editorial: Georgia, 'Times New Roman', serif;
   --spacing-fixed-stack: 4px;
   --spacing-fixed-element: 8px;
@@ -43,6 +44,7 @@
   --spacing-off-84: 84px;
   --spacing-off-96: 96px;
   --spacing-off-104: 104px;
+  --spacing-off-132: 132px;
   --spacing-off-360: 360px;
   --spacing-off-480: 480px;
   --spacing-off-520: 520px;
@@ -69,12 +71,6 @@
   --tracking-off-neg-0-2: -0.2px;
   --tracking-off-0-4: 0.4px;
   --tracking-off-1: 1px;
-  --radius-paper: 2px;
-  --radius-off-0-75: 0.75px;
-  --radius-off-1: 1px;
-  --radius-off-1-5: 1.5px;
-  --radius-off-3: 3px;
-  --radius-off-8: 8px;
   --border-width-hairline: 1px;
   --border-width-strong: 2px;
   --border-width-off-1-5: 1.5px;

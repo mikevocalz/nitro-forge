@@ -14,11 +14,12 @@ export interface SampleEditorProps extends Omit<ViewProps,'children'>,ScopedCont
 }
 import {Button} from '@nyc-tron/ui/components/Button';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export function SampleEditor({scope='sample-editor',revision=0,...props}:SampleEditorProps){
  const {source,loop,keyboard,onRegionCommit:_region,onLoopCommit:_loop,onKeyboardCommit:_keyboard,onAudition:_audition,unstyled=false,disabledReason,style,...rest}=props;
  if(![keyboard.rootNote,keyboard.lowNote,keyboard.highNote].every(n=>Number.isInteger(n)&&n>=0&&n<=127)||keyboard.lowNote>keyboard.highNote||keyboard.rootNote<keyboard.lowNote||keyboard.rootNote>keyboard.highNote||!Number.isFinite(keyboard.tuneCents)||Math.abs(keyboard.tuneCents)>1200)throw new RangeError('Invalid sample keyboard map');
  const owner=useEditorBoundary([JSON.stringify([...controlIdentity(scope,revision),source.lengthSamples,source.sampleRate,disabledReason])]),guard=useScopedControl(owner,props,disabledReason!==undefined),off=guard.pending||disabledReason!==undefined;
- return <View {...rest} style={[{gap:12},style]} accessibilityLabel="Sample editor">
+ return <View {...rest} style={[{gap:tokens.spacing.fixedInset},style]} accessibilityLabel="Sample editor">
   <AudioClipTrimAndFade {...source} scope={owner+'region'} revision={revision} disabledReason={off?'Sample edit unavailable':undefined} unstyled={unstyled} onCommit={r=>guard.run('region',(h,s)=>h.onRegionCommit(r,s))}/>
   <LoopPunchRecording scope={owner+'loop'} revision={revision} durationSamples={source.lengthSamples} sampleRate={source.sampleRate} value={loop} recording={false} passCount={0} disabledReason={off?'Sample edit unavailable':undefined} unstyled={unstyled} onCommit={v=>guard.run('loop',(h,s)=>h.onLoopCommit(v,s))}/>
   <Text {...{className:unstyled?undefined:'text-text'}}>MIDI keyboard mapping</Text>

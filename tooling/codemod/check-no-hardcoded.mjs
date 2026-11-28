@@ -9,7 +9,9 @@
 //   - kind colour:    a string literal that contains a hex colour (#rgb, #rgba, #rrggbb, #rrggbbaa) or a literal `rgb(`/`rgba(`/`hsl(` call, or
 //   - kind number:    a non-zero numeric literal that is, or sits in a ternary or arithmetic branch of, the value of a style
 //                     property (width, padding, gap, fontSize, borderRadius, zIndex, opacity ...). `opacity: 1` is the identity
-//                     and is not a finding.
+//                     and is not a finding. Neither is the divisor in `x / 2`, nor a unit 1 added to or subtracted from
+//                     a factor of a product or quotient (`(1 - t) * length`, `(x + 1) / 2`, `(last - first + 1) * row`),
+//                     which is a fraction or a count, not a length.
 //   - kind prop:      a non-zero numeric literal given to a JSX numeric prop (size, width, height, strokeWidth, fontSize, r, rx, ry),
 //                     including both branches of a ternary.
 //   - kind tailwind:  a Tailwind arbitrary value with a length unit or a colour inside a class string (`rounded-[4px]`,
@@ -26,7 +28,7 @@
 // Exit code 1 on an unallowed finding or a stale allowlist entry.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { TOKEN_FILES, isTestFile, listSources, loadTsMorph, readJson, repoRoot } from './lib.mjs';
+import { JSX_NUMERIC_PROPS, STYLE_PROPS, TOKEN_FILES, isTestFile, listSources, loadTsMorph, numericPartsOf, readJson, repoRoot } from './lib.mjs';
 import { readdirSync } from 'node:fs';
 
 const { Project, SyntaxKind, Node } = loadTsMorph();
@@ -39,16 +41,6 @@ const listAll = args.includes('--list');
 const config = readJson(join(repoRoot, 'tooling/codemod/allowlist.json'));
 const exempt = new Map(config.exemptFiles.map(entry => [entry.path, entry.reason]));
 
-const STYLE_PROPS = new Set([
-  'left', 'right', 'top', 'bottom', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight',
-  'margin', 'marginTop', 'marginBottom', 'marginLeft', 'marginRight', 'marginHorizontal', 'marginVertical',
-  'padding', 'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'paddingHorizontal', 'paddingVertical',
-  'gap', 'rowGap', 'columnGap', 'borderWidth', 'borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth',
-  'borderRadius', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius',
-  'fontSize', 'lineHeight', 'letterSpacing', 'zIndex', 'opacity', 'hitSlop', 'outlineWidth', 'outlineOffset',
-  'shadowRadius', 'shadowOpacity', 'elevation', 'flexBasis', 'fontWeight',
-]);
-const JSX_NUMERIC_PROPS = new Set(['size', 'width', 'height', 'strokeWidth', 'fontSize', 'r', 'rx', 'ry']);
 /** Tailwind arbitrary value whose bracket holds a length unit or a colour. */
 const tailwindArbitrary = /(?:^|[\s"'`:!])(-?[a-z][a-z0-9-]*-\[[^\]\s]*(?:\d(?:\.\d+)?(?:px|rem|em|vh|vw)|#[0-9a-fA-F]{3,8}|rgba?\()[^\]\s]*\])/g;
 const hexInString = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_-])/;
@@ -63,21 +55,7 @@ let scanned = 0;
 const skipped = { tests: 0, tokenFiles: 0, exempt: [] };
 const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { allowJs: true } });
 
-const nodeValue = node => Node.isNumericLiteral(node) ? Number(node.getText()) : null;
-/** Numeric literals that are the value, or a ternary or arithmetic branch of the value. */
-function* numericParts(node) {
-  if (Node.isNumericLiteral(node)) yield node;
-  else if (Node.isPrefixUnaryExpression(node) && Node.isNumericLiteral(node.getOperand())) yield node.getOperand();
-  else if (Node.isParenthesizedExpression(node)) yield* numericParts(node.getExpression());
-  else if (Node.isAsExpression(node)) yield* numericParts(node.getExpression());
-  else if (Node.isConditionalExpression(node)) { yield* numericParts(node.getWhenTrue()); yield* numericParts(node.getWhenFalse()); }
-  else if (Node.isBinaryExpression(node)) {
-    // `x / 2` and `x % 3` are ratios, not lengths: only the left side can carry a literal length.
-    const operator = node.getOperatorToken().getKind();
-    yield* numericParts(node.getLeft());
-    if (operator !== SyntaxKind.SlashToken && operator !== SyntaxKind.PercentToken) yield* numericParts(node.getRight());
-  }
-}
+const numericParts = numericPartsOf({ Node, SyntaxKind });
 
 for (const file of files) {
   if (isTestFile(file)) { skipped.tests += 1; continue; }

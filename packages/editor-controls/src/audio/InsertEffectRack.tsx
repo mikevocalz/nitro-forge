@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 /**
@@ -27,6 +28,7 @@ import {
   type InsertKind, type InsertSlot,
 } from "./inserts.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 const HIT = 44;
 
@@ -116,8 +118,8 @@ function InsertEffectRackBody({actionError,disabledReason,
   const muted = joinClasses(styled && "text-text-muted text-sm");
   return <View {...rest} accessibilityLabel={label + " inserts"} {...{ role: "group" }}
     {...{ className: joinClasses(styled && "rounded-card border border-border bg-surface-raised", className) }}
-    style={[{ padding: 12, gap: 12 }, rest.style]}>
-    <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+    style={[{ padding: tokens.spacing.fixedInset, gap: tokens.spacing.fixedInset }, rest.style]}>
+    <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: tokens.spacing.fixedElement }}>
       <Text role="heading" {...{ "aria-level": 3 }} numberOfLines={1} style={{ flexShrink: 1 }} {...{ className: heading }}>
         {label + " inserts"}
       </Text>
@@ -125,34 +127,34 @@ function InsertEffectRackBody({actionError,disabledReason,
     </View>
 
     {count === 0
-      ? <View style={{ gap: 4, paddingVertical: 8 }}>
+      ? <View style={{ gap: tokens.spacing.fixedStack, paddingVertical: tokens.spacing.fixedElement }}>
           <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>No effects yet</Text>
           <Text {...{ className: muted }}>{`Add an effect to process ${label}. Effects run top to bottom.`}</Text>
         </View>
-      : <View accessibilityLabel={label + " insert chain"} {...{ role: "list" }} style={{ gap: 6 }}>
+      : <View accessibilityLabel={label + " insert chain"} {...{ role: "list" }} style={{ gap: tokens.spacing.off6 }}>
           {inserts.map((slot, index) => <SlotRow key={slot.id} slot={slot} index={index} count={count}
             selected={slot.id === selectedId} disabled={disabled} styled={styled} trackLabel={label}
             onSelect={onSelect} onRemove={onRemove} onBypassCommit={onBypassCommit} move={move} />)}
         </View>}
 
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: tokens.spacing.fixedElement }}>
       <Pressable role="button" accessibilityLabel={"Add effect to " + label} disabled={addDisabled}
         accessibilityState={{ disabled: addDisabled, expanded: showPicker }}
         {...{ "aria-expanded": showPicker }}
         {...(blocked !== undefined ? { "aria-describedby": reasonId, accessibilityHint: blocked } : {})}
         onPress={() => store.setState({ picking: !picking })}
         {...{ className: joinClasses(styled && "rounded-control border border-border bg-surface-sunken items-center justify-center focus-visible:ring-2 focus-visible:ring-focus active:opacity-80") }}
-        style={{ minHeight: HIT, paddingHorizontal: 16, opacity: addDisabled ? 0.45 : 1 }}>
+        style={{ minHeight: HIT, paddingHorizontal: tokens.spacing.fixedGroup, opacity: addDisabled ? tokens.opacity.disabled : 1 }}>
         <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>Add effect</Text>
       </Pressable>
       {blocked !== undefined ? <Text nativeID={reasonId} {...{ className: muted }}>{blocked}</Text> : null}
       {showPicker ? <View accessibilityLabel="Effect type" {...{ role: "group" }}
-        style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.off6 }}>
         {INSERT_KINDS.map(kind => <Pressable key={kind} role="button" accessibilityLabel={"Add " + INSERT_KIND_LABELS[kind]}
           onPress={() => add(kind)}
           onKeyDown={(e: KeyDownEvent) => { if (e.nativeEvent.key === "Escape") store.setState({ picking: false }); }}
           {...{ className: joinClasses(styled && "rounded-control border border-primary bg-surface-raised items-center justify-center focus-visible:ring-2 focus-visible:ring-focus active:opacity-80") }}
-          style={{ minHeight: HIT, minWidth: 88, paddingHorizontal: 14, flexGrow: 1 }}>
+          style={{ minHeight: HIT, minWidth: controlTokens.extent.field, paddingHorizontal: tokens.spacing.off14, flexGrow: 1 }}>
           <Text {...{ className: joinClasses(styled && "text-primary font-semibold") }}>{INSERT_KIND_LABELS[kind]}</Text>
         </Pressable>)}
       </View> : null}
@@ -190,7 +192,7 @@ function SlotRow({ slot, index, count, selected, disabled, styled, onSelect, onR
   const last = index === count - 1;
   return <View {...{ role: "listitem" }}
     {...{ className: joinClasses(styled && "rounded-control border", styled && (selected ? "border-primary bg-surface-sunken" : "border-border bg-surface-raised")) }}
-    style={{ flexDirection: "row", alignItems: "center", paddingStart: 4, paddingEnd: 2, gap: 2, minHeight: HIT + 12 }}>
+    style={{ flexDirection: "row", alignItems: "center", paddingStart: tokens.spacing.fixedStack, paddingEnd: tokens.spacing.off2, gap: tokens.spacing.off2, minHeight: HIT + tokens.spacing.fixedInset }}>
     <Pressable role="button" accessibilityLabel={description} accessibilityState={{ selected, disabled }}
       {...{ "aria-current": selected ? "true" : undefined }}
       accessibilityActions={[
@@ -206,9 +208,9 @@ function SlotRow({ slot, index, count, selected, disabled, styled, onSelect, onR
       }}
       disabled={disabled} onPress={() => onSelect?.(slot.id)} onKeyDown={onKeyDown}
       {...{ className: joinClasses(styled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus") }}
-      style={{ flex: 1, minHeight: HIT, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 6, opacity: disabled ? 0.45 : 1 }}>
+      style={{ flex: 1, minHeight: HIT, flexDirection: "row", alignItems: "center", gap: tokens.spacing.off10, paddingHorizontal: tokens.spacing.off6, opacity: disabled ? tokens.opacity.disabled : 1 }}>
       <Text {...{ className: joinClasses(styled && "text-text-muted text-sm") }}
-        style={{ width: 16, textAlign: "center", fontVariant: ["tabular-nums"] }}>{String(index + 1)}</Text>
+        style={{ width: tokens.spacing.fixedGroup, textAlign: "center", fontVariant: ["tabular-nums"] }}>{String(index + 1)}</Text>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} {...{ className: joinClasses(styled && "font-semibold", styled && (slot.bypassed ? "text-text-muted" : "text-text")) }}
           style={slot.bypassed ? { textDecorationLine: "line-through" } : undefined}>{kind}</Text>
@@ -223,55 +225,55 @@ function SlotRow({ slot, index, count, selected, disabled, styled, onSelect, onR
       accessibilityState={{ checked: slot.bypassed, disabled }} {...webToggleProps(slot.bypassed)}
       disabled={disabled} onPress={bypass}
       {...{ className: joinClasses(iconButton, styled && "border", styled && (slot.bypassed ? "border-border bg-surface-sunken" : "border-accent bg-surface-raised")) }}
-      style={{ width: HIT, height: HIT, opacity: disabled ? 0.45 : 1 }}>
+      style={{ width: HIT, height: HIT, opacity: disabled ? tokens.opacity.disabled : 1 }}>
       <PowerGlyph styled={styled} on={!slot.bypassed} />
     </Pressable>
     <Pressable role="button" accessibilityLabel={"Move " + kind + " earlier"} disabled={disabled || first}
       onPress={() => move(slot, index, -1)} {...{ className: iconButton }}
-      style={{ width: HIT, height: HIT, opacity: disabled || first ? 0.3 : 1 }}>
+      style={{ width: HIT, height: HIT, opacity: disabled || first ? tokens.opacity.disabled : 1 }}>
       <ChevronGlyph styled={styled} up />
     </Pressable>
     <Pressable role="button" accessibilityLabel={"Move " + kind + " later"} disabled={disabled || last}
       onPress={() => move(slot, index, 1)} {...{ className: iconButton }}
-      style={{ width: HIT, height: HIT, opacity: disabled || last ? 0.3 : 1 }}>
+      style={{ width: HIT, height: HIT, opacity: disabled || last ? tokens.opacity.disabled : 1 }}>
       <ChevronGlyph styled={styled} up={false} />
     </Pressable>
     <Pressable role="button" accessibilityLabel={"Remove " + kind + " from slot " + (index + 1)} disabled={disabled}
-      onPress={remove} {...{ className: iconButton }} style={{ width: HIT, height: HIT, opacity: disabled ? 0.45 : 1 }}>
+      onPress={remove} {...{ className: iconButton }} style={{ width: HIT, height: HIT, opacity: disabled ? tokens.opacity.disabled : 1 }}>
       <CloseGlyph styled={styled} />
     </Pressable>
   </View>;
 }
 
-const bar = { position: "absolute" as const, height: 2, borderRadius: 1 };
+const bar = { position: "absolute" as const, height: tokens.spacing.off2, borderRadius: forgeHairlineRadius.tick };
 
 /** Chevron drawn with two rotated bars. */
 function ChevronGlyph({ styled, up }: { styled: boolean; up: boolean }) {
   const cls = { className: joinClasses(styled && "bg-text") };
   const tilt = up ? 1 : -1;
-  return <View pointerEvents="none" style={{ width: 16, height: 10 }}>
-    <View {...cls} style={[bar, { width: 10, left: 0, top: 4, transform: [{ rotate: `${-45 * tilt}deg` }] }]} />
-    <View {...cls} style={[bar, { width: 10, left: 6, top: 4, transform: [{ rotate: `${45 * tilt}deg` }] }]} />
+  return <View pointerEvents="none" style={{ width: tokens.spacing.fixedGroup, height: tokens.spacing.off10 }}>
+    <View {...cls} style={[bar, { width: tokens.spacing.off10, left: 0, top: tokens.spacing.fixedStack, transform: [{ rotate: `${-45 * tilt}deg` }] }]} />
+    <View {...cls} style={[bar, { width: tokens.spacing.off10, left: tokens.spacing.off6, top: tokens.spacing.fixedStack, transform: [{ rotate: `${45 * tilt}deg` }] }]} />
   </View>;
 }
 
 /** Remove mark drawn with two rotated bars. */
 function CloseGlyph({ styled }: { styled: boolean }) {
   const cls = { className: joinClasses(styled && "bg-text-muted") };
-  return <View pointerEvents="none" style={{ width: 14, height: 14, alignItems: "center", justifyContent: "center" }}>
-    <View {...cls} style={[bar, { width: 14, transform: [{ rotate: "45deg" }] }]} />
-    <View {...cls} style={[bar, { width: 14, transform: [{ rotate: "-45deg" }] }]} />
+  return <View pointerEvents="none" style={{ width: tokens.spacing.off14, height: tokens.spacing.off14, alignItems: "center", justifyContent: "center" }}>
+    <View {...cls} style={[bar, { width: tokens.spacing.off14, transform: [{ rotate: "45deg" }] }]} />
+    <View {...cls} style={[bar, { width: tokens.spacing.off14, transform: [{ rotate: "-45deg" }] }]} />
   </View>;
 }
 
 /** Power mark: an open ring with a stem; filled accent when the effect runs. */
 function PowerGlyph({ styled, on }: { styled: boolean; on: boolean }) {
-  return <View pointerEvents="none" style={{ width: 16, height: 16, alignItems: "center" }}>
-    <View style={{ position: "absolute", top: 2, width: 14, height: 14, borderRadius: 7, borderWidth: 2 }}
+  return <View pointerEvents="none" style={{ width: tokens.spacing.fixedGroup, height: tokens.spacing.fixedGroup, alignItems: "center" }}>
+    <View style={{ position: "absolute", top: tokens.spacing.off2, width: tokens.spacing.off14, height: tokens.spacing.off14, borderRadius: forgeRadius.sm, borderWidth: tokens.borderWidth.strong }}
       {...{ className: joinClasses(styled && (on ? "border-accent" : "border-text-muted")) }} />
-    <View style={{ position: "absolute", top: -1, width: 6, height: 6 }}
+    <View style={{ position: "absolute", top: -tokens.borderWidth.hairline, width: tokens.spacing.off6, height: tokens.spacing.off6 }}
       {...{ className: joinClasses(styled && (on ? "bg-surface-raised" : "bg-surface-sunken")) }} />
-    <View style={{ position: "absolute", top: 0, width: 2, height: 8, borderRadius: 1 }}
+    <View style={{ position: "absolute", top: 0, width: tokens.spacing.off2, height: tokens.spacing.fixedElement, borderRadius: forgeHairlineRadius.tick }}
       {...{ className: joinClasses(styled && (on ? "bg-accent" : "bg-text-muted")) }} />
   </View>;
 }

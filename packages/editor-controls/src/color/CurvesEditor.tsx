@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useEffect,useLayoutEffect,useRef,type ComponentRef} from "react";
 import {Platform,Text,View,type ViewProps} from "react-native";
 import {createStore,type StoreApi} from "zustand/vanilla";
@@ -11,6 +12,7 @@ import {keyboardKey} from "@nyc-tron/ui/components/gestures/drag-transport";
 import {LinePiece} from "../vector/vector-controls.tsx";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {bounded,validateCurve,moveCurvePoint,evaluateCurve,type ColorCurve} from "./color-adjustments.ts";
+import { tokens } from "../tokens.ts";
 export type {ColorCurve,CurvePoint} from "./color-adjustments.ts";
 /** One controlled channel curve and its document revision boundary. */
 export interface CurvesEditorProps extends Omit<ViewProps,"children">{
@@ -70,7 +72,7 @@ export function CurvesEditor({scope,value,selectedId,onSelect,onPreview,onCommit
  const shown=state.preview??value,width=Math.max(88,state.width||240),w=width-44,h=height-44;
  const samples=Array.from({length:129},(_,i)=>({x:22+i/128*w,y:22+(1-evaluateCurve(shown,i/128))*h}));
  const index=value.points.indexOf(selected),canRemove=index>0&&index<value.points.length-1;
- return <View {...props} style={[{gap:8},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
   {channelSelection?<Select label="Curve channel" value={channelSelection.value} options={channelSelection.channels.map(c=>({value:c.id,label:c.label}))} disabled={disabled} unstyled={unstyled} onValueChange={channelSelection.onChange}/>:null}
   {presets.length?<Select label="Curve preset" value="" placeholder="Apply a curve preset" options={presets.map(p=>({value:p.id,label:p.label}))} disabled={disabled} unstyled={unstyled} onValueChange={id=>{const preset=presets.find(p=>p.id===id);if(!disabled&&preset)onCommit(preset.curve,preset.curve.points[0]!.id);}}/>:null}
   <Button title="Reset curve to identity" disabled={disabled} unstyled={unstyled} onPress={()=>{if(!disabled){const points=[{...value.points[0]!,x:0,y:0},{...value.points.at(-1)!,x:1,y:1}];onCommit({...value,points},points[0]!.id);}}}/>
@@ -85,11 +87,11 @@ export function CurvesEditor({scope,value,selectedId,onSelect,onPreview,onCommit
    <View pointerEvents="none" importantForAccessibility="no-hide-descendants" aria-hidden style={{position:'absolute',inset:0}}>
     <LinePiece from={{x:22,y:height-22}} to={{x:width-22,y:22}} className={joinClasses(!unstyled&&'bg-border')}/>
     {samples.slice(1).map((point,i)=><LinePiece key={i} from={samples[i]!} to={point} className={joinClasses(!unstyled&&'bg-primary')}/>)}
-    {shown.points.map(p=><View key={p.id} {...{className:joinClasses(!unstyled&&(p.id===selectedId?'bg-primary border-text':'bg-surface-raised border-primary'))}} style={{position:'absolute',left:22+p.x*w-6,top:22+(1-p.y)*h-6,width:12,height:12,borderRadius:6,borderWidth:2}}/>)}
+    {shown.points.map(p=><View key={p.id} {...{className:joinClasses(!unstyled&&(p.id===selectedId?'bg-primary border-text':'bg-surface-raised border-primary'))}} style={{position:'absolute',left:tokens.spacing.off22+p.x*w-tokens.spacing.off6,top:tokens.spacing.off22+(1-p.y)*h-tokens.spacing.off6,width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset,borderRadius:forgeRadius.sm,borderWidth:tokens.borderWidth.strong}}/>)}
    </View>
   </View></Transport>
-  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}><UnitInput label="Curve input" value={selected.x} min={0} max={1} step={.01} precision={6} disabled={disabled||!canRemove} unstyled={unstyled} onCommit={x=>commitPoint(x,selected.y)}/><UnitInput label="Curve output" value={selected.y} min={0} max={1} step={.01} precision={6} disabled={disabled} unstyled={unstyled} onCommit={y=>commitPoint(selected.x,y)}/></View>
-  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}><Button title="Add curve point" disabled={disabled||value.points.length>=64} unstyled={unstyled} onPress={()=>{
+  <View style={{flexDirection:'row',flexWrap:'wrap',gap:tokens.spacing.fixedElement}}><UnitInput label="Curve input" value={selected.x} min={0} max={1} step={.01} precision={6} disabled={disabled||!canRemove} unstyled={unstyled} onCommit={x=>commitPoint(x,selected.y)}/><UnitInput label="Curve output" value={selected.y} min={0} max={1} step={.01} precision={6} disabled={disabled} unstyled={unstyled} onCommit={y=>commitPoint(selected.x,y)}/></View>
+  <View style={{flexDirection:'row',flexWrap:'wrap',gap:tokens.spacing.fixedElement}}><Button title="Add curve point" disabled={disabled||value.points.length>=64} unstyled={unstyled} onPress={()=>{
    if(disabled||value.points.length>=64)return;let gap=0;for(let i=1;i<value.points.length-1;i++)if(value.points[i+1]!.x-value.points[i]!.x>value.points[gap+1]!.x-value.points[gap]!.x)gap=i;
    const x=(value.points[gap]!.x+value.points[gap+1]!.x)/2,id=createPointId();const next={...value,points:[...value.points.slice(0,gap+1),{id,x,y:evaluateCurve(value,x)},...value.points.slice(gap+1)]};validateCurve(next);onCommit(next,id);
   }}/><Button title="Remove curve point" disabled={disabled||!canRemove} unstyled={unstyled} onPress={()=>{if(!disabled&&canRemove)onCommit({...value,points:value.points.filter(p=>p.id!==selectedId)},value.points[index-1]!.id);}}/></View>

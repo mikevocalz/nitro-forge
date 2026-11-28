@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useEffect,useRef,type ComponentRef} from "react";
 import {LinearGradient} from "expo-linear-gradient";
 import {Host,Slider} from "@expo/ui";
@@ -8,6 +9,7 @@ import {ColorChannels} from "../ColorChannels.tsx";
 import {assertHsv,hsvToRgb,rgbaEditToHsv,rgbaToHex,wrapHue,type HsvColor} from "../color.ts";
 import {clamp} from "@nyc-tron/ui/components/shell/precision";
 import {createFieldGesture} from "./fieldGesture.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode HsvPicker}. */
 export interface HsvPickerProps extends Omit<ViewProps,"children"> {
@@ -47,7 +49,7 @@ const SPECTRUM=[0,60,120,180,240,300,360].map(pure) as unknown as readonly [stri
 const WHITE=rgbaToHex(hsvToRgb({h:0,s:0,v:1,alpha:1}),false);
 const CLEAR_BLACK=rgbaToHex({r:0,g:0,b:0,alpha:0});
 const BLACK=rgbaToHex({r:0,g:0,b:0,alpha:1},false);
-const TARGET={minWidth:44,minHeight:44,alignItems:"center" as const,justifyContent:"center" as const};
+const TARGET={minWidth:tokens.spacing.fixedTarget,minHeight:tokens.spacing.fixedTarget,alignItems:"center" as const,justifyContent:"center" as const};
 const round3=(n:number)=>Math.round(n*1000)/1000;
 
 /**
@@ -140,20 +142,20 @@ export function HsvPicker({
   const muted=joinClasses(styled&&"text-text-muted");
   const id=(suffix:string)=>testID?{testID:testID+"-"+suffix}:{};
   const stepper=(axis:"s"|"v",label:string,shown:number)=>
-    <View style={{flexDirection:"row",alignItems:"center",gap:8}}>
+    <View style={{flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedElement}}>
       <Pressable accessibilityRole="button" accessibilityLabel={"Decrease "+label}
         accessibilityState={{disabled}} disabled={disabled} onPress={()=>nudge(axis,-1)}
         {...id(axis==="s"?"saturation-decrease":"brightness-decrease")}
         {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-sunken")}}
-        style={{...TARGET,opacity:disabled?0.45:1}}>
+        style={{...TARGET,opacity:disabled?tokens.opacity.disabled:1}}>
         <Text {...{className:text}}>−</Text>
       </Pressable>
-      <Text {...{className:muted}} style={{minWidth:120,textAlign:"center"}}>{label} {shown}%</Text>
+      <Text {...{className:muted}} style={{minWidth:controlTokens.extent.fieldWide,textAlign:"center"}}>{label} {shown}%</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={"Increase "+label}
         accessibilityState={{disabled}} disabled={disabled} onPress={()=>nudge(axis,1)}
         {...id(axis==="s"?"saturation-increase":"brightness-increase")}
         {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-sunken")}}
-        style={{...TARGET,opacity:disabled?0.45:1}}>
+        style={{...TARGET,opacity:disabled?tokens.opacity.disabled:1}}>
         <Text {...{className:text}}>+</Text>
       </Pressable>
     </View>;
@@ -185,7 +187,7 @@ export function HsvPicker({
         else if(a==="increaseHue")nudgeHue(1);
         else if(a==="decreaseHue")nudgeHue(-1);
       }}
-      style={{width:"100%",height:fieldHeight,opacity:disabled?0.45:1}}>
+      style={{width:"100%",height:fieldHeight,opacity:disabled?tokens.opacity.disabled:1}}>
       {/* Only the gradients are clipped, so the thumb stays whole at the
           field's corners and edges instead of being cut to a quarter. */}
       <View pointerEvents="none" {...{className:joinClasses(styled&&"rounded-control border border-border")}}
@@ -198,18 +200,18 @@ export function HsvPicker({
       {/* Two token rings keep the thumb visible on light and dark field areas. */}
       <View pointerEvents="none" {...{className:joinClasses(styled&&"border-text")}}
         style={{position:"absolute",left:`${value.s*100}%`,top:`${(1-value.v)*100}%`,
-          width:28,height:28,borderRadius:14,borderWidth:2,
+          width:tokens.spacing.fixedStatus,height:tokens.spacing.fixedStatus,borderRadius:tokens.spacing.fixedStatus / 2, /* radius-exempt: colour-well */borderWidth:tokens.borderWidth.strong,
           transform:[{translateX:-14},{translateY:-14}],alignItems:"center",justifyContent:"center"}}>
         <View {...{className:joinClasses(styled&&"border-surface-raised")}}
-          style={{width:24,height:24,borderRadius:12,borderWidth:2,backgroundColor:opaque}}/>
+          style={{width:tokens.spacing.fixedSection,height:tokens.spacing.fixedSection,borderRadius:tokens.spacing.fixedSection / 2, /* radius-exempt: colour-well */borderWidth:tokens.borderWidth.strong,backgroundColor:opaque}}/>
       </View>
     </View>
     {stepper("s","Saturation",sat)}
     {stepper("v","Brightness",bri)}
-    <View style={{gap:6}}>
+    <View style={{gap:tokens.spacing.off6}}>
       <Text {...{className:muted}}>Hue {hue}°</Text>
       <LinearGradient pointerEvents="none" colors={SPECTRUM}
-        start={{x:0,y:0}} end={{x:1,y:0}} style={{height:12,borderRadius:6,opacity:disabled?0.45:1}}/>
+        start={{x:0,y:0}} end={{x:1,y:0}} style={{height:tokens.spacing.fixedInset,borderRadius:forgeRadius.sm,opacity:disabled?tokens.opacity.disabled:1}}/>
       <View ref={hueHost} {...(web?{}:{
           accessible:true,accessibilityRole:"adjustable" as const,accessibilityLabel:"Hue",
           accessibilityValue:{min:0,max:359,now:hue,text:hue+" degrees"},
@@ -232,7 +234,7 @@ export function HsvPicker({
     {showChannels?<ColorChannels value={rgb} showAlpha={showAlpha} disabled={disabled} unstyled labelClassName={muted} {...id("channels")}
       onValueChange={rgba=>onValueChange(rgbaEditToHsv(rgba,value))}/>
       :showHexReadout?<Text selectable {...{className:muted}} style={{fontVariant:["tabular-nums"]}}>{hex}</Text>:null}
-    {onApply||onCancel?<View style={{flexDirection:"row",gap:8,justifyContent:"flex-end"}}>
+    {onApply||onCancel?<View style={{flexDirection:"row",gap:tokens.spacing.fixedElement,justifyContent:"flex-end"}}>
       {onCancel?<Button title="Cancel" variant="secondary" disabled={disabled} onPress={onCancel} {...id("cancel")}/>:null}
       {onApply?<Button title="Apply color" disabled={disabled} onPress={()=>onApply(value)} {...id("apply")}/>:null}
     </View>:null}

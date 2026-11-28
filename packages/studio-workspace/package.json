@@ -9,6 +9,7 @@
     "./theme": "./src/theme.ts",
     "./apps": "./src/app-manifest.ts",
     "./prism": "./src/prism-editor.tsx",
+    "./prism-blend": "./src/prism-blend.ts",
     "./ui": "./src/ui.tsx",
     "./instruments": "./src/instrument-system.ts",
     "./interaction": "./src/interaction-policy.ts",
@@ -35,7 +36,7 @@
   },
   "peerDependencies": {
     "react": ">=19",
-    "react-native": ">=0.81",
+    "react-native": ">=0.82",
     "react-native-gesture-handler": ">=3.4.0 <4",
     "react-native-reanimated": ">=4.7.1 <5"
   },

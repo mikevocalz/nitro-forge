@@ -5,6 +5,7 @@ import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {OFFICE_TOUCH_TARGET,ToolButton,officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {LIST_FORMATS,canIndent,defaultLevelFormats,canOutdent,formatLabel,listMarker,listPreviewMarkers,type ListFormat,type ListKind} from "./list-model.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 export {BULLETS_NUMBERING_CAPABILITIES} from "./list-model.ts";
 
@@ -75,41 +76,41 @@ function BulletsNumberingEditorBody({actionError,disabledReason,disabled=false,
   };
   const muted=joinClasses(styled&&"text-text-muted text-sm");
   return <View {...rest} accessibilityLabel="Bullets and numbering" {...{role:"group",onKeyDown}}
-    {...{className:joinClasses("min-w-0",className)}} style={[{gap:12},rest.style as object]}>
-    <View accessibilityRole="radiogroup" accessibilityLabel="List kind" style={{flexDirection:"row",flexWrap:"wrap",gap:4}}>
+    {...{className:joinClasses("min-w-0",className)}} style={[{gap:tokens.spacing.fixedInset},rest.style as object]}>
+    <View accessibilityRole="radiogroup" accessibilityLabel="List kind" style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.fixedStack}}>
       {kinds.map(k=><Pressable key={k} accessibilityRole="radio" accessibilityState={{checked:kind===k,disabled}} disabled={disabled} onPress={()=>onKindChange(k)}
         {...{className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
           styled&&(kind===k?"border-accent bg-accent/10":"border-border"))}}
-        style={{minHeight:OFFICE_TOUCH_TARGET,paddingHorizontal:12,justifyContent:"center"}}>
+        style={{minHeight:OFFICE_TOUCH_TARGET,paddingHorizontal:tokens.spacing.fixedInset,justifyContent:"center"}}>
         <Text {...{className:joinClasses(styled&&"text-text text-sm")}}>{KIND_LABEL[k]}</Text>
       </Pressable>)}
     </View>
-    {onShiftLevel?<View style={{flexDirection:"row",gap:4,flexWrap:"wrap"}}>
+    {onShiftLevel?<View style={{flexDirection:"row",gap:tokens.spacing.fixedStack,flexWrap:"wrap"}}>
       <ToolButton label="Decrease indent" disabled={disabled||!outdentOk} styled={styled} onPress={()=>onShiftLevel(-1)}/>
       <ToolButton label="Increase indent" disabled={disabled||!indentOk} styled={styled} onPress={()=>onShiftLevel(1)}/>
     </View>:null}
-    {onLevelFormatChange&&kind!=="none"?<View style={{gap:6}}>
+    {onLevelFormatChange&&kind!=="none"?<View style={{gap:tokens.spacing.off6}}>
       {Array.from({length:deepest+1},(_,level)=><View key={level} accessibilityLabel={"Level "+(level+1)+" format"}
-        {...{role:"radiogroup"}} style={{flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:4}}>
-        <Text {...{className:muted}} style={{width:64}}>{"Level "+(level+1)}</Text>
+        {...{role:"radiogroup"}} style={{flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:tokens.spacing.fixedStack}}>
+        <Text {...{className:muted}} style={{width:tokens.spacing.fixedPage}}>{"Level "+(level+1)}</Text>
         {LIST_FORMATS.map(f=>{
           const on=formats[level]===f;
           return <Pressable key={f} accessibilityRole="radio" accessibilityLabel={formatLabel(f)} accessibilityState={{checked:on}}
             disabled={disabled} onPress={()=>onLevelFormatChange(level,f)}
             {...{className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
               styled&&(on?"border-accent bg-accent/10":"border-border"))}}
-            style={{minWidth:OFFICE_TOUCH_TARGET,minHeight:OFFICE_TOUCH_TARGET,alignItems:"center",justifyContent:"center",paddingHorizontal:6}}>
+            style={{minWidth:OFFICE_TOUCH_TARGET,minHeight:OFFICE_TOUCH_TARGET,alignItems:"center",justifyContent:"center",paddingHorizontal:tokens.spacing.off6}}>
             <Text {...{className:joinClasses(styled&&"text-text")}}>{listMarker(f,f==="bullet"?1:2,level)}</Text>
           </Pressable>;
         })}
       </View>)}
     </View>:null}
     <View accessibilityLabel="Preview" {...{role:"list",className:joinClasses(styled&&"rounded-control border border-border bg-surface-sunken")}}
-      style={{padding:10,gap:4}}>
+      style={{padding:tokens.spacing.off10,gap:tokens.spacing.fixedStack}}>
       {items.length===0?<Text {...{className:muted}}>Select paragraphs to make a list.</Text>:items.map((it,i)=>{
         const selected=i>=selectionStart&&i<=selectionEnd;
-        return <View key={it.id} {...{role:"listitem"}} style={{flexDirection:"row",gap:8,paddingStart:it.level*20}}>
-          <Text {...{className:joinClasses(styled&&"text-text-muted")}} style={{minWidth:28,textAlign:"right",fontVariant:["tabular-nums"]}}>{markers[i]}</Text>
+        return <View key={it.id} {...{role:"listitem"}} style={{flexDirection:"row",gap:tokens.spacing.fixedElement,paddingStart:it.level*tokens.spacing.off20}}>
+          <Text {...{className:joinClasses(styled&&"text-text-muted")}} style={{minWidth:tokens.spacing.fixedStatus,textAlign:"right",fontVariant:["tabular-nums"]}}>{markers[i]}</Text>
           <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text")}} style={{flex:1,fontWeight:selected?"600":"400"}}>{it.text||" "}</Text>
         </View>;
       })}

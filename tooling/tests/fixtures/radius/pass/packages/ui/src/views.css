@@ -1,0 +1,4 @@
+/* rounded-xl in a comment is fine */
+.panel { border-radius: var(--radius-md); }
+.row { border-top-left-radius: var(--radius-sm); border-radius: 0; }
+.radio { border-radius: 50%; } /* radius-exempt: radio */

@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {useContext,useMemo as useIdentityMemo} from 'react';
 import {EditorInteractionScope,useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -19,6 +20,7 @@ import {
 } from "./transitions.ts";
 import {frameToX,type TimelineViewport} from "./viewport.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode TransitionHandles}. */
 export interface TransitionHandlesProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -96,9 +98,9 @@ function Band({t,cut,max,top,height,viewport,rate,selected,onChange,onRemove,onS
   };
   const edge=(side:-1|1)=><View {...(side<0?left:right)} pointerEvents={disabled?"none":"auto"}
     style={{position:"absolute",top:0,bottom:0,width:HIT,[side<0?"left":"right"]:-HIT/2,alignItems:"center",justifyContent:"center",...NO_SELECT}}>
-    <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}} style={{width:4,height:Math.max(16,height-20),borderRadius:2}}/>
+    <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}} style={{width:tokens.spacing.fixedStack,height:Math.max(16,height-20),borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
-  return <View style={{position:"absolute",left:cx-w/2,top,width:w,height,zIndex:6}}>
+  return <View style={{position:"absolute",left:cx-w/2,top,width:w,height,zIndex:controlTokens.layer.handle}}>
     <View {...{onKeyDown,focusable:!disabled,className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
         styled&&(selected?"border-2 border-focus bg-accent/30":"border-accent bg-accent/20"))}}
       accessible accessibilityRole="adjustable"
@@ -115,8 +117,8 @@ function Band({t,cut,max,top,height,viewport,rate,selected,onChange,onRemove,onS
       <Pressable accessible={false} disabled={disabled} onPress={()=>onSelect?.(selected?undefined:t.id)} style={{flex:1}}>
         {/* Two crossing lines: the outgoing and incoming clip. */}
         <View pointerEvents="none" style={{flex:1,justifyContent:"center",overflow:"hidden"}}>
-          <View {...{className:joinClasses(styled&&"bg-accent")}} style={{height:2,transform:[{rotate:"18deg"}]}}/>
-          <View {...{className:joinClasses(styled&&"bg-accent")}} style={{height:2,marginTop:-2,transform:[{rotate:"-18deg"}]}}/>
+          <View {...{className:joinClasses(styled&&"bg-accent")}} style={{height:tokens.spacing.off2,transform:[{rotate:"18deg"}]}}/>
+          <View {...{className:joinClasses(styled&&"bg-accent")}} style={{height:tokens.spacing.off2,marginTop:-tokens.spacing.off2,transform:[{rotate:"-18deg"}]}}/>
         </View>
       </Pressable>
     </View>
@@ -168,7 +170,7 @@ function TransitionHandlesBody({
         if(x<-HIT||x>viewport.widthPx+HIT)return [];
         const existing=transitionAt(transitions,cut);
         const key=cut.leftClipId+"|"+cut.rightClipId;
-        if(existing)return [<Band key={key} t={existing} cut={cut} max={max} top={top+laneHeight/2-14} height={28}
+        if(existing)return [<Band key={key} t={existing} cut={cut} max={max} top={top+laneHeight/2-14} height={tokens.spacing.fixedStatus}
           viewport={viewport} rate={rate} selected={existing.id===selectedTransitionId} onChange={onChange} onRemove={onRemove}
           onSelect={onSelectTransition} dropFrame={dropFrame} disabled={disabled||track.locked===true} styled={styled}/>];
         if(!showCutTargets)return [];
@@ -187,10 +189,10 @@ function TransitionHandlesBody({
           onPress={()=>{if(off)return;if(onSelectCut)onSelectCut(chosen?undefined:cut);else if(request)onAdd(request);}}
           {...(testID?{testID:testID+"-cut-"+key}:{})}
           {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
-          style={{position:"absolute",left:x-HIT/2,top:top+(laneHeight-HIT)/2,width:HIT,height:HIT,alignItems:"center",justifyContent:"center",zIndex:5,opacity:off?0.4:1}}>
+          style={{position:"absolute",left:x-HIT/2,top:top+(laneHeight-HIT)/2,width:HIT,height:HIT,alignItems:"center",justifyContent:"center",zIndex:controlTokens.layer.indicator,opacity:off?tokens.opacity.disabled:1}}>
           {/* A diamond on the cut. */}
           <View pointerEvents="none" {...{className:joinClasses(styled&&(chosen?"bg-focus border-2 border-focus":"bg-surface-raised border-2 border-accent"))}}
-            style={{width:14,height:14,borderRadius:2,transform:[{rotate:"45deg"}]}}/>
+            style={{width:tokens.spacing.off14,height:tokens.spacing.off14,borderRadius:forgeRadius.sm,transform:[{rotate:"45deg"}]}}/>
         </Pressable>];
       });
     })}

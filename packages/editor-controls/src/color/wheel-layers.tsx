@@ -25,7 +25,7 @@ function Wedges({size,from,segments}:{size:number;from:number;segments:readonly 
 
 /** The hue ring of `ColorWheel`, drawn once per size. `inner` is the hole radius. */
 export const HueRingLayer=memo(function HueRingLayer({size,inner}:{size:number;inner:number}){
-  return <View pointerEvents="none" style={{width:size,height:size,borderRadius:size/2,overflow:"hidden"}}>
+  return <View pointerEvents="none" style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: colour-well */overflow:"hidden"}}>
     <Wedges size={size} from={inner*0.9} segments={RING_SEGMENTS}/>
   </View>;
 });
@@ -36,11 +36,11 @@ export const HueRingLayer=memo(function HueRingLayer({size,inner}:{size:number;i
  * then black at `1 - value`. Only the black layer depends on the color.
  */
 export const HueSaturationDiscLayer=memo(function HueSaturationDiscLayer({size,value}:{size:number;value:number}){
-  return <View pointerEvents="none" style={{width:size,height:size,borderRadius:size/2,overflow:"hidden"}}>
+  return <View pointerEvents="none" style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: colour-well */overflow:"hidden"}}>
     <Wedges size={size} from={0} segments={DISC_SEGMENTS}/>
     {SATURATION.map((alpha,i)=>{
       const d=size*(SATURATION.length-i)/SATURATION.length;
-      return <View key={i} style={{position:"absolute",left:(size-d)/2,top:(size-d)/2,width:d,height:d,borderRadius:d/2,backgroundColor:WHITE,opacity:alpha}}/>;
+      return <View key={i} style={{position:"absolute",left:(size-d)/2,top:(size-d)/2,width:d,height:d,borderRadius:d/2, /* radius-exempt: colour-well */backgroundColor:WHITE,opacity:alpha}}/>;
     })}
     <View style={[fill,{backgroundColor:BLACK,opacity:1-value}]}/>
   </View>;

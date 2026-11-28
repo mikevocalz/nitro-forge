@@ -20,6 +20,7 @@ import { fillFromEdge, fillTarget, type FillPlan } from "./spreadsheet/fill-hand
 import type { DragPoint, DragTransport } from "@nyc-tron/ui/components/gestures/drag-transport";
 import { PanResponderDrag } from "@nyc-tron/ui/components/gestures/PanResponderDrag";
 import {exact} from './exact-optional.ts';
+import { tokens } from "./tokens.ts";
 
 /** Only presentation data supplied by the app's TallyDocument.getRange(). */
 export interface SpreadsheetCell {
@@ -386,7 +387,7 @@ function SpreadsheetGridBody({interactionBoundary,actionError,readOnly,disabledR
       {/* 12pt mark, 44pt grab area through hitSlop. */}
       <View aria-hidden hitSlop={16}
         {...{className:joinClasses(!unstyled&&"bg-primary border-2 border-surface-raised")}}
-        style={{position:"absolute",bottom:-1,end:-1,width:12,height:12}}/>
+        style={{position:"absolute",bottom:-tokens.borderWidth.hairline,end:-tokens.borderWidth.hairline,width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset}}/>
     </FillTransport>:null;
   const cell=(row:number,col:number)=>{
     const addr=cellAddress(row,col);
@@ -419,7 +420,7 @@ function SpreadsheetGridBody({interactionBoundary,actionError,readOnly,disabledR
         !unstyled&&referenced&&!inRange&&REFERENCE_TONE_CLASSES[refs[0]!.tone]!.fill,
         !unstyled&&inRange&&"bg-primary/10",
         !unstyled&&isFocus&&"border-2 border-focus")}}
-      style={{width:columnWidth,height:rowHeight,justifyContent:"center",paddingHorizontal:8}}>
+      style={{width:columnWidth,height:rowHeight,justifyContent:"center",paddingHorizontal:tokens.spacing.fixedElement}}>
       {custom?custom.content:<Text numberOfLines={1} {...{className:textClass}}>{value}</Text>}
       {outline?<View aria-hidden pointerEvents="none" {...{className:outline}}
         style={{position:"absolute",top:0,bottom:0,start:0,end:0}}/>:null}
@@ -450,16 +451,16 @@ function SpreadsheetGridBody({interactionBoundary,actionError,readOnly,disabledR
       height:metrics.formulaBarHeight,
       flexDirection:metrics.compact?"column":"row",
       alignItems:metrics.compact?"stretch":"center",
-      gap:metrics.compact?4:8,paddingHorizontal:8,
-      paddingVertical:metrics.compact?6:0,
+      gap:metrics.compact?tokens.spacing.fixedStack:tokens.spacing.fixedElement,paddingHorizontal:tokens.spacing.fixedElement,
+      paddingVertical:metrics.compact?tokens.spacing.off6:0,
     }}>
       <View style={{flexDirection:"row",alignItems:"center",
-        justifyContent:"space-between",minWidth:metrics.compact?0:60}}>
+        justifyContent:"space-between",minWidth:metrics.compact?0:tokens.spacing.fixedHeader}}>
         <Text selectable {...{className:textClass}}
           accessibilityLabel={range?`Selected ${range.startRow===range.endRow&&range.startColumn===range.endColumn?"cell":"range"} ${selection!.anchor===focus?focus:`${selection!.anchor} to ${focus}`}`:"No cell selected"}>
           {range?(selection!.anchor===focus?focus:`${selection!.anchor}:${focus}`):""}
         </Text>
-        {metrics.compact?<Text numberOfLines={1} style={{fontSize:11}} {...{className:mutedClass}}>
+        {metrics.compact?<Text numberOfLines={1} style={{fontSize:tokens.text.off11}} {...{className:mutedClass}}>
           Swipe sideways for more columns
         </Text>:null}
       </View>

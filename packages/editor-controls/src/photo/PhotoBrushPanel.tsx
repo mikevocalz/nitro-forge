@@ -9,6 +9,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
 import {PhotoBrushSurface} from './PhotoBrushSurface.tsx';
 import {validatePhotoBrush,validatePhotoBrushPoints,type PhotoBrushSettings,type PhotoBrushPoint,type PhotoImageSize} from './photo-masks.ts';
+import { tokens } from '../tokens.ts';
 /** Shared brush settings/input owner, specialized by LocalMaskBrush and retouch. */
 export interface PhotoBrushPanelProps extends Omit<ViewProps,'children'> {
  readonly scope:string;readonly imageSize:PhotoImageSize;readonly value:PhotoBrushSettings;
@@ -24,7 +25,7 @@ export function PhotoBrushPanel({scope,imageSize,value,tool,tools,label,onToolCh
  const local=useRef<ReturnType<typeof makeStore>|null>(null);local.current??=makeStore();const store=local.current,cursor=useStore(store,s=>s);
  const set=(change:Partial<PhotoBrushSettings>)=>{if(locked)return;const next={...value,...change};validatePhotoBrush(next);onChange(next);};
  const commit=(points:readonly PhotoBrushPoint[])=>{if(locked)return;validatePhotoBrushPoints(points);void action.run('stroke',signal=>onCommit(points,signal));};
- return <View {...props} style={[{gap:8},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
   <Select label={`${label} operation`} value={tool} options={tools} disabled={locked} unstyled={unstyled} onValueChange={tool=>{if(!locked)onToolChange(tool);}}/>
   <UnitInput label={`${label} radius pixels`} value={value.radius} min={.5} max={4096} step={1} disabled={locked} unstyled={unstyled} onCommit={radius=>set({radius})}/>
   <UnitInput label={`${label} feather`} value={value.feather} min={0} max={1} step={.05} disabled={locked} unstyled={unstyled} onCommit={feather=>set({feather})}/>

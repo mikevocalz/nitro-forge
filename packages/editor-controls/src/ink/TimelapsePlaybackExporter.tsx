@@ -9,6 +9,7 @@ import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber
 import {controlIdentity,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface TimelapseExportSettings {format:'mp4'|'webm';width:number;height:number;fps:number}
 export interface TimelapseArtifact {uri:string;bytes:number;mime:'video/mp4'|'video/webm';width:number;height:number;durationMs:number}
 export interface TimelapseProgress {completedFrames:number;totalFrames:number}
@@ -47,7 +48,7 @@ export function TimelapsePlaybackExporter({scope='timelapse',revision=0,...props
    store.setState({artifact:{...artifact}});
   }).finally(()=>{if(committed.current.boundary===boundary)admitted.current=false;});
  };
- return <View {...rest} style={[{gap:8,minWidth:0},style]} accessibilityLabel="Drawing timelapse">
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement,minWidth:0},style]} accessibilityLabel="Drawing timelapse">
   <Text {...{className:unstyled?undefined:'text-text'}}>{eventCount} recorded drawing events; {(durationMs/1000).toFixed(1)} seconds</Text>
   <Button title={recording?'Pause history recording':'Record drawing history'} disabled={off} unstyled={unstyled} onPress={()=>run('record',(host,signal)=>host.onRecordingChange(!host.recording,signal))}/>
   {renderPreview(playback.positionMs)}

@@ -7,6 +7,7 @@ import {
   GRID_MAX_SPACING,GRID_MAX_SUBDIVISIONS,GRID_MIN_SPACING,SNAP_MAX_THRESHOLD,SNAP_MIN_THRESHOLD,
   validateGrid,validateSnap,type GridSettings,type SnapSettings,
 } from "./snap-grid-model.ts";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode SnapGridSettings}. */
 export interface SnapGridSettingsProps extends Omit<ViewProps,"children"> {
@@ -48,7 +49,7 @@ export function SnapGridSettings({scope="canvas-grid",revision=0,grid,snap,onGri
   const heading=(text:string)=><Text role="heading" aria-level={3}
     {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}}>{text}</Text>;
   return <View {...rest} accessibilityLabel="Grid and snapping" {...{role:"group",className:joinClasses(styled&&"gap-3",className)}}>
-    <View style={{gap:4}}>
+    <View style={{gap:tokens.spacing.fixedStack}}>
       {heading("Grid")}
       <Switch label="Show grid" on={grid.visible} disabled={disabled} styled={styled} onChange={visible=>onGridChange({...grid,visible})}/>
       <PrecisionScrubber scope={scope} revision={revision} label="Spacing" unit="px" value={grid.spacing} min={GRID_MIN_SPACING} max={GRID_MAX_SPACING} step={1}
@@ -56,7 +57,7 @@ export function SnapGridSettings({scope="canvas-grid",revision=0,grid,snap,onGri
       <PrecisionScrubber scope={scope} revision={revision} label="Subdivisions" value={grid.subdivisions} min={1} max={GRID_MAX_SUBDIVISIONS} step={1}
         disabled={disabled} unstyled={unstyled} onCommit={n=>onGridChange({...grid,subdivisions:Math.round(n)})}/>
     </View>
-    <View style={{gap:4}}>
+    <View style={{gap:tokens.spacing.fixedStack}}>
       {heading("Snapping")}
       <Switch label="Snap while dragging" on={snap.enabled} disabled={disabled} styled={styled} onChange={enabled=>onSnapChange({...snap,enabled})}/>
       <View accessibilityLabel="Snap to" {...{role:"group"}}>

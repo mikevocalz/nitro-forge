@@ -8,6 +8,7 @@ import {useLocalPointer} from "@nyc-tron/ui/components/gestures/useLocalPointer"
 import {createValueGesture} from "@nyc-tron/ui/components/gestures/value-gesture";
 import type {RgbaColor} from "../color.ts";
 import {checkerColumns,trackSegments} from "./segments.ts";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ChannelTrack}. */
 export interface ChannelTrackProps extends Omit<ViewProps,"children"> {
@@ -115,13 +116,13 @@ export function ChannelTrack({
       if(e.nativeEvent.actionName==="increment")commitKey(value+step);
       if(e.nativeEvent.actionName==="decrement")commitKey(value-step);
     }}
-    style={[{height:44,justifyContent:"center",direction:"ltr",opacity:disabled?0.45:1,...NO_SELECT},style]}>
+    style={[{height:tokens.spacing.fixedTarget,justifyContent:"center",direction:"ltr",opacity:disabled?tokens.opacity.disabled:1,...NO_SELECT},style]}>
     <View pointerEvents="none" {...{className:joinClasses(styled&&"rounded-control border border-border")}}
-      style={{position:"absolute",left:0,right:0,height:24,overflow:"hidden"}}>
+      style={{position:"absolute",left:0,right:0,height:tokens.spacing.fixedSection,overflow:"hidden"}}>
       {cells?<View style={{position:"absolute",left:0,top:0,bottom:0,flexDirection:"row"}}>
-        {Array.from({length:cells},(_,i)=><View key={i} style={{width:7}}>
-          <View {...{className:joinClasses(styled&&(i%2?"bg-border":"bg-surface-raised"))}} style={{height:12}}/>
-          <View {...{className:joinClasses(styled&&(i%2?"bg-surface-raised":"bg-border"))}} style={{height:12}}/>
+        {Array.from({length:cells},(_,i)=><View key={i} style={{width:tokens.spacing.off7}}>
+          <View {...{className:joinClasses(styled&&(i%2?"bg-border":"bg-surface-raised"))}} style={{height:tokens.spacing.fixedInset}}/>
+          <View {...{className:joinClasses(styled&&(i%2?"bg-surface-raised":"bg-border"))}} style={{height:tokens.spacing.fixedInset}}/>
         </View>)}
       </View>:null}
       <View style={{flex:1,flexDirection:"row"}}>
@@ -129,10 +130,10 @@ export function ChannelTrack({
       </View>
     </View>
     {state.width>0?<View pointerEvents="none" {...{className:joinClasses(styled&&"border-text")}}
-      style={{position:"absolute",left:thumbLeft,width:THUMB,height:THUMB,borderRadius:THUMB/2,borderWidth:2,
+      style={{position:"absolute",left:thumbLeft,width:THUMB,height:THUMB,borderRadius:THUMB/2, /* radius-exempt: colour-well */borderWidth:tokens.borderWidth.strong,
         alignItems:"center",justifyContent:"center"}}>
       <View {...{className:joinClasses(styled&&"border-surface-raised")}}
-        style={{width:THUMB-4,height:THUMB-4,borderRadius:(THUMB-4)/2,borderWidth:2,backgroundColor:thumbColor(shown)}}/>
+        style={{width:THUMB-tokens.spacing.fixedStack,height:THUMB-tokens.spacing.fixedStack,borderRadius:(THUMB-(tokens.spacing.fixedElement / 2))/2, /* radius-exempt: colour-well */borderWidth:tokens.borderWidth.strong,backgroundColor:thumbColor(shown)}}/>
     </View>:null}
   </View>;
 }

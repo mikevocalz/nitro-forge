@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-// node build-theme.mjs          write src/theme.css and src/theme.native.css
-// node build-theme.mjs --check  write nothing; exit 1 when either file differs from what theme.ts and tokens.ts generate
+// node build-theme.mjs          write src/theme.css, src/theme.native.css and src/radius.css
+// node build-theme.mjs --check  write nothing; exit 1 when any of them differs from what theme.ts and tokens.ts generate
 const check = process.argv.includes('--check');
 const drift = [];
 const emit = (url, text) => {
@@ -9,7 +9,7 @@ const emit = (url, text) => {
   try { current = readFileSync(url, 'utf8'); } catch { /* missing counts as drift */ }
   if (current !== text) drift.push(url.pathname.split('/').slice(-1)[0]);
 };
-import { workspaceThemes, workspaceScale, workspaceStatus } from './src/theme.ts';
+import { forgeRadius, workspaceThemes, workspaceScale, workspaceStatus } from './src/theme.ts';
 import { cssTokens } from './src/tokens.ts';
 const names = { base: 'surface', raised: 'raised', deep: 'mat', line: 'border', text: 'text', muted: 'muted', accent: 'accent', ink: 'on-accent', soft: 'tint', paper: 'paper', paperInk: 'paper-ink', paperMuted: 'paper-muted', error: 'error' };
 const forge = values => Object.entries(values).map(([key, value]) => `  --color-forge-${names[key]}: ${value};`);
@@ -31,11 +31,15 @@ const declare = list => list.map(({ name, value }) => `  ${name}: ${value};`).jo
 const densityBlocks = Object.entries(added.density)
   .filter(([, list]) => list.length > 0)
   .map(([name, list]) => `[data-density="${name}"] {\n${declare(list)}\n}\n`).join('');
-const metrics = `  --spacing-forge-target: ${workspaceScale.size.target}px;
-  --radius-sm: ${workspaceScale.radius.control}px;
+// The two Forge radii, plus the aliases NYC-Tron recipes read (`rounded-control`
+// for controls, `rounded-card` for cards) and Forge's own control alias.
+const radii = `  --radius-sm: ${forgeRadius.sm}px;
+  --radius-md: ${forgeRadius.md}px;
   --radius-forge-control: ${workspaceScale.radius.control}px;
   --radius-control: ${workspaceScale.radius.control}px;
-  --radius-card: ${workspaceScale.radius.panel}px;
+  --radius-card: ${workspaceScale.radius.panel}px;`;
+const metrics = `  --spacing-forge-target: ${workspaceScale.size.target}px;
+${radii}
   --font-forge-editorial: Georgia, 'Times New Roman', serif;`;
 // `.dark` is NYC-Tron's NightScope on web (Uniwind ScopedTheme's class), so a
 // night surface inside a light page keeps the dark values. It follows the
@@ -62,10 +66,17 @@ ${declare(added.dark)}
 }
 `;
 emit(new URL('./src/theme.native.css', import.meta.url), nativeOutput);
+
+// Radius only, for hosts that keep their own palette (the audio and media labs).
+emit(new URL('./src/radius.css', import.meta.url), `/* Generated from theme.ts; do not edit. Forge radius tokens only. */
+@theme {
+${radii}
+}
+`);
 if (check) {
   if (drift.length) {
     console.error(`build-theme --check: ${drift.join(', ')} differ from theme.ts and tokens.ts. Run pnpm --filter @nitro-forge/studio-workspace build:theme and commit.`);
     process.exit(1);
   }
-  console.log('build-theme --check: theme.css and theme.native.css match theme.ts and tokens.ts');
+  console.log('build-theme --check: theme.css, theme.native.css and radius.css match theme.ts and tokens.ts');
 }

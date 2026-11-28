@@ -29,13 +29,12 @@ const offScale = {
   spacing: {
     off1_5: 1.5, off2: 2, off3: 3, off5: 5, off5_75: 5.75, off6: 6, off7: 7, off10: 10, off14: 14,
     off16: 16, off18: 18, off20: 20, off22: 22, off24: 24, off25: 25, off26: 26, off28: 28, off33: 33,
-    off40: 40, off48: 48, off50: 50, off76: 76, off84: 84, off96: 96, off104: 104, off360: 360,
+    off40: 40, off48: 48, off50: 50, off76: 76, off84: 84, off96: 96, off104: 104, off132: 132, off360: 360,
     off480: 480, off520: 520, off600: 600, off680: 680, off760: 760, off792: 792, off800: 800, off1200: 1200,
   },
   text: { off9: 9, off11: 11, off13: 13, off15: 15, off22: 22, off28: 28 },
   leading: { off18: 18, off19: 19 },
   tracking: { offNeg0_2: -0.2, off0_4: 0.4, off1: 1 },
-  radius: { off0_75: 0.75, off1: 1, off1_5: 1.5, off3: 3, off8: 8 },
   borderWidth: { off1_5: 1.5, off3: 3 },
 } as const;
 
@@ -188,7 +187,9 @@ export const tokens = {
   },
   leading: { ...offScale.leading },
   tracking: { ...offScale.tracking },
-  radius: { control: standardScale.radius.control, paper: standardScale.radius.paper, ...offScale.radius },
+  // No radius group: radius values come only from `forgeRadius`, `forgeHairlineRadius` and
+  // `workspaceScale.radius` in theme.ts, and their CSS only from build-theme.mjs
+  // (design/DIRECTION.md radius rule, tooling/check-radius.mjs).
   borderWidth: { hairline: 1, strong: 2, ...offScale.borderWidth },
   fontWeight: { regular: '400', medium: '500', semibold: '600', bold: '700' },
   font: {
@@ -237,7 +238,7 @@ export type Tokens = typeof tokens;
 
 /** Value-preserving rule: the CSS unit a numeric token carries, by group. Strings are emitted as written. */
 const unitByGroup: Readonly<Record<string, string>> = {
-  spacing: 'px', text: 'px', leading: 'px', tracking: 'px', radius: 'px', borderWidth: 'px', size: 'px', hit: 'px',
+  spacing: 'px', text: 'px', leading: 'px', tracking: 'px', borderWidth: 'px', size: 'px', hit: 'px',
   duration: 'ms', angle: 'deg',
 };
 
@@ -254,9 +255,6 @@ export const cssVarName = (group: string, key: string): string => `--${kebab(gro
 const cssHex = (text: string): string => (/^#[0-9a-f]{3,8}$/i.test(text) ? text.toUpperCase() : text);
 const cssText = (group: string, value: string | number): string =>
   typeof value === 'number' ? `${value}${unitByGroup[group] ?? ''}` : cssHex(value);
-
-/** Declared by `build-theme.mjs` straight from `theme.ts` already; `tokens` lists them so components can read them too. */
-const declaredByTheme: ReadonlySet<string> = new Set(['--radius-control']);
 
 export type CssDeclaration = Readonly<{ name: string; value: string }>;
 export type CssTokens = Readonly<{
@@ -285,7 +283,6 @@ export function cssTokens(): CssTokens {
   for (const [group, entries] of Object.entries(tokens) as [string, TokenGroup][]) {
     for (const [key, value] of Object.entries(entries)) {
       const name = cssVarName(group, key);
-      if (declaredByTheme.has(name)) continue;
       if (typeof value === 'object') {
         if (value.dark === value.light) shared.push({ name, value: cssHex(value.dark) });
         else {

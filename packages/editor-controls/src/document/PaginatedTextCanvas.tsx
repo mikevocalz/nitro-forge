@@ -5,6 +5,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface TextCanvasPage {id:string;label:string;width:number;height:number;marginTop:number;marginBottom:number;marginLeft:number;marginRight:number;text:string;contentRevision:string|number;oversetCharacters:number}
 export interface PageEditorContext {readOnly:boolean;selection:DocumentTextSelection;onTextChange:(text:string)=>void;onSelectionChange:(selection:DocumentTextSelection)=>void;onFocus:()=>void;onMeasuredContent:(size:{width:number;height:number})=>void}
 type PageEditorBackend={mode:'plain-text';renderRichEditor?:never}|{mode:'native-rich-text';renderRichEditor:(page:TextCanvasPage,context:PageEditorContext)=>ReactNode};
@@ -20,7 +21,7 @@ export function PaginatedTextCanvas({scope='paginated-text',revision=0,...props}
  const owner=useEditorBoundary([JSON.stringify([...controlIdentity(scope,revision),disabledReason])]),guard=useScopedControl(owner,props,disabledReason!==undefined),off=readOnly||disabledReason!==undefined;
  return <View {...rest} style={[{minWidth:0,minHeight:0},style]} accessibilityLabel="Paginated document">
  <Text {...{className:unstyled?undefined:'text-text-muted'}}>{pages.length} laid-out pages · {mode==='plain-text'?'Native plain text editing':'Host native rich text editing'}</Text>
- <ScrollView horizontal nestedScrollEnabled><ScrollView nestedScrollEnabled style={{maxHeight:800}} contentContainerStyle={{gap:16,padding:8}} keyboardShouldPersistTaps="handled">
+ <ScrollView horizontal nestedScrollEnabled><ScrollView nestedScrollEnabled style={{maxHeight:tokens.spacing.off800}} contentContainerStyle={{gap:tokens.spacing.fixedGroup,padding:tokens.spacing.fixedElement}} keyboardShouldPersistTaps="handled">
  {pages.map(page=>{const active=page.id===activePageId,context:PageEditorContext={readOnly:off,selection:active?selection:{start:0,end:0},onTextChange:text=>{const h=guard.current();if(h&&!h.readOnly)h.onPageTextChange(page.id,text);},onSelectionChange:value=>guard.current()?.onSelectionChange(page.id,value),onFocus:()=>guard.current()?.onActivatePage(page.id),onMeasuredContent:size=>guard.current()?.onMeasuredContent(page.id,{...size,availableHeight:page.height-page.marginTop-page.marginBottom})};
  return <View key={page.id} style={{width:page.width*zoom,height:page.height*zoom,overflow:'hidden'}} accessibilityLabel={page.label}>
   <View {...{className:unstyled?undefined:'bg-surface-raised border border-border'}} style={{width:page.width,height:page.height,transformOrigin:'top left',transform:[{scale:zoom}],paddingTop:page.marginTop,paddingBottom:page.marginBottom,paddingLeft:page.marginLeft,paddingRight:page.marginRight}}>

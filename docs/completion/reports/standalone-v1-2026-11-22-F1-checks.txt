@@ -1,0 +1,66 @@
+F1 final verification. A machine-specific checkout path is replaced below by <pinned-Tron-checkout>.
+$ node --test tooling/tests/component-program.test.mjs tooling/tests/component-program-handoff.test.mjs
+✔ adoption preserves every row field while converting only source, evidence and decision locations (9.216875ms)
+✔ pinned URL resolution rejects mutable refs, other hosts, traversal, encoded paths and the wrong tree prefix (0.380042ms)
+✔ checkout provenance verifies revision, source checksums, clean tracked bytes and rejects untracked files (168.466458ms)
+✔ checkout provenance rejects a parent Git root and unsupported invocation has no default source checkout (196.342417ms)
+✔ CI checks the adopted program against the same immutable source revision (0.1735ms)
+✔ local and pinned external implementations count separately from pending external work (9.083667ms)
+✔ external completion requires revision, actual source paths, public exports and an existing report (16.08225ms)
+✔ external repositories, paths and immutable revisions cannot be unsafe or mutable references (31.605541ms)
+✔ external ownership cannot masquerade as local implementation or source (7.082333ms)
+✔ local implementations need existing owned source, evidence and a public export (8.788083ms)
+✔ the exact 341 canonical IDs and names cannot be replaced while retaining the count (7.599458ms)
+✔ baseline contents and ledger baseline identity remain frozen (4.103583ms)
+✔ the required eight-platform scope cannot shrink, duplicate or substitute another platform (4.493084ms)
+✔ unknown implementation, acceptance and platform result statuses are rejected (7.196583ms)
+✔ accepted rows require completed implementation and eight passing, existing proofs (11.4985ms)
+✔ partial work must stay visible and cannot be labeled implemented (5.555416ms)
+✔ additions are counted apart from the frozen 341 and follow the same row rules (18.298791ms)
+✔ additions cannot replace, rename into or shadow canonical rows, and need a gate and decision record (24.755792ms)
+✔ recorded additions can grow but never be dropped, and the repository records the T2 rows (5.791334ms)
+✔ proof validation rejects untracked or altered blobs even when a local file exists (5.926583ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 530.854709
+Exit: 0
+
+$ node tooling/verify-component-program.mjs --tron-source <pinned-Tron-checkout>
+Forge component program: 341 canonical IDs; 332 Tron implementations, 0 partial, 9 pinned external implementations, 0 pending; 0 accepted with all eight platform proofs.
+Recorded additions: 5; 0 accepted. No acceptance or Forge completion status changed.
+Tron source and direct evidence files resolved at 0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44; nested report links and external-owner source contents are not checked by this validator.
+Exit: 0
+
+$ node tooling/verify-completion-plan.mjs
+Completion plan valid: 341 components, 21 phases, 8 required platforms; 0 fully verified; 329/329 library source reviews
+Exit: 0
+
+$ node --test tooling/verify-completion-plan.test.mjs
+✔ all 341 IDs have one delivery phase and retain mandatory platform gates (4.370834ms)
+✔ dropping an absent component cannot silently shrink the scope (4.706917ms)
+✔ a component cannot be delivered in two phases (5.169167ms)
+✔ legacy DONE or passing builds cannot promote an unverified component (5.039708ms)
+✔ passing gates require matching component-specific evidence (4.657583ms)
+✔ required target scope and dependencies cannot be silently removed or cycled (10.567125ms)
+✔ unit/build records cannot masquerade as platform runtime and screen-reader evidence (3.948917ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 205.24025
+Exit: 0
+
+$ git diff --check
+Exit: 0
+
+$ git diff --quiet -- docs/completion/components.json tooling/nyc-tron.json docs/release/v1-readiness.json
+Exit: 0
+

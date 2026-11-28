@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {audioTargetSize} from './audio-chrome.ts';
 import {valueAccessibility} from "../value-a11y.ts";
 import { useRef } from "react";
@@ -10,6 +11,7 @@ import { useStore } from "zustand";
 import { cancelPreview } from "../cancel-preview.ts";
 import { joinClasses } from "@nyc-tron/ui/components/styles";
 import { describeBalance, describePan, dragToPan, formatPan, panToPosition, quantizePan, stepPan } from "./pan.ts";
+import { tokens } from "../tokens.ts";
 
 /** Minimum hit size (iOS 44pt / Android 48dp floor). */
 const THUMB = 14;
@@ -182,21 +184,21 @@ export function PanControl({
       onKeyDown={onKeyDown}
       {...{ className: joinClasses(styled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus") }}
       // Physical stereo field: never mirrored by an RTL ancestor.
-      style={{ width, height: HIT, direction: "ltr", opacity: disabled ? 0.45 : 1, ...webTrack }}>
+      style={{ width, height: HIT, direction: "ltr", opacity: disabled ? tokens.opacity.disabled : 1, ...webTrack }}>
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-surface-sunken border border-border") }}
-        style={{ position: "absolute", left: THUMB / 2, right: THUMB / 2, top: (HIT - 6) / 2, height: 6, borderRadius: 3 }} />
+        style={{ position: "absolute", left: THUMB / 2, right: THUMB / 2, top: (HIT - tokens.spacing.off6) / 2, height: tokens.spacing.off6, borderRadius: forgeHairlineRadius.tick }} />
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-accent") }}
-        style={{ position: "absolute", left: fillLeft, width: fillWidth, top: (HIT - 6) / 2, height: 6 }} />
+        style={{ position: "absolute", left: fillLeft, width: fillWidth, top: (HIT - tokens.spacing.off6) / 2, height: tokens.spacing.off6 }} />
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-text-muted") }}
-        style={{ position: "absolute", left: centreX - 1, width: 2, top: (HIT - 16) / 2, height: 16 }} />
+        style={{ position: "absolute", left: centreX - tokens.borderWidth.hairline, width: tokens.spacing.off2, top: (HIT - tokens.spacing.fixedGroup) / 2, height: tokens.spacing.fixedGroup }} />
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-surface-raised border-accent") }}
-        style={{ position: "absolute", left: x, width: THUMB, top: (HIT - 24) / 2, height: 24, borderRadius: 4, borderWidth: 2 }} />
+        style={{ position: "absolute", left: x, width: THUMB, top: (HIT - tokens.spacing.fixedSection) / 2, height: tokens.spacing.fixedSection, borderRadius: forgeRadius.sm, borderWidth: tokens.borderWidth.strong }} />
     </View>
     <Pressable accessibilityRole="button" accessibilityLabel={labels?.centreName?.(name)??"Centre " + name}
       accessibilityHint={labels?.currentHint?.(spoken)??"Currently " + spoken} disabled={disabled || current === 0}
       onPress={centre}
       {...{ className: joinClasses(styled && "rounded-control active:opacity-80 focus-visible:ring-2 focus-visible:ring-focus") }}
-      style={{ minWidth: HIT, minHeight: HIT, paddingHorizontal: 6, justifyContent: "center", alignItems: "center" }}>
+      style={{ minWidth: HIT, minHeight: HIT, paddingHorizontal: tokens.spacing.off6, justifyContent: "center", alignItems: "center" }}>
       <Text {...{ className: joinClasses(styled && "text-text") }} style={{ fontVariant: ["tabular-nums"] }}>{readout}</Text>
     </Pressable>
   </View>;

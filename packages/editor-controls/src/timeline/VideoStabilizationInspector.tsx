@@ -6,6 +6,7 @@ import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface VideoStabilizationSettings {strength:number;smoothingFrames:number;quality:'fast'|'balanced'|'high'}
 export interface VideoStabilizationInspectorProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  value:VideoStabilizationSettings;qualities:readonly VideoStabilizationSettings['quality'][];
@@ -18,7 +19,7 @@ export function VideoStabilizationInspector({scope='video-stabilization',revisio
  if(!Number.isFinite(value.strength)||value.strength<0||value.strength>1||!Number.isInteger(value.smoothingFrames)||value.smoothingFrames<1||value.smoothingFrames>240||!['fast','balanced','high'].includes(value.quality)||qualities.length>3||new Set(qualities).size!==qualities.length||qualities.some(q=>!['fast','balanced','high'].includes(q))||!['idle','running','ready','error'].includes(analysis.status)||![analysis.progress,analysis.cropFraction].every(n=>n===undefined||Number.isFinite(n)&&n>=0&&n<=1))throw new RangeError('Invalid video stabilization');
  const guard=useScopedControl(JSON.stringify([...controlIdentity(scope,revision),disabledReason]),props,disabledReason!==undefined||analysis.status==='running'),off=guard.pending||disabledReason!==undefined||analysis.status==='running';
  const set=(patch:Partial<VideoStabilizationSettings>)=>guard.run('settings',(host,signal)=>host.onChange({...host.value,...patch},signal));
- return <View {...rest} style={[{gap:8,minWidth:0},style]} accessibilityLabel="Video stabilization">
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement,minWidth:0},style]} accessibilityLabel="Video stabilization">
   <PrecisionScrubber scope={scope} revision={revision} label="Stabilization strength" value={value.strength} min={0} max={1} step={.01} disabled={off} unstyled={unstyled} onCommit={strength=>set({strength})}/>
   <PrecisionScrubber scope={scope} revision={revision} label="Smoothing frames" value={value.smoothingFrames} min={1} max={240} step={1} disabled={off} unstyled={unstyled} onCommit={smoothingFrames=>set({smoothingFrames:Math.round(smoothingFrames)})}/>
   <SegmentedControl aria-label="Stabilization quality" value={value.quality} options={(['fast','balanced','high'] as const).map(quality=>({value:quality,label:quality,disabled:!qualities.includes(quality)}))} disabled={off} unstyled={unstyled} onChange={quality=>set({quality})}/>

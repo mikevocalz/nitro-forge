@@ -16,6 +16,7 @@
  * its base and stays visible with a reason when the layer cannot clip.
  * Modified for NYC-Tron UI on 2026-11-06: added document ownership and permission guards; original licenses retained.
  */
+import {forgeHairlineRadius} from "../radius.ts";
 import {useLayoutEffect,useRef} from 'react';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
@@ -23,6 +24,7 @@ import {View,type ViewProps} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {PanelButton,Reason} from "./panel-button.tsx";
 import {CLIP_INDENT,clipReason,clipToggleLabel,type ClipLayer,type SetClippedOp} from "./clipping-model.ts";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ClipToggle}. */
 export interface ClipToggleProps extends Omit<ViewProps,"children"> {
@@ -84,9 +86,9 @@ export function ClipIndicator({unstyled=false,style,...rest}:ClipIndicatorProps)
  */
 function ClipGlyph({styled}:{styled:boolean}){
   const ink=joinClasses(styled&&"bg-text-muted");
-  return <View pointerEvents="none" style={{width:12,height:16,alignItems:"center"}}>
-    <View {...{className:ink}} style={{position:"absolute",top:1,width:1.5,height:13,borderRadius:1}}/>
-    <View {...{className:ink}} style={{position:"absolute",top:10,left:1.6,width:6,height:1.5,borderRadius:1,transform:[{rotate:"45deg"}]}}/>
-    <View {...{className:ink}} style={{position:"absolute",top:10,right:1.6,width:6,height:1.5,borderRadius:1,transform:[{rotate:"-45deg"}]}}/>
+  return <View pointerEvents="none" style={{width:tokens.spacing.fixedInset,height:tokens.spacing.fixedGroup,alignItems:"center"}}>
+    <View {...{className:ink}} style={{position:"absolute",top:tokens.borderWidth.hairline,width:tokens.spacing.off1_5,height:tokens.spacing.fixedInset,borderRadius:forgeHairlineRadius.tick}}/>
+    <View {...{className:ink}} style={{position:"absolute",top:tokens.spacing.off10,left:tokens.spacing.off1_5,width:tokens.spacing.off6,height:tokens.spacing.off1_5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"45deg"}]}}/>
+    <View {...{className:ink}} style={{position:"absolute",top:tokens.spacing.off10,right:tokens.spacing.off1_5,width:tokens.spacing.off6,height:tokens.spacing.off1_5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"-45deg"}]}}/>
   </View>;
 }

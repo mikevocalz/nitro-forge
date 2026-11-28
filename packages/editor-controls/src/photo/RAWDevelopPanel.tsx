@@ -8,6 +8,7 @@ import {ToneAndPresence} from './ToneAndPresence.tsx';
 import {EightBandColorMixer} from './EightBandColorMixer.tsx';
 import {LensCorrectionPanel,type LensProfile} from './LensCorrectionPanel.tsx';
 import {parsePhotoDevelop,serializePhotoDevelop,validatePhotoDevelop,type PhotoDevelopSettings} from './photo-adjustments.ts';
+import { tokens } from '../tokens.ts';
 export type {PhotoDevelopSettings} from './photo-adjustments.ts';
 export interface RAWDevelopPanelProps extends Omit<ViewProps,'children'> {
  readonly photoId:string;
@@ -32,9 +33,9 @@ export function RAWDevelopPanel({photoId,revision,value,defaults,baseline,profil
  const locked=disabled||action.pending!==null;
  const serialized=serializePhotoDevelop(value);
  const commit=(next:PhotoDevelopSettings)=>{if(locked)return;validatePhotoDevelop(next);if(serializePhotoDevelop(next)!==serialized)onCommit(next);};
- return <View key={photoId} {...props} style={[{gap:16},props.style]}>
+ return <View key={photoId} {...props} style={[{gap:tokens.spacing.fixedGroup},props.style]}>
   <Text {...{className:joinClasses(!unstyled&&'text-text')}}>Non-destructive develop settings</Text>
-  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+  <View style={{flexDirection:'row',flexWrap:'wrap',gap:tokens.spacing.fixedElement}}>
    <Button title="Reset develop defaults" disabled={locked||serializePhotoDevelop(defaults)===serialized} unstyled={unstyled} onPress={()=>commit(parsePhotoDevelop(serializePhotoDevelop(defaults)))}/>
    <Button title="Revert develop edits" disabled={locked||serializePhotoDevelop(baseline)===serialized} unstyled={unstyled} onPress={()=>commit(parsePhotoDevelop(serializePhotoDevelop(baseline)))}/>
    <Button title="Copy develop settings" disabled={locked} unstyled={unstyled} onPress={()=>{if(!locked)void action.run('copy',signal=>onCopy(serialized,signal));}}/>

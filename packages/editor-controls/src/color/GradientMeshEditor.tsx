@@ -15,6 +15,7 @@ import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {rasterToImage} from "../layers/layer-thumbnail-model.ts";
 import {bounded} from "./color-adjustments.ts";
 import {validateMesh,editMeshPoint,rasterizeMesh,type GradientMesh} from "./gradient-mesh.ts";
+import { tokens } from "../tokens.ts";
 export type {GradientMesh,MeshPoint} from "./gradient-mesh.ts";
 /** Host-owned mesh, selection, preview and one-transaction commit boundaries. */
 export interface GradientMeshEditorProps extends Omit<ViewProps,'children'>{
@@ -45,13 +46,13 @@ export function GradientMeshEditor({scope,value,selectedId,onSelect,onPreview,on
  const shown=state.preview??value,width=Math.max(88,state.width||240),w=width-44,h=height-44;
  const previewImage=useMemo(()=>children?null:rasterToImage(rasterizeMesh(shown)),[shown,children]);
  const edges=shown.points.flatMap((p,i)=>[...(i%value.columns<value.columns-1?[[p,shown.points[i+1]!]]:[]),...(i<shown.points.length-value.columns?[[p,shown.points[i+value.columns]!]]:[])]);
- return <View {...props} style={[{gap:8},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
   <Select label="Mesh control point" value={selectedId} options={value.points.map((p,i)=>({value:p.id,label:`Row ${Math.floor(i/value.columns)+1}, column ${i%value.columns+1}`}))} disabled={disabled} unstyled={unstyled} onValueChange={onSelect}/>
   <Transport disabled={disabled} onBegin={begin} onMove={(p,n)=>{if(n===1)apply(p);else cancel();}} onCancel={cancel} onRelease={p=>{pending.current=null;apply(p);const d=drag.current;cancel();if(d&&!d.invalid&&!disabled&&d.scope===scope&&d.next.points.some((p,i)=>p.x!==d.start.points[i]!.x||p.y!==d.start.points[i]!.y))onCommit(d.next);}}>
    <View ref={root} collapsable={false} onLayout={e=>store.setState({width:e.nativeEvent.layout.width})} accessibilityLabel="Gradient mesh topology" style={{height,overflow:'hidden'}}>
-    <View pointerEvents="none" importantForAccessibility="no-hide-descendants" aria-hidden style={{position:'absolute',inset:0}}>{children??(previewImage?<Image accessible={false} source={{uri:previewImage.uri}} resizeMode="stretch" style={{position:'absolute',left:22,top:22,width:w,height:h}}/>:null)}
+    <View pointerEvents="none" importantForAccessibility="no-hide-descendants" aria-hidden style={{position:'absolute',inset:0}}>{children??(previewImage?<Image accessible={false} source={{uri:previewImage.uri}} resizeMode="stretch" style={{position:'absolute',left:tokens.spacing.off22,top:tokens.spacing.off22,width:w,height:h}}/>:null)}
      {edges.map(([a,b],i)=><LinePiece key={i} from={{x:22+a!.x*w,y:22+a!.y*h}} to={{x:22+b!.x*w,y:22+b!.y*h}} className={joinClasses(!unstyled&&'bg-border')}/>)}
-     {shown.points.map(p=><View key={p.id} {...{className:joinClasses(!unstyled&&(p.id===selectedId?'border-primary':'border-text'))}} style={{position:'absolute',left:22+p.x*w-8,top:22+p.y*h-8,width:16,height:16,borderRadius:8,borderWidth:2,backgroundColor:rgbaToHex(p.color,true)}}/>)}
+     {shown.points.map(p=><View key={p.id} {...{className:joinClasses(!unstyled&&(p.id===selectedId?'border-primary':'border-text'))}} style={{position:'absolute',left:tokens.spacing.off22+p.x*w-tokens.spacing.fixedElement,top:tokens.spacing.off22+p.y*h-tokens.spacing.fixedElement,width:tokens.spacing.fixedGroup,height:tokens.spacing.fixedGroup,borderRadius:tokens.spacing.fixedGroup / 2, /* radius-exempt: colour-well */borderWidth:tokens.borderWidth.strong,backgroundColor:rgbaToHex(p.color,true)}}/>)}
     </View>
    </View>
   </Transport>

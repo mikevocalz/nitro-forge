@@ -201,13 +201,6 @@
       "reason": "No existing token has this value in this role. tokens.map.json has no row for it. Minting an off-scale token is a design call (decision 13), so the literal stays."
     },
     {
-      "file": "packages/studio-workspace/src/prism-editor.tsx",
-      "kind": "number",
-      "property": "borderRadius",
-      "value": "2",
-      "reason": "Offset from a scale step (for example scale.space.inset + 2). tokens.map.json names a calc token for it (--spacing-inset-plus-2 and the like) but tokens[] does not define one, so there is no exact token to apply. It stays an expression of the scale, so density still moves it."
-    },
-    {
       "file": "packages/studio-workspace/src/stage.tsx",
       "kind": "number",
       "property": "lineHeight",
@@ -290,14 +283,6 @@
       "property": "size",
       "value": "18",
       "reason": "ForgeIcon size 18: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
-    },
-    {
-      "file": "packages/studio-workspace/src/index.tsx",
-      "kind": "tailwind",
-      "property": "rounded",
-      "value": "rounded-[4px]",
-      "count": 5,
-      "reason": "Tailwind `rounded-[4px]` equals --radius-forge-control (4 px), but swapping the class name to `rounded-forge-control` is a class-name change that static AST equivalence cannot prove, and it can change tailwind-merge precedence against the NYC-Tron control classes. Waits for a rendered check."
     },
     {
       "file": "packages/studio-workspace/src/index.tsx",
@@ -430,27 +415,146 @@
       "reason": "ForgeIcon size 17: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
     },
     {
-      "file": "packages/studio-workspace/src/prism-editor.tsx",
-      "kind": "tailwind",
-      "property": "rounded",
-      "value": "rounded-[4px]",
-      "count": 4,
-      "reason": "Tailwind `rounded-[4px]` equals --radius-forge-control (4 px), but swapping the class name to `rounded-forge-control` is a class-name change that static AST equivalence cannot prove, and it can change tailwind-merge precedence against the NYC-Tron control classes. Waits for a rendered check."
-    },
-    {
-      "file": "packages/studio-workspace/src/text-editor.tsx",
-      "kind": "tailwind",
-      "property": "rounded",
-      "value": "rounded-[4px]",
-      "count": 2,
-      "reason": "Tailwind `rounded-[4px]` equals --radius-forge-control (4 px), but swapping the class name to `rounded-forge-control` is a class-name change that static AST equivalence cannot prove, and it can change tailwind-merge precedence against the NYC-Tron control classes. Waits for a rendered check."
-    },
-    {
       "file": "packages/studio-workspace/src/text-editor.tsx",
       "kind": "prop",
       "property": "size",
       "value": "14",
       "reason": "ForgeIcon size 14: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
+    },
+    {
+      "file": "packages/editor-controls/src/inputs/InstrumentKnob.tsx",
+      "kind": "number",
+      "property": "height",
+      "value": "0.28",
+      "reason": "Knob pointer length as a proportion of the knob size (size * 0.28). Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/office/office-controls.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "0.85",
+      "reason": "Play glyph width as a proportion of its size (size * 0.85). Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/office/office-controls.tsx",
+      "kind": "number",
+      "property": "gap",
+      "value": "0.28",
+      "reason": "Gap between the pause bars as a proportion of the glyph size (size * 0.28). Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/office/office-controls.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "0.3",
+      "count": 2,
+      "reason": "Pause bar width as a proportion of the glyph size (size * 0.3). Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/timeline/glyphs.tsx",
+      "kind": "number",
+      "property": "borderLeftWidth",
+      "value": "0.85",
+      "reason": "Play-triangle depth as a proportion of the glyph size (size * 0.85); the border draws the triangle. Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/timeline/glyphs.tsx",
+      "kind": "number",
+      "property": "borderRightWidth",
+      "value": "0.85",
+      "reason": "Reverse-triangle depth as a proportion of the glyph size (size * 0.85); the border draws the triangle. Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/photo/photo-export.ts",
+      "kind": "number",
+      "property": "opacity",
+      "value": ".7",
+      "reason": "Default watermark opacity in the photo export settings: document data for the exporter, not a view style."
+    },
+    {
+      "file": "packages/editor-controls/src/photo/photo-export.ts",
+      "kind": "number",
+      "property": "fontSize",
+      "value": "24",
+      "reason": "Default watermark text size in the photo export settings: document data for the exporter, not a view style."
+    },
+    {
+      "file": "packages/editor-controls/src/slides/slide-model.ts",
+      "kind": "number",
+      "property": "width",
+      "value": "960",
+      "reason": "Default slide width of the slide document model (960 x 540): document data, not a view style."
+    },
+    {
+      "file": "packages/editor-controls/src/slides/slide-model.ts",
+      "kind": "number",
+      "property": "height",
+      "value": "540",
+      "reason": "Default slide height of the slide document model (960 x 540): document data, not a view style."
+    },
+    {
+      "file": "packages/editor-controls/src/audio/AutomationLane.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "2",
+      "reason": "Factor, not a length: the lane is the visible width plus the lead-in on both sides (width + LEAD * 2)."
+    },
+    {
+      "file": "packages/editor-controls/src/audio/SpectrogramView.tsx",
+      "kind": "number",
+      "property": "right",
+      "value": "100",
+      "reason": "Percentage, not a length: the end marker sits at (1 - position) * 100 percent of the strip, a string ending in %."
+    },
+    {
+      "file": "packages/editor-controls/src/audio/SpectrogramView.tsx",
+      "kind": "number",
+      "property": "left",
+      "value": "100",
+      "reason": "Percentage, not a length: the marker sits at position * 100 percent of the strip, a string ending in %."
+    },
+    {
+      "file": "packages/editor-controls/src/audio/eq-graph.ts",
+      "kind": "number",
+      "property": "width",
+      "value": "1",
+      "count": 2,
+      "reason": "Data the gate reads as style: a 1-wide probe plot passed to assertPlot to validate height and range, not a view."
+    },
+    {
+      "file": "packages/editor-controls/src/canvas/GuidedCropAndStraighten.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "1",
+      "reason": "Data the gate reads as style: the reset crop rect is the full normalised image (0, 0, 1, 1), not a view size."
+    },
+    {
+      "file": "packages/editor-controls/src/canvas/GuidedCropAndStraighten.tsx",
+      "kind": "number",
+      "property": "height",
+      "value": "1",
+      "reason": "Data the gate reads as style: the reset crop rect is the full normalised image (0, 0, 1, 1), not a view size."
+    },
+    {
+      "file": "packages/editor-controls/src/color/ColorWheel.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "2",
+      "reason": "Factor, not a length: the inner disc is a circle of radius inner, so its width is inner * 2."
+    },
+    {
+      "file": "packages/editor-controls/src/color/ColorWheel.tsx",
+      "kind": "number",
+      "property": "height",
+      "value": "2",
+      "reason": "Factor, not a length: the inner disc is a circle of radius inner, so its height is inner * 2."
+    },
+    {
+      "file": "packages/editor-controls/src/vector/fill-stroke-model.ts",
+      "kind": "number",
+      "property": "width",
+      "value": "2",
+      "reason": "Data the gate reads as style: the default stroke width of a vector document stroke, not a view style."
     }
   ]
 }

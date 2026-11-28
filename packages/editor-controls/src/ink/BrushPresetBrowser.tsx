@@ -8,6 +8,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {joinClasses} from '@nyc-tron/ui/components/styles';
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from '../tokens.ts';
 export interface BrushPreset {id:string;name:string;category:string;favorite:boolean;disabledReason?:string}
 export interface BrushPresetBrowserProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  presets:readonly BrushPreset[];selectedId?:string;onSelect:(id:string,signal?:AbortSignal)=>void|Promise<unknown>;
@@ -21,11 +22,11 @@ export function BrushPresetBrowser({scope='brush-presets',revision=0,...props}:B
  const local=useRef<ReturnType<typeof makeStore>|null>(null);local.current??=makeStore();const store=local.current,s=useStore(store,v=>v);
  const guard=useScopedControl(JSON.stringify([...controlIdentity(scope,revision),disabledReason]),props,disabledReason!==undefined),off=guard.pending||disabledReason!==undefined;
  const query=s.query.trim().toLocaleLowerCase(),items=presets.filter(p=>(!s.favorites||p.favorite)&&(!query||[p.name,p.category].some(t=>t.toLocaleLowerCase().includes(query))));
- return <View {...rest} style={[{minHeight:240,minWidth:0,gap:8},style]} accessibilityLabel="Brush presets">
-  <TextInput accessibilityLabel="Search brushes" maxLength={128} value={s.query} onChangeText={query=>store.setState({query})} style={{minHeight:44,padding:8}} {...{className:joinClasses(!unstyled&&'text-text border border-border rounded-control')}}/>
+ return <View {...rest} style={[{minHeight:controlTokens.extent.preview,minWidth:0,gap:tokens.spacing.fixedElement},style]} accessibilityLabel="Brush presets">
+  <TextInput accessibilityLabel="Search brushes" maxLength={128} value={s.query} onChangeText={query=>store.setState({query})} style={{minHeight:tokens.spacing.fixedTarget,padding:tokens.spacing.fixedElement}} {...{className:joinClasses(!unstyled&&'text-text border border-border rounded-control')}}/>
   <Button title={s.favorites?'Show all brushes':'Show favorite brushes'} variant="secondary" unstyled={unstyled} onPress={()=>store.setState({favorites:!s.favorites})}/>
   <Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{items.length} brushes</Text>
-  <FlatList data={items} keyExtractor={p=>p.id} keyboardShouldPersistTaps="handled" style={{maxHeight:480}} ListEmptyComponent={<Text {...{className:unstyled?undefined:'text-text'}}>No matching brushes</Text>} renderItem={({item})=><View style={{gap:4,paddingVertical:8}}>
+  <FlatList data={items} keyExtractor={p=>p.id} keyboardShouldPersistTaps="handled" style={{maxHeight:tokens.spacing.off480}} ListEmptyComponent={<Text {...{className:unstyled?undefined:'text-text'}}>No matching brushes</Text>} renderItem={({item})=><View style={{gap:tokens.spacing.fixedStack,paddingVertical:tokens.spacing.fixedElement}}>
    <View accessible accessibilityRole="image" accessibilityLabel={item.name+' stroke preview'}>{renderPreview(item)}</View>
    <Button title={item.name} accessibilityState={{selected:item.id===selectedId}} disabled={off||item.disabledReason!==undefined} accessibilityHint={item.disabledReason} unstyled={unstyled} onPress={()=>guard.run('select',(host,signal)=>{const preset=host.presets.find(p=>p.id===item.id);return preset&&preset.disabledReason===undefined?host.onSelect(item.id,signal):undefined;})}/>
    <Text {...{className:unstyled?undefined:'text-text'}}>{item.category}</Text>

@@ -8,6 +8,7 @@ import {PanResponderDrag} from "@nyc-tron/ui/components/gestures/PanResponderDra
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {nudgePalette,placeFloatingPalette,shouldUndock,type PalettePosition,type PaletteRect} from "./floating-palette.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens } from "../tokens.ts";
 
 /** Props for {@linkcode FloatingPaletteUndockHandle}. */
 export interface FloatingPaletteUndockHandleProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -114,6 +115,6 @@ function FloatingPaletteUndockHandleBody({
         else if(d.at.x!==d.origin.x||d.at.y!==d.origin.y)onMove(d.at);
       }}
       onCancel={()=>{drag.current={armed:false,origin};onPreview(undefined);}}
-      style={{minWidth:88}}/>
+      style={{minWidth:controlTokens.extent.field}}/>
   </View>;
 }

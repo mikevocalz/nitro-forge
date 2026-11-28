@@ -12,6 +12,7 @@ import {createFrameThrottle,type FrameThrottle} from '../frame-throttle.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {MAX_INK_PREVIEW_SAMPLES,validateInkSamples,type InkSample} from './brush-model.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface InkStrokePreviewProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  width:number;height:number;strokeWidth:number;inkColor:string;
  /** External/native-adapter samples. Omit for the local test pad. */
@@ -57,7 +58,7 @@ export function InkStrokePreview({scope='ink-test',revision=0,...props}:InkStrok
  const raw=samples??s.points,points=filterSamples?filterSamples(raw):raw;validateInkSamples(points);
  if(filterSamples&&(points.length!==raw.length||points.some((p,i)=>{const source=raw[i]!;return p.pressure!==source.pressure||p.tiltX!==source.tiltX||p.tiltY!==source.tiltY||p.twist!==source.twist||p.timeMs!==source.timeMs||p.input!==source.input;})))throw new RangeError('Ink preview filter must preserve input measurements');
  const last=raw[raw.length-1],metric=(n:number|undefined,suffix='')=>n===undefined?'Not reported':n.toFixed(2)+suffix;
- return <View {...rest} style={[{gap:8,minWidth:0},style]} accessibilityLabel="Test stroke">
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement,minWidth:0},style]} accessibilityLabel="Test stroke">
   <GestureDetector gesture={gesture} touchAction="none" userSelect="none"><View collapsable={false} style={{width,height}}>
    <GPUCanvasViewport scope={scope} revision={s.frame} viewport={{width,height,zoom:1,panX:0,panY:0}} unstyled={unstyled} label="Ink test stroke" drawFrame={canvas=>{
     const paint=Skia.Paint();try{paint.setColor(Skia.Color(inkColor));paint.setStrokeCap(StrokeCap.Round);

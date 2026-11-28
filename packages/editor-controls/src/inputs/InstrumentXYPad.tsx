@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {cancelPreview} from "../cancel-preview.ts";
 import {useRef} from "react";
 import {PanResponder,Pressable,Text,View,type ViewProps} from "react-native";
@@ -5,6 +6,7 @@ import {createStore,type StoreApi} from "zustand/vanilla";
 import {useStore} from "zustand";
 import {pointFromDrag,clamp,type Point2D} from "@nyc-tron/ui/components/shell/precision";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
+import { controlTokens, tokens } from "../tokens.ts";
 
 type Local={width:number;height:number;active:boolean;preview:Point2D};
 export interface InstrumentXYPadProps extends Omit<ViewProps,"children"> {
@@ -72,7 +74,7 @@ export function InstrumentXYPad({
   const accentFill=accentColor?{backgroundColor:accentColor}:null;
   const accentBorderClass=styled&&!accentColor&&"border-accent";
   const accentFillClass=styled&&!accentColor&&"bg-accent";
-  const arrow={minHeight:44,minWidth:44,justifyContent:"center" as const,alignItems:"center" as const,opacity:disabled?0.45:1};
+  const arrow={minHeight:tokens.spacing.fixedTarget,minWidth:tokens.spacing.fixedTarget,justifyContent:"center" as const,alignItems:"center" as const,opacity:disabled?tokens.opacity.disabled:1};
   return <View {...rest} {...{className:joinClasses("items-center gap-2",!unstyled&&"bg-surface-raised rounded-control p-3",className)}}>
     <Text {...{className:joinClasses(!unstyled&&"text-text font-semibold")}}>{label}</Text>
     <View {...responder.current.panHandlers}
@@ -98,23 +100,23 @@ export function InstrumentXYPad({
         else if(a==="decreaseY")nudge("y",-1);
       }}
       {...{className:joinClasses(styled&&"bg-surface-sunken",accentBorderClass)}}
-      style={{width:size,height:size,borderWidth:1,...accentBorder,opacity:disabled?0.45:1,overflow:"hidden"}}>
+      style={{width:size,height:size,borderWidth:tokens.borderWidth.hairline,...accentBorder,opacity:disabled?tokens.opacity.disabled:1,overflow:"hidden"}}>
       <View pointerEvents="none" {...{className:joinClasses(accentFillClass)}}
-        style={{position:"absolute",top:"50%",left:0,right:0,height:1,...accentFill,opacity:0.35}}/>
+        style={{position:"absolute",top:"50%",left:0,right:0,height:tokens.borderWidth.hairline,...accentFill,opacity:controlTokens.opacity.faint}}/>
       <View pointerEvents="none" {...{className:joinClasses(accentFillClass)}}
-        style={{position:"absolute",left:"50%",top:0,bottom:0,width:1,...accentFill,opacity:0.35}}/>
+        style={{position:"absolute",left:"50%",top:0,bottom:0,width:tokens.borderWidth.hairline,...accentFill,opacity:controlTokens.opacity.faint}}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised",accentBorderClass)}}
-        style={{position:"absolute",left:position.x*width-9,top:(1-position.y)*height-9,
-        width:18,height:18,borderRadius:9,borderWidth:2,...accentBorder}}/>
+        style={{position:"absolute",left:position.x*width-(tokens.spacing.off18 / 2),top:(1-position.y)*height-(tokens.spacing.off18 / 2),
+        width:tokens.spacing.off18,height:tokens.spacing.off18,borderRadius:forgeRadius.sm,borderWidth:tokens.borderWidth.strong,...accentBorder}}/>
     </View>
-    <View style={{flexDirection:"row",gap:8,alignItems:"center"}}>
+    <View style={{flexDirection:"row",gap:tokens.spacing.fixedElement,alignItems:"center"}}>
       <Pressable accessibilityRole="button" accessibilityLabel={"Decrease "+label+" X"} disabled={disabled} onPress={()=>nudge("x",-1)}
         style={arrow}><Text {...{className:text}}>←</Text></Pressable>
       <Text {...{className:text}}>X {Math.round(position.x*100)}% · Y {Math.round(position.y*100)}%</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={"Increase "+label+" X"} disabled={disabled} onPress={()=>nudge("x",1)}
         style={arrow}><Text {...{className:text}}>→</Text></Pressable>
     </View>
-    <View style={{flexDirection:"row",gap:16}}>
+    <View style={{flexDirection:"row",gap:tokens.spacing.fixedGroup}}>
       <Pressable accessibilityRole="button" accessibilityLabel={"Decrease "+label+" Y"} disabled={disabled} onPress={()=>nudge("y",-1)}
         style={arrow}><Text {...{className:text}}>↓</Text></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={"Increase "+label+" Y"} disabled={disabled} onPress={()=>nudge("y",1)}

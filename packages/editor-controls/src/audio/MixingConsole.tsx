@@ -13,6 +13,7 @@ import { FADER_RANGES, type FaderRange } from "./level.ts";
 import { mixGroups } from "./mix-groups.ts";
 import { audibility, type MixerChannel } from "./mixer.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 type Id = MixerChannel["id"];
 
@@ -124,12 +125,12 @@ function MixingConsoleBody({actionError,disabledReason,scope='mixing-console',re
       ? <MixGroupBar targetSize={target} labels={groupLabels} groups={groups} disabled={disabled} unstyled={unstyled}
         onGroupSoloCommit={onGroupSoloCommit} onGroupMutedCommit={onGroupMutedCommit}
         {...{ className: joinClasses(styled && "border-b border-border") }}
-        style={{ padding: 8 }} />
+        style={{ padding: tokens.spacing.fixedElement }} />
       : null}
-    <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ paddingHorizontal: 4 }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ paddingHorizontal: tokens.spacing.fixedStack }}>
       {channels.map((channel, i) => <View key={channel.id} style={{ flexDirection: "row" }}>
-        {i > 0 ? <View {...{ className: joinClasses(styled && "bg-border") }} style={{ width: 1, alignSelf: "stretch" }} /> : null}
-        <View style={{gap:8}}><ChannelStrip targetSize={target} labels={channelLabels} channel={channel} audibility={states[i]} range={range} faderLength={faderLength}
+        {i > 0 ? <View {...{ className: joinClasses(styled && "bg-border") }} style={{ width: tokens.borderWidth.hairline, alignSelf: "stretch" }} /> : null}
+        <View style={{gap:tokens.spacing.fixedElement}}><ChannelStrip targetSize={target} labels={channelLabels} channel={channel} audibility={states[i]} range={range} faderLength={faderLength}
           disabled={disabled} unstyled={unstyled} outputName={outputNameOf(channel)} routingLines={routingLines}
           meter={meters ? meters[String(channel.id)] ?? { peak: 0 } : undefined}
           onGainCommit={gain => onGainCommit(channel.id, gain)}

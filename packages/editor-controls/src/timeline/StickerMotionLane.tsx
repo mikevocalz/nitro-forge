@@ -11,6 +11,7 @@ import type {FrameRate} from '../timebase.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface StickerTransform {x:number;y:number;rotation:number;scale:number}
 export interface TimelineSticker {id:string;assetId:string;label:string;startFrame:number;endFrame:number;transform:StickerTransform;locked?:boolean}
 export interface StickerMotionLaneProps extends Omit<ViewProps,'children'>,ScopedControlProps {
@@ -28,11 +29,11 @@ export function StickerMotionLane({scope='sticker-motion',revision=0,...props}:S
  if(!Number.isSafeInteger(durationFrames)||durationFrames<0||!Number.isSafeInteger(frame)||frame<0||stickers.length>10000||new Set(stickers.map(s=>s.id)).size!==stickers.length||stickers.some(s=>!s.id.trim()||s.id.length>512||!s.assetId.trim()||!s.label.trim()||!Number.isSafeInteger(s.startFrame)||!Number.isSafeInteger(s.endFrame)||s.startFrame<0||s.endFrame<=s.startFrame||s.endFrame>durationFrames||![s.transform.x,s.transform.y,s.transform.rotation,s.transform.scale].every(Number.isFinite)||Math.abs(s.transform.x)>1e6||Math.abs(s.transform.y)>1e6||Math.abs(s.transform.rotation)>3600||s.transform.scale<.01||s.transform.scale>100)||catalog.length>1000||new Set(catalog.map(c=>c.id)).size!==catalog.length||catalog.some(c=>!c.id.trim()||c.id.length>512||!c.label.trim()||c.label.length>1024))throw new RangeError('Invalid sticker timeline');
  const owner=JSON.stringify([...controlIdentity(scope,revision),selectedId,disabledReason]),guard=useScopedControl(owner,props,disabledReason!==undefined),off=guard.pending||disabledReason!==undefined,selected=stickers.find(s=>s.id===selectedId);
  const edit=(patch:Partial<StickerTransform>)=>guard.run('transform',(host,signal)=>{const sticker=host.stickers.find(s=>s.id===selectedId);return sticker&&!sticker.locked?host.onTransform(sticker.id,{...sticker.transform,...patch},signal):undefined;});
- return <View {...rest} style={[{gap:8,minWidth:0},style]} accessibilityLabel="Sticker motion lane">
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement,minWidth:0},style]} accessibilityLabel="Sticker motion lane">
   {surface}
   <MenuButton label="Insert sticker" editScope={owner} disabled={off||catalog.length===0} unstyled={unstyled} items={catalog.map(c=>({id:c.id,label:c.label}))} onSelect={id=>guard.run('insert',(host,signal)=>host.catalog.some(c=>c.id===id)?host.onInsert(id,host.frame,signal):undefined)}><Text {...{className:unstyled?undefined:'text-text'}}>Insert sticker</Text></MenuButton>
-  <FlatList horizontal data={stickers} keyExtractor={s=>s.id} style={{maxHeight:80}} initialNumToRender={10} windowSize={5} extraData={[off,selectedId]} renderItem={({item})=><Button title={item.label} accessibilityState={{selected:item.id===selectedId}} disabled={off} unstyled={unstyled} onPress={()=>guard.current()?.onSelect(item.id)}/>}/>
-  {selected?<View key={selected.id} style={{gap:8}}>
+  <FlatList horizontal data={stickers} keyExtractor={s=>s.id} style={{maxHeight:tokens.spacing.off76}} initialNumToRender={10} windowSize={5} extraData={[off,selectedId]} renderItem={({item})=><Button title={item.label} accessibilityState={{selected:item.id===selectedId}} disabled={off} unstyled={unstyled} onPress={()=>guard.current()?.onSelect(item.id)}/>}/>
+  {selected?<View key={selected.id} style={{gap:tokens.spacing.fixedElement}}>
    <Text {...{className:unstyled?undefined:'text-text'}}>{selected.label}: frames {selected.startFrame}–{selected.endFrame}{selected.locked?'; locked':''}</Text>
    <InOutRangeHandles scope={scope} revision={revision} showCommands={false} viewport={viewport} durationFrames={durationFrames} playheadFrame={frame} rate={rate} range={{inFrame:selected.startFrame,outFrame:selected.endFrame}} disabled={off||!!selected.locked} unstyled={unstyled}
     onCommit={range=>guard.run('range',(host,signal)=>{const sticker=host.stickers.find(s=>s.id===selected.id);if(!sticker||sticker.locked)return;if(range.inFrame===undefined||range.outFrame===undefined||range.inFrame>=range.outFrame)throw new Error('A sticker needs both range boundaries and at least one frame');return host.onRangeChange(sticker.id,{startFrame:range.inFrame,endFrame:range.outFrame},signal);})}/>

@@ -38,7 +38,7 @@
 <button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
 <p>The slot contract between Studio and the host UI. <code>StudioUIProvider</code> puts a <code>StudioUIComponents</code> object in context and each wrapper reads its slot and forwards props. With no provider any wrapper throws &quot;Studio requires StudioUIProvider with your application UI components. No substitute UI is installed.&quot; No fallback UI exists.</p>
 <h2 id="install">Install</h2>
-<ul><li>Package: <code>@nitro-forge/studio-ui-provider</code> (registry item)</li><li>Import: <code>import { StudioUIProvider, View, Text, Button /* and the other wrappers */ } from '@/components/forge/ui';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</li><li>Requires: A <code>StudioUIComponents</code> implementation (registry item <code>nyc-tron-host</code> builds one from NYC-Tron)</li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider</code></li><li>Installs: none (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/ui.tsx</code></li></ul>
+<ul><li>Package: <code>@nitro-forge/studio-ui-provider</code> (registry item)</li><li>Import: <code>import { StudioUIProvider, View, Text, Button /* and the other wrappers */ } from '@/components/forge/ui';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</li><li>Requires: <code>@nitro-forge/studio-theme</code>; A <code>StudioUIComponents</code> implementation (registry item <code>nyc-tron-host</code> builds one from NYC-Tron)</li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider</code></li><li>Installs: none (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/ui.tsx</code></li></ul>
 <h2 id="props">Props</h2>
 <table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">components</td><td data-l="Type"><code>StudioUIComponents</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">27 slots; 24 required, 3 optional (Popover, NativeDropdown, TokenScope). Table in the Slots section above.</td></tr><tr><td data-l="Name">children</td><td data-l="Type"><code>ReactNode</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">slot props</td><td data-l="Type"><code>Studio*Props</code> types in <code>ui.tsx</code></td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description"><code>tone</code> and <code>surface</code> are accepted for older call sites and ignored by the NYC-Tron host.</td></tr></tbody></table>
 <h2 id="variants">Variants</h2>
@@ -81,7 +81,7 @@ export const Root = ({ children }: { children: React.ReactNode }) =&gt; (
 <dt>Peers</dt><dd><code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</dd>
 <dt>Installs</dt><dd>none</dd>
 <dt>Source files</dt><dd class="mono">studio-workspace/src/ui.tsx</dd>
-<dt>Generated from</dt><dd class="mono">09b855b1</dd>
+<dt>Generated from</dt><dd class="mono">db764a11</dd>
 </dl></aside>
 </div>
 </main>
@@ -89,7 +89,7 @@ export const Root = ({ children }: { children: React.ReactNode }) =&gt; (
 <footer class="status" role="contentinfo">
 <span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
 <span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
-<span>Generated from inputs <code>09b855b1</code></span>
+<span>Generated from inputs <code>db764a11</code></span>
 <span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
 </footer>
 <script src="../site.js"></script>

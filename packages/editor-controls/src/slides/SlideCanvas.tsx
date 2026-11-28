@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {validateSlideSummary} from './slide-model.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -10,6 +11,7 @@ import {SlideObjectView} from "./SlideThumbnail.tsx";
 import {SLIDE_SNAP_POINTS,fitScale,nudge,objectLabel,resizeFromCorner,snapRect,stepRotation,type SnapGuide} from "./canvas-model.ts";
 import {SLIDE_DEFAULT_SIZE,rgbaCss,type SlideObject,type SlideSize,type SlideSummary} from "./slide-model.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode SlideCanvas}. Every edit is reported once, on release or commit; the slide is controlled. */
 export interface SlideCanvasProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -193,7 +195,7 @@ function SlideCanvasBody({boundary,actionError,disabledReason,disabled=false,
             }}
             onPress={()=>onSelectObject(o.id)} {...{onDoubleClick:()=>startEditing(o)}} onLongPress={()=>{onSelectObject(o.id);startEditing(o);}}
             {...{className:joinClasses(styled&&"border",styled&&(on?"border-focus":"border-transparent"))}}
-            style={{position:"absolute",left:shown.x*scale-1,top:shown.y*scale-1,width:shown.w*scale+2,height:shown.h*scale+2,
+            style={{position:"absolute",left:shown.x*scale-tokens.borderWidth.hairline,top:shown.y*scale-tokens.borderWidth.hairline,width:shown.w*scale+tokens.spacing.off2,height:shown.h*scale+tokens.spacing.off2,
               transform:shown.rotation?[{rotate:shown.rotation+"deg"}]:undefined}}/>
           {editing?<TextInput autoFocus multiline editable={!disabled} maxLength={1048576} value={local.editing!.draft} accessibilityLabel="Text box contents"
             onChangeText={draft=>store.set(s=>({...s,editing:{id:o.id,draft}}))}
@@ -201,16 +203,16 @@ function SlideCanvasBody({boundary,actionError,disabledReason,disabled=false,
             onKeyPress={e=>{if(e.nativeEvent.key==="Escape")finishEditing(false);}}
             {...{className:joinClasses(styled&&"border-2 border-focus bg-surface-raised text-text")}}
             style={{position:"absolute",left:o.x*scale,top:o.y*scale,width:Math.max(o.w*scale,120),minHeight:Math.max(o.h*scale,44),
-              fontSize:Math.max(14,(o.fontSize??18)*scale),padding:4}}/>:null}
+              fontSize:Math.max(14,(o.fontSize??18)*scale),padding:tokens.spacing.fixedStack}}/>:null}
           {on&&onResizeObject&&!editing?<View {...sizePan.current!.panHandlers} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-            style={{position:"absolute",left:(shown.x+shown.w)*scale-22,top:(shown.y+shown.h)*scale-22,width:44,height:44,
+            style={{position:"absolute",left:(shown.x+shown.w)*scale-tokens.spacing.off22,top:(shown.y+shown.h)*scale-tokens.spacing.off22,width:tokens.spacing.fixedTarget,height:tokens.spacing.fixedTarget,
               alignItems:"center",justifyContent:"center"}}>
-            <View {...{className:joinClasses(styled&&"border-2 border-focus bg-surface-raised")}} style={{width:12,height:12,borderRadius:2}}/>
+            <View {...{className:joinClasses(styled&&"border-2 border-focus bg-surface-raised")}} style={{width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset,borderRadius:forgeRadius.sm}}/>
           </View>:null}
         </View>;
       })}
       {pv?.guides.map((g,i)=><View key={i} pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}}
-        style={g.axis==="x"?{position:"absolute",left:g.at*scale,top:0,bottom:0,width:1}:{position:"absolute",top:g.at*scale,left:0,right:0,height:1}}/>)}
+        style={g.axis==="x"?{position:"absolute",left:g.at*scale,top:0,bottom:0,width:tokens.borderWidth.hairline}:{position:"absolute",top:g.at*scale,left:0,right:0,height:tokens.borderWidth.hairline}}/>)}
       {slide.objects.length===0?<View pointerEvents="none" style={{position:"absolute",left:0,right:0,top:0,bottom:0,alignItems:"center",justifyContent:"center"}}>
         <Text {...{className:joinClasses(styled&&"text-text-muted")}}>Empty slide. Add text, a shape or an image.</Text>
       </View>:null}

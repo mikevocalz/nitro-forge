@@ -47,8 +47,7 @@ test('density-invariant twins equal the standard scale', () => {
   assert.equal(tokens.spacing.fixedHeader, standard.size.header);
   assert.equal(tokens.spacing.fixedToolbar, standard.size.toolbar);
   assert.equal(tokens.spacing.fixedStatus, standard.size.status);
-  assert.equal(tokens.radius.control, workspaceScale.radius.control);
-  assert.equal(tokens.radius.paper, workspaceScale.radius.paper);
+  assert.equal('radius' in tokens, false, 'radius tokens live in theme.ts only (check-radius.mjs)');
 });
 
 test('density blocks carry only values that differ from standard, and match resolveWorkspaceScale', () => {
@@ -116,7 +115,6 @@ test('derived tokens read the sources that own them', () => {
 test('off-scale twins keep the literal exactly, with no snapping', () => {
   assert.equal(tokens.spacing.off5_75, 5.75);
   assert.equal(tokens.tracking.offNeg0_2, -0.2);
-  assert.equal(tokens.radius.off0_75, 0.75);
   assert.equal(tokens.fontWeight.semibold, '600');
   assert.equal(tokens.color.stagePaper, '#f7f5ed');
   const declared = new Map(css.shared.map(entry => [entry.name, entry.value]));

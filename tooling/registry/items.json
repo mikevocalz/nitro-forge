@@ -123,7 +123,7 @@
     "--color-stage-track-label",
     "--font-weight-medium",
     "--radius-control",
-    "--radius-paper",
+    "--radius-md",
     "--spacing-fixed-canvas",
     "--spacing-fixed-element",
     "--spacing-fixed-inset",
@@ -157,7 +157,7 @@
     "--color-text-muted",
     "--font-editorial",
     "--radius-control",
-    "--radius-paper",
+    "--radius-md",
     "--shadow-page",
     "--spacing-fixed-element",
     "--spacing-fixed-inset",
@@ -259,6 +259,10 @@
     {
      "from": "packages/studio-workspace/src/prism-transform.ts",
      "target": "prism-transform.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/prism-blend.ts",
+     "target": "prism-blend.ts"
     },
     {
      "from": "packages/studio-workspace/src/rgba-png.ts",
@@ -580,7 +584,7 @@
     "--font-mono-plain",
     "--radius-card",
     "--radius-control",
-    "--radius-paper",
+    "--radius-md",
     "--spacing-canvas",
     "--spacing-canvas-header",
     "--spacing-canvas-rail",

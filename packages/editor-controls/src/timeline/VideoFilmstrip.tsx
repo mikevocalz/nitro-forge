@@ -6,6 +6,7 @@ import {controlIdentity,useScopedControl,type ScopedControlProps} from '../input
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {frameToX,visibleRange,type TimelineViewport} from './viewport.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface VideoFilmstripProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  sourceId:string;sourceRevision:number;durationFrames:number;viewport:TimelineViewport;height?:number;tileWidth?:number;
  /** Decode this source frame; max bounds the returned raster edge. */
@@ -20,7 +21,7 @@ export function VideoFilmstrip({scope='filmstrip',revision=0,...props}:VideoFilm
  const owner=JSON.stringify([...controlIdentity(scope,revision),sourceId,sourceRevision,disabledReason,mediaProviderId(loadFrame)]),guard=useScopedControl(owner,props,disabledReason!==undefined);
  const step=Math.max(1,Math.ceil(tileWidth/viewport.pxPerFrame)),first=Math.max(0,Math.floor(visible.start/step)*step),end=Math.min(durationFrames,visible.end+step),frames:number[]=[];
  for(let frame=first;frame<end&&frames.length<512;frame+=step)frames.push(frame);
- return <View {...rest} style={[{width:viewport.widthPx,minWidth:0,gap:4},style]} accessibilityLabel="Video filmstrip">
+ return <View {...rest} style={[{width:viewport.widthPx,minWidth:0,gap:tokens.spacing.fixedStack},style]} accessibilityLabel="Video filmstrip">
   <View style={{height,overflow:'hidden'}}>{frames.map(frame=>{
    const image=<LayerThumbnail scope={owner} source={{kind:'loader',id:sourceId+':'+frame,revision:sourceRevision,load:(_id,max,signal)=>loadFrame(frame,max,signal)}} width={Math.min(1024,Math.max(44,step*viewport.pxPerFrame))} height={height} unstyled={unstyled} label={'Source frame '+frame}/>;
    return <View key={frame} style={{position:'absolute',left:frameToX(viewport,frame),top:0}}>{onSeek?<Pressable accessibilityRole="button" accessibilityLabel={'Seek to frame '+frame} disabled={disabledReason!==undefined||guard.pending} onPress={()=>guard.run('seek',(host,signal)=>host.onSeek?.(frame,signal))}>{image}</Pressable>:image}</View>;

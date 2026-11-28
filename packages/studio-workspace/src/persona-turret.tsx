@@ -12,7 +12,7 @@ import {
   scaleTurretGeometry, turretAnnouncement, turretArrowKey, turretDisplayAngle, turretFrame, turretLogicalAngle, turretReduce,
   turretShortcutDigit, turretShortcutFor, type TurretEffect, type TurretEvent, type TurretShortcut, type TurretState,
 } from './turret';
-import { workspaceScale as scale, type WorkspaceColors } from './theme';
+import { forgeHairlineRadius, workspaceScale as scale, type WorkspaceColors } from './theme';
 import {
   DEFAULT_TURRET_DIRECTION, detentDurationMs, forgeDirections, forgeFeedbackMotion, turretGeometry as geo,
   systemColor, type ForgeDirectionId, type ForgeRenderPrefs, type ForgeScheme,
@@ -363,7 +363,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
             }) as ViewStyle}>
             <Text numberOfLines={stacked ? undefined : 1} style={{ flexShrink: 1, color: lit ? m.text : m.muted, fontSize: fs(scale.type.label + 1), fontWeight: committed || lit ? tokens.fontWeight.bold : '500' }}>{p.label}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.stack, minHeight: tokens.spacing.off14 }}>
-              {committed && <View style={{ width: tokens.spacing.off6, height: tokens.spacing.off2, borderRadius: tokens.radius.off1, backgroundColor: m.accent }} />}
+              {committed && <View style={{ width: tokens.spacing.off6, height: tokens.spacing.off2, borderRadius: forgeHairlineRadius.tick, backgroundColor: m.accent }} />}
               {tag && <Text style={{ color: m.muted, fontSize: fs(scale.type.micro + 1), fontVariant: ['tabular-nums'] }}>{tag}</Text>}
             </View>
           </Pressable>
@@ -400,7 +400,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
         <View style={{ width: frame.boxWidth, height: frame.boxHeight, direction: 'ltr', transform: [{ scale: frame.scale }], transformOrigin: 'top left' } as ViewStyle}>
           {/* Focus ring sits outside the bezel so it never covers a detent. */}
           <View pointerEvents="none" style={{
-            position: 'absolute', left: cx - R - 5, top: frame.boxTop - R - 5, width: ringSize + 10, height: ringSize + 10, borderRadius: R + 5,
+            position: 'absolute', left: cx - R - 5, top: frame.boxTop - R - 5, width: ringSize + 10, height: ringSize + 10, borderRadius: R + 5, // radius-exempt: knob
             borderWidth: state.focused ? tokens.borderWidth.strong : 0, borderColor: focusColor,
             ...(state.focused && Platform.OS === 'web' ? { outlineStyle: 'solid', outlineWidth: forced ? tokens.borderWidth.strong : 0, outlineColor: focusColor, outlineOffset: tokens.borderWidth.hairline } : {}),
           } as ViewStyle} />
@@ -427,7 +427,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
               }}
               {...{ onFocus: () => store.setState({ focused: true }), onBlur: () => { store.setState({ focused: false }); dispatch({ type: 'cancel' }, null); } }}
               style={{
-                position: 'absolute', left: cx - R, top: frame.boxTop - R, width: ringSize, height: ringSize, borderRadius: R,
+                position: 'absolute', left: cx - R, top: frame.boxTop - R, width: ringSize, height: ringSize, borderRadius: R, // radius-exempt: knob
                 // The face colour under the drawing, so the readout has a real ground for contrast checks.
                 backgroundColor: m.face[1],
                 ...(depth.dial ? { boxShadow: depth.dial } : {}),
@@ -471,10 +471,10 @@ export function PersonaTurret(props: PersonaTurretProps) {
                 {[6, 13, 20, 27, 34].map(d => <Circle key={d} r={g.face - d * k} fill="none" stroke={m.lathe} strokeWidth={0.6} strokeOpacity={direction.light.model === 'refract' ? 0.14 : 0.07} />)}
               </Svg>
               <TurretRim pulse={state.pulse} reduceMotion={prefs.reduceMotion} size={ringSize} commitColor={m.accent} limitColor={m.muted} />
-              {/* The pointer: a slot milled from the face to the shown detent. */}
+              {/* The pointer: a square-ended slot milled from the face to the shown detent. */}
               <TurretPointer deg={indicatorDeg} durationMs={travel} easing={direction.motion.easing} bezier={direction.motion.bezier}
                 reduceMotion={prefs.reduceMotion} pulse={state.pulse} size={ringSize}>
-                <View style={{ position: 'absolute', left: R - 1.5 * k, top: R - g.face + 3 * k, width: tokens.spacing.off3 * k, height: tokens.spacing.off10 * k, borderRadius: tokens.radius.off1_5 * k, backgroundColor: peeking ? m.faceText : m.accent }} />
+                <View style={{ position: 'absolute', left: R - 1.5 * k, top: R - g.face + 3 * k, width: tokens.spacing.off3 * k, height: tokens.spacing.off10 * k, backgroundColor: peeking ? m.faceText : m.accent }} />
               </TurretPointer>
               <View pointerEvents="none" style={{ position: 'absolute', left: R - g.face + 6 * k, width: (g.face - 6 * k) * 2, top: R - 22 * k, alignItems: 'center', gap: tokens.spacing.off2 * k }}>
                 <Text numberOfLines={1} style={{ color: m.faceText, fontSize: fs(scale.type.body + 2), fontWeight: tokens.fontWeight.bold, letterSpacing: tokens.tracking.offNeg0_2 }}>{persona?.label ?? turretCopy.ringLabel}</Text>

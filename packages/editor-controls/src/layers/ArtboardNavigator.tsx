@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {useEffect,useLayoutEffect,useRef,type ComponentRef} from "react";
 import {I18nManager,Platform,Pressable,ScrollView,Text,TextInput,View,type ViewProps} from "react-native";
 import {createStore,type StoreApi} from "zustand/vanilla";
@@ -18,6 +19,7 @@ import {
   formatArtboardSize,newArtboardOp,validateArtboards,
   type AddArtboardOp,type ArtboardItem,type ArtboardLayout,type MoveArtboardOp,type RemoveArtboardOp,type UpdateArtboardOp,
 } from "./artboard-model.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ArtboardNavigator}. Each `on*Artboard` payload is one engine op's argument. */
 export interface ArtboardNavigatorProps extends Omit<ViewProps,"children"> {
@@ -184,7 +186,7 @@ function ArtboardNavigatorBody({
     const editing=rename?.id===a.id?rename:null;
     const grid=layout==="grid";
     // Grid tiles have 4pt padding inside a 2pt border.
-    const thumb=<LayerThumbnail scope={scope} width={grid?Math.max(44,tileWidth-12):64} height={grid?thumbHeight:48} unstyled={unstyled}
+    const thumb=<LayerThumbnail scope={scope} width={grid?Math.max(44,tileWidth-12):tokens.spacing.fixedPage} height={grid?thumbHeight:tokens.spacing.off48} unstyled={unstyled}
       source={{kind:"loader",id:artboardThumbnailId(a.id),revision:a.revision??0,load:(_id,max,signal)=>loadThumbnail(a.id,max,signal)}}
       {...(cache?{cache}:{})}/>;
     const name=editing
@@ -193,8 +195,8 @@ function ArtboardNavigatorBody({
         onSubmitEditing={finishRename} onBlur={finishRename}
         onKeyPress={e=>{if(e.nativeEvent.key==="Escape")store.setState({rename:null});}}
         {...{className:joinClasses(styled&&"rounded-control border border-focus bg-surface-sunken text-text")}}
-        style={{minHeight:44,paddingHorizontal:8,minWidth:0}}/>
-      :<View style={{gap:2,minWidth:0}}>
+        style={{minHeight:tokens.spacing.fixedTarget,paddingHorizontal:tokens.spacing.fixedElement,minWidth:0}}/>
+      :<View style={{gap:tokens.spacing.off2,minWidth:0}}>
         <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text text-sm")}}
           style={{fontWeight:selected?"700":"500"}}>{a.name}</Text>
         <Text numberOfLines={1} {...{className:muted}} style={{fontVariant:["tabular-nums"]}}>{formatArtboardSize(a)}</Text>
@@ -205,7 +207,7 @@ function ArtboardNavigatorBody({
     const removeButton=<Pressable disabled={disabled} accessibilityState={{disabled}} accessibilityRole="button" accessibilityLabel={"Remove "+a.name} onPress={()=>remove(a.id)}
       {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus",
         styled&&grid&&"bg-surface-raised border border-border")}}
-      style={{width:44,height:44,alignItems:"center",justifyContent:"center"}}>
+      style={{width:tokens.spacing.fixedTarget,height:tokens.spacing.fixedTarget,alignItems:"center",justifyContent:"center"}}>
       <Cross styled={styled}/>
     </Pressable>;
     const main=<Pressable ref={node=>{tiles.current.set(a.id,node as unknown as Focusable|null);}}
@@ -227,25 +229,25 @@ function ArtboardNavigatorBody({
       onPress={()=>{if(!disabled)onSelect(a.id);}} onLongPress={()=>startRename(a)} onFocus={()=>store.setState({focusId:a.id})}
       {...{onKeyDown:onKey(a,index),tabIndex:!disabled&&a.id===roving?0:-1}}
       {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
-      style={grid?{gap:6,padding:4}:{flex:1,minWidth:0,flexDirection:"row",alignItems:"center",gap:10,minHeight:LIST_ROW-8,paddingHorizontal:4}}>
+      style={grid?{gap:tokens.spacing.off6,padding:tokens.spacing.fixedStack}:{flex:1,minWidth:0,flexDirection:"row",alignItems:"center",gap:tokens.spacing.off10,minHeight:LIST_ROW-tokens.spacing.fixedElement,paddingHorizontal:tokens.spacing.fixedStack}}>
       {thumb}
       {grid?null:<View style={{flex:1,minWidth:0}}>{editing?null:name}</View>}
-      {grid&&!editing?<View style={{paddingHorizontal:4,minHeight:44,justifyContent:"center"}}>{name}</View>:null}
+      {grid&&!editing?<View style={{paddingHorizontal:tokens.spacing.fixedStack,minHeight:tokens.spacing.fixedTarget,justifyContent:"center"}}>{name}</View>:null}
     </Pressable>;
     return <View key={a.id}
       {...{className:joinClasses(styled&&"rounded-card border",
         styled&&(target?"border-accent":selected?"border-primary":"border-transparent"),
         styled&&(selected||dragging?"bg-surface-raised":"bg-transparent"))}}
-      style={[grid?{width:tileWidth,marginBottom:GAP}:{flexDirection:"row",alignItems:"center",minHeight:LIST_ROW,marginBottom:4},
-        {borderWidth:target||selected?2:1,zIndex:dragging?2:0,
+      style={[grid?{width:tileWidth,marginBottom:GAP}:{flexDirection:"row",alignItems:"center",minHeight:LIST_ROW,marginBottom:tokens.spacing.fixedStack},
+        {borderWidth:target||selected?tokens.borderWidth.strong:tokens.borderWidth.hairline,zIndex:dragging?controlTokens.layer.lifted:0,
           transform:dragging&&drag?[{translateX:layout==="grid"?drag.dx:0},{translateY:drag.dy}]:undefined,
-          opacity:dragging?0.9:1},dragging?NO_SELECT:null]}>
+          opacity:dragging?controlTokens.opacity.strong:1},dragging?NO_SELECT:null]}>
       {grid?null:grip}
       {main}
-      {grid&&editing?<View style={{paddingHorizontal:4,paddingBottom:4}}>{name}</View>:null}
+      {grid&&editing?<View style={{paddingHorizontal:tokens.spacing.fixedStack,paddingBottom:tokens.spacing.fixedStack}}>{name}</View>:null}
       {!grid&&editing?<View style={{flex:1,minWidth:0}}>{name}</View>:null}
       {grid?null:removeButton}
-      {grid?<View pointerEvents="box-none" style={{position:"absolute",top:8,start:8,end:8,flexDirection:"row",justifyContent:"space-between"}}>
+      {grid?<View pointerEvents="box-none" style={{position:"absolute",top:tokens.spacing.fixedElement,start:tokens.spacing.fixedElement,end:tokens.spacing.fixedElement,flexDirection:"row",justifyContent:"space-between"}}>
         {grip}{removeButton}
       </View>:null}
     </View>;
@@ -257,7 +259,7 @@ function ArtboardNavigatorBody({
     onPress={()=>onAddArtboard(newArtboardOp(latest.current.artboards,selectedId))}/>;
   return <View {...rest} ref={host} accessibilityLabel={label}
     {...{className:joinClasses("min-w-0 gap-2",styled&&"rounded-control bg-surface-sunken p-2",className)}}>
-    <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8,paddingStart:4}}>
+    <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:tokens.spacing.fixedElement,paddingStart:tokens.spacing.fixedStack}}>
       <Text accessibilityRole="header" {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}}>
         {label+(artboards.length?" ("+artboards.length+")":"")}
       </Text>
@@ -265,7 +267,7 @@ function ArtboardNavigatorBody({
     </View>
     <Reason text={addReason} styled={styled}/>
     {artboards.length===0
-      ?<Text {...{className:joinClasses(styled&&"text-text-muted text-sm")}} style={{padding:8}}>
+      ?<Text {...{className:joinClasses(styled&&"text-text-muted text-sm")}} style={{padding:tokens.spacing.fixedElement}}>
         No artboards yet. Add one for each page or screen size you design.
       </Text>
       :<ScrollView scrollEnabled={drag===null} nestedScrollEnabled
@@ -280,16 +282,16 @@ function ArtboardNavigatorBody({
 
 function Cross({styled}:{styled:boolean}){
   const bar=joinClasses(styled&&"bg-text-muted");
-  return <View pointerEvents="none" style={{width:14,height:14,alignItems:"center",justifyContent:"center"}}>
-    <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:1,transform:[{rotate:"45deg"}]}}/>
-    <View {...{className:bar}} style={{position:"absolute",width:16,height:1.5,borderRadius:1,transform:[{rotate:"-45deg"}]}}/>
+  return <View pointerEvents="none" style={{width:tokens.spacing.off14,height:tokens.spacing.off14,alignItems:"center",justifyContent:"center"}}>
+    <View {...{className:bar}} style={{position:"absolute",width:tokens.spacing.fixedGroup,height:tokens.spacing.off1_5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"45deg"}]}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:tokens.spacing.fixedGroup,height:tokens.spacing.off1_5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"-45deg"}]}}/>
   </View>;
 }
 
 function Plus({styled}:{styled:boolean}){
   const bar=joinClasses(styled&&"bg-text");
-  return <View pointerEvents="none" style={{width:12,height:12,alignItems:"center",justifyContent:"center"}}>
-    <View {...{className:bar}} style={{position:"absolute",width:12,height:1.5,borderRadius:1}}/>
-    <View {...{className:bar}} style={{position:"absolute",width:1.5,height:12,borderRadius:1}}/>
+  return <View pointerEvents="none" style={{width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset,alignItems:"center",justifyContent:"center"}}>
+    <View {...{className:bar}} style={{position:"absolute",width:tokens.spacing.fixedInset,height:tokens.spacing.off1_5,borderRadius:forgeHairlineRadius.tick}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:tokens.spacing.off1_5,height:tokens.spacing.fixedInset,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
 }

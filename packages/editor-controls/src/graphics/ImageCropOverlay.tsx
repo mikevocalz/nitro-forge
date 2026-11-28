@@ -8,6 +8,7 @@ import {createStore,type StoreApi} from "zustand/vanilla";
 import {useStore} from "zustand";
 import {moveCrop,resizeCrop,resizeCropWithAspect,type CropRect,type CropCorner,validateCrop} from "./crop.ts";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
+import { controlTokens, tokens } from "../tokens.ts";
 
 export interface ImageCropOverlayProps extends Omit<ViewProps,"children">{
  scope?:string;revision?:string|number;disabled?:boolean;
@@ -76,7 +77,7 @@ export function ImageCropOverlay({
  const moveBy=(dx:number,dy:number)=>commit(moveCrop(latest.current.rect,dx,dy));
  const pct=(n:number)=>Math.round(n*100)+"%";
  const guide=(pos:object)=><View pointerEvents="none" {...{className:accentFillClass}}
-   style={{position:"absolute",opacity:0.35,...accentFill,...pos}}/>;
+   style={{position:"absolute",opacity:controlTokens.opacity.faint,...accentFill,...pos}}/>;
  return <View {...rest} {...{className:joinClasses("overflow-hidden",className)}}
    accessibilityLabel="Crop canvas" style={[{width,height,position:"relative"},rest.style]}>
    {children}
@@ -102,12 +103,12 @@ export function ImageCropOverlay({
      {...{className:accentBorderClass}}
      style={{position:"absolute",left:displayed.x*width,top:displayed.y*height,
        width:displayed.width*width,height:displayed.height*height,
-       borderWidth:2,...accentBorder,backgroundColor:"transparent"}}>
-     {grid==="thirds"?guide({left:"33.33%",top:0,bottom:0,width:1}):null}
-     {grid==="thirds"?guide({left:"66.66%",top:0,bottom:0,width:1}):null}
-     {grid==="thirds"?guide({top:"33.33%",left:0,right:0,height:1}):null}
-     {grid==="thirds"?guide({top:"66.66%",left:0,right:0,height:1}):null}
-     {grid==="center"?<>{guide({left:"50%",top:0,bottom:0,width:1})}{guide({top:"50%",left:0,right:0,height:1})}</>:null}
+       borderWidth:tokens.borderWidth.strong,...accentBorder,backgroundColor:"transparent"}}>
+     {grid==="thirds"?guide({left:"33.33%",top:0,bottom:0,width:tokens.borderWidth.hairline}):null}
+     {grid==="thirds"?guide({left:"66.66%",top:0,bottom:0,width:tokens.borderWidth.hairline}):null}
+     {grid==="thirds"?guide({top:"33.33%",left:0,right:0,height:tokens.borderWidth.hairline}):null}
+     {grid==="thirds"?guide({top:"66.66%",left:0,right:0,height:tokens.borderWidth.hairline}):null}
+     {grid==="center"?<>{guide({left:"50%",top:0,bottom:0,width:tokens.borderWidth.hairline})}{guide({top:"50%",left:0,right:0,height:tokens.borderWidth.hairline})}</>:null}
    </View></GestureDetector>
    {(["nw","ne","sw","se"] as const).map(corner=><CropHandle key={corner} corner={corner} rect={displayed}
      boundary={boundary} disabled={disabled} width={width} height={height} accentColor={accentColor} styled={styled} onBegin={begin}
@@ -115,7 +116,7 @@ export function ImageCropOverlay({
      onCommit={release}
      onCancel={cancel}/>)}
    {styled?<Text {...{className:accentColor?undefined:"text-text"}}
-     style={{position:"absolute",bottom:4,left:4,fontSize:11,...(accentColor?{color:accentColor}:null)}}>
+     style={{position:"absolute",bottom:tokens.spacing.fixedStack,left:tokens.spacing.fixedStack,fontSize:tokens.text.off11,...(accentColor?{color:accentColor}:null)}}>
      {Math.round(displayed.width*100)}% × {Math.round(displayed.height*100)}%
    </Text>:null}
  </View>;
@@ -134,8 +135,8 @@ function CropHandle({boundary,disabled,corner,rect,width,height,accentColor,styl
  // actions cover resize without a pointer.
  return <GestureDetector gesture={pan} touchAction="none" userSelect="none"><View
    importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
-   style={{position:"absolute",left:x-22,top:y-22,width:44,height:44,justifyContent:"center",alignItems:"center"}}>
+   style={{position:"absolute",left:x-tokens.spacing.off22,top:y-tokens.spacing.off22,width:tokens.spacing.fixedTarget,height:tokens.spacing.fixedTarget,justifyContent:"center",alignItems:"center"}}>
    <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised",styled&&!accentColor&&"border-accent")}}
-     style={{width:14,height:14,borderWidth:2,...(accentColor?{borderColor:accentColor}:null)}}/>
+     style={{width:tokens.spacing.off14,height:tokens.spacing.off14,borderWidth:tokens.borderWidth.strong,...(accentColor?{borderColor:accentColor}:null)}}/>
  </View></GestureDetector>;
 }

@@ -29,6 +29,7 @@ import {
  thresholdLabel,validateDrop,type DropPoint,type DropRect,type FillRequest,
 } from "./color-drop-model.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ColorDropCanvasTarget}. */
 export interface ColorDropCanvasTargetProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -212,7 +213,7 @@ function ColorDropCanvasTargetBody({
  return <View ref={root} collapsable={false} {...rest} {...{className:joinClasses("gap-2",className)}}
   style={[{position:"relative",maxWidth:"100%"},style]}>
   <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
-  <View style={{flexDirection:"row",alignItems:"center",gap:10,minHeight:44}}>
+  <View style={{flexDirection:"row",alignItems:"center",gap:tokens.spacing.off10,minHeight:tokens.spacing.fixedTarget}}>
    <View ref={chip} collapsable={false} {...pan.current.panHandlers}
     {...{onKeyDown,focusable:true}} accessible role="button"
     aria-label={disabledReason!==undefined?`${colorLabel} fill colour, unavailable`:`${colorLabel} fill colour`}
@@ -222,10 +223,10 @@ function ColorDropCanvasTargetBody({
      {name:"moveLeft",label:"Move left"},{name:"moveRight",label:"Move right"},{name:"moveUp",label:"Move up"},{name:"moveDown",label:"Move down"}]
      :[{name:"activate",label:"Aim at the canvas"}]}
     onAccessibilityAction={e=>a11y(e.nativeEvent.actionName)}
-    {...{className:joinClasses(styled&&"rounded-full border focus-visible:ring-2 focus-visible:ring-focus",styled&&(active?"border-accent":"border-border"))}}
-    style={{width:44,height:44,borderRadius:22,borderWidth:active?2:1,alignItems:"center",justifyContent:"center",
-     opacity:disabledReason!==undefined?0.5:1,...(Platform.OS==="web"?{cursor:disabledReason?"not-allowed":"grab",touchAction:"none",userSelect:"none"} as object:null)}}>
-    <View pointerEvents="none" style={{width:34,height:34,borderRadius:17,backgroundColor:color}}/>
+    {...{className:joinClasses(styled&&"rounded-full border focus-visible:ring-2 focus-visible:ring-focus" /* radius-exempt: colour-well */,styled&&(active?"border-accent":"border-border"))}}
+    style={{width:tokens.spacing.fixedTarget,height:tokens.spacing.fixedTarget,borderRadius:tokens.spacing.fixedTarget / 2, /* radius-exempt: colour-well */borderWidth:active?tokens.borderWidth.strong:tokens.borderWidth.hairline,alignItems:"center",justifyContent:"center",
+     opacity:disabledReason!==undefined?tokens.opacity.disabled:1,...(Platform.OS==="web"?{cursor:disabledReason?"not-allowed":"grab",touchAction:"none",userSelect:"none"} as object:null)}}>
+    <View pointerEvents="none" style={{width:tokens.spacing.off33,height:tokens.spacing.off33,borderRadius:tokens.spacing.off33 / 2, /* radius-exempt: colour-well */backgroundColor:color}}/>
    </View>
    <View style={{flex:1,minWidth:0}}>
     <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}}>ColorDrop: {colorLabel}</Text>
@@ -245,6 +246,6 @@ function ColorDropCanvasTargetBody({
   </View>
   {drag?<View pointerEvents="none" testID="color-drop-dot" {...{className:joinClasses(styled&&"border-surface-raised")}}
    style={{position:"absolute",left:drag.pointer.x-DROP_DOT_SIZE/2,top:drag.pointer.y-DROP_DOT_SIZE/2,width:DROP_DOT_SIZE,
-    height:DROP_DOT_SIZE,borderRadius:DROP_DOT_SIZE/2,borderWidth:3,backgroundColor:color,zIndex:10}}/>:null}
+    height:DROP_DOT_SIZE,borderRadius:DROP_DOT_SIZE/2, /* radius-exempt: colour-well */borderWidth:tokens.borderWidth.off3,backgroundColor:color,zIndex:controlTokens.layer.floating}}/>:null}
  </View>;
 }

@@ -1,4 +1,5 @@
 import { ScrollView, Text, View } from './ui';
+import { workspaceScale } from './theme';
 import type { Studio } from '@nitro-forge/studio-layout';
 import { tokens } from './tokens';
 
@@ -16,7 +17,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
   const doc = record(state);
   if (!state) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={caption}>Opening document…</Text></View>;
   const heading = (title: string, detail: string) => <View style={{ gap: tokens.spacing.fixedStack, marginBottom: tokens.spacing.off20 }}><Text style={{ color: theme === 'light' ? tokens.color.stageHeading.light : tokens.color.stageHeading.dark, fontSize: tokens.text.off22, fontWeight: tokens.fontWeight.medium }}>{title}</Text><Text style={caption}>{detail}</Text></View>;
-  const paper = (children: React.ReactNode) => <View style={{ backgroundColor: tokens.color.stagePaper, minHeight: tokens.spacing.off360, padding: tokens.spacing.off28, width: '100%', maxWidth: tokens.spacing.off680, alignSelf: 'center', borderRadius: tokens.radius.paper }}>{children}</View>;
+  const paper = (children: React.ReactNode) => <View style={{ backgroundColor: tokens.color.stagePaper, minHeight: tokens.spacing.off360, padding: tokens.spacing.off28, width: '100%', maxWidth: tokens.spacing.off680, alignSelf: 'center', borderRadius: workspaceScale.radius.paper }}>{children}</View>;
   let content: React.ReactNode;
   if (studioId === 'quill') {
     content = <>{heading('The written page', 'Live text and paragraph styles from Quill')}{paper(array(doc.blocks).map((block, i) => <Text key={i} selectable style={{ color: tokens.color.stagePaperText, fontSize: block.kind === 'h1' ? tokens.text.off28 : block.kind === 'h2' ? tokens.text.off22 : tokens.text.off15, lineHeight: block.kind === 'h1' ? 38 : 25, marginBottom: tokens.spacing.off14, fontWeight: block.kind?.startsWith('h') ? '700' : '400', borderLeftWidth: block.kind === 'quote' ? tokens.borderWidth.off3 : 0, borderLeftColor: tokens.color.stageQuoteRule, paddingLeft: block.kind === 'quote' ? tokens.spacing.fixedInset : 0 }}>
@@ -27,7 +28,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
     const sheet = array(doc.sheets)[doc.active ?? 0];
     const cells = record(sheet?.cells);
     content = <>{heading(sheet?.name ?? 'Workbook', 'Raw values and formulas · select Commands to edit')}
-      <ScrollView horizontal><View style={{ backgroundColor: tokens.color.stagePaper, borderRadius: tokens.radius.off3 }}>
+      <ScrollView horizontal><View style={{ backgroundColor: tokens.color.stagePaper, borderRadius: workspaceScale.radius.paper }}>
         <View style={{ flexDirection: 'row' }}>{['', 'A', 'B', 'C', 'D', 'E'].map((v, i) => <Text key={i} style={{ width: i === 0 ? tokens.spacing.off40 : tokens.spacing.off104, padding: tokens.spacing.fixedInset, color: tokens.color.stageGridHeadText, backgroundColor: tokens.color.stageGridHead, fontSize: tokens.text.label, textAlign: 'center' }}>{v}</Text>)}</View>
         {Array.from({ length: 12 }, (_, row) => <View key={row} style={{ flexDirection: 'row' }}><Text style={{ width: tokens.spacing.off40, padding: tokens.spacing.fixedInset, color: tokens.color.stageGridHeadText, backgroundColor: tokens.color.stageGridHead, textAlign: 'center', fontSize: tokens.text.label }}>{row + 1}</Text>{['A', 'B', 'C', 'D', 'E'].map(col => <Text key={col} selectable numberOfLines={1} style={{ width: tokens.spacing.off104, minHeight: tokens.spacing.off40, borderTopWidth: tokens.borderWidth.hairline, borderRightWidth: tokens.borderWidth.hairline, borderColor: tokens.color.stageGridLine, padding: tokens.spacing.off10, color: tokens.color.stageCellText, fontSize: tokens.text.label }}>{cells[`${col}${row + 1}`]?.raw ?? ''}</Text>)}</View>)}
       </View></ScrollView></>;
@@ -46,7 +47,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
       <View style={{ alignSelf: 'center', width: '100%', maxWidth: tokens.spacing.off520, aspectRatio: (doc.width || 1) / (doc.height || 1), backgroundColor: tokens.color.stagePaper, overflow: 'hidden' }}>
         {array(doc.layers).filter(layer => layer.visible).map(layer => {
           const shape = layer.content?.shape;
-          return shape ? <View key={layer.id} style={{ position: 'absolute', left: `${shape.x / doc.width * 100}%`, top: `${shape.y / doc.height * 100}%`, width: `${shape.w / doc.width * 100}%`, height: `${shape.h / doc.height * 100}%`, borderRadius: shape.kind === 'ellipse' ? 9999 : 0, backgroundColor: rgba(shape.fill), opacity: layer.opacity }} /> : null;
+          return shape ? <View key={layer.id} style={{ position: 'absolute', left: `${shape.x / doc.width * 100}%`, top: `${shape.y / doc.height * 100}%`, width: `${shape.w / doc.width * 100}%`, height: `${shape.h / doc.height * 100}%`, borderRadius: shape.kind === 'ellipse' ? 9999 : 0, /* radius-exempt: artwork */ backgroundColor: rgba(shape.fill), opacity: layer.opacity }} /> : null;
         })}
       </View>
       <Text style={[caption, { marginTop: tokens.spacing.off14 }]}>Shape projection. Raster compositing is supplied by the host canvas adapter.</Text>
@@ -61,7 +62,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>{Array.from({ length: 5 }, (_, i) => <Text key={i} style={caption}>{Math.round(end * i / 4)}{audio ? ' ticks' : 's'}</Text>)}</View>
         {tracks.map(track => <View key={track.id} style={{ backgroundColor: tokens.color.stageTrack, borderWidth: tokens.borderWidth.hairline, borderColor: tokens.color.stageTrackBorder, minHeight: tokens.spacing.off96, paddingTop: tokens.spacing.off28, position: 'relative', overflow: 'hidden' }}>
           <Text style={{ position: 'absolute', top: tokens.spacing.fixedElement, left: tokens.spacing.off10, color: tokens.color.stageTrackLabel, fontSize: tokens.text.off11 }}>{track.name ?? `${track.kind} ${track.id}`}{track.muted ? ' · muted' : ''}</Text>
-          {array(track.clips).map(clip => <View key={clip.id} style={{ position: 'absolute', top: tokens.spacing.fixedCanvas, bottom: tokens.spacing.fixedElement, left: `${(audio ? clip.start_ticks : clip.timeline_start_s) / end * 100}%`, width: `${(audio ? clip.length_ticks : (clip.out_s - clip.in_s) / clip.speed) / end * 100}%`, backgroundColor: audio ? tokens.color.stageClipAudio : tokens.color.stageClipVideo, borderRadius: tokens.radius.control, padding: tokens.spacing.off7 }}><Text numberOfLines={1} style={{ color: tokens.color.stageOnClip, fontSize: tokens.text.micro }}>Clip {clip.id}{audio ? ` · ${array(clip.notes).length} notes` : ''}</Text></View>)}
+          {array(track.clips).map(clip => <View key={clip.id} style={{ position: 'absolute', top: tokens.spacing.fixedCanvas, bottom: tokens.spacing.fixedElement, left: `${(audio ? clip.start_ticks : clip.timeline_start_s) / end * 100}%`, width: `${(audio ? clip.length_ticks : (clip.out_s - clip.in_s) / clip.speed) / end * 100}%`, backgroundColor: audio ? tokens.color.stageClipAudio : tokens.color.stageClipVideo, borderRadius: workspaceScale.radius.control, padding: tokens.spacing.off7 }}><Text numberOfLines={1} style={{ color: tokens.color.stageOnClip, fontSize: tokens.text.micro }}>Clip {clip.id}{audio ? ` · ${array(clip.notes).length} notes` : ''}</Text></View>)}
         </View>)}
         {!tracks.length && <Text style={[caption, { paddingVertical: tokens.spacing.off48 }]}>No tracks yet. Add a track in Commands.</Text>}
       </View>
@@ -83,7 +84,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
     const layers = array(doc.layers);
     const rate = record(doc.frame_rate);
     content = <>{heading(doc.title ?? 'Composition', `${doc.width ?? '?'} × ${doc.height ?? '?'} · ${doc.duration_s ?? '?'}s · ${rate.num ?? '?'}/${rate.den ?? '?'} fps · ${layers.length} layers`)}
-      {layers.map(layer => <View key={layer.id} style={{ marginBottom: tokens.spacing.off10, backgroundColor: tokens.color.stageTrack, borderWidth: tokens.borderWidth.hairline, borderColor: tokens.color.stageTrackBorder, borderRadius: tokens.radius.control, padding: tokens.spacing.off10 }}>
+      {layers.map(layer => <View key={layer.id} style={{ marginBottom: tokens.spacing.off10, backgroundColor: tokens.color.stageTrack, borderWidth: tokens.borderWidth.hairline, borderColor: tokens.color.stageTrackBorder, borderRadius: workspaceScale.radius.control, padding: tokens.spacing.off10 }}>
         <Text style={{ color: tokens.color.stageHeading.dark, fontSize: tokens.text.off13 }}>{`${layer.name ?? `Layer ${layer.id}`} · ${layer.kind}`}</Text>
         <Text style={caption}>{`opacity ${layer.opacity ?? 1}${layer.visible === false ? ' · hidden' : ''} · ${array(layer.curves).length} animated properties`}</Text>
       </View>)}
@@ -94,7 +95,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
     const nodes = Object.values(record(doc.nodes)) as Data[];
     const root = record(record(doc.nodes)['1']);
     content = <>{heading(doc.title ?? 'Untitled design', `${nodes.length} nodes${root.width ? ` · ${root.width} × ${root.height}` : ''}`)}
-      {nodes.filter(node => node.id !== 1).slice(0, 24).map(node => <View key={String(node.id)} style={{ marginBottom: tokens.spacing.fixedElement, backgroundColor: tokens.color.stagePaper, borderRadius: tokens.radius.off3, padding: tokens.spacing.off10 }}>
+      {nodes.filter(node => node.id !== 1).slice(0, 24).map(node => <View key={String(node.id)} style={{ marginBottom: tokens.spacing.fixedElement, backgroundColor: tokens.color.stagePaper, borderRadius: workspaceScale.radius.control, padding: tokens.spacing.off10 }}>
         <Text style={{ color: tokens.color.stagePaperText, fontSize: tokens.text.off13 }}>{`${node.name ?? `Node ${node.id}`} · ${node.kind}`}</Text>
         <Text style={{ color: tokens.color.stagePaperTextMuted, fontSize: tokens.text.label, marginTop: tokens.spacing.off2 }}>{`${Math.round(node.width ?? 0)} × ${Math.round(node.height ?? 0)}`}</Text>
       </View>)}
@@ -103,7 +104,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
   } else if (studioId === 'draft') {
     const count = (key: string) => Object.keys(record(doc[key])).length;
     content = <>{heading('CAD drawing', `${doc.units ?? 'mm'} units · ${count('points')} points · ${count('segments')} segments · ${count('circles')} circles · ${count('arcs')} arcs`)}
-      <View style={{ backgroundColor: tokens.color.stagePaper, borderRadius: tokens.radius.off3, padding: tokens.spacing.off18 }}>
+      <View style={{ backgroundColor: tokens.color.stagePaper, borderRadius: workspaceScale.radius.paper, padding: tokens.spacing.off18 }}>
         <Text style={{ color: tokens.color.stagePaperText, fontSize: tokens.text.body }}>{`${count('hatches') ?? 0} hatches · ${count('dimensions') ?? 0} dimensions · ${count('constraints') ?? 0} constraints`}</Text>
         <Text style={{ color: tokens.color.stagePaperTextMuted, fontSize: tokens.text.label, marginTop: tokens.spacing.fixedElement }}>World-space geometry with a bounded linear/nonlinear solver and snap engine.</Text>
       </View>

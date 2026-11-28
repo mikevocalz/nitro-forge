@@ -9,6 +9,7 @@ import {assertHsv,hsvToRgb,rgbaToHex,wrapHue,type HsvColor} from "../color.ts";
 import {ChannelTrack} from "./ChannelTrack.tsx";
 import {discPointToHsv,hsvToDiscPoint} from "./wheel-geometry.ts";
 import {HueSaturationDiscLayer} from "./wheel-layers.tsx";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ColorDiscPicker}. */
 export interface ColorDiscPickerProps extends Omit<ViewProps,"children"> {
@@ -119,15 +120,15 @@ export function ColorDiscPicker({
         else if(a==="increaseHue")hueBy(5);
         else if(a==="decreaseHue")hueBy(-5);
       }}
-      style={{width:size,height:size,borderRadius:size/2,alignSelf:"center",opacity:disabled?0.45:1,...NO_SELECT}}>
+      style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: colour-well */alignSelf:"center",opacity:disabled?tokens.opacity.disabled:1,...NO_SELECT}}>
       {renderDisc ? <View pointerEvents="none" style={{position:"absolute",width:size,height:size}}>{renderDisc({size,value:shown})}</View> : <HueSaturationDiscLayer size={size} value={shown.v}/>}
       <View pointerEvents="none" {...{className:joinClasses(styled&&"border-border")}}
-        style={{position:"absolute",left:0,top:0,width:size,height:size,borderRadius:size/2,borderWidth:1}}/>
+        style={{position:"absolute",left:0,top:0,width:size,height:size,borderRadius:size/2, /* radius-exempt: colour-well */borderWidth:tokens.borderWidth.hairline}}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"border-text")}}
-        style={{position:"absolute",left:thumb.x-THUMB/2,top:thumb.y-THUMB/2,width:THUMB,height:THUMB,borderRadius:THUMB/2,
-          borderWidth:2,alignItems:"center",justifyContent:"center"}}>
+        style={{position:"absolute",left:thumb.x-THUMB/2,top:thumb.y-THUMB/2,width:THUMB,height:THUMB,borderRadius:THUMB/2, /* radius-exempt: colour-well */
+          borderWidth:tokens.borderWidth.strong,alignItems:"center",justifyContent:"center"}}>
         <View {...{className:joinClasses(styled&&"border-surface-raised")}}
-          style={{width:THUMB-4,height:THUMB-4,borderRadius:(THUMB-4)/2,borderWidth:2,backgroundColor:renderDisc?"transparent":opaque}}/>
+          style={{width:THUMB-tokens.spacing.fixedStack,height:THUMB-tokens.spacing.fixedStack,borderRadius:(THUMB-(tokens.spacing.fixedElement / 2))/2, /* radius-exempt: colour-well */borderWidth:tokens.borderWidth.strong,backgroundColor:renderDisc?"transparent":opaque}}/>
       </View>
     </View>
     <View style={{flexDirection:"row",justifyContent:"space-between"}}>

@@ -7,7 +7,7 @@ docs: "handwritten"
 platforms: ["ios", "android", "web"]
 category: "shell"
 tokens: []
-registryDependencies: []
+registryDependencies: ["@nitro-forge/studio-theme"]
 a11yStatus: "reviewed-pass"
 ---
 
@@ -24,7 +24,7 @@ The slot contract between Studio and the host UI. `StudioUIProvider` puts a `Stu
 - Package: `@nitro-forge/studio-ui-provider` (registry item)
 - Import: `import { StudioUIProvider, View, Text, Button /* and the other wrappers */ } from '@/components/forge/ui';`
 - Peers: `react` >=19, `react-native` >=0.81
-- Requires: A `StudioUIComponents` implementation (registry item `nyc-tron-host` builds one from NYC-Tron)
+- Requires: `@nitro-forge/studio-theme`; A `StudioUIComponents` implementation (registry item `nyc-tron-host` builds one from NYC-Tron)
 - Command: `npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider`
 - Installs: none (the CLI adds them when they are absent)
 - Files: `components/forge/ui.tsx`
