@@ -62,6 +62,7 @@
     "nitrogen/generated",
     "android/build.gradle",
     "android/CMakeLists.txt",
+    "android/forge-engines.cmake",
     "android/src",
     "app.plugin.cjs",
     "app.plugin.d.cts",
