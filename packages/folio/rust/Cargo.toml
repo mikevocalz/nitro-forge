@@ -10,7 +10,11 @@ ignition-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 rand = "0.9"
-lopdf = "0.36"
+# 0.47 bounds object nesting (RUSTSEC-2026-0187, fixed in 0.42) and stream
+# decompression. Default features are off: `chrono-clock` pulls chrono
+# (RUSTSEC-2026-0543) and `rayon` would load objects on a thread pool, and
+# the engine is single-threaded and keeps no dates.
+lopdf = { version = "0.47", default-features = false }
 md-5 = "0.10"
 # Already in the dependency tree via lopdf; used directly for bounded PNG
 # IDAT inflation and chunk CRC checks in `insertPageImage`.

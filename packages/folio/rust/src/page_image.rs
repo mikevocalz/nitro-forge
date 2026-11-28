@@ -910,7 +910,7 @@ mod tests {
 
         // The appended content stream places it at the rect.
         let page_id = *doc.get_pages().get(&1).unwrap();
-        let content = doc.get_page_content(page_id).unwrap();
+        let content = crate::page_content(&doc, page_id).unwrap();
         let text = String::from_utf8_lossy(&content);
         assert!(text.contains(" cm\n"), "{text}");
         assert!(text.contains(" Do\n"), "{text}");
@@ -923,7 +923,7 @@ mod tests {
         let doc = Document::load_mem(&bytes).unwrap();
         let page_id = *doc.get_pages().get(&1).unwrap();
         assert!(doc.get_page_images(page_id).map(|v| v.is_empty()).unwrap_or(true));
-        assert!(doc.get_page_content(page_id).unwrap().is_empty());
+        assert!(!crate::page_has_contents(&doc, page_id).unwrap());
     }
 
     #[test]
@@ -1320,9 +1320,8 @@ mod tests {
         assert_eq!(d["name"], "X2");
         let bytes = saved_pdf(&mut e);
         let doc = Document::load_mem(&bytes).unwrap();
-        let content = doc
-            .get_page_content(*doc.get_pages().get(&1).unwrap())
-            .unwrap();
+        let content =
+            crate::page_content(&doc, *doc.get_pages().get(&1).unwrap()).unwrap();
         assert!(String::from_utf8_lossy(&content).contains("/X2 Do"));
 
         // Hostile: every candidate name X0..X1023 pre-seeded → the op
