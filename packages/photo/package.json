@@ -31,10 +31,11 @@
     "test": "vitest run --config ../../tooling/completion-backends.vitest.config.mjs packages/photo/tests",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@nitro-forge/ignition": "workspace:*"
   },
   "devDependencies": {
+    "@nitro-forge/ignition": "workspace:*",
     "typescript": "7.0.2"
   }
 }

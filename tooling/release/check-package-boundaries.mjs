@@ -25,8 +25,13 @@ export function checkManifests() {
   for (const engine of engineNames) {
     const pkg = get("packages/" + engine + "/package.json");
     assert.equal(pkg.name, "@nitro-forge/" + engine);
-    const runtime = pkg.dependencies ?? {};
-    assert.equal(runtime["@nitro-forge/ignition"], "workspace:*");
+    // Ignition is a peer, so a consumer installs one copy of its native module
+    // for every engine; the devDependency keeps the workspace build linked.
+    assert.ok(!Object.hasOwn(pkg.dependencies ?? {}, "@nitro-forge/ignition"),
+      engine + " must take @nitro-forge/ignition as a peerDependency, not a dependency");
+    assert.equal(pkg.peerDependencies?.["@nitro-forge/ignition"], "workspace:*");
+    assert.equal(pkg.devDependencies?.["@nitro-forge/ignition"], "workspace:*");
+    const runtime = { ...pkg.dependencies, ...pkg.peerDependencies };
     for (const [name] of Object.entries(runtime)) {
       assert.ok(!name.startsWith("@acme/") && !name.startsWith("@moyo/"),
         engine + " is not permitted to depend on Moyo: " + name);

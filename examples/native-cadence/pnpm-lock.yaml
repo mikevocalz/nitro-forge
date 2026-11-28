@@ -248,14 +248,13 @@ importers:
         version: 7.0.2
 
   ../../packages/cadence:
-    dependencies:
-      '@nitro-forge/ignition':
-        specifier: workspace:*
-        version: link:../ignition
     devDependencies:
       '@nitro-forge/editor-controls':
         specifier: workspace:*
         version: link:../editor-controls
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       '@nyc-tron/ui':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz(patch_hash=0b7985b41d0d3fbb6a1f95ae429a86b8327347db5fefc08554b48c4da382be2c)(5e3c3332b33181e93ad7019fb7252e2c)
@@ -337,14 +336,13 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(terser@5.51.2)(yaml@2.9.1))
 
   ../../packages/prism:
-    dependencies:
-      '@nitro-forge/ignition':
-        specifier: workspace:*
-        version: link:../ignition
     devDependencies:
       '@nitro-forge/editor-controls':
         specifier: workspace:*
         version: link:../editor-controls
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -353,11 +351,10 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(terser@5.51.2)(yaml@2.9.1))
 
   ../../packages/telemetry:
-    dependencies:
+    devDependencies:
       '@nitro-forge/ignition':
         specifier: workspace:*
         version: link:../ignition
-    devDependencies:
       '@nitro-forge/prism':
         specifier: workspace:*
         version: link:../prism

@@ -37,10 +37,11 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@nitro-forge/ignition": "workspace:*"
   },
   "devDependencies": {
+    "@nitro-forge/ignition": "workspace:*",
     "@nitro-forge/editor-controls": "workspace:*",
     "typescript": "7.0.2",
     "vitest": "5.1.0"

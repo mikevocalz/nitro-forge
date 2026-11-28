@@ -672,14 +672,13 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/cadence:
-    dependencies:
-      '@nitro-forge/ignition':
-        specifier: workspace:*
-        version: link:../ignition
     devDependencies:
       '@nitro-forge/editor-controls':
         specifier: workspace:*
         version: link:../editor-controls
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       '@nyc-tron/ui':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz(patch_hash=0b7985b41d0d3fbb6a1f95ae429a86b8327347db5fefc08554b48c4da382be2c)(f4132b9c2a9693355f2ebb1d275b03e3)
@@ -719,21 +718,19 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/design:
-    dependencies:
+    devDependencies:
       '@nitro-forge/ignition':
         specifier: workspace:*
         version: link:../ignition
-    devDependencies:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
 
   packages/draft:
-    dependencies:
+    devDependencies:
       '@nitro-forge/ignition':
         specifier: workspace:*
         version: link:../ignition
-    devDependencies:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -779,14 +776,13 @@ importers:
         version: 7.0.2
 
   packages/folio:
-    dependencies:
-      '@nitro-forge/ignition':
-        specifier: workspace:*
-        version: link:../ignition
     devDependencies:
       '@nitro-forge/editor-controls':
         specifier: workspace:*
         version: link:../editor-controls
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       '@nyc-tron/ui':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz(patch_hash=0b7985b41d0d3fbb6a1f95ae429a86b8327347db5fefc08554b48c4da382be2c)(f4132b9c2a9693355f2ebb1d275b03e3)
@@ -872,11 +868,10 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/motion:
-    dependencies:
+    devDependencies:
       '@nitro-forge/ignition':
         specifier: workspace:*
         version: link:../ignition
-    devDependencies:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -888,24 +883,22 @@ importers:
         version: 58.0.24(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(expo-router@58.0.31)(react-dom@19.3.1(react@19.3.1))(react-native-web@0.21.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2)
 
   packages/photo:
-    dependencies:
+    devDependencies:
       '@nitro-forge/ignition':
         specifier: workspace:*
         version: link:../ignition
-    devDependencies:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
 
   packages/pitch:
-    dependencies:
-      '@nitro-forge/ignition':
-        specifier: workspace:*
-        version: link:../ignition
     devDependencies:
       '@nitro-forge/editor-controls':
         specifier: workspace:*
         version: link:../editor-controls
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       '@nyc-tron/ui':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz(patch_hash=0b7985b41d0d3fbb6a1f95ae429a86b8327347db5fefc08554b48c4da382be2c)(f4132b9c2a9693355f2ebb1d275b03e3)
@@ -917,14 +910,13 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/prism:
-    dependencies:
-      '@nitro-forge/ignition':
-        specifier: workspace:*
-        version: link:../ignition
     devDependencies:
       '@nitro-forge/editor-controls':
         specifier: workspace:*
         version: link:../editor-controls
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -933,14 +925,13 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/quill:
-    dependencies:
-      '@nitro-forge/ignition':
-        specifier: workspace:*
-        version: link:../ignition
     devDependencies:
       '@nitro-forge/editor-controls':
         specifier: workspace:*
         version: link:../editor-controls
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       '@nyc-tron/ui':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz(patch_hash=0b7985b41d0d3fbb6a1f95ae429a86b8327347db5fefc08554b48c4da382be2c)(f4132b9c2a9693355f2ebb1d275b03e3)
@@ -952,11 +943,10 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/scene:
-    dependencies:
+    devDependencies:
       '@nitro-forge/ignition':
         specifier: workspace:*
         version: link:../ignition
-    devDependencies:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -971,14 +961,13 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/splice:
-    dependencies:
-      '@nitro-forge/ignition':
-        specifier: workspace:*
-        version: link:../ignition
     devDependencies:
       '@nitro-forge/editor-controls':
         specifier: workspace:*
         version: link:../editor-controls
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       '@nyc-tron/ui':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz(patch_hash=0b7985b41d0d3fbb6a1f95ae429a86b8327347db5fefc08554b48c4da382be2c)(f4132b9c2a9693355f2ebb1d275b03e3)
@@ -1041,14 +1030,13 @@ importers:
         version: 0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)
 
   packages/tally:
-    dependencies:
-      '@nitro-forge/ignition':
-        specifier: workspace:*
-        version: link:../ignition
     devDependencies:
       '@nitro-forge/editor-controls':
         specifier: workspace:*
         version: link:../editor-controls
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       '@nyc-tron/ui':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz(patch_hash=0b7985b41d0d3fbb6a1f95ae429a86b8327347db5fefc08554b48c4da382be2c)(f4132b9c2a9693355f2ebb1d275b03e3)
@@ -1060,11 +1048,10 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/telemetry:
-    dependencies:
+    devDependencies:
       '@nitro-forge/ignition':
         specifier: workspace:*
         version: link:../ignition
-    devDependencies:
       '@nitro-forge/prism':
         specifier: workspace:*
         version: link:../prism
