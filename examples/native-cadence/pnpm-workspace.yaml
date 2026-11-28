@@ -11,7 +11,7 @@ packages:
 # Keep the app and shared Ignition dependency on the same Nitro v1 nightly.
 # Metro must bundle a single react-native-nitro-modules runtime.
 overrides:
-  react-native-nitro-modules: "1.0.0-alpha.nightly.136.gdb81de61bd32"
+  react-native-nitro-modules: "1.0.0-alpha.nightly.138.g43e09c161101"
 minimumReleaseAge: 0
 allowBuilds:
   esbuild: false

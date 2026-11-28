@@ -56,7 +56,7 @@ for (const platform of ['ios', 'android']) {
   assert.ok(dependency.platforms[platform]);
   console.log(`Gesture Handler ${platform} autolinking passed (configuration evidence, not device input)`);
 }
-const nightly = '1.0.0-alpha.nightly.136.gdb81de61bd32';
+const nightly = '1.0.0-alpha.nightly.138.g43e09c161101';
 assert.equal(hostRequire('react-native-nitro-modules/package.json').version, nightly);
 assert.equal(hostRequire('nitro-core/package.json').version, nightly);
 const skiaRequire = createRequire(hostRequire.resolve('react-native-skia/package.json'));

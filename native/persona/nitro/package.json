@@ -15,9 +15,9 @@
     "codegen": "nitrogen"
   },
   "peerDependencies": {
-    "nitro-core": "1.0.0-alpha.nightly.136.gdb81de61bd32"
+    "nitro-core": "1.0.0-alpha.nightly.138.g43e09c161101"
   },
   "devDependencies": {
-    "nitrogen": "1.0.0-alpha.nightly.136.gdb81de61bd32"
+    "nitrogen": "1.0.0-alpha.nightly.138.g43e09c161101"
   }
 }
