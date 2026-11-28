@@ -93,6 +93,8 @@ const providerItems = items.filter((i) => i.meta.needsProvider);
 const freeItems = items.filter((i) => !i.meta.needsProvider);
 const engines = excluded.engines;
 const foundations = excluded.foundations;
+// The version each excluded package carries in its package.json. compatibility.v1.json keeps its own record.
+const pkgVersions = [...new Set([...engines, ...foundations].map((e) => readJson(join(ROOT, 'packages', e.name, 'package.json')).version))].sort().join(', ');
 const A11Y_WORD = { 'reviewed-pass': 'source read, no failures found', 'reviewed-fail': 'source read, failures found', unverified: 'not reviewed' };
 const studios = readFileSync(join(ROOT, 'packages/studio-layout/src/index.ts'), 'utf8').match(/STUDIOS\s*=\s*\[([^\]]+)\]/)[1].match(/"([a-z]+)"/g).map((x) => x.replaceAll('"', ''));
 const manifests = Object.fromEntries([...readFileSync(join(ROOT, 'packages/studio-workspace/src/app-manifest.ts'), 'utf8').matchAll(/^\s{2}([a-z]+): \{ task: '([^']+)'/gm)].map((m) => [m[1], m[2]]));
@@ -137,7 +139,7 @@ function shell({ file, title, desc, body, facts = '', wide = false, lead = '' })
 </div></details></nav>`;
   const status = `<footer class="status" role="contentinfo">
 <span>Registry: ${rBuilt ? `r/ built, ${items.length} items, ref <code>${esc(cfg.nitroForgeRef)}</code> (moving branch)` : 'r/ not built: shadcn add resolves nothing yet'}</span>
-<span>Distribution: GitHub release tarballs, ${esc(compat.version)}, npm ${esc(compat.distribution.npm)}, status ${esc(compat.distribution.status)}</span>
+<span>Packages ${esc(pkgVersions)}, no tag or tarball cut, npm ${esc(compat.distribution.npm)}, distribution status ${esc(compat.distribution.status)}</span>
 <span>Generated from inputs <code>${inputHash}</code></span>
 <span><a href="${href('../../llms.txt')}">llms.txt</a> <a href="${href('../../AGENTS.md')}">AGENTS.md</a></span>
 </footer>`;
@@ -235,23 +237,24 @@ for (const e of [...engines, ...foundations]) {
     const hasStudio = studios.includes(e.name);
     return { e, task: task ?? 'no studio manifest', studio: hasStudio ? 'studio' : 'no studio' };
   });
-  const table = `<table class="stack"><thead><tr><th scope="col">Engine</th><th scope="col">Task</th><th scope="col">Form</th><th scope="col">Registry items that need it</th></tr></thead><tbody>${rosterRows.map((r) => `<tr id="engine-${r.e.name}"><th scope="row" data-l="Engine"><a href="engines/${r.e.name}.html">${esc(r.e.name)}</a></th><td data-l="Task">${esc(r.task)} (${r.studio})</td><td data-l="Form">${mkr('ring', 'tarball package')}</td><td data-l="Registry items that need it">none</td></tr>`).join('')}</tbody></table>`;
+  const table = `<table class="stack"><thead><tr><th scope="col">Engine</th><th scope="col">Task</th><th scope="col">Form</th><th scope="col">Registry items that need it</th></tr></thead><tbody>${rosterRows.map((r) => `<tr id="engine-${r.e.name}"><th scope="row" data-l="Engine"><a href="engines/${r.e.name}.html">${esc(r.e.name)}</a></th><td data-l="Task">${esc(r.task)} (${r.studio})</td><td data-l="Form">${mkr('ring', 'monorepo package, no tarball')}</td><td data-l="Registry items that need it">none</td></tr>`).join('')}</tbody></table>`;
   const found = `<table class="stack"><thead><tr><th scope="col">Foundation</th><th scope="col">Form</th><th scope="col">Why</th></tr></thead><tbody>
 <tr><th scope="row" data-l="Foundation"><a href="engines/ignition.html">ignition</a></th><td data-l="Form">${mkr('ring', 'native host, prerequisite')}</td><td data-l="Why">shadcn cannot run nitrogen, pod install or CMake (decision 4).</td></tr>
 <tr><th scope="row" data-l="Foundation"><a href="engines/studio-layout.html">studio-layout</a></th><td data-l="Form">${mkr('ring', 'private package')}</td><td data-l="Why">No tarball and no versioning scheme (decision 3).</td></tr>
+<tr><th scope="row" data-l="Foundation"><a href="engines/editor-controls.html">editor-controls</a></th><td data-l="Form">${mkr('ring', 'private package')}</td><td data-l="Why">No tarball. Import <code>@nitro-forge/editor-controls/&lt;path&gt;</code>, never <code>@nyc-tron/ui/components/forge/*</code> (decision 3).</td></tr>
 <tr><th scope="row" data-l="Foundation"><a href="components/forge-icon.html">icons</a></th><td data-l="Form">${mkr('full', 'registry item forge-icon')}</td><td data-l="Why">Plain source, installs with its own dependencies.</td></tr>
 </tbody></table>`;
   const list = (group) => `<ul>${group.map((i) => `<li id="${i.name}"><a href="components/${i.name}.html">${esc(i.title)}</a>. ${esc(i.description)} Accessibility: ${esc(A11Y_WORD[i.meta.a11yStatus])}.</li>`).join('')}</ul>`;
-  const body = `<p class="lead">Document studios on one Rust engine, delivered as a shadcn registry of source files plus tarball packages. Controls come from NYC-Tron.</p>
-<div class="banner" role="note"><strong>Status.</strong> ${rBuilt ? `The registry is built: ${items.length} items in <code>r/</code>.` : '<code>r/</code> is not built.'} The registry URLs point at the moving branches <code>${esc(cfg.nitroForgeRef)}</code> (Forge) and <code>${esc(cfg.nycTronRef)}</code> (NYC-Tron), not a release tag, so what <code>shadcn add</code> fetches changes with each push until the owner cuts tags. The <code>@nyc-tron</code> items resolve only once NYC-Tron's <code>r/</code> is on its <code>${esc(cfg.nycTronRef)}</code> branch. Packages are at ${esc(compat.version)} and nothing is on npm. Steps 1 to 3 of the install cannot be reproduced outside the monorepo today. <a href="install.html#step-1">See step 1</a>.</div>
+  const body = `<p class="lead">Document studios on one Rust engine, delivered as a shadcn registry of source files plus monorepo packages. General controls come from NYC-Tron; the editor controls are <code>@nitro-forge/editor-controls</code>.</p>
+<div class="banner" role="note"><strong>Status.</strong> ${rBuilt ? `The registry is built: ${items.length} items in <code>r/</code>.` : '<code>r/</code> is not built.'} The registry URLs point at the moving branches <code>${esc(cfg.nitroForgeRef)}</code> (Forge) and <code>${esc(cfg.nycTronRef)}</code> (NYC-Tron), not a release tag, so what <code>shadcn add</code> fetches changes with each push until the owner cuts tags. The <code>@nyc-tron</code> items resolve only once NYC-Tron's <code>r/</code> is on its <code>${esc(cfg.nycTronRef)}</code> branch. Packages are at ${esc(pkgVersions)}, no tag or tarball has been cut, and nothing is on npm. Steps 1 to 3 of the install cannot be reproduced outside the monorepo today. <a href="install.html#step-1">See step 1</a>.</div>
 <div class="paths"><a class="btn primary" href="install.html">Read the install order</a><a class="btn" href="components/${providerItems[0].name}.html">Wire a component</a><a class="btn" href="tokens.html#rebrand">Rebrand</a></div>
 <h2 id="engines">Engines</h2><p>Twelve engines, read from <code>ENGINE_KINDS</code>. None has a registry item today (decision 3).</p>${table}
 <h2 id="foundations">Foundations</h2>${found}
 <h2 id="registry">Registry items</h2>
 <h3 id="needs-provider">Needs StudioUIProvider (${providerItems.length})</h3>${list(providerItems)}
 <h3 id="no-provider">No provider needed (${freeItems.length})</h3>${list(freeItems)}
-<h2 id="not-in-registry">Not in the registry</h2><p>Four binding adapters, 12 engines, ignition and studio-layout. Each has a reason in <a href="../../registry-excluded.json">registry-excluded.json</a>.</p>`;
-  add('index.html', shell({ file: 'index.html', title: 'Nitro Forge', desc: 'Document studios on one Rust engine, delivered as a shadcn registry and tarball packages.', body, facts: `<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl><dt>Registry items</dt><dd>${items.length}</dd><dt>Excluded</dt><dd>${excluded.adapters.length} adapters, ${engines.length} engines, ${foundations.length} foundations</dd><dt>Registry refs</dt><dd class="mono">${esc(cfg.nitroForgeRef)}, ${esc(cfg.nycTronRef)} (moving)</dd><dt>Generated from</dt><dd class="mono">${inputHash}</dd></dl></aside>` }));
+<h2 id="not-in-registry">Not in the registry</h2><p>${excluded.adapters.length} binding adapters, ${engines.length} engines and ${foundations.length} foundations (${foundations.map((e) => e.name).join(', ')}). Each has a reason in <a href="../../registry-excluded.json">registry-excluded.json</a>.</p>`;
+  add('index.html', shell({ file: 'index.html', title: 'Nitro Forge', desc: 'Document studios on one Rust engine, delivered as a shadcn registry and monorepo packages.', body, facts: `<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl><dt>Registry items</dt><dd>${items.length}</dd><dt>Excluded</dt><dd>${excluded.adapters.length} adapters, ${engines.length} engines, ${foundations.length} foundations</dd><dt>Registry refs</dt><dd class="mono">${esc(cfg.nitroForgeRef)}, ${esc(cfg.nycTronRef)} (moving)</dd><dt>Generated from</dt><dd class="mono">${inputHash}</dd></dl></aside>` }));
 }
 
 // Install.
@@ -268,7 +271,7 @@ for (const e of [...engines, ...foundations]) {
   const sec = installOrder.slice(installOrder.indexOf('## Registry add versus tarball or native install'), installOrder.indexOf('## Known gaps in the chain'));
   const tableMd = sec.split('\n').filter((l) => l.startsWith('|')).join('\n');
   const gaps = installOrder.slice(installOrder.indexOf('## Known gaps in the chain')).split('\n').filter((l) => l.startsWith('- ')).join('\n');
-  const body = `<div class="banner" role="note">Nothing here is published to npm. Steps 1 to 3 cannot be reproduced outside the monorepo today: no tarball or release exists for <code>ignition</code>, the engines or <code>studio-layout</code>. Source: install-order.md.</div>
+  const body = `<div class="banner" role="note">Nothing here is published to npm. Steps 1 to 3 cannot be reproduced outside the monorepo today: no tarball or release exists for <code>ignition</code>, the engines, <code>studio-layout</code> or <code>editor-controls</code>. Source: install-order.md.</div>
 <h2 id="agent">Agent prompt</h2>${copyBlock('agent-prompt', 'Prompt', prompt)}
 <label class="chk"><input type="checkbox" id="only-registry" hidden> <span class="js-only" hidden>Show only steps a registry add covers</span></label>
 <h2 id="chain">The chain</h2><ol class="chain" start="0">${rows}</ol>

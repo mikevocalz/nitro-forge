@@ -1,11 +1,11 @@
 ---
 name: nitro-forge
-description: Install and use the Nitro Forge studio components (workspace chrome, persona turret, Prism editor, theme, StudioUIProvider, icons) through the @nitro-forge shadcn registry. Use when adding a Forge item, wiring StudioUIProvider, rebranding the accent, checking a token, or deciding why an engine or ignition cannot be installed with shadcn.
+description: Install and use the Nitro Forge studio components (workspace chrome, persona turret, Prism editor, theme, StudioUIProvider, icons) through the @nitro-forge shadcn registry, drive the 12 Rust engines through @nitro-forge/ignition, and import the editor controls from @nitro-forge/editor-controls. Use when adding a Forge item, wiring StudioUIProvider, opening or editing an engine document, importing an editor control, rebranding the accent, checking a token, or deciding why an engine, ignition or editor-controls cannot be installed with shadcn.
 ---
 
 # Nitro Forge
 
-Nitro Forge is a set of document studios on one Rust engine. The `@nitro-forge` registry ships the studio UI as source files. The engines, `@nitro-forge/ignition` and `@nitro-forge/studio-layout` are not in it. Controls such as Button and TabBar come from the `@nyc-tron` registry, which owns them.
+Nitro Forge is a set of document studios on one Rust engine. The `@nitro-forge` registry ships the studio UI as source files. The engines, `@nitro-forge/ignition`, `@nitro-forge/studio-layout` and `@nitro-forge/editor-controls` are not in it. General controls such as Button and TabBar come from the `@nyc-tron` registry, which owns them. The editor controls (layers, timeline, spreadsheet, color and the rest) belong to Forge and come from `@nitro-forge/editor-controls`.
 
 ## Provider prerequisite: do this first
 
@@ -34,7 +34,7 @@ Nine steps, numbered 0 to 8. A registry add covers step 4 and step 8, plus the f
 | 0 | Toolchain: Node >=24.3.0, pnpm 12.18.0, Rust, Xcode or Android NDK with `cargo-ndk` | no |
 | 1 | `@nitro-forge/ignition` native host | no (decision 4) |
 | 2 | An engine package, for example `@nitro-forge/tally` | no (decision 3) |
-| 3 | `@nitro-forge/studio-layout` | no (decision 3) |
+| 3 | `@nitro-forge/studio-layout` and `@nitro-forge/editor-controls` | no (decision 3) |
 | 4 | `@nitro-forge/icons` as item `forge-icon` | yes |
 | 5 | NYC-Tron tarballs from `tooling/nyc-tron.json` | packages no, wrapper items yes |
 | 6 | Theme CSS from `studio-theme` | files yes, the generator and CSS import no |
@@ -43,7 +43,7 @@ Nine steps, numbered 0 to 8. A registry add covers step 4 and step 8, plus the f
 
 Steps 1 to 3 cannot be reproduced outside this monorepo today. No tag, release or tarball exists for them, nothing is on npm, and `compatibility.v1.json` records distribution as not run. Stop and ask rather than invent a release URL. The commands for steps 0 to 3, 5 and 6 are in `docs/agent-native/install-order.md`. They were read from the repo and were not run on the machine that wrote this skill.
 
-Items that name a prerequisite shadcn cannot install list it in `meta.prerequisites` and in the `docs` text the CLI prints after an add. `prism-editor` needs `@nitro-forge/ignition` (it imports `base64ToBytes` and `bytesToBase64`). `forge-workspace`, `forge-document-stage` and `workspace-utilities` need `@nitro-forge/studio-layout`, and so does everything that depends on them.
+Items that name a prerequisite shadcn cannot install list it in `meta.prerequisites` and in the `docs` text the CLI prints after an add. `prism-editor` needs `@nitro-forge/ignition` (it imports `base64ToBytes` and `bytesToBase64`). `prism-editor` also needs `@nitro-forge/editor-controls` for its layers panel. `forge-workspace`, `forge-document-stage` and `workspace-utilities` need `@nitro-forge/studio-layout`, and so does everything that depends on them.
 
 ## Commands
 
@@ -58,9 +58,49 @@ npx shadcn@4.23.0 mcp
 
 `components.json` at the repo root points the two namespaces at `https://raw.githubusercontent.com/mikevocalz/<repo>/<ref>/r/{name}.json`. `<ref>` is `nitroForgeRef` (`master`) for `@nitro-forge` and `nycTronRef` (`main`) for `@nyc-tron`, both in `tooling/registry/config.json`. They are moving branches, not release tags, until the owner cuts tags: what an install fetches changes with each push, and the `@nyc-tron` items resolve only once NYC-Tron's `r/` is on its `main` branch. To pin, run `node tooling/registry/set-ref.mjs <nitroForgeRef> [nycTronRef]`; it rewrites the config and regenerates every generated file. The install proof against a local server accepted `text/plain` responses, which is what raw.githubusercontent.com serves. A live fetch from raw GitHub has not been done. `.mcp.json` runs `npx shadcn@latest mcp` because the mission specifies it. Pin it to `shadcn@4.23.0`, the version the registry is built with, if you want a reproducible tool version.
 
-Item names keep slashes: `@nyc-tron/forge/layers/LayerStack`. The `@nyc-tron` item names are the export keys after `./components/`. All 22 that Forge depends on exist in NYC-Tron's built `registry.json`; `check-imports` reads that registry on every run.
+Item names keep slashes: `@nyc-tron/shell/PrecisionScrubber`. The `@nyc-tron` item names are the export keys after `./components/`. Forge items depend on 21 of them. `check-imports` reads NYC-Tron's built `registry.json` on every run and fails on any that is missing. A dependency under the old editor-control path is invalid, and `validate-registry` rejects it.
 
 Installed files land in `components/forge/` (icons in `components/forge/icons/`). Imports between them are relative. Imports of NYC-Tron files are written as `@/components/nyc-tron/ui/components/<key>`, which is where the `@nyc-tron` items install (their `files[].target` is `@components/nyc-tron/ui/components/<key>.tsx`, and `@components` expands to your `components` alias).
+
+## Editor controls
+
+`@nitro-forge/editor-controls` holds the editor controls: audio and MIDI, timeline, spreadsheet, canvas and layers, color, photo, motion, vector, office and PDF. They moved unchanged from NYC-Tron UI (`packages/ui/src/components/forge/`) in #95. They take controlled values and callbacks; the engine packages supply persistence and undo.
+
+Import a control by its path. The package has 450 exports, one per file:
+
+```ts
+import { LayerStack } from '@nitro-forge/editor-controls/layers/LayerStack';
+import { moveLayer, validateLayers } from '@nitro-forge/editor-controls/layers/layer-model';
+```
+
+Never import `@nyc-tron/ui/components/forge/*`. NYC-Tron `v1.0.0-rc.2` still ships those files, but Forge does not use them. `node tooling/verify-nyc-tron-pin.mjs` fails on any such import and names the file and line. The old path `forge/<path>` is now `@nitro-forge/editor-controls/<path>`, except three precision helpers that NYC-Tron kept: `@nyc-tron/ui/components/shell/precision`, `shell/precision-scrubber-model` and `shell/PrecisionScrubber`. `packages/editor-controls/README.md` has the mapping and the rc.2 export patch.
+
+It is a private workspace package with no tarball. A package in this monorepo adds `"@nitro-forge/editor-controls": "workspace:*"`. There is no way to install it outside the repo today.
+
+## Engines
+
+Each engine is a package with a document facade (`TallyDocument`, `PrismDocument`, ...) over `@nitro-forge/ignition`. Every facade has `open` (or `create` for folio), `openSnapshot`, `save`, `undo`, `redo` and `close`, plus engine ops. In an app the host is `createNitroHost()` from `@nitro-forge/ignition`. In Node it is `new CliHost()` from `@nitro-forge/ignition/cli`, which spawns `target/debug/nf-cli` (build it with `cargo build --locked -p nf-cli`, or set `NF_CLI`).
+
+```ts
+import { createNitroHost } from '@nitro-forge/ignition';
+import { TallyDocument } from '@nitro-forge/tally';
+
+const host = createNitroHost();
+const doc = await TallyDocument.open(host);
+await doc.setCell('A1', '10');
+await doc.setCell('A2', '20');
+const sum = await doc.setCell('A3', '=A1+A2'); // sum.data.computed === 30
+const bytes = await doc.save();
+await doc.close();
+
+const again = await TallyDocument.openSnapshot(host, bytes);
+await again.setCell('A1', '15');
+await again.undo(); // A3 is 30 again
+await again.redo(); // A3 is 35
+await again.close();
+```
+
+Op names and payloads are in `docs/ENGINE_OPS.md`; use only ops listed there. Each page in `docs/engines/` has a full example for its engine. `corepack pnpm test:docs-examples` runs every one against the real engines through nf-cli, and checks that each op it uses is in `ENGINE_OPS.md` and the package source.
 
 ## Rebrand contract
 
@@ -106,9 +146,9 @@ Values are `reviewed-pass`, `reviewed-fail` and `unverified`. Nothing was render
 ## Not in the registry, and why
 
 - Four binding adapters (`quill-office-binding`, `tally-sheet-binding`, `splice-timeline-binding`, `prism-canvas-binding`): each imports its engine facade, which a registry add cannot install (decision 30).
-- Twelve engines (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene): they need the Rust binary through ignition and ship as release tarballs at 0.0.0 (decision 3).
+- Twelve engines (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene): they need the Rust binary through ignition. They are version 0.1.0 in the monorepo, and no tag, release or tarball has been cut (decision 3).
 - `ignition`: shadcn cannot run nitrogen, pod install or CMake (decision 4).
-- `studio-layout`: private workspace package with no tarball.
+- `studio-layout` and `editor-controls`: private workspace packages with no tarball.
 
 `registry-excluded.json` holds each reason and the condition for returning. Engine and foundation pages are in `docs/engines/`.
 
@@ -120,12 +160,17 @@ node tooling/registry/check-imports.mjs
 node tooling/registry/validate-registry.mjs
 node tooling/docs/build-docs.mjs
 node tooling/docs/check-docs.mjs
+corepack pnpm test:docs-examples
 ```
 
-`build.mjs` runs `shadcn build` through `npx` unless `SHADCN_BIN` points at a local shadcn 4.23.0 binary. Never edit `r/`, `registry.json`, `docs/components/` or `llms.txt` by hand. CI fails when a rebuild changes them.
+`build.mjs` runs `shadcn build` through `npx` unless `SHADCN_BIN` points at a local shadcn 4.23.0 binary. Never edit `r/`, `registry.json`, `docs/components/`, `docs/engines/`, `llms.txt` or `packages/ignition/skills/` by hand. CI fails when a rebuild changes them.
 
 ## Where to read more
 
 - `llms.txt` for the page index and `llms-full.txt` for all pages in one file.
 - `docs/components/<item>.md` for props, states, accessibility and examples.
+- `docs/engines/<package>.md` for each engine, ignition, studio-layout and editor-controls.
+- `docs/ENGINE_OPS.md` for op names and payloads.
 - `docs/agent-native/install-order.md` and `docs/agent-native/02-design-system.md`.
+
+This file is the source. `build-docs.mjs` copies it to `packages/ignition/skills/nitro-forge/SKILL.md`, and `skills.sh.json` points at that folder, so `npx skills add mikevocalz/nitro-forge --skill nitro-forge` installs it.

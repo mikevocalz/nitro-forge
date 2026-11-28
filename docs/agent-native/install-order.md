@@ -2,7 +2,7 @@
 
 Status: read from `package.json` files, `tooling/`, `packages/ignition/scripts/`, `docs/native/NITRO_V1_HOST_INTEGRATION.md`, `.github/workflows/` and `apps/example`. No command here was run on this machine (4.9 GB free, no install allowed). Where a command comes from CI or a script, the source is named. UNVERIFIED marks a step the files do not settle.
 
-Nothing here is published to npm. `compatibility.v1.json` records `distribution: github-release-tarballs`, `npm: not-used`, and no tag or release exists for the Forge packages. Every `@nitro-forge/*` package is `0.0.0` at the root or `0.1.0` per package and resolves through `workspace:*`. A consumer outside this monorepo has no installable `@nitro-forge/ignition`, engine or `studio-layout` today.
+Nothing here is published to npm. `compatibility.v1.json` records `distribution: github-release-tarballs`, `npm: not-used`, and no tag or release exists for the Forge packages. The engines, `ignition`, `studio-layout`, `editor-controls`, `studio-workspace` and `icons` are version `0.1.0` (`adaptive-layout` is `0.1.0-alpha.0` and `agpl-speed-curve` is `0.0.0-experimental`; the private root `package.json` says `0.0.0`). They resolve through `workspace:*`. A consumer outside this monorepo has no installable `@nitro-forge/ignition`, engine, `studio-layout` or `editor-controls` today.
 
 ## The chain
 
@@ -13,7 +13,7 @@ Each step needs the one above it. Step 7 fails at first render if step 6 is skip
 | 0 | Toolchain | Node >=24.3.0, pnpm 12.18.0 (`packageManager`), Rust with `cargo`, Xcode for Apple, Android NDK and `cargo-ndk` for Android | No |
 | 1 | `@nitro-forge/ignition` (native host) | see below | No (decision 4) |
 | 2 | Engine package, for example `@nitro-forge/tally` | `workspace:*` dependency, Rust crate linked through `nf-sys` | No (decision 3) |
-| 3 | `@nitro-forge/studio-layout` | `workspace:*` dependency, private package | No (decision 3) |
+| 3 | `@nitro-forge/studio-layout` and `@nitro-forge/editor-controls` | `workspace:*` dependencies, private packages | No (decision 3) |
 | 4 | `@nitro-forge/icons` | registry item `forge-icon` | Yes, plus peers |
 | 5 | NYC-Tron tarballs | URL dependencies from `tooling/nyc-tron.json` | No for the packages, yes for registry items that wrap them |
 | 6 | Theme CSS | generated `theme.css` or `theme.native.css`, plus an import | Files yes, build step no |
@@ -64,9 +64,11 @@ Add the package as a `workspace:*` dependency, for example `"@nitro-forge/tally"
 
 Engine contract tests need `@nyc-tron/ui` as a devDependency (URL tarball); apps do not.
 
-### Step 3. `@nitro-forge/studio-layout`
+### Step 3. `@nitro-forge/studio-layout` and `@nitro-forge/editor-controls`
 
-Private, pure TypeScript, no build step (`"exports": {".": "./src/index.ts"}`). Used by `studio-workspace` (`model.ts`, `index.tsx`, `stage.tsx`, `app-manifest.ts`). Add `"@nitro-forge/studio-layout": "workspace:*"`. No tarball exists. Distribution is blocked on the versioning scheme in decision 3.
+`studio-layout` is private, pure TypeScript, no build step (`"exports": {".": "./src/index.ts"}`). Used by `studio-workspace` (`model.ts`, `index.tsx`, `stage.tsx`, `app-manifest.ts`). Add `"@nitro-forge/studio-layout": "workspace:*"`. No tarball exists. Distribution is blocked on the versioning scheme in decision 3.
+
+`editor-controls` holds the editor controls (audio, timeline, spreadsheet, layers, color, photo, motion, office and the rest), moved unchanged from NYC-Tron UI in #95. It is private and has 450 exports, one per file: import `@nitro-forge/editor-controls/<path>`, for example `@nitro-forge/editor-controls/layers/LayerStack`. Add `"@nitro-forge/editor-controls": "workspace:*"`. It needs `@nyc-tron/ui` from step 5 and the rc.2 export patch described in `packages/editor-controls/README.md`. Never import `@nyc-tron/ui/components/forge/*`; `pnpm verify:nyc-tron` fails on it. `prism-editor` needs this step for its layers panel.
 
 ### Step 4. `@nitro-forge/icons`
 
@@ -159,14 +161,16 @@ Only now do the registry items for studio chrome work: `forge-workspace`, `prism
 | `@nitro-forge/ignition`: Nitrogen codegen, `ForgeRust.xcframework`, Android static archives, CMake, podspec, Swift package | | Yes (decision 4) |
 | Engine packages and their Rust crates | | Yes (decision 3) |
 | `@nitro-forge/studio-layout` | | Yes (decision 3) |
+| `@nitro-forge/editor-controls` | | Yes (decision 3) |
 | Quill, Tally, Splice and Prism binding adapters | Deferred | Need the engine facade first |
 | Expo config plugin for brand identity (`tooling/brand/plugin.cjs`) | | Yes, not in registry scope |
 
-Two items need a native prerequisite even though their own files are plain TypeScript. `prism-editor` imports `base64ToBytes` and `bytesToBase64` from the `@nitro-forge/ignition` package index, so a copy of it resolves only after step 1. `forge-workspace`, `forge-document-stage` and `studio-layout` consumers need `@nitro-forge/studio-layout` from step 3 for the `Studio` type and the dock model.
+Two items need a native prerequisite even though their own files are plain TypeScript. `prism-editor` imports `base64ToBytes` and `bytesToBase64` from the `@nitro-forge/ignition` package index, so a copy of it resolves only after step 1. `prism-editor` also imports `LayerStack` and the `LayerRow` type from `@nitro-forge/editor-controls` (step 3). `forge-workspace`, `forge-document-stage` and `studio-layout` consumers need `@nitro-forge/studio-layout` from step 3 for the `Studio` type and the dock model.
 
 ## Known gaps in the chain
 
 - No document today gives these steps in order. This file is the first.
-- Steps 1 to 3 cannot be reproduced outside the monorepo: no tarball or release exists for `ignition`, the engines or `studio-layout`.
+- Steps 1 to 3 cannot be reproduced outside the monorepo: no tarball or release exists for `ignition`, the engines, `studio-layout` or `editor-controls`.
+- NYC-Tron's published `registry.json` (on its `agent-native-20261119` branch) still lists `forge/inputs/PrecisionScrubber` and has no `shell/PrecisionScrubber`, so `prism-editor`'s `@nyc-tron/shell/PrecisionScrubber` dependency does not resolve until NYC-Tron rebuilds its registry. `check-imports.mjs` reports it.
 - The Apple archive script and the integration doc disagree on Intel simulator support (step 1).
 - Seven NYC-Tron packages are pinned; the example installs four. Which of the other three a new studio needs is not stated in the repo. UNVERIFIED.
