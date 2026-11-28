@@ -70,6 +70,8 @@ test('dispatch runs the matching handler once and stops the browser action', () 
   assert.equal(prevented, 4);
   // In a text field the field keeps ⌘Z; nothing runs and the event is untouched.
   assert.equal(dispatchStudioShortcut(event('z', { target: { tagName: 'TEXTAREA' } }), true, handlers), false);
+  // A control that already handled ⌘Z (the ink toolbar, the grid) keeps it: one key, one undo.
+  assert.equal(dispatchStudioShortcut(event('z', { defaultPrevented: true }), true, handlers), false);
   // Without an open handler ⌘O is left to the browser.
   assert.equal(dispatchStudioShortcut(event('o'), true, { ...handlers, open: undefined }), false);
   assert.equal(dispatchStudioShortcut(event('/'), true, handlers), false, 'no help handler, nothing to show');

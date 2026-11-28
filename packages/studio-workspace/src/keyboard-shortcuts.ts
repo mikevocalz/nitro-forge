@@ -18,6 +18,8 @@ type KeyFields = {
   readonly altKey?: boolean | undefined;
   readonly repeat?: boolean | undefined;
   readonly target?: unknown;
+  /** Set when a control inside the studio already handled the key, such as the ink toolbar's own ⌘Z. */
+  readonly defaultPrevented?: boolean | undefined;
 };
 /** A DOM KeyboardEvent, a React synthetic event or a React Native key event. */
 export type ShortcutKeyEvent = KeyFields & {
@@ -88,7 +90,7 @@ export type ShortcutHandlers = {
 /** Run the shortcut an event asks for. Returns true and stops the browser's own action when it ran one. */
 export function dispatchStudioShortcut(event: ShortcutKeyEvent, apple: boolean, handlers: ShortcutHandlers): boolean {
   const shortcut = studioShortcut(event, apple);
-  if (!shortcut || isTextEntryTarget(field(event, 'target'))) return false;
+  if (!shortcut || field(event, 'defaultPrevented') || isTextEntryTarget(field(event, 'target'))) return false;
   const run = handlers[shortcut];
   if (!run) return false;
   event.preventDefault?.();
