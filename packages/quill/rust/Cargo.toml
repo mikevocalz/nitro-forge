@@ -10,7 +10,7 @@ ignition-core = { workspace = true }
 serde = { workspace = true, features = ["rc"] }
 serde_json = { workspace = true }
 zip = { version = "9.9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
-quick-xml = "0.37"
+quick-xml = "0.42"
 unicode-normalization = "=0.1.25"
 # Font metrics backend (P-font-glyph-backend-decision, option c/a):
 # skrifa/read-fonts parse host-supplied font bytes for deterministic

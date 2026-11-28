@@ -9,7 +9,9 @@ use std::{collections::BTreeMap, sync::Arc};
 fn bad(s: &str) -> EngineError {
     EngineError::validation(s)
 }
-fn name(v: &[u8]) -> &[u8] {
+/// Local part of a qualified name, as bytes so callers match byte literals.
+fn name(v: &str) -> &[u8] {
+    let v = v.as_bytes();
     v.rsplit(|b| *b == b':').next().unwrap_or(v)
 }
 fn attr(e: &BytesStart, key: &[u8]) -> Result<Option<String>, EngineError> {
@@ -17,7 +19,7 @@ fn attr(e: &BytesStart, key: &[u8]) -> Result<Option<String>, EngineError> {
         let a = a.map_err(|_| bad("invalid numbering attribute"))?;
         if name(a.key.as_ref()) == key {
             return Ok(Some(
-                a.unescape_value()
+                crate::docx::unescaped_value(&a)
                     .map_err(|_| bad("invalid numbering attribute value"))?
                     .into_owned(),
             ));
@@ -204,7 +206,7 @@ pub fn parse(xml: &str) -> Result<BTreeMap<u64, Parsed>, EngineError> {
             Event::Eof => break,
             Event::Start(e) | Event::Empty(e) => {
                 let qualified = e.name();
-                if !qualified.as_ref().starts_with(b"w:") {
+                if !qualified.as_ref().starts_with("w:") {
                     return Err(EngineError::unsupported(
                         "numbering requires admitted w namespace prefix",
                     ));
@@ -212,9 +214,9 @@ pub fn parse(xml: &str) -> Result<BTreeMap<u64, Parsed>, EngineError> {
                 if name(qualified.as_ref()) == b"numbering"
                     && !e.attributes().any(|a| {
                         a.is_ok_and(|a| {
-                            a.key.as_ref() == b"xmlns:w"
-                            && a.value.as_ref()
-                                == b"http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            a.key.as_ref() == "xmlns:w"
+                                && a.value
+                                    == "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
                         })
                     })
                 {
@@ -235,7 +237,7 @@ pub fn parse(xml: &str) -> Result<BTreeMap<u64, Parsed>, EngineError> {
                 };
                 for a in e.attributes() {
                     let a = a.map_err(|_| bad("invalid/duplicate numbering attribute"))?;
-                    if a.key.as_ref().starts_with(b"xmlns") {
+                    if a.key.as_ref().starts_with("xmlns") {
                         if tag != b"numbering" {
                             return Err(EngineError::unsupported(
                                 "nested numbering namespace declarations unsupported",
@@ -243,7 +245,7 @@ pub fn parse(xml: &str) -> Result<BTreeMap<u64, Parsed>, EngineError> {
                         }
                         continue;
                     }
-                    if !a.key.as_ref().starts_with(b"w:") {
+                    if !a.key.as_ref().starts_with("w:") {
                         return Err(EngineError::unsupported(
                             "unsupported numbering attribute namespace",
                         ));
@@ -486,9 +488,16 @@ pub fn parse(xml: &str) -> Result<BTreeMap<u64, Parsed>, EngineError> {
                 }
                 _ => {}
             },
+            // Only whitespace may sit between numbering elements. References
+            // arrive as their own events; a whitespace character reference
+            // is allowed as it was when 0.37 folded it into the text.
             Event::Text(e) => {
-                if !e
-                    .unescape()
+                if !e.trim().is_empty() {
+                    return Err(bad("unexpected text in numbering definitions"));
+                }
+            }
+            Event::GeneralRef(g) => {
+                if !crate::docx::general_ref_text(&g)
                     .map_err(|_| bad("invalid numbering text"))?
                     .trim()
                     .is_empty()
