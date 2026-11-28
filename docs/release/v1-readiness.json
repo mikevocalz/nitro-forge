@@ -120,9 +120,9 @@
       "acceptance": [
         "For each studio package: in a new Expo app, install from release tarballs, add the config plugin, prebuild, and open, edit, save, reopen and undo a document on iOS and Android. No hand-edited native files. Add a clean-consumer smoke job like Tron's `consumer-smoke.mjs` and run it in CI against the produced tarballs."
       ],
-      "status": "not-started",
-      "statusReason": "Forge produces no release tarballs yet and has no clean-consumer smoke job. examples/native-cadence consumes workspace sources, not tarballs.",
-      "evidence": null,
+      "status": "in-progress",
+      "statusReason": "2026-11-28: draft PR #88 adds the candidate packer (tooling/release/pack-candidate.mjs), the clean-consumer smoke (tooling/release/consumer-smoke.mjs) and the Forge clean tarball consumer workflow with Maestro flows on iOS and Android. At f1b5b48 (run 43603701341) both native jobs and all 13 workflows succeeded; the earlier iOS timeout at 722a2fe came from picker centering at the scroll boundary and was fixed in f1b5b48. The branch was merged with master (#95, #96) at cafeefc; that merged source has no native CI result yet. Independent R2 source/runtime/visual/license review and final F1 graph reconciliation are still required. Not passed.",
+      "evidence": "docs/release/evidence/2026-11-28-f6-master-merge/README.md",
       "commit": null,
       "reviewer": null,
       "reviewedAt": null
