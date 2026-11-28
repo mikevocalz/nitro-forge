@@ -136,7 +136,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         </FieldGroup></View>}
         {id === 'actions' && <>
           <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 19 }}>Run an operation on this document.</Text>
-          {props.actions.map(item => <View key={item.title} style={{ backgroundColor: colors.base, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control }}>
+          {props.actions.map(item => <View key={item.title} style={{ backgroundColor: colors.base, borderWidth: 1, borderColor: colors.controlBorder, borderRadius: scale.radius.control }}>
             {button(item.title, () => { void perform(item.title, item.run); }, false, props.busy)}
           </View>)}
         </>}
@@ -166,13 +166,13 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     if (!panels.length) return null;
     const active = panels.includes(layout.activeTabs[dock] ?? '') ? layout.activeTabs[dock]! : panels[0]!;
     return <View key={dock} testID={`dock-${dock}`} style={[{ minHeight: 0, padding: scale.space.element, backgroundColor: colors.deep }, style]}>
-      <View style={{ flex: 1, minHeight: 0, borderColor: colors.line, borderWidth: 1, borderRadius: scale.radius.panel, overflow: 'hidden', backgroundColor: colors.raised }}>
+      <View style={{ flex: 1, minHeight: 0, borderColor: colors.controlBorder, borderWidth: 1, borderRadius: scale.radius.panel, overflow: 'hidden', backgroundColor: colors.raised }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: scale.space.stack + 1, borderBottomWidth: 1, borderBottomColor: colors.line }}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <TabBar semantics="tabs" density="compact" aria-label={`${dock} dock panels`} tone="royal" className="rounded-sm overflow-hidden" tabs={panels.map(id => ({
               key: id, label: panelNames[id] ?? id, active: active === id,
               onPress: () => action(id, 'activate'),
-              icon: <ForgeIcon name={panelIcons[id] ?? 'file'} size={17} color={active === id ? '#FFFFFF' : colors.muted} reducedMotion={reducedMotion} />,
+              icon: <ForgeIcon name={panelIcons[id] ?? 'file'} size={17} color={active === id ? colors.ink : colors.muted} reducedMotion={reducedMotion} />,
             }))} />
           </View>
           {!arranging && button(`Hide ${panelNames[active]}`, () => action(active, 'collapse'), false, false, true, true, 'close')}
@@ -251,7 +251,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         {dockView('right', { width: `${layout.sizes.rightFraction * 100}%` })}
         {/* Sized by its buttons, so grown text widens the column and the stage gives way, rather than the buttons spilling over the stage. */}
         {canvasStudio && !compact && <View accessibilityLabel="Studio panels" style={{ minWidth: scale.size.canvasRail, paddingHorizontal: 3, alignItems: 'center', gap: scale.space.stack, paddingTop: scale.space.inset, backgroundColor: colors.deep }}>
-          <View style={{ paddingVertical: 4, gap: 2, backgroundColor: colors.base, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control }}>
+          <View style={{ paddingVertical: 4, gap: 2, backgroundColor: colors.base, borderWidth: 1, borderColor: colors.controlBorder, borderRadius: scale.radius.control }}>
             {(['properties', 'actions', 'history'] as const).map(id => button(panelNames[id]!, () => action(id, layout.collapsed.includes(id) ? 'activate' : 'collapse'), !layout.collapsed.includes(id), false, true, true, panelIcons[id]))}
           </View>
         </View>}
@@ -259,7 +259,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
       {dockView('bottom', { height: `${layout.sizes.bottomFraction * 100}%` })}
       {layout.floating.filter(f => !layout.collapsed.includes(f.panelId)).map(f => <View key={f.panelId} style={{ position: 'absolute', left: `${f.rect.x * 100}%`, top: `${f.rect.y * 100}%`, width: `${f.rect.width * 100}%`, height: `${f.rect.height * 100}%`, borderWidth: 1, borderColor: colors.accent, borderRadius: scale.radius.panel, overflow: 'hidden' }}>{renderPanel(f.panelId)}</View>)}
       {drag?.preview && <View pointerEvents="none" testID="dock-preview" style={{ position: 'absolute', left: drag.preview.rect.x - hostRect.current.x, top: drag.preview.rect.y - hostRect.current.y, width: drag.preview.rect.width, height: drag.preview.rect.height, backgroundColor: colors.accent + '30', borderColor: colors.accent, borderWidth: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: colors.text }}>Dock {drag.preview.dock}</Text></View>}
-      {drag && <View style={{ position: 'absolute', alignSelf: 'center', top: 8, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.accent }}>{button('Cancel move', () => store.getState().cancelDrag())}</View>}
+      {drag && <View style={{ position: 'absolute', alignSelf: 'center', top: 8, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.accent, borderRadius: scale.radius.control }}>{button('Cancel move', () => store.getState().cancelDrag())}</View>}
     </View>
     </View>
     {compact && !canvasStudio && <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.base, paddingBottom: 6 }}>
@@ -268,7 +268,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         <Text style={{ color: layout.collapsed.includes(id) ? colors.muted : colors.accent, fontSize: scale.type.micro }}>{id === 'properties' ? 'Inspect' : id === 'actions' ? 'Tools' : panelNames[id]}</Text>
       </View>)}
     </View>}
-    {(!canvasStudio || props.error || layoutError || /complete|generated|failed|…/.test(status)) && <View style={{ minHeight: scale.size.status, paddingHorizontal: scale.space.group, paddingVertical: scale.space.element / 2 + 2, borderTopWidth: 1, borderTopColor: colors.line, ...(canvasStudio ? { position: 'absolute', left: 76, right: 76, bottom: 84, zIndex: 20, backgroundColor: colors.raised, borderRadius: scale.radius.control, borderWidth: 1, borderColor: colors.line, boxShadow: '0 4px 16px #00000030' } : {}) }}>
+    {(!canvasStudio || props.error || layoutError || /complete|generated|failed|…/.test(status)) && <View style={{ minHeight: scale.size.status, paddingHorizontal: scale.space.group, paddingVertical: scale.space.element / 2 + 2, borderTopWidth: 1, borderTopColor: colors.line, ...(canvasStudio ? { position: 'absolute', left: 76, right: 76, bottom: 84, zIndex: 20, backgroundColor: colors.raised, borderRadius: scale.radius.control, borderWidth: 1, borderColor: colors.controlBorder, boxShadow: '0 4px 16px #00000030' } : {}) }}>
       {props.error || layoutError ? <ErrorMessage surface="night" message={props.error || layoutError || ''} /> : <Text accessibilityLiveRegion="polite" selectable style={{ color: colors.muted, fontSize: 11 }}>{status}</Text>}
     </View>}
   </View>;

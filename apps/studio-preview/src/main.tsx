@@ -216,7 +216,7 @@ function App() {
       { id: 'desktop', title: 'Desktop · full' }, { id: 'tablet', title: 'Tablet · 768px' },
       { id: 'split', title: 'Split view · 724px' }, { id: 'phone', title: 'Phone · 390px' },
     ]} onAction={value => { if (value === 'desktop' || value === 'tablet' || value === 'split' || value === 'phone') store.setState({ hostWidth: value }); }}>
-      <View style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: theme === 'dark' ? '#ADB3C4' : '#687287', fontSize: 11 }}>Preview</Text></View>
+      <View style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: workspaceThemes[theme].muted, fontSize: 11 }}>Preview</Text></View>
     </Menu>{themeToggle}
   </Page>;
   const lab = route.startsWith('#/lab/turret') ? <TurretLab/> : isPrismComparisonRoute() ? <PrismComparison/> : isComposerLabRoute() ? <ComposerLab theme={theme}/> : null;
