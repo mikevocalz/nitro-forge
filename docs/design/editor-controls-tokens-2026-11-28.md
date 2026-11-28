@@ -1,10 +1,11 @@
 # Editor-controls tokens (2026-11-28)
 
-`packages/editor-controls/src` had 2,320 values that `tooling/codemod/check-no-hardcoded.mjs`
-reports as hard-coded. That is 2,280 under the gate as it was, plus 40 in the logical properties
-`start`, `end`, `paddingStart` and the like, which this branch adds to the gate. Each now reads from
-a token, except 11 that are allowlisted below with a reason each. No package or file exemption was added. The gate reports 75 findings across the repo,
-all allowlisted, with 0 violations and 0 stale entries.
+Under the gate as this branch leaves it, `packages/editor-controls/src` had 2,298 values that
+`tooling/codemod/check-no-hardcoded.mjs` reports as hard-coded. Under the gate as it was, the count
+was 2,280; [Gate changes](#gate-changes) explains the difference. Each value now reads from a token,
+except 21 that are allowlisted with a reason each, in 19 entries. No package or file exemption was
+added. Across the repo the gate reports 85 findings, all allowlisted, with 0 violations and 0 stale
+entries.
 
 Branch `design/editor-controls-tokens`. It starts from draft PR #91 (`agent-native-20261119`) and
 merges draft PR #94 (radius, `claude/blissful-faraday-5jovmd`) first, so the counts below are
@@ -67,6 +68,15 @@ copy drifts.
    - A border wider than the border scale draws a shape (a CSS triangle or a ring), so it takes the
      spacing scale.
 6. **New tokens only where no role exists.** Each new token is named by role, not by value.
+7. **Only lengths become tokens.** Some literals are not lengths even though the gate reports them
+   or a token has the same value. Those stay literals:
+   - a unit `1` in a fraction or count: `(1 - t) * length`, `(x + 1) / 2`, `(last - first + 1) * row`;
+   - a factor: `LEAD * 2`, or `inner * 2` for a diameter;
+   - a percentage: `(t.position * 100) + "%"`;
+   - data that is not a style: a probe plot, a normalised crop rect, a document default, or a
+     `{start, end}` range.
+
+   The gate stops reporting the unit `1`. The rest are allowlisted.
 
 ## Counts
 
@@ -74,14 +84,14 @@ Whole repo, from `node tooling/codemod/check-no-hardcoded.mjs`:
 
 | | Findings | Allowed | Violations | Stale entries |
 |---|---:|---:|---:|---:|
-| Before (after the PR #94 merge) | 2,345 | 64 | 2,281 | 4 |
-| After | 75 | 75 | 0 | 0 |
+| Before (after the PR #94 merge, gate as it was) | 2,345 | 64 | 2,281 | 4 |
+| After | 85 | 85 | 0 | 0 |
 
 By package and kind (findings; violations in brackets):
 
 | Package | Kind | Before | After |
 |---|---|---:|---:|
-| editor-controls | number | 2,259 (2,259) | 11 (0) |
+| editor-controls | number | 2,259 (2,259) | 21 (0) |
 | editor-controls | prop | 16 (16) | 0 |
 | editor-controls | colour | 4 (4) | 0 |
 | editor-controls | tailwind | 1 (1) | 0 |
@@ -89,10 +99,22 @@ By package and kind (findings; violations in brackets):
 | studio-workspace | prop / colour / offset / tailwind | 20 / 1 / 4 / 1 (0) | 20 / 1 / 4 / 1 (0) |
 | audio-ui, media-ui, pitch | prop, number | 5 (0) | 5 (0) |
 
-The "before" rows use the gate as it was. Adding the logical properties (`start`, `end`,
-`marginStart`, `marginEnd`, `paddingStart`, `paddingEnd`, `borderStartWidth`, `borderEndWidth`) to
-`STYLE_PROPS` in `tooling/codemod/lib.mjs` found 40 more in editor-controls and none in any other
-package. All 40 were rewritten to tokens with the same value.
+### Gate changes
+
+The "before" rows use the gate as it was. This branch changes the gate in two ways, both in
+`tooling/codemod/lib.mjs`. Neither changes the count in any package except editor-controls.
+
+- **The logical properties are now covered.** `marginStart`, `marginEnd`, `paddingStart`,
+  `paddingEnd`, `borderStartWidth` and `borderEndWidth` were missing from `STYLE_PROPS`. With them,
+  the gate reports 26 more in editor-controls. `start` and `end` were also tried but left out,
+  because waveform and timeline ranges use the same keys (`{start: 0, end: 1}`). The `start`/`end`
+  style values that run rewrote keep their tokens of identical value.
+- **A unit `1` in a factor is no longer reported.** This is the `1` in `(1 - t) * length`,
+  `(x + 1) / 2` or `(n + 1) * row`. It is a fraction or a count, the same reasoning as the existing
+  `x / 2` exemption. 8 fewer findings in editor-controls.
+
+Under the final gate, editor-controls goes from 2,298 findings (2,277 number, 16 prop, 4 colour,
+1 tailwind) to 21, all allowlisted.
 
 The 4 stale entries were left behind by PR #94, which removed the radius literals they covered. The
 merge commit removes them.
@@ -101,12 +123,17 @@ Editor-controls before, by property (number kind):
 
 gap 621, height 313, width 264, top 110, opacity 101, paddingHorizontal 98, minHeight 98, padding 88, left 73, fontSize 72, minWidth 71, borderWidth 62, paddingVertical 56, bottom 20, maxHeight 20, lineHeight 19, zIndex 18, borderRadius 18, fontWeight 17, right 14, flexBasis 11, paddingTop 9, borderBottomWidth 9, borderLeftWidth 9, columnGap 8, rowGap 8, marginLeft 7, borderRightWidth 7, marginTop 6, paddingBottom 6, marginHorizontal 6, borderTopWidth 6, maxWidth 4, marginBottom 3, paddingLeft 3, margin 1, paddingRight 1, marginVertical 1, marginRight 1.
 
-Rewrite totals from the codemod (`tooling/codemod/tokenize-editor-controls.mjs --write`, run twice:
-once before the logical properties were added to the gate, and once after):
+Rewrite totals from the codemod (`tooling/codemod/tokenize-editor-controls.mjs --write`):
 
-- 2,302 literals rewritten. With `tokens.ts`, 303 files in `packages/editor-controls/src` change.
-- 2,102 keep their exact value; 200 are snapped.
-- By role: spacing 1965, opacity 98, border 93, type 70, leading 18, layer 18, radius 18, weight 17, icon 3, override 2.
+- The first run rewrote 2,262 literals: 2,062 exact and 200 snapped.
+- The run over the logical properties rewrote 40, all exact.
+- Code review then put 23 back as literals: 21 exact and 2 snapped. They were fractions, factors,
+  percentages and data (rule 7). One of them, the spectrogram marker, was a real rendering bug:
+  `(t.position * 100) + "%"` had snapped to 96 percent.
+- That leaves 2,279 rewrites: 2,081 exact and 198 snapped. Counting `tokens.ts`, 299 files in
+  `packages/editor-controls/src` change. A dry run of the codemod on this branch rewrites 0 and
+  skips the 21 allowlisted sites.
+- By role, before the review: spacing 1965, opacity 98, border 93, type 70, leading 18, layer 18, radius 18, weight 17, icon 3, override 2.
 
 Hand fixes covered the 4 colours, the 1 Tailwind arbitrary value and 2 opacity sites that were
 arithmetic. They also snapped one studio-workspace value, listed below.
@@ -122,7 +149,7 @@ references whose old literal differed from the value. Studio-workspace reference
 | Token | Value | References | Of which snapped |
 |---|---:|---:|---:|
 | `tokens.spacing.off1_5` | 1.5 | 17 | 2 |
-| `tokens.spacing.off2` | 2 | 119 | 0 |
+| `tokens.spacing.off2` | 2 | 115 | 0 |
 | `tokens.spacing.off3` | 3 | 25 | 0 |
 | `tokens.spacing.fixedStack` | 4 | 175 | 0 |
 | `tokens.spacing.off5` | 5 | 15 | 0 |
@@ -150,7 +177,7 @@ references whose old literal differed from the value. Studio-workspace reference
 | `tokens.spacing.fixedPage` | 64 | 12 | 0 |
 | `tokens.spacing.fixedRail` | 72 | 5 | 0 |
 | `tokens.spacing.off76` | 76 | 9 | 7 |
-| `tokens.spacing.off96` | 96 | 16 | 9 |
+| `tokens.spacing.off96` | 96 | 14 | 7 |
 | `tokens.spacing.off104` | 104 | 2 | 1 |
 | `tokens.spacing.off360` | 360 | 8 | 2 |
 | `tokens.spacing.off480` | 480 | 4 | 2 |
@@ -207,7 +234,7 @@ references whose old literal differed from the value. Studio-workspace reference
 
 | Token | Value | References | Of which snapped |
 |---|---:|---:|---:|
-| `tokens.borderWidth.hairline` | 1 | 135 | 0 |
+| `tokens.borderWidth.hairline` | 1 | 118 | 0 |
 | `tokens.borderWidth.off1_5` | 1.5 | 7 | 0 |
 | `tokens.borderWidth.strong` | 2 | 48 | 0 |
 | `tokens.borderWidth.off3` | 3 | 7 | 0 |
@@ -257,7 +284,7 @@ role, so each is named by role and used only in editor-controls.
 
 ## Snapped values
 
-200 snaps from the codemod and 5 from hand fixes, for owner review.
+198 snaps from the codemod and 5 from hand fixes, for owner review.
 
 ### Hand fixes
 
@@ -288,12 +315,12 @@ workspace's 0.52 (74 sites). Disabled controls now dim by the same amount everyw
 | 0.45 | 0.52 | `tokens.opacity.disabled` | 50 |
 | 220 | 240 | `controlTokens.extent.preview` | 9 |
 | 16 | 15 | `tokens.text.off15` | 9 |
-| 100 | 96 | `tokens.spacing.off96` | 8 |
 | 0.4 | 0.52 | `tokens.opacity.disabled` | 7 |
 | 80 | 76 | `tokens.spacing.off76` | 7 |
 | 300 | 320 | `controlTokens.extent.list` | 6 |
 | 30 | 32 | `tokens.spacing.fixedCanvas` | 6 |
 | 56 | 52 | `tokens.spacing.fixedToolbar` | 6 |
+| 100 | 96 | `tokens.spacing.off96` | 6 |
 | 9 | 8 | `tokens.spacing.fixedElement` | 5 |
 | 36 | 33 | `tokens.spacing.off33` | 5 |
 | .5 | 0.52 | `tokens.opacity.disabled` | 4 |
@@ -397,8 +424,6 @@ Line numbers are in this branch's files.
 | audio/PluginPresetBrowser.tsx | 128 | opacity | 0.45 | 0.52 | `tokens.opacity.disabled` | disabled or unavailable state |
 | audio/PluginPresetBrowser.tsx | 149 | opacity | 0.45 | 0.52 | `tokens.opacity.disabled` | disabled or unavailable state |
 | audio/SoloMuteButtons.tsx | 89 | opacity | 0.45 | 0.52 | `tokens.opacity.disabled` | disabled or unavailable state |
-| audio/SpectrogramView.tsx | 131 | right | 100 | 96 | `tokens.spacing.off96` | nearest spacing step |
-| audio/SpectrogramView.tsx | 132 | left | 100 | 96 | `tokens.spacing.off96` | nearest spacing step |
 | audio/TempoAndMetronome.tsx | 120 | opacity | 0.45 | 0.52 | `tokens.opacity.disabled` | disabled or unavailable state |
 | cad/BakingMapPanel.tsx | 13 | height | 260 | 240 | `controlTokens.extent.preview` | nearest spacing step |
 | cad/DimensionsAndHatching.tsx | 12 | height | 260 | 240 | `controlTokens.extent.preview` | nearest spacing step |
@@ -551,8 +576,8 @@ Line numbers are in this branch's files.
 
 ## Allowlist entries added
 
-Each is in `tooling/codemod/allowlist.json` with the reason below. Each matches on file, kind,
-property and value, not on a line. The other 57 entries are unchanged and cover packages outside
+19 entries cover 21 findings. Each is in `tooling/codemod/allowlist.json` with the reason below.
+Each matches on file, kind, property and value, not on a line. The other 57 entries are unchanged and cover packages outside
 this pass. 4 stale radius entries were removed.
 
 | File | Property | Value | Count | Reason |
@@ -567,6 +592,23 @@ this pass. 4 stale radius entries were removed.
 | `photo/photo-export.ts` | fontSize | 24 | 1 | Default watermark text size in the photo export settings: document data for the exporter, not a view style. |
 | `slides/slide-model.ts` | width | 960 | 1 | Default slide width of the slide document model (960 x 540): document data, not a view style. |
 | `slides/slide-model.ts` | height | 540 | 1 | Default slide height of the slide document model (960 x 540): document data, not a view style. |
+| `audio/AutomationLane.tsx` | width | 2 | 1 | Factor, not a length: the lane is the visible width plus the lead-in on both sides (width + LEAD * 2). |
+| `audio/SpectrogramView.tsx` | right | 100 | 1 | Percentage, not a length: the end marker sits at (1 - position) * 100 percent of the strip, a string ending in %. |
+| `audio/SpectrogramView.tsx` | left | 100 | 1 | Percentage, not a length: the marker sits at position * 100 percent of the strip, a string ending in %. |
+| `audio/eq-graph.ts` | width | 1 | 2 | Data the gate reads as style: a 1-wide probe plot passed to assertPlot to validate height and range, not a view. |
+| `canvas/GuidedCropAndStraighten.tsx` | width | 1 | 1 | Data the gate reads as style: the reset crop rect is the full normalised image (0, 0, 1, 1), not a view size. |
+| `canvas/GuidedCropAndStraighten.tsx` | height | 1 | 1 | Data the gate reads as style: the reset crop rect is the full normalised image (0, 0, 1, 1), not a view size. |
+| `color/ColorWheel.tsx` | width | 2 | 1 | Factor, not a length: the inner disc is a circle of radius inner, so its width is inner * 2. |
+| `color/ColorWheel.tsx` | height | 2 | 1 | Factor, not a length: the inner disc is a circle of radius inner, so its height is inner * 2. |
+| `vector/fill-stroke-model.ts` | width | 2 | 1 | Data the gate reads as style: the default stroke width of a vector document stroke, not a view style. |
+
+There are four groups:
+
+- **Glyph proportions** (7 findings).
+- **Document data** (4): photo export, slide model.
+- **Data the gate reads as style** (5): the EQ probe plot, the reset crop rect, the default vector
+  stroke.
+- **Factors and percentages** (5): `LEAD * 2`, `inner * 2`, `position * 100%`.
 
 The glyph entries are proportions, `size * k`. They draw a play triangle, pause bars and a knob
 pointer at any size. Tokenizing the factor would give a token that is not a length. Snapping it
@@ -577,7 +619,7 @@ renders them as styles.
 ## Re-running
 
 ```sh
-node tooling/codemod/tokenize-editor-controls.mjs          # dry run; on this branch it rewrites 0 and skips the 11 allowlisted sites
+node tooling/codemod/tokenize-editor-controls.mjs          # dry run; on this branch it rewrites 0 and skips the 21 allowlisted sites
 node tooling/codemod/check-no-hardcoded.mjs
 node tooling/check-token-mirror.mjs
 node tooling/check-radius.mjs
