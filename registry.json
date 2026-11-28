@@ -1,0 +1,926 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "nitro-forge",
+  "homepage": "https://github.com/mikevocalz/nitro-forge",
+  "items": [
+    {
+      "name": "studio-ui-provider",
+      "type": "registry:lib",
+      "title": "Studio UI Provider",
+      "description": "Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.",
+      "files": [
+        {
+          "path": "tooling/registry/stage/studio-ui-provider/ui.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/ui.tsx"
+        }
+      ],
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/studio-ui-provider.md",
+        "category": "shell",
+        "a11yStatus": "reviewed-pass",
+        "needsProvider": false,
+        "sourceFiles": [
+          "packages/studio-workspace/src/ui.tsx"
+        ],
+        "platforms": [
+          "ios",
+          "android",
+          "web"
+        ]
+      }
+    },
+    {
+      "name": "studio-theme",
+      "type": "registry:lib",
+      "title": "Studio Theme",
+      "description": "Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both.",
+      "files": [
+        {
+          "path": "tooling/registry/stage/studio-theme/theme.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/theme.ts"
+        },
+        {
+          "path": "tooling/registry/stage/studio-theme/theme.css",
+          "type": "registry:file",
+          "target": "@components/forge/theme.css"
+        },
+        {
+          "path": "tooling/registry/stage/studio-theme/theme.native.css",
+          "type": "registry:file",
+          "target": "@components/forge/theme.native.css"
+        }
+      ],
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/studio-theme.md",
+        "category": "primitive",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": false,
+        "sourceFiles": [
+          "packages/studio-workspace/src/theme.ts",
+          "packages/studio-workspace/src/theme.css",
+          "packages/studio-workspace/src/theme.native.css"
+        ],
+        "platforms": [
+          "ios",
+          "android",
+          "web"
+        ],
+        "a11yFailures": [
+          "N01 1.4.3: light muted 4.43:1 on base, 4.01:1 on deep (theme.ts:7)",
+          "N02 1.4.3: paperMuted 3.98:1 on paper (theme.ts:6-7)",
+          "N06 1.4.11: --color-border 1.2 to 1.54:1 where it is the only edge (theme.ts:6-7)"
+        ]
+      }
+    },
+    {
+      "name": "brand-theme",
+      "type": "registry:lib",
+      "title": "Brand Theme",
+      "description": "Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.",
+      "registryDependencies": [
+        "@nitro-forge/studio-theme"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/brand-theme/brand-theme.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/brand-theme.ts"
+        },
+        {
+          "path": "tooling/registry/stage/brand-theme/brand.theme.schema.json",
+          "type": "registry:file",
+          "target": "@components/forge/brand.theme.schema.json"
+        },
+        {
+          "path": "tooling/registry/stage/brand-theme/brand.theme.json",
+          "type": "registry:file",
+          "target": "@components/forge/brand.theme.json"
+        }
+      ],
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/brand-theme.md",
+        "category": "primitive",
+        "a11yStatus": "unverified",
+        "needsProvider": false,
+        "sourceFiles": [
+          "tooling/registry/theme/brand-theme.ts",
+          "tooling/registry/theme/brand.theme.schema.json",
+          "tooling/registry/theme/brand.theme.example.json"
+        ]
+      }
+    },
+    {
+      "name": "forge-directions",
+      "type": "registry:lib",
+      "title": "Forge Directions",
+      "description": "Theme: workbench, optics and atelier palettes for Prism chrome and the persona turret, plus WCAG contrast helpers. Needs studio-theme.",
+      "registryDependencies": [
+        "@nitro-forge/studio-theme",
+        "@nitro-forge/instrument-system"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/forge-directions/forge-directions.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/forge-directions.ts"
+        },
+        {
+          "path": "tooling/registry/stage/forge-directions/tokens.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/tokens.ts"
+        }
+      ],
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/forge-directions.md",
+        "category": "forge",
+        "a11yStatus": "reviewed-pass",
+        "needsProvider": false,
+        "sourceFiles": [
+          "packages/studio-workspace/src/forge-directions.ts",
+          "packages/studio-workspace/src/tokens.ts"
+        ]
+      }
+    },
+    {
+      "name": "forge-document-stage",
+      "type": "registry:ui",
+      "title": "Forge Document Stage",
+      "description": "Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout.",
+      "registryDependencies": [
+        "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/forge-directions"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/forge-document-stage/stage.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/stage.tsx"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-ui-provider (StudioUIProvider) and a host such as nyc-tron-host. Every studio component throws without it. See docs/agent-native/install-order.md step 7.\nNeeds @nitro-forge/studio-layout first (step 3 of docs/agent-native/install-order.md). shadcn cannot install it.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/forge-document-stage.md",
+        "category": "display",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": true,
+        "sourceFiles": [
+          "packages/studio-workspace/src/stage.tsx"
+        ],
+        "a11yFailures": [
+          "N03 1.4.3: #798373 on #f7f5ed 3.63:1 and #637161 on #e5e9dd 4.19:1, both 12 pt (stage.tsx:30,40)",
+          "N13 1.3.1: Tally grid is Text cells with no table, row or cell roles (stage.tsx:30-31)"
+        ],
+        "prerequisites": [
+          {
+            "id": "@nitro-forge/studio-layout",
+            "step": 3,
+            "installable": false,
+            "via": "direct import",
+            "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3)."
+          }
+        ]
+      }
+    },
+    {
+      "name": "forge-icon",
+      "type": "registry:ui",
+      "title": "Forge Icon",
+      "description": "Icon: outline when idle, filled when selected. 47 glyphs drawn; 42 of 1,463 catalog ids resolve to one; 6 drawn glyphs are not catalog ids. A name with no glyph renders nothing. Needs react-native-svg.",
+      "dependencies": [
+        "react-native-svg@15.16.0"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/forge-icon/icons/ForgeIcon.js",
+          "type": "registry:ui",
+          "target": "@components/forge/icons/ForgeIcon.js"
+        },
+        {
+          "path": "tooling/registry/stage/forge-icon/icons/state.js",
+          "type": "registry:lib",
+          "target": "@components/forge/icons/state.js"
+        },
+        {
+          "path": "tooling/registry/stage/forge-icon/icons/tokens.js",
+          "type": "registry:lib",
+          "target": "@components/forge/icons/tokens.js"
+        },
+        {
+          "path": "tooling/registry/stage/forge-icon/icons/glyphs.js",
+          "type": "registry:lib",
+          "target": "@components/forge/icons/glyphs.js"
+        },
+        {
+          "path": "tooling/registry/stage/forge-icon/icons/catalog.js",
+          "type": "registry:lib",
+          "target": "@components/forge/icons/catalog.js"
+        },
+        {
+          "path": "tooling/registry/stage/forge-icon/icons/ForgeIcon.d.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/icons/ForgeIcon.d.ts"
+        },
+        {
+          "path": "tooling/registry/stage/forge-icon/icons/index.d.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/icons/index.d.ts"
+        },
+        {
+          "path": "tooling/registry/stage/forge-icon/icons/index.js",
+          "type": "registry:lib",
+          "target": "@components/forge/icons/index.js"
+        }
+      ],
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/forge-icon.md",
+        "category": "primitive",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": false,
+        "sourceFiles": [
+          "packages/icons/src/ForgeIcon.js",
+          "packages/icons/src/state.js",
+          "packages/icons/src/tokens.js",
+          "packages/icons/src/glyphs.js",
+          "packages/icons/src/catalog.js",
+          "packages/icons/src/ForgeIcon.d.ts",
+          "packages/icons/src/index.d.ts",
+          "packages/icons/src/index.js"
+        ],
+        "platforms": [
+          "ios",
+          "android",
+          "web"
+        ],
+        "a11yFailures": [
+          "N09 1.4.11: default appearance=light ink 1.02:1 on dark workspace base; default accent #6859E8 2.89:1 on dark raised (ForgeIcon.js:29, state.js)",
+          "N08 1.4.1: status success, error, recording change colour only and the glyph is hidden from assistive tech (state.js)"
+        ]
+      }
+    },
+    {
+      "name": "forge-icon-button",
+      "type": "registry:ui",
+      "title": "Forge Icon Button",
+      "description": "Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.",
+      "registryDependencies": [
+        "@nitro-forge/forge-icon"
+      ],
+      "files": [],
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/forge-icon-button.md",
+        "category": "input",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": false,
+        "sourceFiles": [],
+        "platforms": [
+          "ios",
+          "android",
+          "web"
+        ],
+        "a11yFailures": [
+          "N08 1.4.1, 4.1.2: status is not in accessibilityState or accessibilityValue (ForgeIcon.js:91-93)"
+        ]
+      }
+    },
+    {
+      "name": "forge-workspace",
+      "type": "registry:ui",
+      "title": "Forge Workspace",
+      "description": "Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout.",
+      "dependencies": [
+        "zustand@5.1.0"
+      ],
+      "registryDependencies": [
+        "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/studio-theme",
+        "@nitro-forge/forge-directions",
+        "@nitro-forge/forge-document-stage",
+        "@nitro-forge/forge-icon",
+        "@nitro-forge/persona-turret",
+        "@nitro-forge/quill-text-editor",
+        "@nitro-forge/studio-gesture",
+        "@nyc-tron/DragGrabHandle"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/forge-workspace/index.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/index.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/forge-workspace/model.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/model.ts"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-ui-provider (StudioUIProvider) and a host such as nyc-tron-host. Every studio component throws without it. See docs/agent-native/install-order.md step 7.\nNeeds @nitro-forge/studio-layout first (step 3 of docs/agent-native/install-order.md). shadcn cannot install it.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/forge-workspace.md",
+        "category": "shell",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": true,
+        "sourceFiles": [
+          "packages/studio-workspace/src/index.tsx",
+          "packages/studio-workspace/src/model.ts"
+        ],
+        "platforms": [
+          "ios",
+          "android",
+          "web"
+        ],
+        "a11yFailures": [
+          "N01 1.4.3: light muted #687287 on base 4.43:1 for 9 to 11 pt header, status and rail text (index.tsx:190,196)",
+          "N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:273)"
+        ],
+        "prerequisites": [
+          {
+            "id": "@nitro-forge/studio-layout",
+            "step": 3,
+            "installable": false,
+            "via": "direct import",
+            "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3)."
+          }
+        ]
+      }
+    },
+    {
+      "name": "instrument-system",
+      "type": "registry:lib",
+      "title": "Instrument System",
+      "description": "Instrument policy, not UI: 18 blueprints, precision scrubbing math, ruler ticks, motion budgets, overlay planner. No provider needed.",
+      "files": [
+        {
+          "path": "tooling/registry/stage/instrument-system/instrument-system.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/instrument-system.ts"
+        },
+        {
+          "path": "tooling/registry/stage/instrument-system/interaction-policy.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/interaction-policy.ts"
+        }
+      ],
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/instrument-system.md",
+        "category": "forge",
+        "a11yStatus": "reviewed-pass",
+        "needsProvider": false,
+        "sourceFiles": [
+          "packages/studio-workspace/src/instrument-system.ts",
+          "packages/studio-workspace/src/interaction-policy.ts"
+        ]
+      }
+    },
+    {
+      "name": "nyc-tron-host",
+      "type": "registry:lib",
+      "title": "NYC-Tron Host",
+      "description": "Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.",
+      "registryDependencies": [
+        "@nitro-forge/studio-ui-provider",
+        "@nyc-tron/Button",
+        "@nyc-tron/Card",
+        "@nyc-tron/FieldGroup",
+        "@nyc-tron/IconButton",
+        "@nyc-tron/List",
+        "@nyc-tron/SegmentedControl",
+        "@nyc-tron/Select",
+        "@nyc-tron/TabBar",
+        "@nyc-tron/Toolbar",
+        "@nyc-tron/content/KeyValueList",
+        "@nyc-tron/feedback/Badge",
+        "@nyc-tron/feedback/Banner",
+        "@nyc-tron/feedback/EmptyState",
+        "@nyc-tron/feedback/ErrorMessage",
+        "@nyc-tron/files/DropZone",
+        "@nyc-tron/overlays/AnchoredPopover",
+        "@nyc-tron/theme/NightScope"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/nyc-tron-host/nyc-tron-host.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/nyc-tron-host.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/nyc-tron-host/nyc-tron-options.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/nyc-tron-options.ts"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-ui-provider (StudioUIProvider) and a host such as nyc-tron-host. Every studio component throws without it. See docs/agent-native/install-order.md step 7.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/nyc-tron-host.md",
+        "category": "shell",
+        "a11yStatus": "unverified",
+        "needsProvider": true,
+        "sourceFiles": [
+          "packages/studio-workspace/src/nyc-tron-host.tsx",
+          "packages/studio-workspace/src/nyc-tron-options.ts"
+        ]
+      }
+    },
+    {
+      "name": "persona-composer",
+      "type": "registry:ui",
+      "title": "Persona Composer",
+      "description": "Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore.",
+      "dependencies": [
+        "react-native-svg@15.16.0",
+        "zustand@5.1.0"
+      ],
+      "registryDependencies": [
+        "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/studio-theme",
+        "@nitro-forge/forge-directions",
+        "@nitro-forge/forge-icon",
+        "@nitro-forge/instrument-system",
+        "@nitro-forge/persona-model",
+        "@nitro-forge/studio-gesture",
+        "@nyc-tron/DragGrabHandle"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/persona-composer/persona-composer.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/persona-composer.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/persona-composer/persona-composer-model.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/persona-composer-model.ts"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-ui-provider (StudioUIProvider) and a host such as nyc-tron-host. Every studio component throws without it. See docs/agent-native/install-order.md step 7.\nNeeds @nitro-forge/studio-layout first (step 3 of docs/agent-native/install-order.md). shadcn cannot install it.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/persona-composer.md",
+        "category": "forge",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": true,
+        "sourceFiles": [
+          "packages/studio-workspace/src/persona-composer.tsx",
+          "packages/studio-workspace/src/persona-composer-model.ts"
+        ],
+        "platforms": [
+          "ios",
+          "android",
+          "web"
+        ],
+        "a11yFailures": [
+          "N06 1.4.11: field borders c.line 1.16 to 1.78:1 against field ground and 1.37 to 1.57:1 against the panel (persona-composer.tsx:195,405,426)"
+        ],
+        "prerequisites": [
+          {
+            "id": "@nitro-forge/studio-layout",
+            "step": 3,
+            "installable": false,
+            "via": "registryDependencies",
+            "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3)."
+          }
+        ]
+      }
+    },
+    {
+      "name": "persona-model",
+      "type": "registry:lib",
+      "title": "Persona Model",
+      "description": "Persona data, not UI: 4 personas, 11 capabilities, 7 surfaces, compose, import, export, per-document store. No provider needed.",
+      "dependencies": [
+        "zustand@5.1.0"
+      ],
+      "registryDependencies": [
+        "@nitro-forge/instrument-system",
+        "@nitro-forge/workspace-utilities"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/persona-model/persona.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/persona.ts"
+        },
+        {
+          "path": "tooling/registry/stage/persona-model/persona-store.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/persona-store.ts"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-layout first (step 3 of docs/agent-native/install-order.md). shadcn cannot install it.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/persona-model.md",
+        "category": "forge",
+        "a11yStatus": "reviewed-pass",
+        "needsProvider": false,
+        "sourceFiles": [
+          "packages/studio-workspace/src/persona.ts",
+          "packages/studio-workspace/src/persona-store.ts"
+        ],
+        "prerequisites": [
+          {
+            "id": "@nitro-forge/studio-layout",
+            "step": 3,
+            "installable": false,
+            "via": "registryDependencies",
+            "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3)."
+          }
+        ]
+      }
+    },
+    {
+      "name": "persona-turret",
+      "type": "registry:ui",
+      "title": "Persona Turret",
+      "description": "Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions.",
+      "dependencies": [
+        "react-native-reanimated@^4.7.1",
+        "react-native-svg@15.16.0",
+        "zustand@5.1.0"
+      ],
+      "registryDependencies": [
+        "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/studio-theme",
+        "@nitro-forge/forge-directions",
+        "@nitro-forge/persona-model",
+        "@nitro-forge/studio-gesture"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/persona-turret/persona-turret.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/persona-turret.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/persona-turret/turret.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/turret.ts"
+        },
+        {
+          "path": "tooling/registry/stage/persona-turret/turret-motion.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/turret-motion.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/persona-turret/turret-motion.native.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/turret-motion.native.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/persona-turret/turret-motion-types.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/turret-motion-types.ts"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-ui-provider (StudioUIProvider) and a host such as nyc-tron-host. Every studio component throws without it. See docs/agent-native/install-order.md step 7.\nNeeds @nitro-forge/studio-layout first (step 3 of docs/agent-native/install-order.md). shadcn cannot install it.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/persona-turret.md",
+        "category": "forge",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": true,
+        "sourceFiles": [
+          "packages/studio-workspace/src/persona-turret.tsx",
+          "packages/studio-workspace/src/turret.ts",
+          "packages/studio-workspace/src/turret-motion.tsx",
+          "packages/studio-workspace/src/turret-motion.native.tsx",
+          "packages/studio-workspace/src/turret-motion-types.ts"
+        ],
+        "platforms": [
+          "ios",
+          "android",
+          "web"
+        ],
+        "a11yFailures": [
+          "N10 iOS 44 pt: stop targets scale to 0.85 of 44, 37.4 pt, in the narrow ring layout (persona-turret.tsx:399, turret.ts:150)"
+        ],
+        "prerequisites": [
+          {
+            "id": "@nitro-forge/studio-layout",
+            "step": 3,
+            "installable": false,
+            "via": "registryDependencies",
+            "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3)."
+          }
+        ]
+      }
+    },
+    {
+      "name": "prism-canvas",
+      "type": "registry:ui",
+      "title": "Prism Canvas",
+      "description": "Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture.",
+      "dependencies": [
+        "react-native-svg@15.16.0",
+        "zustand@5.1.0"
+      ],
+      "registryDependencies": [
+        "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/forge-directions",
+        "@nitro-forge/studio-gesture"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/prism-canvas/prism-canvas.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/prism-canvas.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/prism-canvas/prism-canvas-model.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/prism-canvas-model.ts"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-ui-provider (StudioUIProvider) and a host such as nyc-tron-host. Every studio component throws without it. See docs/agent-native/install-order.md step 7.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/prism-canvas.md",
+        "category": "forge",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": true,
+        "sourceFiles": [
+          "packages/studio-workspace/src/prism-canvas.tsx",
+          "packages/studio-workspace/src/prism-canvas-model.ts"
+        ],
+        "a11yFailures": [
+          "N04 1.4.3: Cancel move ghost label on #111827 chip 1.11:1 (chrome light) and 1.24:1 (reference light) (prism-canvas.tsx:96-97)"
+        ]
+      }
+    },
+    {
+      "name": "prism-editor",
+      "type": "registry:ui",
+      "title": "Prism Editor",
+      "description": "Vector canvas editor: shape tools, layers, transforms, personas. Needs ignition and editor-controls first, StudioUIProvider, @nyc-tron.",
+      "dependencies": [
+        "zustand@5.1.0"
+      ],
+      "registryDependencies": [
+        "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/studio-theme",
+        "@nitro-forge/forge-directions",
+        "@nitro-forge/forge-icon",
+        "@nitro-forge/persona-model",
+        "@nitro-forge/persona-turret",
+        "@nitro-forge/prism-canvas",
+        "@nitro-forge/studio-gesture",
+        "@nyc-tron/shell/PrecisionScrubber"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/prism-editor/prism-editor.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/prism-editor.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/prism-editor/prism-layers.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/prism-layers.ts"
+        },
+        {
+          "path": "tooling/registry/stage/prism-editor/prism-layer-label.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/prism-layer-label.ts"
+        },
+        {
+          "path": "tooling/registry/stage/prism-editor/prism-layout.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/prism-layout.ts"
+        },
+        {
+          "path": "tooling/registry/stage/prism-editor/prism-transform.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/prism-transform.ts"
+        },
+        {
+          "path": "tooling/registry/stage/prism-editor/rgba-png.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/rgba-png.ts"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-ui-provider (StudioUIProvider) and a host such as nyc-tron-host. Every studio component throws without it. See docs/agent-native/install-order.md step 7.\nNeeds @nitro-forge/editor-controls first (step 3 of docs/agent-native/install-order.md). shadcn cannot install it.\nNeeds @nitro-forge/ignition first (step 1 of docs/agent-native/install-order.md). shadcn cannot install it.\nNeeds @nitro-forge/studio-layout first (step 3 of docs/agent-native/install-order.md). shadcn cannot install it.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/prism-editor.md",
+        "category": "forge",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": true,
+        "sourceFiles": [
+          "packages/studio-workspace/src/prism-editor.tsx",
+          "packages/studio-workspace/src/prism-layers.ts",
+          "packages/studio-workspace/src/prism-layer-label.ts",
+          "packages/studio-workspace/src/prism-layout.ts",
+          "packages/studio-workspace/src/prism-transform.ts",
+          "packages/studio-workspace/src/rgba-png.ts"
+        ],
+        "platforms": [
+          "ios",
+          "android",
+          "web"
+        ],
+        "a11yFailures": [
+          "N05 1.4.11: light fill chips amber 1.98:1, rose 2.62:1, hairline 2.08:1 (prism-editor.tsx:444)"
+        ],
+        "prerequisites": [
+          {
+            "id": "@nitro-forge/editor-controls",
+            "step": 3,
+            "installable": false,
+            "via": "direct import",
+            "reason": "Private workspace package (packages/editor-controls) with no tarball. The editor controls moved there from NYC-Tron UI in #95. Do not take them from @nyc-tron/forge/*."
+          },
+          {
+            "id": "@nitro-forge/ignition",
+            "step": 1,
+            "installable": false,
+            "via": "direct import",
+            "reason": "Native host. shadcn copies files and cannot run nitrogen, pod install or CMake (decision 4)."
+          },
+          {
+            "id": "@nitro-forge/studio-layout",
+            "step": 3,
+            "installable": false,
+            "via": "registryDependencies",
+            "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3)."
+          }
+        ]
+      }
+    },
+    {
+      "name": "quill-text-editor",
+      "type": "registry:ui",
+      "title": "Quill Text Editor",
+      "description": "Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload.",
+      "dependencies": [
+        "zustand@5.1.0"
+      ],
+      "registryDependencies": [
+        "@nitro-forge/studio-ui-provider",
+        "@nitro-forge/studio-theme",
+        "@nitro-forge/forge-directions",
+        "@nitro-forge/forge-icon"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/quill-text-editor/text-editor.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/text-editor.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/quill-text-editor/text-diff.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/text-diff.ts"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-ui-provider (StudioUIProvider) and a host such as nyc-tron-host. Every studio component throws without it. See docs/agent-native/install-order.md step 7.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/quill-text-editor.md",
+        "category": "input",
+        "a11yStatus": "reviewed-fail",
+        "needsProvider": true,
+        "sourceFiles": [
+          "packages/studio-workspace/src/text-editor.tsx",
+          "packages/studio-workspace/src/text-diff.ts"
+        ],
+        "a11yFailures": [
+          "N02 1.4.3: placeholder paperMuted #797F8D on #FFFEFC 3.98:1 in both schemes (text-editor.tsx:151)",
+          "N01 1.4.3: word count muted on stage mat 4.01:1 in light (text-editor.tsx:140)"
+        ]
+      }
+    },
+    {
+      "name": "studio-gesture",
+      "type": "registry:ui",
+      "title": "Studio Gesture",
+      "description": "Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.",
+      "dependencies": [
+        "react-native-gesture-handler@^3.5.0"
+      ],
+      "registryDependencies": [
+        "@nyc-tron/gestures/GestureHandlerDrag",
+        "@nyc-tron/gestures/PanResponderDrag"
+      ],
+      "files": [
+        {
+          "path": "tooling/registry/stage/studio-gesture/studio-gesture.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/studio-gesture.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/studio-gesture/studio-gesture.native.tsx",
+          "type": "registry:ui",
+          "target": "@components/forge/studio-gesture.native.tsx"
+        },
+        {
+          "path": "tooling/registry/stage/studio-gesture/studio-gesture-types.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/studio-gesture-types.ts"
+        },
+        {
+          "path": "tooling/registry/stage/studio-gesture/keyboard-event.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/keyboard-event.ts"
+        },
+        {
+          "path": "tooling/registry/stage/studio-gesture/drag-transport.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/drag-transport.ts"
+        },
+        {
+          "path": "tooling/registry/stage/studio-gesture/drag-transport.native.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/drag-transport.native.ts"
+        }
+      ],
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/studio-gesture.md",
+        "category": "primitive",
+        "a11yStatus": "reviewed-pass",
+        "needsProvider": false,
+        "sourceFiles": [
+          "packages/studio-workspace/src/studio-gesture.tsx",
+          "packages/studio-workspace/src/studio-gesture.native.tsx",
+          "packages/studio-workspace/src/studio-gesture-types.ts",
+          "packages/studio-workspace/src/keyboard-event.ts",
+          "packages/studio-workspace/src/drag-transport.ts",
+          "packages/studio-workspace/src/drag-transport.native.ts"
+        ],
+        "platforms": [
+          "ios",
+          "android",
+          "web"
+        ]
+      }
+    },
+    {
+      "name": "workspace-utilities",
+      "type": "registry:lib",
+      "title": "Workspace Utilities",
+      "description": "Helpers, not UI: APP_MANIFESTS (task line, glyph, category per studio), jsonProblem (JSON parse error as a sentence). Needs studio-layout.",
+      "files": [
+        {
+          "path": "tooling/registry/stage/workspace-utilities/app-manifest.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/app-manifest.ts"
+        },
+        {
+          "path": "tooling/registry/stage/workspace-utilities/json-problem.ts",
+          "type": "registry:lib",
+          "target": "@components/forge/json-problem.ts"
+        }
+      ],
+      "docs": "Needs @nitro-forge/studio-layout first (step 3 of docs/agent-native/install-order.md). shadcn cannot install it.",
+      "meta": {
+        "tier": 1,
+        "docs": "handwritten",
+        "docsPath": "docs/components/workspace-utilities.md",
+        "category": "primitive",
+        "a11yStatus": "reviewed-pass",
+        "needsProvider": false,
+        "sourceFiles": [
+          "packages/studio-workspace/src/app-manifest.ts",
+          "packages/studio-workspace/src/json-problem.ts"
+        ],
+        "prerequisites": [
+          {
+            "id": "@nitro-forge/studio-layout",
+            "step": 3,
+            "installable": false,
+            "via": "direct import",
+            "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3)."
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,856 @@
+{
+ "_note": "Curated from docs/agent-native/03-design-handoff.md. Edit by hand; build.mjs derives dependencies, registryDependencies and prerequisites from the imports in the listed files. movedFiles records files whose owner differs from the handoff.",
+ "movedFiles": [
+  {
+   "file": "keyboard-event.ts",
+   "from": "forge-workspace",
+   "to": "studio-gesture",
+   "reason": "persona-turret imports it and forge-workspace imports persona-turret: leaving it in forge-workspace made a registryDependencies cycle and pulled the whole chrome into prism-canvas, persona-turret and persona-composer."
+  },
+  {
+   "file": "drag-transport.ts",
+   "from": "forge-workspace",
+   "to": "studio-gesture",
+   "reason": "persona-composer imports it; leaving it in forge-workspace pulled the whole chrome into the composer."
+  },
+  {
+   "file": "drag-transport.native.ts",
+   "from": "forge-workspace",
+   "to": "studio-gesture",
+   "reason": "persona-composer imports it; leaving it in forge-workspace pulled the whole chrome into the composer."
+  },
+  {
+   "file": "tokens.ts",
+   "from": null,
+   "to": "forge-directions",
+   "reason": "Added after the handoff by the tokenization pass (72506ec). Nine components import it. It reads theme.ts, forge-directions.ts and interaction-policy.ts, so it cannot live in studio-theme without a cycle (forge-directions already depends on studio-theme). forge-directions now depends on instrument-system for interaction-policy."
+  }
+ ],
+ "items": [
+  {
+   "name": "forge-workspace",
+   "type": "registry:ui",
+   "category": "shell",
+   "tokens": [
+    "--border-width-hairline",
+    "--border-width-strong",
+    "--color-accent",
+    "--color-border",
+    "--color-icon-on-active",
+    "--color-on-primary",
+    "--color-primary-tint",
+    "--color-surface-base",
+    "--color-surface-raised",
+    "--color-surface-sunken",
+    "--color-text",
+    "--color-text-muted",
+    "--font-weight-medium",
+    "--font-weight-semibold",
+    "--radius-card",
+    "--radius-control",
+    "--shadow-float-md",
+    "--shadow-float-sm",
+    "--spacing-canvas-header",
+    "--spacing-canvas-rail",
+    "--spacing-canvas-toolbar",
+    "--spacing-element",
+    "--spacing-fixed-element",
+    "--spacing-fixed-stack",
+    "--spacing-fixed-status",
+    "--spacing-group",
+    "--spacing-header",
+    "--spacing-inset",
+    "--spacing-rail",
+    "--spacing-stack",
+    "--spacing-status",
+    "--spacing-target",
+    "--spacing-toolbar",
+    "--text-body",
+    "--text-label",
+    "--text-micro",
+    "--z-chrome"
+   ],
+   "platforms": [
+    "ios",
+    "android",
+    "web"
+   ],
+   "handoffRegistryDependencies": [
+    "@nitro-forge/forge-icon",
+    "@nitro-forge/persona-turret",
+    "@nitro-forge/studio-theme",
+    "@nitro-forge/studio-ui-provider",
+    "@nyc-tron/DragGrabHandle",
+    "@nyc-tron/gestures/GestureHandlerDrag",
+    "@nyc-tron/gestures/PanResponderDrag"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/index.tsx",
+     "target": "index.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/model.ts",
+     "target": "model.ts"
+    }
+   ]
+  },
+  {
+   "name": "forge-document-stage",
+   "type": "registry:ui",
+   "category": "display",
+   "tokens": [
+    "--border-width-hairline",
+    "--color-stage-caption",
+    "--color-stage-cell-text",
+    "--color-stage-clip-audio",
+    "--color-stage-clip-video",
+    "--color-stage-empty-hint",
+    "--color-stage-fill-fallback",
+    "--color-stage-grid-head",
+    "--color-stage-grid-head-text",
+    "--color-stage-grid-line",
+    "--color-stage-heading",
+    "--color-stage-on-clip",
+    "--color-stage-paper",
+    "--color-stage-paper-text",
+    "--color-stage-paper-text-muted",
+    "--color-stage-paper-title",
+    "--color-stage-quote-rule",
+    "--color-stage-slide-text",
+    "--color-stage-track",
+    "--color-stage-track-border",
+    "--color-stage-track-label",
+    "--font-weight-medium",
+    "--radius-control",
+    "--radius-paper",
+    "--spacing-fixed-canvas",
+    "--spacing-fixed-element",
+    "--spacing-fixed-inset",
+    "--spacing-fixed-section",
+    "--spacing-fixed-stack",
+    "--text-body",
+    "--text-label",
+    "--text-micro"
+   ],
+   "platforms": null,
+   "handoffRegistryDependencies": [
+    "@nitro-forge/studio-theme",
+    "@nitro-forge/studio-ui-provider"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/stage.tsx",
+     "target": "stage.tsx"
+    }
+   ]
+  },
+  {
+   "name": "quill-text-editor",
+   "type": "registry:ui",
+   "category": "input",
+   "tokens": [
+    "--color-accent",
+    "--color-paper",
+    "--color-paper-text",
+    "--color-paper-text-muted",
+    "--color-text-muted",
+    "--font-editorial",
+    "--radius-control",
+    "--radius-paper",
+    "--shadow-page",
+    "--spacing-fixed-element",
+    "--spacing-fixed-inset",
+    "--spacing-fixed-page",
+    "--spacing-group",
+    "--spacing-target"
+   ],
+   "platforms": null,
+   "handoffRegistryDependencies": [
+    "@nitro-forge/forge-icon",
+    "@nitro-forge/studio-theme",
+    "@nitro-forge/studio-ui-provider"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/text-editor.tsx",
+     "target": "text-editor.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/text-diff.ts",
+     "target": "text-diff.ts"
+    }
+   ]
+  },
+  {
+   "name": "prism-editor",
+   "type": "registry:ui",
+   "category": "forge",
+   "tokens": [
+    "--border-width-hairline",
+    "--border-width-strong",
+    "--color-accent",
+    "--color-danger",
+    "--color-paper-text",
+    "--color-scrim",
+    "--color-surface-sunken",
+    "--color-text",
+    "--color-text-muted",
+    "--font-weight-semibold",
+    "--opacity-scrim",
+    "--radius-card",
+    "--radius-control",
+    "--spacing-canvas-rail",
+    "--spacing-element",
+    "--spacing-fixed-element",
+    "--spacing-fixed-inset",
+    "--spacing-fixed-stack",
+    "--spacing-fixed-target",
+    "--spacing-fixed-toolbar",
+    "--spacing-group",
+    "--spacing-inset",
+    "--spacing-stack",
+    "--spacing-target",
+    "--swatch-amber",
+    "--swatch-rose",
+    "--swatch-teal",
+    "--swatch-violet",
+    "--text-label",
+    "--text-micro",
+    "--z-chrome",
+    "--z-fill-bar",
+    "--z-layer-row",
+    "--z-overlay",
+    "--z-panel",
+    "--z-toast"
+   ],
+   "platforms": [
+    "ios",
+    "android",
+    "web"
+   ],
+   "handoffRegistryDependencies": [
+    "@nitro-forge/forge-directions",
+    "@nitro-forge/forge-icon",
+    "@nitro-forge/persona-model",
+    "@nitro-forge/persona-turret",
+    "@nitro-forge/prism-canvas",
+    "@nitro-forge/studio-theme",
+    "@nitro-forge/studio-ui-provider",
+    "@nyc-tron/shell/PrecisionScrubber"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/prism-editor.tsx",
+     "target": "prism-editor.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/prism-layers.ts",
+     "target": "prism-layers.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/prism-layer-label.ts",
+     "target": "prism-layer-label.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/prism-layout.ts",
+     "target": "prism-layout.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/prism-transform.ts",
+     "target": "prism-transform.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/rgba-png.ts",
+     "target": "rgba-png.ts"
+    }
+   ]
+  },
+  {
+   "name": "prism-canvas",
+   "type": "registry:ui",
+   "category": "forge",
+   "tokens": [
+    "--border-width-strong",
+    "--color-artboard-checker-a",
+    "--color-artboard-checker-b",
+    "--color-on-overlay-chip",
+    "--color-overlay-chip",
+    "--shadow-artboard",
+    "--spacing-fixed-stack"
+   ],
+   "platforms": null,
+   "handoffRegistryDependencies": [
+    "@nitro-forge/studio-gesture",
+    "@nitro-forge/studio-ui-provider"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/prism-canvas.tsx",
+     "target": "prism-canvas.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/prism-canvas-model.ts",
+     "target": "prism-canvas-model.ts"
+    }
+   ]
+  },
+  {
+   "name": "studio-gesture",
+   "type": "registry:ui",
+   "category": "primitive",
+   "tokens": [],
+   "platforms": [
+    "ios",
+    "android",
+    "web"
+   ],
+   "handoffRegistryDependencies": [],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/studio-gesture.tsx",
+     "target": "studio-gesture.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/studio-gesture.native.tsx",
+     "target": "studio-gesture.native.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/studio-gesture-types.ts",
+     "target": "studio-gesture-types.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/keyboard-event.ts",
+     "target": "keyboard-event.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/drag-transport.ts",
+     "target": "drag-transport.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/drag-transport.native.ts",
+     "target": "drag-transport.native.ts"
+    }
+   ]
+  },
+  {
+   "name": "persona-turret",
+   "type": "registry:ui",
+   "category": "forge",
+   "tokens": [
+    "--border-width-hairline",
+    "--color-accent",
+    "--font-weight-bold",
+    "--radius-control",
+    "--spacing-element",
+    "--spacing-inset",
+    "--spacing-stack",
+    "--text-body",
+    "--text-label",
+    "--text-micro"
+   ],
+   "platforms": [
+    "ios",
+    "android",
+    "web"
+   ],
+   "handoffRegistryDependencies": [
+    "@nitro-forge/forge-directions",
+    "@nitro-forge/persona-model",
+    "@nitro-forge/studio-gesture",
+    "@nitro-forge/studio-theme",
+    "@nitro-forge/studio-ui-provider"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/persona-turret.tsx",
+     "target": "persona-turret.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/turret.ts",
+     "target": "turret.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/turret-motion.tsx",
+     "target": "turret-motion.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/turret-motion.native.tsx",
+     "target": "turret-motion.native.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/turret-motion-types.ts",
+     "target": "turret-motion-types.ts"
+    }
+   ]
+  },
+  {
+   "name": "persona-composer",
+   "type": "registry:ui",
+   "category": "forge",
+   "tokens": [
+    "--border-width-hairline",
+    "--font-mono-plain",
+    "--font-weight-bold",
+    "--font-weight-semibold",
+    "--radius-card",
+    "--radius-control",
+    "--shadow-segment-active",
+    "--spacing-element",
+    "--spacing-fixed-rail",
+    "--spacing-fixed-status",
+    "--spacing-group",
+    "--spacing-inset",
+    "--spacing-section",
+    "--spacing-stack",
+    "--spacing-target",
+    "--text-body",
+    "--text-label",
+    "--text-title"
+   ],
+   "platforms": [
+    "ios",
+    "android",
+    "web"
+   ],
+   "handoffRegistryDependencies": [
+    "@nitro-forge/forge-icon",
+    "@nitro-forge/instrument-system",
+    "@nitro-forge/persona-model",
+    "@nitro-forge/studio-theme",
+    "@nitro-forge/studio-ui-provider",
+    "@nyc-tron/DragGrabHandle"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/persona-composer.tsx",
+     "target": "persona-composer.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/persona-composer-model.ts",
+     "target": "persona-composer-model.ts"
+    }
+   ]
+  },
+  {
+   "name": "persona-model",
+   "type": "registry:lib",
+   "category": "forge",
+   "tokens": [],
+   "platforms": null,
+   "handoffRegistryDependencies": [
+    "@nitro-forge/instrument-system"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/persona.ts",
+     "target": "persona.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/persona-store.ts",
+     "target": "persona-store.ts"
+    }
+   ]
+  },
+  {
+   "name": "instrument-system",
+   "type": "registry:lib",
+   "category": "forge",
+   "tokens": [
+    "--duration-cancel",
+    "--duration-commit",
+    "--duration-detent",
+    "--duration-error",
+    "--duration-hover",
+    "--duration-panel-dock",
+    "--duration-popover",
+    "--duration-press",
+    "--duration-selection"
+   ],
+   "platforms": null,
+   "handoffRegistryDependencies": [],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/instrument-system.ts",
+     "target": "instrument-system.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/interaction-policy.ts",
+     "target": "interaction-policy.ts"
+    }
+   ]
+  },
+  {
+   "name": "workspace-utilities",
+   "type": "registry:lib",
+   "category": "primitive",
+   "tokens": [],
+   "platforms": null,
+   "handoffRegistryDependencies": [],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/app-manifest.ts",
+     "target": "app-manifest.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/json-problem.ts",
+     "target": "json-problem.ts"
+    }
+   ]
+  },
+  {
+   "name": "studio-ui-provider",
+   "type": "registry:lib",
+   "category": "shell",
+   "tokens": [],
+   "platforms": [
+    "ios",
+    "android",
+    "web"
+   ],
+   "handoffRegistryDependencies": [],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/ui.tsx",
+     "target": "ui.tsx"
+    }
+   ]
+  },
+  {
+   "name": "nyc-tron-host",
+   "type": "registry:lib",
+   "category": "shell",
+   "tokens": [],
+   "platforms": null,
+   "handoffRegistryDependencies": [
+    "@nitro-forge/studio-ui-provider",
+    "@nyc-tron/Button",
+    "@nyc-tron/Card",
+    "@nyc-tron/FieldGroup",
+    "@nyc-tron/IconButton",
+    "@nyc-tron/List",
+    "@nyc-tron/SegmentedControl",
+    "@nyc-tron/Select",
+    "@nyc-tron/TabBar",
+    "@nyc-tron/Toolbar",
+    "@nyc-tron/content/KeyValueList",
+    "@nyc-tron/feedback/Badge",
+    "@nyc-tron/feedback/Banner",
+    "@nyc-tron/feedback/EmptyState",
+    "@nyc-tron/feedback/ErrorMessage",
+    "@nyc-tron/files/DropZone",
+    "@nyc-tron/overlays/AnchoredPopover",
+    "@nyc-tron/theme/NightScope"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/nyc-tron-host.tsx",
+     "target": "nyc-tron-host.tsx"
+    },
+    {
+     "from": "packages/studio-workspace/src/nyc-tron-options.ts",
+     "target": "nyc-tron-options.ts"
+    }
+   ]
+  },
+  {
+   "name": "studio-theme",
+   "type": "registry:lib",
+   "category": "primitive",
+   "tokens": [
+    "--color-accent",
+    "--color-border",
+    "--color-danger",
+    "--color-focus",
+    "--color-info",
+    "--color-on-danger",
+    "--color-on-primary",
+    "--color-paper",
+    "--color-paper-text",
+    "--color-paper-text-muted",
+    "--color-primary",
+    "--color-primary-tint",
+    "--color-success",
+    "--color-surface-base",
+    "--color-surface-raised",
+    "--color-surface-sunken",
+    "--color-text",
+    "--color-text-muted",
+    "--font-editorial",
+    "--font-mono-plain",
+    "--radius-card",
+    "--radius-control",
+    "--radius-paper",
+    "--spacing-canvas",
+    "--spacing-canvas-header",
+    "--spacing-canvas-rail",
+    "--spacing-canvas-toolbar",
+    "--spacing-element",
+    "--spacing-group",
+    "--spacing-header",
+    "--spacing-inset",
+    "--spacing-page",
+    "--spacing-rail",
+    "--spacing-section",
+    "--spacing-stack",
+    "--spacing-status",
+    "--spacing-target",
+    "--spacing-toolbar",
+    "--text-body",
+    "--text-display",
+    "--text-label",
+    "--text-manuscript",
+    "--text-micro",
+    "--text-title"
+   ],
+   "platforms": [
+    "ios",
+    "android",
+    "web"
+   ],
+   "handoffRegistryDependencies": [],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/theme.ts",
+     "target": "theme.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/theme.css",
+     "target": "theme.css"
+    },
+    {
+     "from": "packages/studio-workspace/src/theme.native.css",
+     "target": "theme.native.css"
+    }
+   ]
+  },
+  {
+   "name": "forge-directions",
+   "type": "registry:lib",
+   "category": "forge",
+   "tokens": [
+    "--color-chrome-accent",
+    "--color-chrome-body",
+    "--color-chrome-chip-edge",
+    "--color-chrome-chip-ring",
+    "--color-chrome-disabled-ink",
+    "--color-chrome-edge",
+    "--color-chrome-muted",
+    "--color-chrome-press",
+    "--color-chrome-rule",
+    "--color-chrome-selected",
+    "--color-chrome-selected-muted",
+    "--color-chrome-text",
+    "--color-chrome-well",
+    "--color-instrument-atelier-accent",
+    "--color-instrument-atelier-accent-halo",
+    "--color-instrument-atelier-bezel-0",
+    "--color-instrument-atelier-bezel-1",
+    "--color-instrument-atelier-face-0",
+    "--color-instrument-atelier-face-1",
+    "--color-instrument-atelier-face-text",
+    "--color-instrument-atelier-knurl",
+    "--color-instrument-atelier-lathe",
+    "--color-instrument-atelier-muted",
+    "--color-instrument-atelier-notch",
+    "--color-instrument-atelier-panel",
+    "--color-instrument-atelier-panel-edge",
+    "--color-instrument-atelier-panel-solid",
+    "--color-instrument-atelier-text",
+    "--color-instrument-optics-accent",
+    "--color-instrument-optics-accent-halo",
+    "--color-instrument-optics-bezel-0",
+    "--color-instrument-optics-bezel-1",
+    "--color-instrument-optics-bezel-2",
+    "--color-instrument-optics-bezel-3",
+    "--color-instrument-optics-face-0",
+    "--color-instrument-optics-face-1",
+    "--color-instrument-optics-face-text",
+    "--color-instrument-optics-knurl",
+    "--color-instrument-optics-lathe",
+    "--color-instrument-optics-muted",
+    "--color-instrument-optics-notch",
+    "--color-instrument-optics-panel",
+    "--color-instrument-optics-panel-edge",
+    "--color-instrument-optics-panel-solid",
+    "--color-instrument-optics-text",
+    "--color-instrument-workbench-accent",
+    "--color-instrument-workbench-accent-halo",
+    "--color-instrument-workbench-bezel-0",
+    "--color-instrument-workbench-bezel-1",
+    "--color-instrument-workbench-face-0",
+    "--color-instrument-workbench-face-1",
+    "--color-instrument-workbench-face-text",
+    "--color-instrument-workbench-knurl",
+    "--color-instrument-workbench-lathe",
+    "--color-instrument-workbench-muted",
+    "--color-instrument-workbench-notch",
+    "--color-instrument-workbench-panel",
+    "--color-instrument-workbench-panel-edge",
+    "--color-instrument-workbench-panel-solid",
+    "--color-instrument-workbench-text",
+    "--color-lab-ground",
+    "--color-lab-mat",
+    "--color-lab-paper",
+    "--color-lab-paper-ink",
+    "--shadow-chrome-depth",
+    "--shadow-instrument-atelier-dial",
+    "--shadow-instrument-atelier-panel",
+    "--shadow-instrument-optics-dial",
+    "--shadow-instrument-optics-panel",
+    "--shadow-instrument-workbench-dial",
+    "--shadow-instrument-workbench-panel"
+   ],
+   "platforms": null,
+   "handoffRegistryDependencies": [
+    "@nitro-forge/studio-theme"
+   ],
+   "files": [
+    {
+     "from": "packages/studio-workspace/src/forge-directions.ts",
+     "target": "forge-directions.ts"
+    },
+    {
+     "from": "packages/studio-workspace/src/tokens.ts",
+     "target": "tokens.ts"
+    }
+   ]
+  },
+  {
+   "name": "forge-icon",
+   "type": "registry:ui",
+   "category": "primitive",
+   "tokens": [
+    "--color-icon",
+    "--color-icon-accent-bright",
+    "--color-icon-cyan",
+    "--color-icon-danger",
+    "--color-icon-muted",
+    "--color-icon-selected",
+    "--color-icon-success",
+    "--color-icon-surface",
+    "--color-icon-warning",
+    "--duration-icon-deselect",
+    "--duration-icon-error",
+    "--duration-icon-hover",
+    "--duration-icon-loading",
+    "--duration-icon-press",
+    "--duration-icon-select",
+    "--duration-icon-success",
+    "--hit-target",
+    "--opacity-disabled",
+    "--scale-icon-press",
+    "--scale-icon-selected",
+    "--size-icon-default",
+    "--size-icon-feature",
+    "--size-icon-hero",
+    "--size-icon-sm",
+    "--size-icon-toolbar",
+    "--size-icon-touch",
+    "--size-icon-xs",
+    "--spring-icon-damping",
+    "--spring-icon-mass",
+    "--spring-icon-stiffness",
+    "--stroke-icon-box",
+    "--stroke-icon-width"
+   ],
+   "platforms": [
+    "ios",
+    "android",
+    "web"
+   ],
+   "handoffRegistryDependencies": [],
+   "files": [
+    {
+     "from": "packages/icons/src/ForgeIcon.js",
+     "target": "icons/ForgeIcon.js",
+     "type": "registry:ui"
+    },
+    {
+     "from": "packages/icons/src/state.js",
+     "target": "icons/state.js"
+    },
+    {
+     "from": "packages/icons/src/tokens.js",
+     "target": "icons/tokens.js"
+    },
+    {
+     "from": "packages/icons/src/glyphs.js",
+     "target": "icons/glyphs.js"
+    },
+    {
+     "from": "packages/icons/src/catalog.js",
+     "target": "icons/catalog.js"
+    },
+    {
+     "from": "packages/icons/src/ForgeIcon.d.ts",
+     "target": "icons/ForgeIcon.d.ts"
+    },
+    {
+     "from": "packages/icons/src/index.d.ts",
+     "target": "icons/index.d.ts"
+    },
+    {
+     "from": "packages/icons/src/index.js",
+     "target": "icons/index.js"
+    }
+   ]
+  },
+  {
+   "name": "forge-icon-button",
+   "type": "registry:ui",
+   "category": "input",
+   "tokens": [
+    "--hit-target",
+    "--spacing-fixed-stack",
+    "--spacing-fixed-target"
+   ],
+   "platforms": [
+    "ios",
+    "android",
+    "web"
+   ],
+   "handoffRegistryDependencies": [
+    "@nitro-forge/forge-icon"
+   ],
+   "files": [],
+   "dependsOn": [
+    "forge-icon"
+   ]
+  },
+  {
+   "name": "brand-theme",
+   "type": "registry:lib",
+   "category": "primitive",
+   "tokens": [
+    "--color-accent",
+    "--color-focus",
+    "--color-on-primary",
+    "--color-primary",
+    "--color-primary-tint"
+   ],
+   "platforms": null,
+   "handoffRegistryDependencies": [],
+   "title": "Brand Theme",
+   "description": "Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.",
+   "a11yStatus": "unverified",
+   "sourceRoot": "tooling/registry/theme",
+   "files": [
+    {
+     "from": "tooling/registry/theme/brand-theme.ts",
+     "target": "brand-theme.ts"
+    },
+    {
+     "from": "tooling/registry/theme/brand.theme.schema.json",
+     "target": "brand.theme.schema.json",
+     "type": "registry:file"
+    },
+    {
+     "from": "tooling/registry/theme/brand.theme.example.json",
+     "target": "brand.theme.json",
+     "type": "registry:file"
+    }
+   ]
+  }
+ ]
+}

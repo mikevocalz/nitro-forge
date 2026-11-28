@@ -1,0 +1,19 @@
+[
+ {"id": "forge-workspace", "title": "Forge Workspace", "description": "Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout."},
+ {"id": "forge-document-stage", "title": "Forge Document Stage", "description": "Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout."},
+ {"id": "quill-text-editor", "title": "Quill Text Editor", "description": "Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload."},
+ {"id": "prism-editor", "title": "Prism Editor", "description": "Vector canvas editor: shape tools, layers, transforms, personas. Needs ignition and editor-controls first, StudioUIProvider, @nyc-tron."},
+ {"id": "prism-canvas", "title": "Prism Canvas", "description": "Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture."},
+ {"id": "studio-gesture", "title": "Studio Gesture", "description": "Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed."},
+ {"id": "persona-turret", "title": "Persona Turret", "description": "Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions."},
+ {"id": "persona-composer", "title": "Persona Composer", "description": "Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore."},
+ {"id": "persona-model", "title": "Persona Model", "description": "Persona data, not UI: 4 personas, 11 capabilities, 7 surfaces, compose, import, export, per-document store. No provider needed."},
+ {"id": "instrument-system", "title": "Instrument System", "description": "Instrument policy, not UI: 18 blueprints, precision scrubbing math, ruler ticks, motion budgets, overlay planner. No provider needed."},
+ {"id": "workspace-utilities", "title": "Workspace Utilities", "description": "Helpers, not UI: APP_MANIFESTS (task line, glyph, category per studio), jsonProblem (JSON parse error as a sentence). Needs studio-layout."},
+ {"id": "studio-ui-provider", "title": "Studio UI Provider", "description": "Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host."},
+ {"id": "nyc-tron-host", "title": "NYC-Tron Host", "description": "Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed."},
+ {"id": "studio-theme", "title": "Studio Theme", "description": "Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both."},
+ {"id": "forge-directions", "title": "Forge Directions", "description": "Theme: workbench, optics and atelier palettes for Prism chrome and the persona turret, plus WCAG contrast helpers. Needs studio-theme."},
+ {"id": "forge-icon", "title": "Forge Icon", "description": "Icon: outline when idle, filled when selected. 47 glyphs drawn of 1,463 reserved ids; others render nothing. Needs react-native-svg."},
+ {"id": "forge-icon-button", "title": "Forge Icon Button", "description": "Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Needs forge-icon and react-native-svg."}
+]

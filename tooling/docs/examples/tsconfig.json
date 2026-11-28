@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true,
+    "paths": {
+      "@nitro-forge/ignition": ["../../../packages/ignition/src/index.ts"],
+      "@nitro-forge/ignition/cli": ["../../../packages/ignition/src/host-cli.ts"],
+      "@nitro-forge/editor-controls/*": ["../../../packages/editor-controls/src/*"],
+      "@nitro-forge/*": ["../../../packages/*/src/index.ts"]
+    }
+  },
+  "include": ["*.ts"]
+}

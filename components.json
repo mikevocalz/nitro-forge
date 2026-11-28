@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "baseColor": "neutral",
+    "css": "global.css"
+  },
+  "aliases": {
+    "components": "@/components",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "utils": "@/lib/utils",
+    "hooks": "@/hooks"
+  },
+  "registries": {
+    "@nitro-forge": "https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/r/{name}.json",
+    "@nyc-tron": "https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI/main/r/{name}.json"
+  }
+}

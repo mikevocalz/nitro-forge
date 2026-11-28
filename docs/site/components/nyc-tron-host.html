@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NYC-Tron Host | Nitro Forge</title>
+<meta name="description" content="Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html" aria-current="page">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li><li><a href="../engines/editor-controls.html">@nitro-forge/editor-controls</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>NYC-Tron Host</h1>
+<p class="lead">Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>Needs StudioUIProvider. Install <code>studio-ui-provider</code> and <code>nyc-tron-host</code> first, then follow <a href="../install.html#step-7">install step 7</a>.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-nyc-tron-host" hidden>Copy</button></header><pre id="cmd-nyc-tron-host">npx shadcn@4.23.0 add @nitro-forge/nyc-tron-host</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p><code>nycTronStudioUI(host)</code> builds a <code>StudioUIComponents</code> from NYC-Tron UI. The host supplies only platform primitives and three platform parts. Button maps Forge <code>outline</code> to NYC-Tron <code>secondary</code>; Card forces <code>surface=&quot;raised&quot;</code> and wraps <code>NightScope</code> for <code>surface=&quot;night&quot;</code>; IconButton applies <code>targetSize</code> as min width and height.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/nyc-tron-host</code> (registry item)</li><li>Import: <code>import { nycTronStudioUI } from '@/components/forge/nyc-tron-host';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</li><li>Requires: <code>@nitro-forge/studio-ui-provider</code>; <code>@nyc-tron/Button</code>; <code>@nyc-tron/Card</code>; <code>@nyc-tron/FieldGroup</code>; <code>@nyc-tron/IconButton</code>; <code>@nyc-tron/List</code>; <code>@nyc-tron/SegmentedControl</code>; <code>@nyc-tron/Select</code>; <code>@nyc-tron/TabBar</code>; <code>@nyc-tron/Toolbar</code>; <code>@nyc-tron/content/KeyValueList</code>; <code>@nyc-tron/feedback/Badge</code>; <code>@nyc-tron/feedback/Banner</code>; <code>@nyc-tron/feedback/EmptyState</code>; <code>@nyc-tron/feedback/ErrorMessage</code>; <code>@nyc-tron/files/DropZone</code>; <code>@nyc-tron/overlays/AnchoredPopover</code>; <code>@nyc-tron/theme/NightScope</code></li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/nyc-tron-host</code></li><li>Installs: none (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/nyc-tron-host.tsx</code>, <code>components/forge/nyc-tron-options.ts</code></li></ul>
+<h2 id="props">Props</h2>
+<p>Extends: Argument type <code>NycTronHostParts</code>. Returns the 27-slot object.</p>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">View, Text, Pressable, ScrollView, TextInput, Image</td><td data-l="Type">host primitives</td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">Select</td><td data-l="Type">host part</td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">TokenScope</td><td data-l="Type">host part</td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">ActionMenu</td><td data-l="Type"><code>HostActionMenu</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"><code>@nyc-tron/expo-controls/NativeActionMenu</code> in the Expo host.</td></tr><tr><td data-l="Name">NativePopover</td><td data-l="Type"><code>ComponentType&lt;PopoverProps&gt;</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">GroupedSelect</td><td data-l="Type"><code>ComponentType&lt;SelectProps&gt;</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Fed by <code>studioDropdownGroups</code>.</td></tr></tbody></table>
+<h2 id="variants">Variants</h2>
+<p>none</p>
+<h2 id="states">States</h2>
+<table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Menu title</td><td data-l="How it is set">NYC-Tron menus have no title row</td><td data-l="What the code does">Trigger label names the menu: <code>triggerLabel ?? title ?? &quot;Actions&quot;</code>.</td></tr><tr><td data-l="State">Popover placement</td><td data-l="How it is set">prop <code>placement</code></td><td data-l="What the code does">Ignored; NYC-Tron measures the usable region.</td></tr></tbody></table>
+<h3 id="motion">Motion</h3>
+<p>None.</p>
+<h2 id="a11y">A11y</h2>
+<ul><li>Button passes <code>selected</code> as <code>accessibilityState.selected</code>.</li><li>Menu and Popover derive <code>accessibilityLabel</code> from the trigger label and title.</li><li>Review status: unverified, not reviewed or not reviewable from source. Nothing was rendered, so no item is verified (decision 34).</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { View, Text, Pressable, ScrollView, TextInput, Image } from 'react-native';
+import { Select } from '@nyc-tron/expo-controls/Select';
+import { NativePopover } from '@nyc-tron/expo-controls/NativePopover';
+import { NativeActionMenu } from '@nyc-tron/expo-controls/NativeActionMenu';
+import { nycTronStudioUI } from '@/components/forge/nyc-tron-host';
+
+export const studioUI = nycTronStudioUI({
+  View, Text, Pressable, Image, Select, ActionMenu: NativeActionMenu, NativePopover, GroupedSelect: Select,
+  ScrollView: ScrollView as never, TextInput: TextInput as never,
+});</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Pass NYC-Tron <code>Select</code> for both <code>Select</code> and <code>GroupedSelect</code> as the Expo host does.</li><li>Add a <code>TokenScope</code> (Uniwind <code>ScopedVariables</code>) on native so Prism panels can scope tokens.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not add Forge copies of Button or Card; this file is the only mapping (decision 1).</li><li>Do not rely on <code>tone</code>; the host ignores it and colour comes from theme tokens.</li></ul>
+<h3 id="notes">Notes</h3>
+<ul><li>UNVERIFIED: the web host <code>apps/studio-preview/src/studio-ui.tsx</code> was not read.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-nyc-tron-host" hidden>Copy</button></header><pre id="agent-nyc-tron-host">npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
+npx shadcn@4.23.0 add @nitro-forge/nyc-tron-host</pre></div>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>yes</dd>
+<dt>Needs ignition</dt><dd>no</dd>
+<dt>Needs studio-layout</dt><dd>no</dd>
+<dt>Accessibility</dt><dd>unverified: not reviewed</dd>
+<dt>Peers</dt><dd><code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</dd>
+<dt>Installs</dt><dd>none</dd>
+<dt>Source files</dt><dd class="mono">studio-workspace/src/nyc-tron-host.tsx<br>studio-workspace/src/nyc-tron-options.ts</dd>
+<dt>Generated from</dt><dd class="mono">09b855b1</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
+<span>Generated from inputs <code>09b855b1</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

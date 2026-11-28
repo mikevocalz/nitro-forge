@@ -3,7 +3,7 @@ import {Animated,Easing,Pressable,View} from "react-native";
 import Svg,{Path} from "react-native-svg";
 import {getGlyph} from "./glyphs.js";
 import {resolveIconState} from "./state.js";
-import {iconStroke,iconMotion} from "./tokens.js";
+import {iconStroke,iconMotion,iconLayout,iconSpring,iconSurface} from "./tokens.js";
 
 function IconPaths({name,variant,color,surfaceColor,size}){
  const paths=getGlyph(name,variant);
@@ -33,7 +33,7 @@ export function ForgeIcon({
    size,appearance,color,selectedColor,disabledColor,successColor,
    errorColor,reducedMotion};
  const view=resolveIconState(input);
- const surface=surfaceColor??(appearance==="dark"?"#11131B":"#FFFFFF");
+ const surface=surfaceColor??(appearance==="dark"?iconSurface.dark:iconSurface.light);
  const progress=useRef(new Animated.Value(selected?1:0)).current;
  const scale=useRef(new Animated.Value(1)).current;
  const rotation=useRef(new Animated.Value(0)).current;
@@ -49,8 +49,8 @@ export function ForgeIcon({
    scale.stopAnimation();
    if(disabled||reducedMotion){scale.setValue(1);return;}
    const motion=Animated.spring(scale,{toValue:pressed?iconMotion.pressScale:
-     selected?iconMotion.selectedScale:1,stiffness:260,damping:22,
-     mass:0.8,useNativeDriver:true});
+     selected?iconMotion.selectedScale:1,stiffness:iconSpring.stiffness,damping:iconSpring.damping,
+     mass:iconSpring.mass,useNativeDriver:true});
    motion.start();return()=>motion.stop();
  },[scale,pressed,selected,reducedMotion,disabled]);
  useEffect(()=>{
@@ -90,8 +90,8 @@ export function ForgeIconButton({name,label,onPress,selected=false,disabled=fals
  return React.createElement(Pressable,{
    testID,disabled:disabled||loading,onPress,
    accessibilityRole:"button",accessibilityLabel:label,
-   accessibilityState:{selected,disabled,busy:loading},hitSlop:4,
-   style:{minWidth:44,minHeight:44,justifyContent:"center",alignItems:"center"}
+   accessibilityState:{selected,disabled,busy:loading},hitSlop:iconLayout.hitSlop,
+   style:{minWidth:iconLayout.hitTarget,minHeight:iconLayout.hitTarget,justifyContent:"center",alignItems:"center"}
  },({pressed})=>React.createElement(ForgeIcon,{
    ...rest,name,selected,disabled,loading,size,pressed
  }));

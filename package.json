@@ -26,10 +26,16 @@
     "test:completion": "node --test tooling/verify-completion-plan.test.mjs",
     "validate:v1": "node tooling/validate-v1.mjs",
     "validate:v1:prerelease": "node tooling/validate-v1.mjs --version 1.0.0-rc.1",
-    "test:validate-v1": "node --test tooling/validate-v1.test.mjs"
+    "test:validate-v1": "node --test tooling/validate-v1.test.mjs",
+    "test:docs-examples": "cargo build --locked -p nf-cli && tsc -p tooling/docs/examples/tsconfig.json && vitest run --config tooling/docs/examples.vitest.config.mjs",
+    "tokens:check": "node tooling/codemod/check-token-map.mjs",
+    "tokens:tokenize": "node tooling/codemod/tokenize.mjs",
+    "tokens:prove": "node tooling/codemod/prove-equivalence.mjs",
+    "tokens:no-hardcoded": "node tooling/codemod/check-no-hardcoded.mjs"
   },
   "devDependencies": {
     "@types/node": "26.6.6",
+    "ts-morph": "28.0.0",
     "tsx": "4.23.15",
     "turbo": "2.11.11",
     "typescript": "7.0.2",

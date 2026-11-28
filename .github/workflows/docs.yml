@@ -1,0 +1,80 @@
+# Regenerate docs pages, llms.txt and the static site; fail on drift or a broken docs contract.
+# Pins: actions/checkout v7.0.1 and actions/setup-node v7.1.0, resolved to commit SHAs with `gh api` on 2026-11-20.
+name: docs
+
+on:
+  pull_request:
+    paths:
+      - 'docs/components/**'
+      - 'docs/engines/**'
+      - 'docs/site/**'
+      - 'docs/agent-native/**'
+      - 'tooling/docs/**'
+      - 'tooling/registry/**'
+      - 'registry.json'
+      - 'registry-excluded.json'
+      - 'r/**'
+      - 'llms.txt'
+      - 'llms-full.txt'
+      - 'SKILL.md'
+      - 'AGENTS.md'
+      - 'packages/studio-workspace/src/theme.ts'
+      - 'packages/*/src/**'
+      - 'packages/*/package.json'
+      - 'packages/ignition/skills/**'
+      - 'docs/ENGINE_OPS.md'
+      - 'skills.sh.json'
+      - 'rust/**'
+      - 'Cargo.lock'
+      - '.github/workflows/docs.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'docs/**'
+      - 'tooling/docs/**'
+      - 'SKILL.md'
+      - 'llms*.txt'
+      - 'skills.sh.json'
+      - 'packages/*/src/**'
+      - 'rust/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Regenerate pages, llms.txt and llms-full.txt
+        run: node tooling/docs/build-docs.mjs
+      - name: Regenerate the static site and run its checks
+        run: node tooling/docs/build-site.mjs --check
+      - name: Generated files match the commit
+        run: git diff --exit-code -- docs/components docs/engines docs/site llms.txt llms-full.txt packages/ignition/skills
+      - name: Docs contract
+        run: node tooling/docs/check-docs.mjs
+
+  # Every engine page shows tooling/docs/examples/<package>.ts. This job runs each one against the real
+  # engines through nf-cli, so an example that drifts from the engine fails here.
+  examples:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - run: corepack enable && corepack pnpm install --frozen-lockfile --ignore-scripts
+      - name: Run the engine page examples against nf-cli
+        run: corepack pnpm test:docs-examples
+        env:
+          NF_CLI: ${{ github.workspace }}/target/debug/nf-cli

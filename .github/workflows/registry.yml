@@ -1,0 +1,90 @@
+# Rebuild the @nitro-forge registry and fail on drift, unresolved imports or a broken contract.
+# Pins: actions/checkout v7.0.1 and actions/setup-node v7.1.0, resolved to commit SHAs with `gh api` on 2026-11-20.
+name: registry
+
+on:
+  pull_request:
+    paths:
+      - 'packages/studio-workspace/**'
+      - 'packages/icons/**'
+      - 'packages/editor-controls/**'
+      # build.mjs reads each engine's version for registry-excluded.json.
+      - 'packages/*/package.json'
+      - 'tooling/registry/**'
+      - 'tooling/codemod/**'
+      - 'docs/agent-native/tokens.map.json'
+      - 'docs/agent-native/copy.json'
+      - 'docs/agent-native/a11y-status.json'
+      - 'registry.json'
+      - 'registry-excluded.json'
+      - 'components.json'
+      - 'r/**'
+      - '.github/workflows/registry.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'packages/studio-workspace/**'
+      - 'packages/icons/**'
+      - 'packages/editor-controls/**'
+      - 'packages/*/package.json'
+      - 'tooling/registry/**'
+      - 'tooling/codemod/**'
+      - 'r/**'
+      - 'registry.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: registry-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # prove-equivalence reads the base branch with `git show <ref>:<path>`, so it needs history.
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Rebuild registry.json and r/ (shadcn 4.23.0 through npx)
+        run: node tooling/registry/build.mjs
+      - name: Generated files match the commit
+        run: git diff --exit-code -- r registry.json components.json registry-excluded.json
+      - name: Locate NYC-Tron's published registry
+        # main has it once NYC-Tron-UI PR #80 merges. Until then, read the PR branch so the
+        # check still runs against the real registry rather than skipping.
+        run: |
+          base=https://raw.githubusercontent.com/mikevocalz/NYC-Tron-UI
+          if curl -fsI "$base/main/registry.json" >/dev/null; then ref=main; else
+            ref=agent-native-20261119
+            echo "::warning::NYC-Tron registry.json is not on main yet (NYC-Tron-UI PR #80 is unmerged); checking against $ref"
+          fi
+          echo "NYC_TRON_REGISTRY=$base/$ref/registry.json" >> "$GITHUB_ENV"
+      - name: Unresolved imports (checked against NYC-Tron's published registry)
+        run: node tooling/registry/check-imports.mjs --nyc-tron-registry "$NYC_TRON_REGISTRY"
+      - name: Schema and structure validation
+        run: node tooling/registry/validate-registry.mjs --nyc-tron-registry "$NYC_TRON_REGISTRY"
+      - name: theme.css and theme.native.css match theme.ts and tokens.ts
+        run: node packages/studio-workspace/build-theme.mjs --check
+      - name: Token tests and brand-theme tests
+        run: |
+          node --experimental-strip-types --test packages/studio-workspace/src/tokens.test.ts
+          node --experimental-strip-types --test tooling/registry/theme/brand-theme.test.mjs
+      - name: Install ts-morph for the codemod gates (version from the root devDependency, nothing else)
+        run: |
+          version="$(node -p "require('./package.json').devDependencies['ts-morph']")"
+          mkdir -p "$RUNNER_TEMP/codemod-tools"
+          npm i --prefix "$RUNNER_TEMP/codemod-tools" --no-audit --no-fund --ignore-scripts "ts-morph@${version}"
+          echo "CODEMOD_TOOLS_DIR=$RUNNER_TEMP/codemod-tools" >> "$GITHUB_ENV"
+      - name: Token map matches tokens.ts
+        run: node tooling/codemod/check-token-map.mjs
+      - name: No hardcoded values in packages
+        run: node tooling/codemod/check-no-hardcoded.mjs
+      - name: Static equivalence of the tokenization (pull requests only; the base is the target branch)
+        if: github.event_name == 'pull_request'
+        run: node tooling/codemod/prove-equivalence.mjs --base "origin/${{ github.base_ref }}"

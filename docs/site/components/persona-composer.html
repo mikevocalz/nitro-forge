@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Persona Composer | Nitro Forge</title>
+<meta name="description" content="Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html" aria-current="page">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li><li><a href="../engines/editor-controls.html">@nitro-forge/editor-controls</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>Persona Composer</h1>
+<p class="lead">Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>Needs StudioUIProvider. Install <code>studio-ui-provider</code> and <code>nyc-tron-host</code> first, then follow <a href="../install.html#step-7">install step 7</a>.</p><p>Needs <code>@nitro-forge/studio-layout</code> first (<a href="../install.html#step-3">step 3</a>). shadcn cannot install it.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-persona-composer" hidden>Copy</button></header><pre id="cmd-persona-composer">npx shadcn@4.23.0 add @nitro-forge/persona-composer</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p>A form for naming a persona, ordering its instrument rail, choosing capabilities and surfaces, previewing the manifest for the current surface, then saving, exporting, importing or removing through a <code>PersonaStore</code>.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/persona-composer</code> (registry item)</li><li>Import: <code>import { PersonaComposer } from '@/components/forge/persona-composer';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>react-native-svg</code> 15.16.0, <code>zustand</code> 5.1.0</li><li>Requires: <code>@nitro-forge/studio-ui-provider</code>; <code>@nitro-forge/studio-theme</code>; <code>@nitro-forge/forge-directions</code>; <code>@nitro-forge/forge-icon</code>; <code>@nitro-forge/instrument-system</code>; <code>@nitro-forge/persona-model</code>; <code>@nitro-forge/studio-gesture</code>; <code>@nyc-tron/DragGrabHandle</code>; <code>@nitro-forge/studio-layout</code> (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)</li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/persona-composer</code></li><li>Installs: <code>react-native-svg@15.16.0</code>, <code>zustand@5.1.0</code> (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/persona-composer.tsx</code>, <code>components/forge/persona-composer-model.ts</code></li></ul>
+<h2 id="props">Props</h2>
+<p>Extends: Also exports <code>ComposerGlyph</code> (<code>more</code>, <code>chevron-left</code>, <code>chevron-down</code>, <code>chevron-up</code>). Name limit <code>PERSONA_NAME_MAX</code> 40.</p>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">store</td><td data-l="Type"><code>PersonaStore</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Every save, import and removal goes through it.</td></tr><tr><td data-l="Name">theme</td><td data-l="Type"><code>&quot;dark&quot; | &quot;light&quot;</code></td><td data-l="Default"><code>&quot;dark&quot;</code></td><td data-l="Required">no</td><td data-l="Description">Dark wraps the body in <code>NightScope</code>.</td></tr><tr><td data-l="Name">colors</td><td data-l="Type"><code>WorkspaceColors</code></td><td data-l="Default"><code>prismThemes[theme]</code></td><td data-l="Required">no</td><td data-l="Description"></td></tr><tr><td data-l="Name">onExportPersona</td><td data-l="Type"><code>(json, persona) =&gt; Promise&lt;&quot;copied&quot; | &quot;shared&quot;&gt;</code></td><td data-l="Default">shows JSON in a field</td><td data-l="Required">no</td><td data-l="Description">Host copy or share.</td></tr></tbody></table>
+<h2 id="variants">Variants</h2>
+<h3 id="layout-by-width">layout by width</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">wide</td><td data-l="Effect">Width &gt;= 1000 (<code>COMPOSER_WIDE</code>).</td></tr><tr><td data-l="Value">single</td><td data-l="Effect">Between 600 and 1000.</td></tr><tr><td data-l="Value">phone</td><td data-l="Effect">Under 600 (<code>COMPOSER_PHONE</code>); instrument and capability grids fold into disclosures.</td></tr></tbody></table>
+<h3 id="theme">theme</h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value"><code>light</code></td><td data-l="Effect">Own segment classes on web (<code>LIGHT_SEGMENTS</code>).</td></tr></tbody></table>
+<h2 id="states">States</h2>
+<table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Save blocked</td><td data-l="How it is set"><code>saveBlocker(draft)</code></td><td data-l="What the code does">Reason shown.</td></tr><tr><td data-l="State">Notice</td><td data-l="How it is set">save, import, export, remove</td><td data-l="What the code does">Banner tone success, danger or info.</td></tr><tr><td data-l="State">Import open</td><td data-l="How it is set">Import button</td><td data-l="What the code does">Multiline field &quot;Persona JSON to import&quot;.</td></tr><tr><td data-l="State">Built-in</td><td data-l="How it is set">persona <code>builtIn</code></td><td data-l="What the code does">Not removable or exportable; caption explains.</td></tr><tr><td data-l="State">Reorder</td><td data-l="How it is set">drag, Move up, Move down</td><td data-l="What the code does">Live announcement of the new position.</td></tr></tbody></table>
+<h3 id="motion">Motion</h3>
+<p>None authored.</p>
+<h2 id="a11y">A11y</h2>
+<ul><li>Name field <code>accessibilityLabel=&quot;Persona name&quot;</code>; import and export fields labelled.</li><li>Toggles: <code>accessibilityRole=&quot;button&quot;</code> with <code>accessibilityState.selected</code> or <code>expanded</code>.</li><li>Lists: <code>accessibilityRole=&quot;list&quot;</code> with <code>listitem</code> rows; headings with <code>aria-level</code>.</li><li>Reorder by Move up and Move down buttons (<code>aria-label=&quot;Move &lt;name&gt; up&quot;</code>), screen reader and drag.</li><li>Web live region; iOS and Android use <code>announceForAccessibility</code>.</li><li>Review status: reviewed-fail, reviewed, failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li><li>Failing: N06 1.4.11: field borders c.line 1.16 to 1.78:1 against field ground and 1.37 to 1.57:1 against the panel (persona-composer.tsx:195,405,426)</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { PersonaComposer } from '@/components/forge/persona-composer';
+import { createPersonaStore } from '@/components/forge/persona-store';
+
+const store = createPersonaStore({ surface: 'web' });
+export const Demo = () =&gt; &lt;PersonaComposer store={store} /&gt;;</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Pass <code>onExportPersona</code> to use the clipboard or share sheet.</li><li>Use the store from the open document so saves persist with it.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not offer remove or export for built-in personas; the store refuses them.</li><li>Do not hide capabilities with <code>engine: &quot;not-in-engine&quot;</code>; the form keeps them selectable and tags them.</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-persona-composer" hidden>Copy</button></header><pre id="agent-persona-composer">npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider @nitro-forge/nyc-tron-host
+npx shadcn@4.23.0 add @nitro-forge/persona-composer</pre></div>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>yes</dd>
+<dt>Needs ignition</dt><dd>no</dd>
+<dt>Needs studio-layout</dt><dd>yes, step 3</dd>
+<dt>Accessibility</dt><dd>reviewed-fail: source read, failures found</dd>
+<dt>Peers</dt><dd><code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81, <code>react-native-svg</code> 15.16.0, <code>zustand</code> 5.1.0</dd>
+<dt>Installs</dt><dd><code>react-native-svg@15.16.0</code>, <code>zustand@5.1.0</code></dd>
+<dt>Source files</dt><dd class="mono">studio-workspace/src/persona-composer.tsx<br>studio-workspace/src/persona-composer-model.ts</dd>
+<dt>Generated from</dt><dd class="mono">09b855b1</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
+<span>Generated from inputs <code>09b855b1</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

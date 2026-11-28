@@ -1,9 +1,13 @@
 # Nitro-Forge — agent guide
 
 ## What this is
-Monorepo of seven document engines (Prism, Cadence, Splice, Folio, Pitch, Tally,
-Quill), each a pure-Rust crate implementing `ignition_core::Engine`, exposed to
-TypeScript through `@nitro-forge/ignition` (Nitro in production, `nf-cli` in tests).
+Monorepo of 12 document engines, each a pure-Rust crate implementing
+`ignition_core::Engine`, exposed to TypeScript through `@nitro-forge/ignition`
+(Nitro in production, `nf-cli` in tests). `ENGINE_KINDS` in
+`packages/ignition/src/types.ts` lists them: prism, cadence, splice, folio, pitch,
+tally, quill, photo, motion, design, draft, scene. The first seven are the original
+engines. `STUDIOS` in `packages/studio-layout/src/index.ts` lists 11 studios; scene
+has none yet. The count was checked against those two files on 2026-11-20.
 
 ## Contracts (read before editing)
 - `docs/ARCHITECTURE.md` — Engine trait semantics, threading, ownership, undo,
@@ -86,3 +90,51 @@ Keep each skill's platform/version guidance aligned with this repository's
 pinned runtime and preserve its state, window and ownership contracts.
 
 User requirement (2026-11-07): use subagents for scoped implementation and independent review. Apply relevant native, domain and project skills, and the no-ai-slop skill, to implementation and reports.
+
+## Agent-native
+
+The studio UI ships as a shadcn registry, `@nitro-forge`, built from this repo. Agents
+read `llms.txt`, `SKILL.md` and `docs/components/<item>.md` first. `skills.sh.json` points
+`npx skills add mikevocalz/nitro-forge --skill nitro-forge` at the copy of `SKILL.md` in
+`packages/ignition/skills/nitro-forge/`.
+
+- Provider first. Every studio component throws without `StudioUIProvider`. Install
+  `studio-ui-provider` and `nyc-tron-host` before any other item.
+- The registry holds 18 items: the 17 admitted in `docs/agent-native/03-design-handoff.md`
+  and `brand-theme`. `registry-excluded.json` lists what is not in it (4 binding adapters,
+  12 engines, ignition, studio-layout, editor-controls) with the reason and the condition for returning.
+- Do not edit `registry.json`, `r/`, `components.json`, `registry-excluded.json`,
+  `docs/components/`, `docs/engines/`, `docs/site/`, `llms.txt`, `llms-full.txt` or
+  `packages/ignition/skills/` by hand. Change the
+  source, then rebuild:
+  `node tooling/registry/build.mjs`, `node tooling/docs/build-docs.mjs`,
+  `node tooling/docs/build-site.mjs`. CI regenerates them and fails on a diff.
+- Checks: `node tooling/registry/check-imports.mjs` (reads NYC-Tron's registry: `--nyc-tron-registry <path|url>`), `node tooling/registry/validate-registry.mjs`,
+  `node tooling/docs/check-docs.mjs`, `corepack pnpm test:docs-examples`.
+- Engine pages are built from `tooling/docs/examples/<package>.ts`. `test:docs-examples` builds nf-cli and
+  runs each example against the real engine, and fails if an op it uses is missing from
+  `docs/ENGINE_OPS.md` or the package source. Change the example file, not the page.
+- Editor controls come from `@nitro-forge/editor-controls/<path>`. Never import
+  `@nyc-tron/ui/components/forge/*` and never name an `@nyc-tron/forge/*` registry item;
+  `verify-nyc-tron-pin.mjs` and `validate-registry.mjs` fail on either.
+- Import specifiers are rewritten only in the generated `r/*.json` (decision 39). Source files
+  keep `@nyc-tron/ui/components/...` and `@nitro-forge/...` imports. Never rewrite them in `packages/`.
+- NYC-Tron owns reusable controls. Forge items name them as `registryDependencies` with
+  `@nyc-tron/<export key>`. Do not copy a control into this registry.
+- A rebrand changes three keys per scheme (`accent`, `ink`, `soft`) in `brand.theme.json`.
+  The other keys, the 4 px radius and the status colours are locked.
+- `a11yStatus` is `reviewed-pass`, `reviewed-fail` or `unverified`. `verified` is reserved for a
+  rendered check. Do not set it from a source read.
+- The registry URLs use two moving refs in `tooling/registry/config.json`: `nitroForgeRef` (`master`)
+  and `nycTronRef` (`main`). They are branches, not release tags, and must be absolute because shadcn fetches them. Links from
+  `llms.txt` and the docs to repo files are relative, so they follow the ref they were read from. When the owner cuts tags, run
+  `node tooling/registry/set-ref.mjs <nitroForgeRef> [nycTronRef]` and commit the regenerated files.
+- "No hard-coded values" means what `tooling/codemod/check-no-hardcoded.mjs` checks, listed in its
+  header: hex colours, numeric style properties, numeric JSX size props, Tailwind arbitrary values and
+  `fs(x + n)` offsets in `packages/*/src`. SVG geometry, data arrays, native code, `apps/` and tests are
+  outside it. The gate reports 76 findings, all allowlisted in `tooling/codemod/allowlist.json` with a
+  reason. Do not read that as "zero numbers remain".
+- Rebrand has two channels: `brandCssVariables` (CSS variables for the NYC-Tron controls) and
+  `brandThemeOverrides` (JS colours for `ForgeWorkspace`, `PersonaTurret`, `PersonaComposer`). See
+  `docs/components/brand-theme.md`.
+- Native code is out of scope for registry and docs work (decision 38).

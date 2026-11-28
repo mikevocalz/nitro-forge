@@ -1,4 +1,4 @@
-import {iconColors,iconSizes,iconMotion} from "./tokens.js";
+import {iconColors,iconSizes,iconMotion,iconOpacity} from "./tokens.js";
 /** Pure presentation state; no React/native dependency, portable to web, iPad, phone and XR. */
 export function resolveIconState(options={}){
   const {selected=false,disabled=false,loading=false,hovered=false,pressed=false,
@@ -19,7 +19,7 @@ export function resolveIconState(options={}){
   const durationMs=reducedMotion||disabled?0:
     selected?iconMotion.selectMs:iconMotion.deselectMs;
   return Object.freeze({state,variant,size:pixels,color:resolvedColor,
-    opacity:disabled?0.52:1,animated:!reducedMotion&&!disabled,durationMs});
+    opacity:disabled?iconOpacity.disabled:1,animated:!reducedMotion&&!disabled,durationMs});
 }
 export function riveIconInputs(options={}){
  const state=resolveIconState(options);

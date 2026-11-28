@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brand Theme | Nitro Forge</title>
+<meta name="description" content="Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html" aria-current="page">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li><li><a href="../engines/editor-controls.html">@nitro-forge/editor-controls</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>Brand Theme</h1>
+<p class="lead">Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>No provider needed. Needs <code>studio-theme</code>.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-brand-theme" hidden>Copy</button></header><pre id="cmd-brand-theme">npx shadcn@4.23.0 add @nitro-forge/brand-theme</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p>The rebrand contract as a file and a validator. A brand sets three keys per scheme, <code>accent</code>, <code>ink</code> and <code>soft</code>, and nothing else. <code>brand-theme.ts</code> maps them to CSS variables and checks the three contrast pairs the contract requires.</p>
+<p>A brand reaches the UI through two channels, and a rebrand needs both:</p>
+<table><thead><tr><th scope="col">Channel</th><th scope="col">Call</th><th scope="col">Reaches</th><th scope="col">Does not reach</th></tr></thead><tbody><tr><td data-l="Channel">CSS variables</td><td data-l="Call"><code>brandCssVariables(theme, scheme)</code> on a <code>[data-brand]</code> block, <code>:root</code> or a <code>TokenScope</code></td><td data-l="Reaches">Every NYC-Tron control (Button, TabBar, SegmentedControl, Select, Banner) and any Tailwind utility reading <code>--color-primary</code>, <code>--color-accent</code>, <code>--color-focus</code>, <code>--color-on-primary</code> or <code>--color-primary-tint</code></td><td data-l="Does not reach">Anything Forge paints from JavaScript colour values</td></tr><tr><td data-l="Channel">JS overrides</td><td data-l="Call"><code>brandThemeOverrides(theme, scheme)</code> as <code>themeOverrides</code> on <code>ForgeWorkspace</code></td><td data-l="Reaches">Workspace header, rail label, studio glyphs and the soft chip behind them. <code>PersonaTurret</code> reads <code>colors.accent</code> and <code>PersonaComposer</code> reads <code>colors.accent</code> and <code>colors.soft</code> from their own <code>colors</code> prop, which <code>ForgeWorkspace</code> does not fill: pass the same overrides to them</td><td data-l="Does not reach">The CSS variables above</td></tr></tbody></table>
+<p>Neither channel reaches <code>PrismEditor</code> (chrome and direction palettes), <code>QuillTextEditor</code> (<code>workspaceThemes</code> by scheme), <code>ForgeDocumentStage</code> (stage palette) or the default <code>ForgeIcon</code> palette. They keep their own colours until they take an override prop.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/brand-theme</code> (registry item)</li><li>Import: <code>import { brandThemeProblems, checkBrandTheme, brandCssVariables } from '@/components/forge/brand-theme';</code></li><li>Peers: none</li><li>Requires: <code>@nitro-forge/studio-theme</code></li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/brand-theme</code></li><li>Installs: none (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/brand-theme.ts</code>, <code>components/forge/brand.theme.schema.json</code>, <code>components/forge/brand.theme.json</code></li></ul>
+<h2 id="props">Props</h2>
+<p>Not a component. Exports and what they take:</p>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">BRAND_OVERRIDE_KEYS</td><td data-l="Type"><code>readonly [&quot;accent&quot;, &quot;ink&quot;, &quot;soft&quot;]</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">The only overridable keys.</td></tr><tr><td data-l="Name">BRAND_FAN_OUT</td><td data-l="Type"><code>Record&lt;key, readonly string[]&gt;</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">CSS variables each key feeds: <code>accent</code> to <code>--color-primary</code>, <code>--color-accent</code>, <code>--color-focus</code>; <code>ink</code> to <code>--color-on-primary</code>; <code>soft</code> to <code>--color-primary-tint</code>.</td></tr><tr><td data-l="Name">brandThemeProblems</td><td data-l="Type"><code>(value: unknown) =&gt; string[]</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Empty array when the value follows the contract. Names every locked key it finds, every colour that is not six hex digits and a <code>defaultDensity</code> outside <code>compact</code>, <code>standard</code>, <code>comfortable</code>.</td></tr><tr><td data-l="Name">checkBrandTheme</td><td data-l="Type"><code>(theme: unknown) =&gt; BrandCheck[]</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Three pairs per scheme: <code>ink</code> on <code>accent</code> at 4.5:1, <code>accent</code> as a focus ring on the raised surface at 3:1, <code>text</code> on <code>soft</code> at 4.5:1. Always returns six entries and never throws: a missing or malformed colour gives an entry with <code>pass: false</code>, <code>ratio: null</code> and a <code>problem</code> that names it.</td></tr><tr><td data-l="Name">brandCssVariables</td><td data-l="Type"><code>(theme, scheme) =&gt; Record&lt;string, string&gt;</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Channel 1. Variables for a <code>[data-brand]</code> block or a <code>TokenScope</code>.</td></tr><tr><td data-l="Name">brandThemeOverrides</td><td data-l="Type"><code>(theme, scheme) =&gt; { accent, ink, soft }</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">Channel 2. The partial colour object for <code>ForgeWorkspace</code> <code>themeOverrides</code>.</td></tr><tr><td data-l="Name">contrastRatio, luminance</td><td data-l="Type"><code>(a: string, b: string) =&gt; number</code>, <code>(hex: string) =&gt; number</code></td><td data-l="Default">none</td><td data-l="Required">no</td><td data-l="Description">WCAG 2.x.</td></tr></tbody></table>
+<p>The file <code>brand.theme.schema.json</code> is the JSON Schema for <code>brand.theme.json</code>. <code>brand.theme.json</code> is a starter written as today's Prism override.</p>
+<h2 id="variants">Variants</h2>
+<p>none</p>
+<h2 id="states">States</h2>
+<table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">Valid</td><td data-l="How it is set"><code>brandThemeProblems</code> returns <code>[]</code></td><td data-l="What the code does">The file follows the contract. Contrast is a separate check.</td></tr><tr><td data-l="State">Locked key</td><td data-l="How it is set">A key other than <code>accent</code>, <code>ink</code> or <code>soft</code>, or a key outside <code>dark</code>, <code>light</code>, <code>defaultDensity</code></td><td data-l="What the code does">Reported as a problem.</td></tr><tr><td data-l="State">Low contrast</td><td data-l="How it is set"><code>checkBrandTheme</code> returns an entry with <code>pass: false</code> and a numeric <code>ratio</code></td><td data-l="What the code does">The brand is readable only if every entry passes.</td></tr><tr><td data-l="State">Incomplete input</td><td data-l="How it is set"><code>checkBrandTheme</code> returns an entry with <code>pass: false</code>, <code>ratio: null</code> and a <code>problem</code></td><td data-l="What the code does">No throw. Run <code>brandThemeProblems</code> as well to see the structure problems.</td></tr></tbody></table>
+<h2 id="a11y">A11y</h2>
+<ul><li>No UI. The three checks protect text and focus contrast for any brand.</li><li>The six neutral keys stay locked until the owner supplies a contrast check (decision 23). The check does not measure them.</li><li>Review status: unverified. No rendered check exists.</li><li>Review status: unverified, not reviewed or not reviewable from source. Nothing was rendered, so no item is verified (decision 34).</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { brandCssVariables, brandThemeOverrides, brandThemeProblems, checkBrandTheme, type BrandTheme } from '@/components/forge/brand-theme';
+
+const theme: BrandTheme = {
+  dark: { accent: '#66B9FF', ink: '#081D2F', soft: '#173C59' },
+  light: { accent: '#086CB8', ink: '#FFFFFF', soft: '#D6EAFB' },
+  defaultDensity: 'standard',
+};
+
+export const problems = brandThemeProblems(theme);
+export const failing = checkBrandTheme(theme).filter((check) =&gt; !check.pass);
+
+// Channel 1: CSS variables for the NYC-Tron controls. Apply on a [data-brand] block or a TokenScope.
+export const cssVariables = brandCssVariables(theme, 'dark');
+// Channel 2: JS colours. Pass as themeOverrides to ForgeWorkspace, and as colors to PersonaTurret and PersonaComposer.
+export const themeOverrides = brandThemeOverrides(theme, 'dark');</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Override only <code>accent</code>, <code>ink</code> and <code>soft</code> in both <code>dark</code> and <code>light</code> (<code>BRAND_OVERRIDE_KEYS</code>).</li><li>Run <code>brandThemeProblems</code> and <code>checkBrandTheme</code> before shipping a palette and read every entry with <code>pass: false</code>.</li><li>Apply both channels: <code>brandCssVariables</code> for the NYC-Tron controls and <code>brandThemeOverrides</code> for <code>ForgeWorkspace</code>, <code>PersonaTurret</code> and <code>PersonaComposer</code>.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not add <code>base</code>, <code>raised</code>, <code>text</code> or any radius key; <code>brandThemeProblems</code> reports each as locked.</li><li>Do not expect <code>brandCssVariables</code> alone to recolour the workspace header, studio glyphs or persona turret. They read JavaScript colours.</li><li>Do not edit <code>tooling/brand/brand.schema.json</code> for colour; it stays closed and feeds the Expo plugin (decision 24).</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-brand-theme" hidden>Copy</button></header><pre id="agent-brand-theme">npx shadcn@4.23.0 add @nitro-forge/brand-theme</pre></div>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>no</dd>
+<dt>Needs ignition</dt><dd>no</dd>
+<dt>Needs studio-layout</dt><dd>no</dd>
+<dt>Accessibility</dt><dd>unverified: not reviewed</dd>
+<dt>Peers</dt><dd>none</dd>
+<dt>Installs</dt><dd>none</dd>
+<dt>Source files</dt><dd class="mono">tooling/registry/theme/brand-theme.ts<br>tooling/registry/theme/brand.theme.schema.json<br>tooling/registry/theme/brand.theme.example.json</dd>
+<dt>Generated from</dt><dd class="mono">09b855b1</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
+<span>Generated from inputs <code>09b855b1</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

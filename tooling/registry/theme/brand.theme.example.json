@@ -1,0 +1,6 @@
+{
+  "$schema": "./brand.theme.schema.json",
+  "dark": { "accent": "#66B9FF", "ink": "#081D2F", "soft": "#173C59" },
+  "light": { "accent": "#086CB8", "ink": "#FFFFFF", "soft": "#D6EAFB" },
+  "defaultDensity": "standard"
+}

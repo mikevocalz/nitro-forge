@@ -1,0 +1,96 @@
+{
+ "forge-workspace": {
+  "status": "FAIL",
+  "failures": [
+   "N01 1.4.3: light muted #687287 on base 4.43:1 for 9 to 11 pt header, status and rail text (index.tsx:190,196)",
+   "N07 4.1.3: status line uses accessibilityLiveRegion, Android and web only; iOS silent (index.tsx:273)"
+  ]
+ },
+ "forge-document-stage": {
+  "status": "FAIL",
+  "failures": [
+   "N03 1.4.3: #798373 on #f7f5ed 3.63:1 and #637161 on #e5e9dd 4.19:1, both 12 pt (stage.tsx:30,40)",
+   "N13 1.3.1: Tally grid is Text cells with no table, row or cell roles (stage.tsx:30-31)"
+  ]
+ },
+ "quill-text-editor": {
+  "status": "FAIL",
+  "failures": [
+   "N02 1.4.3: placeholder paperMuted #797F8D on #FFFEFC 3.98:1 in both schemes (text-editor.tsx:151)",
+   "N01 1.4.3: word count muted on stage mat 4.01:1 in light (text-editor.tsx:140)"
+  ]
+ },
+ "prism-editor": {
+  "status": "FAIL",
+  "failures": [
+   "N05 1.4.11: light fill chips amber 1.98:1, rose 2.62:1, hairline 2.08:1 (prism-editor.tsx:444)"
+  ]
+ },
+ "prism-canvas": {
+  "status": "FAIL",
+  "failures": [
+   "N04 1.4.3: Cancel move ghost label on #111827 chip 1.11:1 (chrome light) and 1.24:1 (reference light) (prism-canvas.tsx:96-97)"
+  ]
+ },
+ "studio-gesture": {
+  "status": "PASS",
+  "failures": []
+ },
+ "persona-turret": {
+  "status": "FAIL",
+  "failures": [
+   "N10 iOS 44 pt: stop targets scale to 0.85 of 44, 37.4 pt, in the narrow ring layout (persona-turret.tsx:399, turret.ts:150)"
+  ]
+ },
+ "persona-composer": {
+  "status": "FAIL",
+  "failures": [
+   "N06 1.4.11: field borders c.line 1.16 to 1.78:1 against field ground and 1.37 to 1.57:1 against the panel (persona-composer.tsx:195,405,426)"
+  ]
+ },
+ "persona-model": {
+  "status": "PASS",
+  "failures": []
+ },
+ "instrument-system": {
+  "status": "PASS",
+  "failures": []
+ },
+ "workspace-utilities": {
+  "status": "PASS",
+  "failures": []
+ },
+ "studio-ui-provider": {
+  "status": "PASS",
+  "failures": []
+ },
+ "nyc-tron-host": {
+  "status": "UNVERIFIED",
+  "failures": []
+ },
+ "studio-theme": {
+  "status": "FAIL",
+  "failures": [
+   "N01 1.4.3: light muted 4.43:1 on base, 4.01:1 on deep (theme.ts:7)",
+   "N02 1.4.3: paperMuted 3.98:1 on paper (theme.ts:6-7)",
+   "N06 1.4.11: --color-border 1.2 to 1.54:1 where it is the only edge (theme.ts:6-7)"
+  ]
+ },
+ "forge-directions": {
+  "status": "PASS",
+  "failures": []
+ },
+ "forge-icon": {
+  "status": "FAIL",
+  "failures": [
+   "N09 1.4.11: default appearance=light ink 1.02:1 on dark workspace base; default accent #6859E8 2.89:1 on dark raised (ForgeIcon.js:29, state.js)",
+   "N08 1.4.1: status success, error, recording change colour only and the glyph is hidden from assistive tech (state.js)"
+  ]
+ },
+ "forge-icon-button": {
+  "status": "FAIL",
+  "failures": [
+   "N08 1.4.1, 4.1.2: status is not in accessibilityState or accessibilityValue (ForgeIcon.js:91-93)"
+  ]
+ }
+}

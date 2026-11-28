@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@nitro-forge/editor-controls | Nitro Forge</title>
+<meta name="description" content="Decision 3. Private workspace package with no tarball and no versioning scheme. Forge owns the editor controls since #95; they moved here unchanged from NYC-Tron UI, and nothing in Forge imports @nyc-tron/ui/components/forge/*.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li><li><a href="../engines/editor-controls.html" aria-current="page">@nitro-forge/editor-controls</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>@nitro-forge/editor-controls</h1>
+<div class="strip" role="note"><strong>Not a registry item</strong><p>Decision 3. Private workspace package with no tarball and no versioning scheme. Forge owns the editor controls since #95; they moved here unchanged from NYC-Tron UI, and nothing in Forge imports @nyc-tron/ui/components/forge/*. Returns when the tarball versioning scheme is decided and the facade is installable (decision 3).</p></div>
+<h2 id="purpose">Purpose</h2>
+<p>Nitro Forge editor controls (audio, timeline, spreadsheet, canvas, color, photo, motion, office and more) built on NYC-Tron UI primitives. Moved here from @nyc-tron/ui/components/forge. The editor controls (audio and MIDI, timeline, spreadsheet, canvas and layers, color, photo, motion, vector, office, PDF) moved here unchanged from NYC-Tron UI's <code>packages/ui/src/components/forge/</code> at commit <code>5a1ea4db</code>. Import them as <code>@nitro-forge/editor-controls/&lt;path&gt;</code>: the export <code>./&lt;path&gt;</code> is the old <code>@nyc-tron/ui/components/forge/&lt;path&gt;</code>, except three precision helpers that now come from <code>@nyc-tron/ui/components/shell/</code>. Nothing in Forge may import <code>@nyc-tron/ui/components/forge/*</code>; <code>node tooling/verify-nyc-tron-pin.mjs</code> fails if anything does. Not a registry item. Decision 3. Private workspace package with no tarball and no versioning scheme. Forge owns the editor controls since #95; they moved here unchanged from NYC-Tron UI, and nothing in Forge imports @nyc-tron/ui/components/forge/*.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/editor-controls</code></li><li>Import: <code>import { formatOpacity, moveLayer, stepOpacity, validateLayers, type LayerRow } from '@nitro-forge/editor-controls/layers/layer-model';</code></li><li>Peers: <code>@expo/ui</code>, <code>expo-linear-gradient</code>, <code>react</code>, <code>react-native</code>, <code>react-native-gesture-handler</code>, <code>react-native-skia</code></li><li>Requires: <code>@nyc-tron/ui</code> from the release pinned in <code>tooling/nyc-tron.json</code>, with <code>patches/@nyc-tron__ui@1.0.0-rc.2.patch</code> adding 20 export-map entries rc.2 lacks (packages/editor-controls/README.md)</li><li>Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by <code>workspace:*</code> inside this repo.</li><li>Installs: none</li><li>Files: <code>packages/editor-controls</code> in the repo; nothing is copied by shadcn</li></ul>
+<h2 id="props">Props</h2>
+<p>Not a component, so there are no props. 450 entry points: <code>@nitro-forge/editor-controls/WaveformLane</code>, <code>@nitro-forge/editor-controls/NativeSeekBar</code>, <code>@nitro-forge/editor-controls/ColorChannels</code>, <code>@nitro-forge/editor-controls/waveform</code>, <code>@nitro-forge/editor-controls/timebase</code>, <code>@nitro-forge/editor-controls/audio/level</code>, <code>@nitro-forge/editor-controls/audio/LevelFader</code>, <code>@nitro-forge/editor-controls/color</code>, <code>@nitro-forge/editor-controls/color/HsvPicker</code>, <code>@nitro-forge/editor-controls/color/fieldGeometry</code>, <code>@nitro-forge/editor-controls/color/fieldGesture</code>, <code>@nitro-forge/editor-controls/color/AlphaSlider</code>, <code>@nitro-forge/editor-controls/color/ColorWheel</code>, <code>@nitro-forge/editor-controls/color/ColorDiscPicker</code>, <code>@nitro-forge/editor-controls/color/ColorChannelFields</code>, <code>@nitro-forge/editor-controls/color/ForegroundBackgroundChips</code>, and 434 more in <code>packages/editor-controls/package.json</code>.</p>
+<h2 id="variants">Variants</h2>
+<p>none</p>
+<h2 id="states">States</h2>
+<p>Controlled components: the caller passes values and callbacks. The controls own no persistence, file I/O, engine state or undo; the engine adapters (<code>@nitro-forge/cadence</code>, <code>@nitro-forge/tally</code> and the rest) supply those.</p>
+<h2 id="a11y">A11y</h2>
+<p>Not part of the agent-native source review, so nothing here is verified (decision 34). The package has its own render tests, including <code>packages/editor-controls/tests/render/screen-reader-audit.render.test.mjs</code>; this page does not restate their results.</p>
+<h2 id="example">Example</h2>
+<p><code>pnpm test:docs-examples</code> runs this file (<code>tooling/docs/examples/editor-controls.ts</code>) in Node (<code>tooling/docs/examples.test.ts</code>).</p>
+<pre><code>import assert from 'node:assert/strict';
+import { formatOpacity, moveLayer, stepOpacity, validateLayers, type LayerRow } from '@nitro-forge/editor-controls/layers/layer-model';
+
+export async function example() {
+  const rows: LayerRow[] = [
+    { id: 'title', name: 'Title', kind: 'text', visible: true, opacity: 1 },
+    { id: 'photo', name: 'Photo', kind: 'raster', visible: true, opacity: 0.8 },
+    { id: 'paper', name: 'Paper', kind: 'raster', visible: false, opacity: 1 },
+  ];
+  validateLayers(rows);
+
+  const reordered = moveLayer(rows, 'paper', 0);
+  assert.deepEqual(reordered.map((row) =&gt; row.id), ['paper', 'title', 'photo']);
+
+  assert.equal(stepOpacity(0.8, 1), 0.85);
+  assert.equal(formatOpacity(0.85), '85%');
+}</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Add <code>&quot;@nitro-forge/editor-controls&quot;: &quot;workspace:*&quot;</code> to the consuming package and import <code>@nitro-forge/editor-controls/&lt;path&gt;</code>.</li><li>Run <code>pnpm --filter @nitro-forge/editor-controls build</code> before typechecking a consumer on its own; consumers typecheck against <code>dist/</code>.</li><li>Extend the control that exists here (knob, graph, crop overlay and the rest) instead of writing a second one in another package.</li><li>Check <code>registry-excluded.json</code> for the reason and the condition for returning.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not import <code>@nyc-tron/ui/components/forge/*</code> or depend on <code>@nyc-tron/forge/*</code> registry items; the controls live here now.</li><li>Do not run <code>shadcn add</code> for this package; it is a private workspace package with no tarball (decision 3).</li><li>Do not publish or invent a release URL for it.</li></ul>
+</article>
+
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
+<span>Generated from inputs <code>09b855b1</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

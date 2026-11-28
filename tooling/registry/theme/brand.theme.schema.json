@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nitro-forge:brand-theme:schema",
+  "title": "Nitro Forge brand theme",
+  "description": "Rebrand contract. A brand sets accent, ink and soft for the dark and light schemes and nothing else. The six neutral keys are deferred until a contrast check exists (decision 23). Radius, status colours, paper and every scale are locked. Separate from tooling/brand/brand.schema.json (decision 24).",
+  "type": "object",
+  "required": ["dark", "light"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "dark": { "$ref": "#/$defs/palette" },
+    "light": { "$ref": "#/$defs/palette" },
+    "defaultDensity": { "enum": ["compact", "standard", "comfortable"], "default": "standard", "description": "Starting density. Users can still change it at runtime." }
+  },
+  "$defs": {
+    "hex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+    "palette": {
+      "type": "object",
+      "required": ["accent", "ink", "soft"],
+      "additionalProperties": false,
+      "properties": {
+        "accent": { "$ref": "#/$defs/hex", "description": "Feeds --color-primary, --color-accent and --color-focus. Needs 3:1 against the raised surface as a focus ring." },
+        "ink": { "$ref": "#/$defs/hex", "description": "Feeds --color-on-primary. Needs 4.5:1 against accent." },
+        "soft": { "$ref": "#/$defs/hex", "description": "Feeds --color-primary-tint. Needs 4.5:1 against text." }
+      }
+    }
+  }
+}

@@ -1,0 +1,63 @@
+# Nitro Forge
+
+> Document studios on 12 Rust engines, with a shadcn registry (@nitro-forge) for the studio-workspace chrome, theme, provider and icons. General controls come from @nyc-tron; the editor controls are @nitro-forge/editor-controls. Nothing is on npm and nothing is tagged: the engines, ignition, studio-layout and editor-controls are monorepo packages (version 0.1.0) with no release or tarball, so steps 1 to 3 of the install order cannot be reproduced outside this repo today. Links below are relative to this file.
+
+Start here: the provider prerequisite. Every studio component throws without StudioUIProvider (install studio-ui-provider and nyc-tron-host first). Install order has nine steps, numbered 0 to 8; a registry add covers steps 4 and 8 and the file parts of 5, 6 and 7. Each engine page has an example that CI runs against the real engine.
+
+## Install and rules
+
+- [Install order](docs/agent-native/install-order.md): The nine-step chain, which steps `shadcn add` covers, and the commands for the rest.
+- [Agent skill](SKILL.md): Provider first, install order, engines, editor controls, rebrand contract, token rules, what is deferred and why. A copy ships in packages/ignition/skills/nitro-forge, which skills.sh.json points `npx skills add mikevocalz/nitro-forge --skill nitro-forge` at.
+- [Agent guide](AGENTS.md): Contracts, commands and contributor rules, plus the agent-native section.
+- [Engine ops](docs/ENGINE_OPS.md): Authoritative op names and payloads per engine. The TS facades and the Rust engines follow it.
+- [Architecture](docs/ARCHITECTURE.md): Engine trait semantics, threading, ownership, undo, envelope format and error codes.
+- [Editor controls](packages/editor-controls/README.md): Where the controls came from, the import mapping from @nyc-tron/ui/components/forge, the rc.2 export patch.
+- [Not in the registry](registry-excluded.json): 4 deferred adapters, 12 engines and 3 foundations (ignition, studio-layout, editor-controls), each with a reason.
+
+## Needs StudioUIProvider (8)
+
+- [Forge Document Stage](docs/components/forge-document-stage.md): Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout.
+- [Forge Workspace](docs/components/forge-workspace.md): Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout.
+- [NYC-Tron Host](docs/components/nyc-tron-host.md): Provider adapter: nycTronStudioUI() maps @nyc-tron controls onto the StudioUIProvider slots. Needs the @nyc-tron tarballs installed.
+- [Persona Composer](docs/components/persona-composer.md): Persona form: name it, order instruments, pick capabilities, save, export, import. Needs StudioUIProvider and a PersonaStore.
+- [Persona Turret](docs/components/persona-turret.md): Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions.
+- [Prism Canvas](docs/components/prism-canvas.md): Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture.
+- [Prism Editor](docs/components/prism-editor.md): Vector canvas editor: shape tools, layers, transforms, personas. Needs ignition and editor-controls first, StudioUIProvider, @nyc-tron.
+- [Quill Text Editor](docs/components/quill-text-editor.md): Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload.
+
+## No provider needed (10)
+
+- [Studio UI Provider](docs/components/studio-ui-provider.md): Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.
+- [Studio Theme](docs/components/studio-theme.md): Theme: dark and light tokens, densities, generated theme.css (Tailwind v4) and theme.native.css (Uniwind). build:theme regenerates both.
+- [Brand Theme](docs/components/brand-theme.md): Rebrand contract: brand.theme.json schema and a validator. A brand sets accent, ink and soft per scheme (3 keys). Neutrals, radius and status colours stay locked. Needs studio-theme.
+- [Forge Directions](docs/components/forge-directions.md): Theme: workbench, optics and atelier palettes for Prism chrome and the persona turret, plus WCAG contrast helpers. Needs studio-theme.
+- [Forge Icon](docs/components/forge-icon.md): Icon: outline when idle, filled when selected. 47 glyphs drawn; 42 of 1,463 catalog ids resolve to one; 6 drawn glyphs are not catalog ids. A name with no glyph renders nothing. Needs react-native-svg.
+- [Forge Icon Button](docs/components/forge-icon-button.md): Icon: pressable ForgeIcon with a 44 by 44 hit target. Throws TypeError on a blank label. Same file as forge-icon, so this item installs forge-icon. Needs react-native-svg.
+- [Instrument System](docs/components/instrument-system.md): Instrument policy, not UI: 18 blueprints, precision scrubbing math, ruler ticks, motion budgets, overlay planner. No provider needed.
+- [Persona Model](docs/components/persona-model.md): Persona data, not UI: 4 personas, 11 capabilities, 7 surfaces, compose, import, export, per-document store. No provider needed.
+- [Studio Gesture](docs/components/studio-gesture.md): Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed.
+- [Workspace Utilities](docs/components/workspace-utilities.md): Helpers, not UI: APP_MANIFESTS (task line, glyph, category per studio), jsonProblem (JSON parse error as a sentence). Needs studio-layout.
+
+## Engines and foundations (docs only, no registry item)
+
+- [@nitro-forge/prism](docs/engines/prism.md): Create an image Tested example (ops new, addRasterLayer, fillLayer, flatten).
+- [@nitro-forge/cadence](docs/engines/cadence.md): Make an audio project Tested example (ops new, addTrack, addClip, addNote, project).
+- [@nitro-forge/splice](docs/engines/splice.md): Edit a video timeline Tested example (ops new, addSource, addTrack, addClip, duration).
+- [@nitro-forge/folio](docs/engines/folio.md): Work with a PDF Tested example (ops new, pageCount, addAnnotation, listAnnotations).
+- [@nitro-forge/pitch](docs/engines/pitch.md): Build a presentation Tested example (ops new, addSlide, addText, deck).
+- [@nitro-forge/tally](docs/engines/tally.md): Open a spreadsheet Tested example (ops new, setCell, getCell).
+- [@nitro-forge/quill](docs/engines/quill.md): Write a document Tested example (ops new, insertText, text).
+- [@nitro-forge/photo](docs/engines/photo.md): Organize a photo catalog Tested example (ops new, addOriginal, setRating, readOriginal).
+- [@nitro-forge/motion](docs/engines/motion.md): Build a motion composition Tested example (ops new, addShapeLayer, describe).
+- [@nitro-forge/design](docs/engines/design.md): Design an interface Tested example (ops new, addShape, updateNode, describe).
+- [@nitro-forge/draft](docs/engines/draft.md): Draw a CAD document Tested example (ops new, addPoint, addSegment, updatePoint, describe).
+- [@nitro-forge/scene](docs/engines/scene.md): Bounded persistent 3D scene graph: TRS nodes, PBR-state materials, host-side deterministic rendering. Tested example (ops new, addMaterial, addMeshPrimitive, addNode, setTransform, bounds).
+- [@nitro-forge/ignition](docs/engines/ignition.md): Engine host and DocumentHandle: open, apply, applyBatch, snapshot, restore, undo, redo, close. Tested example (ops new, setCell, getCell, __batch).
+- [@nitro-forge/studio-layout](docs/engines/studio-layout.md): Dock and panel layout model behind the studio workspace. Pure functions, no UI. Tested example.
+- [@nitro-forge/editor-controls](docs/engines/editor-controls.md): The editor controls (audio, timeline, spreadsheet, layers, color, photo, motion, office). Import @nitro-forge/editor-controls/<path>, never @nyc-tron/ui/components/forge/*. Tested example.
+
+## Optional
+
+- [Design system](docs/agent-native/02-design-system.md): Token tiers, the rebrand contract and the five colour drift records.
+- [Accessibility review](docs/agent-native/05-accessibility-review.md): Source review of the 17 items; no item is verified.
+- [Full text](llms-full.txt): Every page above in one file.

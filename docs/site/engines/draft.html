@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@nitro-forge/draft | Nitro Forge</title>
+<meta name="description" content="Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html" aria-current="page">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li><li><a href="../engines/editor-controls.html">@nitro-forge/editor-controls</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>@nitro-forge/draft</h1>
+<div class="strip" role="note"><strong>Not a registry item</strong><p>Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary. Returns when the tarball versioning scheme is decided and the facade is installable (decision 3).</p></div>
+<h2 id="purpose">Purpose</h2>
+<p>Bounded persistent world-space 2D drafting and linear coordinate constraints. Studio task line (APP_MANIFESTS): &quot;Draw a CAD document&quot;. Not a registry item. Decision 3. The engine needs the Rust binary through @nitro-forge/ignition. The package is 0.1.0 in the monorepo and no tag, release or tarball has been cut for it. A source copy cannot carry the binary.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/draft</code></li><li>Import: <code>import { DraftDocument } from '@nitro-forge/draft';</code></li><li>Peers: none</li><li>Requires: <code>@nitro-forge/ignition</code> (native host, install-order.md step 1)</li><li>Command: not available. No tag, release or tarball exists (compatibility.v1.json distribution status NOT RUN), and the package is 0.1.0 inside a monorepo. Install by <code>workspace:*</code> inside this repo.</li><li>Installs: none</li><li>Files: <code>packages/draft</code> in the repo; nothing is copied by shadcn</li></ul>
+<h2 id="props">Props</h2>
+<p>Not a component, so there are no props. 1 entry point: <code>@nitro-forge/draft</code>. Top-level exports of <code>src/index.ts</code> (29): <code>DraftPoint</code>, <code>DraftLayer</code>, <code>DraftSegment</code>, <code>DraftCircle</code>, <code>DraftArc</code>, <code>ConstraintDefinition</code>, <code>DraftConstraint</code>, <code>DraftHatchLoops</code>, <code>DraftHatchPattern</code>, <code>DraftHatch</code>, <code>DraftDimensionKind</code>, <code>DraftDimensionAxis</code>, <code>DraftDimension</code>, <code>DraftDimensionMeasured</code>, <code>DraftDimensionState</code>, <code>DraftSheet</code>, <code>DraftViewportEntity</code>, <code>DraftBlock</code>, <code>DraftInsert</code>, <code>SnapSettings</code>, <code>DraftState</code>, <code>SolveReport</code>, <code>SnapResult</code>, <code>DraftSnapQuery</code>, <code>DraftProfileBounds</code>, <code>DraftProfile</code>, <code>DraftProfiles</code>, <code>DraftViewport</code>, <code>DraftDocument</code>.</p>
+<h2 id="variants">Variants</h2>
+<p>none</p>
+<h2 id="states">States</h2>
+<p>A document is live from <code>open</code> or <code>openSnapshot</code> until <code>close</code>. After <code>close</code>, every call throws <code>document handle &lt;id&gt; is closed</code>. A failed op throws <code>EngineError</code> and leaves the document, its ids and its undo history unchanged. <code>save()</code> returns the NFD1 snapshot bytes that <code>openSnapshot</code> reads. <code>undo()</code> and <code>redo()</code> resolve <code>false</code> when there is nothing to move.</p>
+<h2 id="a11y">A11y</h2>
+<p>Not UI. The engine renders nothing on screen, so there is nothing to review here. The studio components that show draft state carry their own A11y sections in docs/components/.</p>
+<h2 id="example">Example</h2>
+<p><code>pnpm test:docs-examples</code> runs this file (<code>tooling/docs/examples/draft.ts</code>) against the real engine through nf-cli (<code>tooling/docs/examples.test.ts</code>). It fails if the example sends an op it does not declare, or declares one that is missing from the draft-engine section of docs/ENGINE_OPS.md or from the package source. Ops: <code>new</code>, <code>addPoint</code>, <code>addSegment</code>, <code>updatePoint</code>, <code>describe</code>.</p>
+<p>The example takes an <code>EngineHost</code>. In an app that is <code>createNitroHost()</code> from <code>@nitro-forge/ignition</code>; in Node it is <code>new CliHost()</code> from <code>@nitro-forge/ignition/cli</code>, after <code>cargo build --locked -p nf-cli</code>.</p>
+<pre><code>import assert from 'node:assert/strict';
+import type { EngineHost } from '@nitro-forge/ignition';
+import { DraftDocument } from '@nitro-forge/draft';
+
+export const ops = ['new', 'addPoint', 'addSegment', 'updatePoint', 'describe'];
+
+export async function example(host: EngineHost) {
+  const doc = await DraftDocument.open(host, 'mm');
+  const a = (await doc.addPoint(0, 0)).data.point_id;
+  const b = (await doc.addPoint(30, 0)).data.point_id;
+  await doc.addSegment(a, b, { name: 'Wall' });
+
+  const bytes = await doc.save();
+  await doc.close();
+
+  const reopened = await DraftDocument.openSnapshot(host, bytes);
+  const endX = async () =&gt; (await reopened.describe()).data.points[String(b)]?.x;
+  assert.equal(await endX(), 30);
+  await reopened.updatePoint(b, { x: 45 });
+  assert.equal(await endX(), 45);
+  assert.equal(await reopened.undo(), true);
+  assert.equal(await endX(), 30);
+  assert.equal(await reopened.redo(), true);
+  assert.equal(await endX(), 45);
+  await reopened.close();
+}</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Read the draft-engine section of <code>docs/ENGINE_OPS.md</code> for op names and payloads before calling <code>apply</code>.</li><li>Group several edits that must undo together with <code>handle.applyBatch</code> (one undo step).</li><li>Treat <code>@nitro-forge/draft</code> as a monorepo dependency until a tarball release exists.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not run <code>shadcn add</code> for this package; it has no registry item (@nitro-forge/draft needs the Rust binary).</li><li>Do not claim an npm install; <code>compatibility.v1.json</code> records npm as not used.</li><li>Do not keep your own undo stack; the engine records one entry per mutating op.</li></ul>
+</article>
+
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
+<span>Generated from inputs <code>09b855b1</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

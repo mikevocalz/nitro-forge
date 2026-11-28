@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio UI Provider | Nitro Forge</title>
+<meta name="description" content="Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<header class="top">
+<a class="mark" href="../index.html">Nitro Forge</a>
+<form action="../search.html" method="get" role="search"><input type="search" name="q" aria-label="Search the docs" placeholder="Search, press / to focus"></form>
+<div class="ctl">
+<select id="brand" aria-label="Brand"><option value="suite">Suite brand</option><option value="prism">Prism brand</option></select>
+<select id="scheme" aria-label="Scheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+<select id="density" aria-label="Density"><option value="standard">Standard</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+</div>
+</header>
+<div class="layout">
+<nav class="side" aria-label="Site"><details class="menu" open><summary class="btn">Menu</summary><div>
+<ul><li><a href="../index.html">Home</a></li><li><a href="../install.html">Install</a></li><li><a href="../tokens.html">Tokens</a></li><li><a href="../search.html">Search</a></li></ul>
+<h2>Components</h2>
+<ul><li><a href="../components/forge-document-stage.html">Forge Document Stage</a></li><li><a href="../components/forge-workspace.html">Forge Workspace</a></li><li><a href="../components/nyc-tron-host.html">NYC-Tron Host</a></li><li><a href="../components/persona-composer.html">Persona Composer</a></li><li><a href="../components/persona-turret.html">Persona Turret</a></li><li><a href="../components/prism-canvas.html">Prism Canvas</a></li><li><a href="../components/prism-editor.html">Prism Editor</a></li><li><a href="../components/quill-text-editor.html">Quill Text Editor</a></li></ul>
+<h2>No provider needed</h2>
+<ul><li><a href="../components/studio-ui-provider.html" aria-current="page">Studio UI Provider</a></li><li><a href="../components/studio-theme.html">Studio Theme</a></li><li><a href="../components/brand-theme.html">Brand Theme</a></li><li><a href="../components/forge-directions.html">Forge Directions</a></li><li><a href="../components/forge-icon.html">Forge Icon</a></li><li><a href="../components/forge-icon-button.html">Forge Icon Button</a></li><li><a href="../components/instrument-system.html">Instrument System</a></li><li><a href="../components/persona-model.html">Persona Model</a></li><li><a href="../components/studio-gesture.html">Studio Gesture</a></li><li><a href="../components/workspace-utilities.html">Workspace Utilities</a></li></ul>
+<h2>Engines and foundations</h2>
+<ul><li><a href="../engines/prism.html">@nitro-forge/prism</a></li><li><a href="../engines/cadence.html">@nitro-forge/cadence</a></li><li><a href="../engines/splice.html">@nitro-forge/splice</a></li><li><a href="../engines/folio.html">@nitro-forge/folio</a></li><li><a href="../engines/pitch.html">@nitro-forge/pitch</a></li><li><a href="../engines/tally.html">@nitro-forge/tally</a></li><li><a href="../engines/quill.html">@nitro-forge/quill</a></li><li><a href="../engines/photo.html">@nitro-forge/photo</a></li><li><a href="../engines/motion.html">@nitro-forge/motion</a></li><li><a href="../engines/design.html">@nitro-forge/design</a></li><li><a href="../engines/draft.html">@nitro-forge/draft</a></li><li><a href="../engines/scene.html">@nitro-forge/scene</a></li><li><a href="../engines/ignition.html">@nitro-forge/ignition</a></li><li><a href="../engines/studio-layout.html">@nitro-forge/studio-layout</a></li><li><a href="../engines/editor-controls.html">@nitro-forge/editor-controls</a></li></ul>
+</div></details></nav>
+<main id="main" class="main">
+<div class="cols">
+<article class="sheet">
+<h1>Studio UI Provider</h1>
+<p class="lead">Provider: StudioUIProvider supplies the 27 UI slots. Every studio component throws without it. Fill the slots with nyc-tron-host.</p><div class="strip" role="note"><strong>Prerequisite</strong><p>This item is the provider. Install it first, then a host such as <code>nyc-tron-host</code>.</p></div>
+<div class="block"><header><span>Install command</span><button type="button" class="btn" hidden data-copy="cmd-studio-ui-provider" hidden>Copy</button></header><pre id="cmd-studio-ui-provider">npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider</pre></div>
+<button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
+<p>The slot contract between Studio and the host UI. <code>StudioUIProvider</code> puts a <code>StudioUIComponents</code> object in context and each wrapper reads its slot and forwards props. With no provider any wrapper throws &quot;Studio requires StudioUIProvider with your application UI components. No substitute UI is installed.&quot; No fallback UI exists.</p>
+<h2 id="install">Install</h2>
+<ul><li>Package: <code>@nitro-forge/studio-ui-provider</code> (registry item)</li><li>Import: <code>import { StudioUIProvider, View, Text, Button /* and the other wrappers */ } from '@/components/forge/ui';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</li><li>Requires: A <code>StudioUIComponents</code> implementation (registry item <code>nyc-tron-host</code> builds one from NYC-Tron)</li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider</code></li><li>Installs: none (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/ui.tsx</code></li></ul>
+<h2 id="props">Props</h2>
+<table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">components</td><td data-l="Type"><code>StudioUIComponents</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">27 slots; 24 required, 3 optional (Popover, NativeDropdown, TokenScope). Table in the Slots section above.</td></tr><tr><td data-l="Name">children</td><td data-l="Type"><code>ReactNode</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description"></td></tr><tr><td data-l="Name">slot props</td><td data-l="Type"><code>Studio*Props</code> types in <code>ui.tsx</code></td><td data-l="Default"></td><td data-l="Required"></td><td data-l="Description"><code>tone</code> and <code>surface</code> are accepted for older call sites and ignored by the NYC-Tron host.</td></tr></tbody></table>
+<h2 id="variants">Variants</h2>
+<h3 id="button-variant">Button <code>variant</code></h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">primary, outline, ghost</td><td data-l="Effect">NYC-Tron host maps outline to secondary.</td></tr></tbody></table>
+<h3 id="button-size">Button <code>size</code></h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">sm, md</td><td data-l="Effect"></td></tr></tbody></table>
+<h3 id="banner-tone">Banner <code>tone</code></h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">info, danger, success, neutral</td><td data-l="Effect"></td></tr></tbody></table>
+<h3 id="card-keyvaluelist-surface">Card, KeyValueList <code>surface</code></h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">page, night</td><td data-l="Effect">night wraps in <code>NightScope</code>.</td></tr></tbody></table>
+<h3 id="toolbar-density">Toolbar <code>density</code></h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">default, compact</td><td data-l="Effect"></td></tr></tbody></table>
+<h3 id="tabbar-semantics">TabBar <code>semantics</code></h3>
+<table><thead><tr><th scope="col">Value</th><th scope="col">Effect</th></tr></thead><tbody><tr><td data-l="Value">tabs, navigation</td><td data-l="Effect"></td></tr></tbody></table>
+<h2 id="states">States</h2>
+<table><thead><tr><th scope="col">State</th><th scope="col">How it is set</th><th scope="col">What the code does</th></tr></thead><tbody><tr><td data-l="State">No provider</td><td data-l="How it is set">wrapper called outside the provider</td><td data-l="What the code does">Throws.</td></tr><tr><td data-l="State">Optional slot absent</td><td data-l="How it is set">Popover or NativeDropdown not supplied</td><td data-l="What the code does">Throws a named error; no generic popup is substituted.</td></tr><tr><td data-l="State">TokenScope absent</td><td data-l="How it is set">native</td><td data-l="What the code does">Children render unscoped.</td></tr><tr><td data-l="State">TokenScope absent</td><td data-l="How it is set">web</td><td data-l="What the code does"><code>display: contents</code> view carries the variables.</td></tr></tbody></table>
+<h3 id="motion">Motion</h3>
+<p>None.</p>
+<h2 id="a11y">A11y</h2>
+<ul><li>The wrappers set nothing; <code>aria-label</code> and similar props pass through to the host component.</li><li>Review status: reviewed-pass, reviewed, no failures found in the source read. Nothing was rendered, so no item is verified (decision 34).</li></ul>
+<h2 id="example">Example</h2>
+<pre><code>import { StudioUIProvider, type StudioUIComponents } from '@/components/forge/ui';
+
+declare const studioUI: StudioUIComponents;
+export const Root = ({ children }: { children: React.ReactNode }) =&gt; (
+  &lt;StudioUIProvider components={studioUI}&gt;{children}&lt;/StudioUIProvider&gt;
+);</code></pre>
+<h2 id="do-don-t">Do/Don't</h2>
+<h3 id="do">Do</h3>
+<ul><li>Mount the provider once above every studio component (<code>components</code>).</li><li>Supply <code>Popover</code> and <code>NativeDropdown</code> when you use Prism, which calls them.</li></ul>
+<h3 id="don-t">Don't</h3>
+<ul><li>Do not expect a default UI; none is installed.</li><li>Do not recreate controls in Forge; NYC-Tron owns them (decision 1).</li></ul><h2 id="for-agents">For agents</h2><p>Run these in order. Steps 1 to 3 of the install order cannot be installed outside the monorepo today.</p><div class="block"><header><span>Commands for an agent</span><button type="button" class="btn" hidden data-copy="agent-studio-ui-provider" hidden>Copy</button></header><pre id="agent-studio-ui-provider">npx shadcn@4.23.0 add @nitro-forge/studio-ui-provider</pre></div>
+</article>
+<aside class="facts" aria-label="Facts"><h2>Facts</h2><dl>
+<dt>Needs StudioUIProvider</dt><dd>this is the provider</dd>
+<dt>Needs ignition</dt><dd>no</dd>
+<dt>Needs studio-layout</dt><dd>no</dd>
+<dt>Accessibility</dt><dd>reviewed-pass: source read, no failures found</dd>
+<dt>Peers</dt><dd><code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</dd>
+<dt>Installs</dt><dd>none</dd>
+<dt>Source files</dt><dd class="mono">studio-workspace/src/ui.tsx</dd>
+<dt>Generated from</dt><dd class="mono">09b855b1</dd>
+</dl></aside>
+</div>
+</main>
+</div>
+<footer class="status" role="contentinfo">
+<span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
+<span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
+<span>Generated from inputs <code>09b855b1</code></span>
+<span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
+</footer>
+<script src="../site.js"></script>
+</body>
+</html>

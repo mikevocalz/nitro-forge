@@ -6,6 +6,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { workspaceThemes, resolveWorkspaceScale, type WorkspaceDensity } from './theme';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { plainText, textEdit } from './text-diff';
+import { tokens } from './tokens';
 
 export interface QuillTextEditorHandle {
   flush(): Promise<void>;
@@ -30,7 +31,7 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
   const storeRef = useRef<StoreApi<Draft> | null>(null);
   if (!storeRef.current) {
     const initial = plainText(props.state);
-    storeRef.current = createStore<Draft>(() => ({ width: 800, base: initial, text: initial, busy: false, conflict: false, error: null, status: 'Write your essay here.' }));
+    storeRef.current = createStore<Draft>(() => ({ width: tokens.spacing.off800, base: initial, text: initial, busy: false, conflict: false, error: null, status: 'Write your essay here.' }));
   }
   const store = storeRef.current;
   const width = useStore(store, s => s.width);
@@ -133,26 +134,26 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
   const compact = width < 600;
   return <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled"
     onLayout={event => { const next = event.nativeEvent.layout.width; if (next > 0 && next !== store.getState().width) store.setState({ width: next }); }}
-    contentContainerStyle={{ paddingHorizontal: compact ? 16 : 40, paddingTop: compact ? 18 : 32, paddingBottom: 48, gap: scale.space.group }}>
-    <View style={{ width: '100%', maxWidth: 792, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    contentContainerStyle={{ paddingHorizontal: compact ? tokens.spacing.off16 : tokens.spacing.off40, paddingTop: compact ? tokens.spacing.off18 : tokens.spacing.fixedCanvas, paddingBottom: tokens.spacing.off48, gap: scale.space.group }}>
+    <View style={{ width: '100%', maxWidth: tokens.spacing.off792, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.fixedInset }}>
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.fixedElement }}>
         <ForgeIcon name="file" size={14} color={colors.muted} reducedMotion />
-        <Text style={{ color: colors.muted, fontSize: 11 }}>{wordCount} {wordCount === 1 ? 'word' : 'words'}{dirty ? ' · Draft changes' : ' · Up to date'}</Text>
+        <Text style={{ color: colors.muted, fontSize: tokens.text.off11 }}>{wordCount} {wordCount === 1 ? 'word' : 'words'}{dirty ? ' · Draft changes' : ' · Up to date'}</Text>
       </View>
       <Button aria-label="Apply essay text" title={busy ? 'Applying…' : 'Apply text'} disabled={busy || !dirty || conflict} loading={busy}
         onPress={() => { void flush().catch(() => {}); }} variant={dirty ? 'primary' : 'ghost'} tone="carolina" size="sm" cornerRadius={scale.radius.control} targetSize={scale.size.target} className={controlClass}
-        icon={<ForgeIcon name="check" size={16} color={colors.accent} reducedMotion />} />
+        icon={<ForgeIcon name="check" size={tokens.size.iconSm} color={colors.accent} reducedMotion />} />
     </View>
-    <View style={{ width: '100%', maxWidth: 792, alignSelf: 'center', minHeight: 760, backgroundColor: colors.paper,
-      borderRadius: scale.radius.paper, paddingHorizontal: compact ? 24 : 64, paddingTop: compact ? 36 : 56, paddingBottom: 64,
-      boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+    <View style={{ width: '100%', maxWidth: tokens.spacing.off792, alignSelf: 'center', minHeight: tokens.spacing.off760, backgroundColor: colors.paper,
+      borderRadius: scale.radius.paper, paddingHorizontal: compact ? tokens.spacing.off24 : tokens.spacing.fixedPage, paddingTop: compact ? 36 : 56, paddingBottom: tokens.spacing.fixedPage,
+      boxShadow: tokens.shadow.page }}>
       <TextInput accessibilityLabel="Essay text" multiline editable={!busy && !!props.state} value={text}
         onChangeText={value => store.setState({ text: value, error: null, status: 'Draft changes · Apply text to update your document.' })}
         placeholder="Begin writing…" placeholderTextColor={colors.paperMuted} textAlignVertical="top"
-        style={{ minHeight: 480, padding: 0, backgroundColor: 'transparent', color: colors.paperInk, fontFamily: manuscriptFont,
+        style={{ minHeight: tokens.spacing.off480, padding: 0, backgroundColor: 'transparent', color: colors.paperInk, fontFamily: manuscriptFont,
           fontSize: compact ? 17 : 19, lineHeight: compact ? 29 : 34, borderWidth: 0 }} />
     </View>
-    {(error || conflict || dirty) && <View style={{ maxWidth: 792, width: '100%', alignSelf: 'center' }}><Banner tone={error || conflict ? 'danger' : 'info'} title={error ?? (conflict ? 'Your draft conflicts with the latest document.' : status)} live={error || conflict ? 'alert' : 'status'} className="rounded-[4px]" /></View>}
+    {(error || conflict || dirty) && <View style={{ maxWidth: tokens.spacing.off792, width: '100%', alignSelf: 'center' }}><Banner tone={error || conflict ? 'danger' : 'info'} title={error ?? (conflict ? 'Your draft conflicts with the latest document.' : status)} live={error || conflict ? 'alert' : 'status'} className="rounded-[4px]" /></View>}
     {conflict && <Button title="Discard draft and load latest document" aria-label="Discard draft and load latest document" disabled={busy} onPress={() => { void loadLatest(); }} variant="ghost" tone="carolina" size="sm" cornerRadius={scale.radius.control} targetSize={scale.size.target} className={controlClass} />}
   </ScrollView>;
 });
