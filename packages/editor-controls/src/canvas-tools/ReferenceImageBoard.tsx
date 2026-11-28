@@ -30,6 +30,7 @@ import {
  referenceA11yLabel,referenceEditProblem,resizeFrame,resolveReferenceKey,stepReferenceOpacity,validateReferences,
  type BoardRect,type ReferenceEdit,type ReferenceFit,type ReferenceImage,type ReferencePatch,type ReferencePlacement,
 } from "./reference-board-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode ReferenceImageBoard}. The reference list is host state, kept apart from the document. */
 export interface ReferenceImageBoardProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -152,7 +153,7 @@ function ReferenceImageBoardBody({
  };
 
  return <View {...rest} role="group" aria-label={label} {...{className:joinClasses("gap-3",className)}} style={[{maxWidth:"100%"},style]}>
-  <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
   {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Reference change in progress"}</Text>:null}
   <View style={{flexDirection:"row",flexWrap:"wrap",gap:12,alignItems:"flex-start"}}>
    <View testID="reference-board" {...{className:joinClasses("overflow-hidden",styled&&"rounded-control border border-border")}}
@@ -304,7 +305,7 @@ function Inspector({reference:ref,styled,unstyled,onAdd,onRemove,onChange,onTogg
   </View>
   <SwitchRow label="Pin in place" unstyled={unstyled} value={ref.pinned}
    detail={ref.placement==="float"?"Keeps the window from being dragged":"Applies when the reference floats"}
-   disabledReason={lockedReason} onValueChange={pinned=>onChange("pin",{pinned})}/>
+   {...(lockedReason===undefined?{}:{disabledReason:lockedReason})} onValueChange={pinned=>onChange("pin",{pinned})}/>
   <SwitchRow label="Lock" unstyled={unstyled} value={ref.locked} detail="Blocks every change until unlocked"
    onValueChange={onToggleLock}/>
   <View style={{flexDirection:"row",flexWrap:"wrap",gap:8,alignItems:"center"}}>

@@ -10,7 +10,7 @@ export interface SlideThumbnailProps {
   readonly width:number;
   readonly size?:SlideSize;
   /** Draws an image object's picture; without it images show as a labelled frame. */
-  readonly renderImage?:(src:string,object:SlideObject)=>ReactNode;
+  readonly renderImage?:((src:string,object:SlideObject)=>ReactNode)|undefined;
   readonly styled?:boolean;
 }
 

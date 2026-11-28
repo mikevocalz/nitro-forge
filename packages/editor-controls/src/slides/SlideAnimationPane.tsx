@@ -9,6 +9,7 @@ import {Button} from "@nyc-tron/ui/components/Button";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {CloseMark,OFFICE_TOUCH_TARGET} from "../office/office-controls.tsx";
 import {effectLabel,formatSeconds,parseSeconds,playOrder,timelineEnd,type AnimationCategory,type AnimationEffect,type SlideAnimation} from "./animation-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode SlideAnimationPane}. */
 export interface SlideAnimationPaneProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -20,13 +21,13 @@ export interface SlideAnimationPaneProps extends Omit<ViewProps,"children">,Scop
   /** The object selected on the canvas; new animations apply to it. */
   readonly selectedObjectId?:string;
   /** Adds an animation. Rejecting keeps the form and shows the message. */
-  readonly onAdd?:(animation:{objectId:string;kind:string;startS:number;durationS:number})=>void|Promise<unknown>;
+  readonly onAdd?:((animation:{objectId:string;kind:string;startS:number;durationS:number})=>void|Promise<unknown>)|undefined;
   /** Removes the animation at the engine's `index`. */
-  readonly onRemove?:(index:number)=>void|Promise<unknown>;
+  readonly onRemove?:((index:number)=>void|Promise<unknown>)|undefined;
   /** Plays the slide's animations once on the canvas. */
-  readonly onPreview?:()=>void;
-  readonly onTimingCommit?:(index:number,value:{startS:number;durationS:number;trigger:'on-click'|'with-previous'|'after-previous'})=>unknown;
-  readonly onOrderCommit?:(indices:readonly number[])=>unknown;
+  readonly onPreview?:(()=>void)|undefined;
+  readonly onTimingCommit?:((index:number,value:{startS:number;durationS:number;trigger:'on-click'|'with-previous'|'after-previous'})=>unknown)|undefined;
+  readonly onOrderCommit?:((indices:readonly number[])=>unknown)|undefined;
   readonly supportedTriggers?:readonly ('on-click'|'with-previous'|'after-previous')[];
   disabled?:boolean;
   className?:string;
@@ -145,5 +146,5 @@ function SlideAnimationPaneBody({boundary,actionError,disabledReason,disabled=fa
       </View>
       {local.error?<Text accessibilityLiveRegion="assertive" {...{className:joinClasses(styled&&"text-danger text-sm")}}>{local.error}</Text>:null}
     </View>:null}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

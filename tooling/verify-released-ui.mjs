@@ -1,7 +1,7 @@
 // Compile all recovered adapter contracts against installed release tarball
 // declarations. The contracts import NYC-Tron shell components and the editor
 // controls in @nitro-forge/editor-controls; the controls are compiled first,
-// with their own flags, against the same release declarations.
+// with their own tsconfig.json, against the same release declarations.
 import {readFileSync,mkdtempSync,writeFileSync,rmSync,realpathSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';

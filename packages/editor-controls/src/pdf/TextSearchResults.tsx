@@ -5,6 +5,7 @@ import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {Button} from "@nyc-tron/ui/components/Button";
 import {OFFICE_TOUCH_TARGET,SkipGlyph,ToolButton,officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {groupHitsByPage,searchSummary,stepHit,type PdfSearchHit} from "./search-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Search progress reported by the host while it walks the pages. */
 export interface PdfSearchProgress {
@@ -37,10 +38,10 @@ export interface TextSearchResultsProps extends Omit<ViewProps,"children">,Scope
   readonly error?:string;
   /** The case toggle renders only with its callback. */
   readonly caseSensitive?:boolean;
-  readonly onCaseSensitiveChange?:(value:boolean)=>void;
+  readonly onCaseSensitiveChange?:((value:boolean)=>void)|undefined;
   /** The whole-word toggle renders only with its callback. */
   readonly wholeWords?:boolean;
-  readonly onWholeWordsChange?:(value:boolean)=>void;
+  readonly onWholeWordsChange?:((value:boolean)=>void)|undefined;
   className?:string;
   unstyled?:boolean;
 }
@@ -58,7 +59,7 @@ export interface TextSearchResultsProps extends Omit<ViewProps,"children">,Scope
 export function TextSearchResults({scope='pdf-search',revision=0,...props}:TextSearchResultsProps){
  if(props.hits.length>1000||props.query.length>8192||!Number.isSafeInteger(props.progress.pageCount)||props.progress.pageCount<0||!Number.isSafeInteger(props.progress.searched)||props.progress.searched<0||props.progress.searched>props.progress.pageCount||props.hits.some(h=>!Number.isSafeInteger(h.page)||h.page<0||h.page>=props.progress.pageCount||!Number.isSafeInteger(h.start)||!Number.isSafeInteger(h.end)||h.start<0||h.end<h.start))throw new RangeError('Invalid PDF search state');
  const owner=JSON.stringify([...controlIdentity(scope,revision),props.disabledReason]),guard=useScopedControl(owner,props,props.disabledReason!==undefined);
- return <><ErrorMessage message={guard.error??props.disabledReason} unstyled={props.unstyled}/><TextSearchResultsBody {...props}
+ return <><ErrorMessage {...exact({message:guard.error??props.disabledReason,unstyled:props.unstyled})}/><TextSearchResultsBody {...props}
  onQueryChange={q=>guard.current()?.onQueryChange(q)} onSubmit={q=>guard.run('search',h=>h.onSubmit(q))}
  onSelect={(index,hit)=>{const h=guard.current(),actual=h?.hits[index];if(h&&actual&&actual.page===hit.page&&actual.start===hit.start&&actual.end===hit.end)h.onSelect(index,actual);}}
  onCaseSensitiveChange={props.onCaseSensitiveChange?v=>guard.current()?.onCaseSensitiveChange?.(v):undefined}

@@ -1,5 +1,5 @@
 import {createValueGesture} from '@nyc-tron/ui/components/gestures/value-gesture';
-export interface FrameScrubOwnerInputs {disabled?:boolean;preview?:(frame:number)=>void;restore():void;commit(frame:number):void}
+export interface FrameScrubOwnerInputs {disabled?:boolean;preview?:((frame:number)=>void)|undefined;restore():void;commit(frame:number):void}
 /** Ownership around the existing value gesture; contains no coordinate math. */
 export function createFrameScrubOwner(show:(frame:number|undefined)=>void){
  let boundary:string|undefined,epoch=0,blocked=false;

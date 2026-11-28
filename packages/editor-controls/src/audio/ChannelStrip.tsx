@@ -26,29 +26,29 @@ export interface ChannelMeter {
 export interface ChannelStripProps extends Omit<ViewProps, "children"> {
   /** App-owned minimum interaction target. Defaults to 44 points. */
   readonly targetSize?: number;
-  readonly labels?:{fader?:LevelFaderProps["labels"];pan?:PanControlProps["labels"];toggles?:SoloMuteButtonsProps["labels"]};
+  readonly labels?:{fader?:LevelFaderProps["labels"];pan?:PanControlProps["labels"];toggles?:SoloMuteButtonsProps["labels"]}|undefined;
   readonly channel: MixerChannel;
   /** From {@linkcode audibility} across the whole console. @default from `channel.muted` */
-  readonly audibility?: Audibility;
+  readonly audibility?: Audibility | undefined;
   readonly onGainCommit: (gain: number) => void | Promise<unknown>;
   readonly onPanCommit: (pan: number) => void | Promise<unknown>;
   readonly onMutedCommit: (muted: boolean) => void | Promise<unknown>;
   readonly onSoloCommit: (solo: boolean) => void | Promise<unknown>;
   /** When given, the strip draws a solo-safe toggle. */
-  readonly onSoloSafeCommit?: (safe: boolean) => void | Promise<unknown>;
+  readonly onSoloSafeCommit?: ((safe: boolean) => void | Promise<unknown>) | undefined;
   /** Live previews; never persist these. */
-  readonly onGainChange?: (gain: number) => void;
-  readonly onPanChange?: (pan: number) => void;
+  readonly onGainChange?: ((gain: number) => void) | undefined;
+  readonly onPanChange?: ((pan: number) => void) | undefined;
   /**
    * Level meter beside the fader. Omit it and no meter is drawn; the strip
    * never shows a placeholder level.
    */
-  readonly meter?: ChannelMeter;
+  readonly meter?: ChannelMeter | undefined;
   /**
    * Name of the bus `channel.output` points at, shown as `"to <name>"`.
    * {@linkcode MixingConsole} resolves it from the channel list.
    */
-  readonly outputName?: string;
+  readonly outputName?: string | undefined;
   /**
    * Lines of routing text (bus tag, group, output) to reserve above the
    * fader, so faders line up across strips with and without routing.

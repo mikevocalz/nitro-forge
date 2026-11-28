@@ -6,6 +6,7 @@ import {SettingSwitch} from '@nyc-tron/ui/components/forms/SettingSwitch';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {validateBrushTaper,type BrushTaper,type BrushTaperSettings} from './brush-model.ts';
+import {exact} from '../exact-optional.ts';
 export interface BrushTaperControlProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  value:BrushTaperSettings;input:'pen'|'touch';onInputChange:(input:'pen'|'touch')=>void;
  onCommit:(settings:BrushTaperSettings,signal?:AbortSignal)=>void|Promise<unknown>;
@@ -25,6 +26,6 @@ export function BrushTaperControl({scope='brush-taper',revision=0,...props}:Brus
   <SegmentedControl aria-label="Tip shape" value={taper.tip} options={[{value:'round',label:'Round'},{value:'linear',label:'Linear'},{value:'sharp',label:'Sharp'}]} disabled={off} unstyled={unstyled} onChange={tip=>set({tip})}/>
   <SettingSwitch label="Pressure taper" on={taper.pressure} disabled={off||!pressureAvailable} styled={!unstyled} hint={!pressureAvailable?'This input does not report pressure':undefined} onChange={pressure=>set({pressure})}/>
   {renderTestStroke(taper,input)}
-  {off?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{disabledReason??'Applying taper'}</Text>:null}<ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  {off?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{disabledReason??'Applying taper'}</Text>:null}<ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

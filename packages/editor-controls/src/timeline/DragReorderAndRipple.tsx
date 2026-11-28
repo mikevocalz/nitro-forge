@@ -13,6 +13,7 @@ import {Button} from "@nyc-tron/ui/components/Button";
 import {SegmentedControl} from "@nyc-tron/ui/components/SegmentedControl";
 import {rippleDeleteEdit,type MoveMode,type RippleScope,type TimelineEdit,type TimelineTrack} from "./edits.ts";
 import {TRIM_MODE_PROBLEM_TEXT,rippleDeletePreview} from "./trim-modes.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode DragReorderAndRipple}. */
 export interface DragReorderAndRippleProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -71,7 +72,7 @@ function DragReorderAndRippleBody({
   const reason=!found?"Select a clip to ripple delete it":preview&&!preview.valid&&preview.problem?TRIM_MODE_PROBLEM_TEXT[preview.problem]:undefined;
   const mode:ModeValue=moveMode??"strict";
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <SegmentedControl aria-label="When a moved clip meets another" options={MODES} value={mode} disabled={disabled}
       onChange={v=>onMoveModeChange(v==="strict"?undefined:v)} unstyled={unstyled} {...id("mode")}/>
     <Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}}>{MODE_HELP[mode]}</Text>

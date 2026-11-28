@@ -7,6 +7,7 @@ import {keyboardKey,type DragPoint,type DragTransport,type DragTransportProps,ty
 import {PanResponderDrag} from "@nyc-tron/ui/components/gestures/PanResponderDrag";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {nudgePalette,placeFloatingPalette,shouldUndock,type PalettePosition,type PaletteRect} from "./floating-palette.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode FloatingPaletteUndockHandle}. */
 export interface FloatingPaletteUndockHandleProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -18,7 +19,7 @@ export interface FloatingPaletteUndockHandleProps extends Omit<ViewProps,"childr
   /** Area the floating palette must stay inside, in the same coordinates as `origin`. */
   readonly bounds:PaletteRect;
   /** Hinges, folds and cutouts the palette must not cover. */
-  readonly obstacles?:readonly PaletteRect[];
+  readonly obstacles?:readonly PaletteRect[]|undefined;
   /** Where to draw the palette during a drag; `undefined` when the drag ends or is cancelled. */
   readonly onPreview:(position:PalettePosition|undefined)=>void;
   /** A docked palette was dragged past the undock distance and released. One commit. */
@@ -87,7 +88,7 @@ function FloatingPaletteUndockHandleBody({
   return <View {...{onKeyDown,focusable:!disabled,
       className:joinClasses(!unstyled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
     style={[{alignSelf:"center"},style]} {...rest}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {disabledReason?<Text accessibilityLiveRegion="polite">{disabledReason}</Text>:null}
     <DragGrabHandle label={docked?`Undock ${label.toLowerCase()}`:`Move ${label.toLowerCase()}`}
       disabled={disabled} unstyled={unstyled}

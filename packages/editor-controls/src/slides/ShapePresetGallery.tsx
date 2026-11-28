@@ -10,6 +10,7 @@ import {Select} from '@nyc-tron/ui/components/Select';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {exact} from '../exact-optional.ts';
 export interface ShapeAdjustmentHandle {id:string;label:string;x:number;y:number;axis:'x'|'y';value:number;min:number;max:number}
 export interface ShapePresetGalleryProps extends Omit<AssetPresetGalleryProps,'label'|'selectedIds'> {
  selectedId:string|null;adjustments:readonly InspectorProperty[];handles:readonly ShapeAdjustmentHandle[];canvasAspectRatio:number;
@@ -28,9 +29,9 @@ export function ShapePresetGallery({scope='shape-presets',revision=0,...props}:S
  <View style={{aspectRatio:canvasAspectRatio,position:'relative',overflow:'hidden',minHeight:88}} onLayout={e=>store.setState({width:e.nativeEvent.layout.width,height:e.nativeEvent.layout.height})}>
  {renderAdjustmentPreview(selectedId,Object.fromEntries(handles.map(h=>[h.id,s.preview[h.id]??h.value])))}
  {active?<ShapeHandle key={owner+active.id} handle={active} width={s.width} height={s.height} disabled={off} unstyled={props.unstyled??false} onPreview={value=>{if(guard.current())store.setState({preview:{[active.id]:value}});}} onCommit={value=>{store.setState({preview:{}});return commit(active.id,value);}} onCancel={()=>store.setState({preview:{}})}/>:null}
- </View>{handles.length?<Select label="Active shape adjustment handle" value={active?.id??''} options={handles.map(h=>({value:h.id,label:h.label}))} disabled={off} unstyled={props.unstyled} onValueChange={activeId=>{if(guard.current())store.setState({activeId,preview:{}});}}/>:null}
- <PropertyInspector scope={owner} disabledReason={off?'Shape editing unavailable':undefined} label="Shape adjustments" fields={adjustments} unstyled={props.unstyled} onCommit={commit}/>
- </>:null}<ErrorMessage message={guard.error??props.disabledReason} unstyled={props.unstyled}/></View>;
+ </View>{handles.length?<Select label="Active shape adjustment handle" value={active?.id??''} options={handles.map(h=>({value:h.id,label:h.label}))} disabled={off} {...exact({unstyled:props.unstyled})} onValueChange={activeId=>{if(guard.current())store.setState({activeId,preview:{}});}}/>:null}
+ <PropertyInspector scope={owner} disabledReason={off?'Shape editing unavailable':undefined} label="Shape adjustments" fields={adjustments} {...exact({unstyled:props.unstyled})} onCommit={commit}/>
+ </>:null}<ErrorMessage {...exact({message:guard.error??props.disabledReason,unstyled:props.unstyled})}/></View>;
 }
 function ShapeHandle({handle:h,width,height,disabled,unstyled,onPreview,onCommit,onCancel}:{handle:ShapeAdjustmentHandle;width:number;height:number;disabled:boolean;unstyled:boolean;onPreview:(v:number)=>void;onCommit:(v:number)=>unknown;onCancel:()=>void}){
  const start=useRef<{value:number;width:number;height:number}|null>(null),value=(dx:number,dy:number)=>{const s=start.current;if(!s)return h.value;return Math.max(h.min,Math.min(h.max,s.value+(h.axis==='x'?dx/s.width:dy/s.height)*(h.max-h.min)));};

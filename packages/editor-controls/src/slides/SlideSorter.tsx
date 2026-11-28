@@ -9,6 +9,7 @@ import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {ToolButton,officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {SlideThumbnail} from "./SlideThumbnail.tsx";
 import {SLIDE_DEFAULT_SIZE,gridColumns,gridMove,moveBlock,nextSelection,slideLabel,type SlideObject,type SlideSize,type SlideSummary} from "./slide-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode SlideSorter}. Selection is controlled; actions render only when their callbacks are passed. */
 export interface SlideSorterProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -16,14 +17,14 @@ export interface SlideSorterProps extends Omit<ViewProps,"children">,ScopedContr
   readonly selectedIds:readonly string[];
   readonly onSelectionChange:(ids:string[])=>void;
   /** Opens a slide in the editor (double press or Enter). */
-  readonly onOpen?:(id:string)=>void;
+  readonly onOpen?:((id:string)=>void)|undefined;
   /**
    * Applies a new deck order after the selection was moved as a block. The
    * host turns it into engine moves (`planMoves` gives single from/to steps).
    */
-  readonly onReorder?:(order:string[])=>void|Promise<unknown>;
+  readonly onReorder?:((order:string[])=>void|Promise<unknown>)|undefined;
   /** Deletes the selected slides. Not offered when it would delete every slide. */
-  readonly onRemove?:(ids:string[])=>void|Promise<unknown>;
+  readonly onRemove?:((ids:string[])=>void|Promise<unknown>)|undefined;
   readonly size?:SlideSize;
   readonly renderImage?:(src:string,object:SlideObject)=>ReactNode;
   /** Smallest thumbnail width in points; columns are fitted to the measured width. @default 160 */
@@ -142,5 +143,5 @@ function SlideSorterBody({boundary,actionError,disabledReason,disabled=false,
           <Text {...{className:muted}} style={{fontVariant:["tabular-nums"],textAlign:"center"}}>{index+1}</Text>
         </View>;
       }}/>
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

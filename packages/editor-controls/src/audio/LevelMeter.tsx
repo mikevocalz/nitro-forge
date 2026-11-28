@@ -12,7 +12,7 @@ export interface LevelMeterProps extends Omit<ViewProps, "children"> {
   /** Current linear input peak in [0, 1] from the app's audio engine. */
   readonly level: number;
   /** Held peak in [0, 1], drawn as a thin marker. */
-  readonly peakHold?: number;
+  readonly peakHold?: number | undefined;
   /** @default "horizontal" */
   readonly orientation?: "horizontal" | "vertical";
   /** Thickness across the bar, in pt. @default 8 */

@@ -9,6 +9,7 @@ import {
   SHEET_TAB_TONES, sheetNameError, sheetTabKeyTarget, sheetTabMoveIndex,
   type SheetTab, type SheetTabTone,
 } from "./sheet-tabs-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /**
  * Controlled worksheet tab strip. The app owns the workbook (for Forge, the
@@ -20,16 +21,16 @@ export interface SheetTabsProps extends Omit<ViewProps, "children">,ScopedContro
   readonly tabs: readonly SheetTab[];
   readonly activeId: string;
   readonly onSelect: (id: string) => unknown;
-  readonly onAdd?: () => unknown;
+  readonly onAdd?: (() => unknown) | undefined;
   /** Called with a name that passed {@linkcode sheetNameError}; reject to show the engine's message. */
-  readonly onRename?: (id: string, name: string) => unknown;
-  readonly onDuplicate?: (id: string) => unknown;
+  readonly onRename?: ((id: string, name: string) => unknown) | undefined;
+  readonly onDuplicate?: ((id: string) => unknown) | undefined;
   /** Move a tab to `toIndex` in the current order. */
-  readonly onMove?: (id: string, toIndex: number) => unknown;
+  readonly onMove?: ((id: string, toIndex: number) => unknown) | undefined;
   /** Never offered for the last remaining sheet. */
-  readonly onRemove?: (id: string) => unknown;
-  readonly onProtectedChange?: (id: string, isProtected: boolean) => unknown;
-  readonly onToneChange?: (id: string, tone: SheetTabTone | undefined) => unknown;
+  readonly onRemove?: ((id: string) => unknown) | undefined;
+  readonly onProtectedChange?: ((id: string, isProtected: boolean) => unknown) | undefined;
+  readonly onToneChange?: ((id: string, tone: SheetTabTone | undefined) => unknown) | undefined;
   /** Reading direction for arrow keys. @default I18nManager.isRTL */
   readonly direction?: "ltr" | "rtl";
   readonly disabled?:boolean;
@@ -63,7 +64,7 @@ function LockMark({ unstyled }: { unstyled: boolean }) {
 }
 
 function ActionButton({ label, text, onPress, disabled, unstyled, hint }: {
-  label: string; text?: string; onPress: () => void; disabled?: boolean; unstyled: boolean; hint?: string;
+  label: string; text?: string; onPress: () => void; disabled?: boolean; unstyled: boolean; hint?: string | undefined;
 }) {
   return <Pressable role="button" accessibilityLabel={label} accessibilityHint={hint}
     aria-disabled={disabled} disabled={disabled} onPress={onPress}
@@ -253,5 +254,5 @@ function SheetTabsBody({actionError,disabledReason,disabled=false,
     {activeIndex < 0 && tabs.length > 0 ? <Text {...{ className: mutedClass }} style={{ paddingHorizontal: 12 }}>
       No sheet is selected.
     </Text> : null}
-  <ErrorMessage message={actionError??error??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??error??disabledReason,unstyled:unstyled})}/></View>;
 }

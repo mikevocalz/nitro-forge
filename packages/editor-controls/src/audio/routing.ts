@@ -129,7 +129,7 @@ export function cycleOutput(current: RouteId | null, buses: readonly RoutingBus[
   const options: (RouteId | null)[] = [null, ...buses.map(b => b.id)];
   const index = options.indexOf(current);
   const from = index < 0 ? 0 : index;
-  return options[(from + direction + options.length) % options.length];
+  return options[(from + direction + options.length) % options.length]!;
 }
 
 /** Accessible name of a send control, e.g. `"Vocal send to Reverb"`. */

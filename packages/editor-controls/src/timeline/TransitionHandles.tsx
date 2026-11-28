@@ -18,6 +18,7 @@ import {
   type TimelineCut,type TimelineTransition,type TransitionRequest,
 } from "./transitions.ts";
 import {frameToX,type TimelineViewport} from "./viewport.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode TransitionHandles}. */
 export interface TransitionHandlesProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -54,7 +55,7 @@ const sameCut=(a?:TimelineCut,b?:TimelineCut)=>!!a&&!!b&&a.leftClipId===b.leftCl
 
 function Band({t,cut,max,top,height,viewport,rate,selected,onChange,onRemove,onSelect,dropFrame,disabled,styled}:{
   t:TimelineTransition;cut:TimelineCut;max:number;top:number;height:number;viewport:TimelineViewport;rate:FrameRate;selected:boolean;
-  onChange:TransitionHandlesProps["onChange"];onRemove:(id:string)=>void;onSelect?:(id:string|undefined)=>void;dropFrame:boolean;disabled:boolean;styled:boolean;
+  onChange:TransitionHandlesProps["onChange"];onRemove:(id:string)=>void;onSelect?:((id:string|undefined)=>void)|undefined;dropFrame:boolean;disabled:boolean;styled:boolean;
 }){
   const [preview,store]=useLocalStore(()=>undefined as number|undefined);
   const latest=useRef({t,max,rate,onChange,disabled});
@@ -156,7 +157,7 @@ function TransitionHandlesBody({
   const styled=!unstyled;
   return <View {...rest} pointerEvents="box-none" {...(testID?{testID}:{})}
     style={[{position:"absolute",left:0,top:0,width:viewport.widthPx,height:laneHeight*tracks.length,overflow:"hidden",direction:"ltr"},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {tracks.flatMap((track,i)=>{
       const top=i*laneHeight;
       return cutsOf(track).flatMap(cut=>{

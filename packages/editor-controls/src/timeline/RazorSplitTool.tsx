@@ -9,6 +9,7 @@ import {Button} from "@nyc-tron/ui/components/Button";
 import type {FrameRate} from "../timebase.ts";
 import {splitEdit,type TimelineEdit,type TimelineTrack} from "./edits.ts";
 import type {TimelineTool} from "./TimelineClipLane.tsx";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode RazorSplitTool}. */
 export interface RazorSplitToolProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -54,7 +55,7 @@ function RazorSplitToolBody({
   const id=(s:string)=>testID?{testID:testID+"-"+s}:{};
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}}
     style={[{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <Pressable accessibilityRole="switch" aria-checked={on} accessibilityState={{checked:on,disabled}} disabled={disabled}
       accessibilityLabel="Razor" accessibilityHint="When on, pressing a clip splits it at that point"
       onPress={()=>onToolChange(on?"select":"razor")} {...id("toggle")}

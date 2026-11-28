@@ -28,6 +28,7 @@ import {
  DROP_DOT_SIZE,buildFill,classifyPress,clampToTarget,describeDropTarget,dropKeyMove,dropToDocument,
  thresholdLabel,validateDrop,type DropPoint,type DropRect,type FillRequest,
 } from "./color-drop-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode ColorDropCanvasTarget}. */
 export interface ColorDropCanvasTargetProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -210,7 +211,7 @@ function ColorDropCanvasTargetBody({
 
  return <View ref={root} collapsable={false} {...rest} {...{className:joinClasses("gap-2",className)}}
   style={[{position:"relative",maxWidth:"100%"},style]}>
-  <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
   <View style={{flexDirection:"row",alignItems:"center",gap:10,minHeight:44}}>
    <View ref={chip} collapsable={false} {...pan.current.panHandlers}
     {...{onKeyDown,focusable:true}} accessible role="button"

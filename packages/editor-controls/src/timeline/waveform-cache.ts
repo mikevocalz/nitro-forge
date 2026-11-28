@@ -4,7 +4,7 @@ export type WaveformResource={kind:'idle'}|{kind:'loading'}|{kind:'ready';peaks:
 const IDLE:WaveformResource=Object.freeze({kind:'idle'});
 /** Source peaks only. No native decoder handles or synthetic waveform data enter the cache. */
 export function createWaveformCache(){
- const store=createStore(()=>({version:0})),entries=new Map<string,{state:WaveformResource;abort?:AbortController;bytes:number}>(),refs=new Map<string,number>();
+ const store=createStore(()=>({version:0})),entries=new Map<string,{state:WaveformResource;abort?:AbortController|undefined;bytes:number}>(),refs=new Map<string,number>();
  let pending=0,bytes=0;const changed=()=>store.setState(s=>({version:s.version+1}));
  const remove=(key:string)=>{const e=entries.get(key);if(!e)return;entries.delete(key);bytes-=e.bytes;if(e.abort){pending--;e.abort.abort();}};
  return {store,
@@ -16,7 +16,7 @@ export function createWaveformCache(){
    if(pending>=4)return;
    if(previous)remove(key);
    while(entries.size>=64){const oldest=[...entries].find(([id,e])=>!e.abort&&!refs.has(id));if(!oldest)return;remove(oldest[0]);}
-   const abort=new AbortController(),entry:{state:WaveformResource;abort?:AbortController;bytes:number}={state:{kind:'loading'},abort,bytes:0};entries.set(key,entry);pending++;changed();
+   const abort=new AbortController(),entry:{state:WaveformResource;abort?:AbortController|undefined;bytes:number}={state:{kind:'loading'},abort,bytes:0};entries.set(key,entry);pending++;changed();
    void Promise.resolve().then(()=>load(abort.signal)).then(peaks=>{
     if(entries.get(key)!==entry||abort.signal.aborted)return;
     if(peaks.length>8192)throw new RangeError('Waveform provider exceeded 8192 bins');

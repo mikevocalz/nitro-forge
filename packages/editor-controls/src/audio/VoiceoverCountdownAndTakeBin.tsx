@@ -6,6 +6,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {LiveRecordingWaveform,type LiveRecordingWaveformProps} from './LiveRecordingWaveform.tsx';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface VoiceoverTake {id:string;label:string;durationSamples:number;saved:boolean}
 export interface VoiceoverCountdownAndTakeBinProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  status:'idle'|'countdown'|'recording'|'saving'|'error';countdownRemainingMs:number|null;
@@ -32,7 +33,7 @@ export function VoiceoverCountdownAndTakeBin({scope='voiceover-takes',revision=0
   <FlatList data={takes} keyExtractor={t=>t.id} style={{height:320}} initialNumToRender={6} windowSize={5} extraData={[off,selectedId]} ListEmptyComponent={<Text {...{className:unstyled?undefined:'text-text'}}>No voiceover takes supplied</Text>} renderItem={({item})=><View style={{gap:6,paddingVertical:8}}><Button title={`${item.label} · ${(item.durationSamples/input.sampleRate).toFixed(2)} s · ${item.saved?'saved':'unsaved'}`} accessibilityState={{selected:item.id===selectedId}} disabled={off} unstyled={unstyled} onPress={()=>guard.current()?.onSelect(item.id)}/><View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}><Button title={'Audition '+item.label} disabled={off} unstyled={unstyled} onPress={()=>guard.run('audition',(h,s)=>h.takes.some(t=>t.id===item.id)?h.onAudition(item.id,s):undefined)}/><Button title={'Discard '+item.label} variant="danger" disabled={off} unstyled={unstyled} onPress={()=>store.setState({discardId:item.id})}/></View></View>}/>
   {discard?<View accessibilityLabel="Confirm take discard" style={{gap:6}}><Text {...{className:unstyled?undefined:'text-text'}}>Discard {discard.label}? This removes the recorded take.</Text><Button title="Confirm discard take" variant="danger" disabled={off} unstyled={unstyled} onPress={()=>guard.run('discard',async(h,s)=>{if(!h.takes.some(t=>t.id===discard.id))return;await h.onDiscard(discard.id,s);store.setState({discardId:null});})}/><Button title="Keep take" variant="secondary" unstyled={unstyled} onPress={()=>store.setState({discardId:null})}/></View>:null}
   {status==='error'?<Button title="Retry voiceover recording" disabled={off} unstyled={unstyled} onPress={()=>guard.run('retry',(h,s)=>h.onRetry(s))}/>:null}
-  <ErrorMessage message={guard.error??stop.error??error??disabledReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??stop.error??error??disabledReason,unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(){return createStore(()=>({discardId:null as string|null}));}

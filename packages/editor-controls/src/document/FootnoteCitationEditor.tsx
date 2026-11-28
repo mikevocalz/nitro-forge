@@ -7,6 +7,7 @@ import {PropertyInspector} from '../inputs/PropertyInspector.tsx';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {exact} from '../exact-optional.ts';
 export interface CitationSource {id:string;title:string;author:string;year:string;formattedCitation:string}
 export interface FootnoteCitationEditorProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  sources:readonly CitationSource[];notes:readonly {id:string;numberLabel:string;text:string;kind:'footnote'|'endnote'}[];
@@ -25,6 +26,6 @@ export function FootnoteCitationEditor({scope='citations',revision=0,...props}:F
  <FlatList data={shown} keyExtractor={s=>s.id} style={{height:240}} initialNumToRender={5} windowSize={5} extraData={off} renderItem={({item})=><View style={{gap:6,paddingVertical:6}}><Text {...{className:unstyled?undefined:'text-text'}}>{item.title} · {item.author} · {item.year}</Text><Text {...{className:unstyled?undefined:'text-text-muted'}}>{item.formattedCitation}</Text><Button title="Insert citation" disabled={off} unstyled={unstyled} onPress={()=>guard.run('cite',(h,s)=>h.sources.some(v=>v.id===item.id)?h.onInsertCitation(item.id,s):undefined)}/></View>}/>
  <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}>{(['footnote','endnote'] as const).map(kind=><Button key={kind} title={'Insert '+kind} disabled={off} unstyled={unstyled} onPress={()=>guard.run('note',(h,s)=>h.onInsertNote(kind,s))}/>)}</View>
  <FlatList data={notes} keyExtractor={n=>n.id} style={{height:320}} initialNumToRender={4} windowSize={5} extraData={off} renderItem={({item})=><View style={{gap:6,paddingVertical:8}}><Button title={'Jump to '+item.kind+' '+item.numberLabel} variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>guard.current()?.onJumpToNote(item.id)}/><PropertyInspector scope={owner+':'+item.id} label={item.kind+' '+item.numberLabel} unstyled={unstyled} disabledReason={off?'Note editing unavailable':undefined} fields={[{kind:'text',id:'text',label:'Note text',value:item.text,maxLength:65536,multiline:true}]} onCommit={(_id,v)=>guard.run('note-edit',(h,s)=>typeof v==='string'&&h.notes.some(n=>n.id===item.id)?h.onNoteCommit(item.id,v,s):undefined)}/></View>}/>
- <Button title="Update bibliography fields" disabled={off} unstyled={unstyled} onPress={()=>guard.run('bibliography',(h,s)=>h.onUpdateBibliography(s))}/><ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/></View>;
+ <Button title="Update bibliography fields" disabled={off} unstyled={unstyled} onPress={()=>guard.run('bibliography',(h,s)=>h.onUpdateBibliography(s))}/><ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/></View>;
 }
 function makeStore(){return createStore(()=>({query:''}));}

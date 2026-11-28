@@ -32,6 +32,7 @@ import {
   formatThreshold, levelToOffset, stepRatio, unitySegment,
   type DynamicsCurvePoint, type DynamicsParams,
 } from "./dynamics-graph.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Minimum hit size (iOS 44pt / Android 48dp floor). */
 const HIT = 44;
@@ -56,14 +57,14 @@ export interface DynamicsTransferGraphProps extends Omit<ViewProps, "children">,
   /** Once per finished threshold drag or key press, whole dB in -60..0. A rejected promise keeps the committed value. */
   readonly onThresholdCommit: (thresholdDb: number) => void | Promise<unknown>;
   /** Live threshold while dragging, and the committed value again on cancel. Never persisted. */
-  readonly onThresholdChange?: (thresholdDb: number) => void;
+  readonly onThresholdChange?: ((thresholdDb: number) => void) | undefined;
   /** Once per stepper press, with the next ratio stop (1, 1.5, 2, 3, 4, 6, 8, 10, 20). */
   readonly onRatioCommit: (ratio: number) => void | Promise<unknown>;
   /** Current input level from a meter, dBFS. Drawn as a dot on the curve; display only. */
   readonly inputLevelDb?: number;
   readonly gainReductionDb?:number;
-  readonly onKneeCommit?:(db:number)=>void|Promise<unknown>;
-  readonly onMakeupCommit?:(db:number)=>void|Promise<unknown>;
+  readonly onKneeCommit?:((db:number)=>void|Promise<unknown>)|undefined;
+  readonly onMakeupCommit?:((db:number)=>void|Promise<unknown>)|undefined;
   /** Largest plot side, points. The plot shrinks to fit narrower containers. @default 280 */
   readonly maxSize?: number;
   /** @default false */
@@ -74,7 +75,7 @@ export interface DynamicsTransferGraphProps extends Omit<ViewProps, "children">,
   unstyled?: boolean;
 }
 
-type Local = { width: number; active: boolean; preview: number; staleFor?: readonly DynamicsCurvePoint[] };
+type Local = { width: number; active: boolean; preview: number; staleFor?: readonly DynamicsCurvePoint[] | undefined };
 
 /**
  * Controlled compressor transfer graph: input level across, output level
@@ -290,7 +291,7 @@ function DynamicsTransferGraphBody({actionError,disabledReason,
         </View>
       </View>
     </View>
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 function Readout({ label, value, styled }: { label: string; value: string; styled: boolean }) {

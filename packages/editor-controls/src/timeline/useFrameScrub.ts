@@ -17,7 +17,7 @@ export interface FrameScrubOptions {
   readonly onRestore?:()=>void;
   /** Maps a view-local point to a whole frame. */
   readonly frameAt:(point:LocalPoint)=>number;
-  readonly onScrub?:(frame:number)=>void;
+  readonly onScrub?:((frame:number)=>void)|undefined;
   /** Once per release that changed the frame. */
   readonly onCommit:(frame:number)=>void;
   readonly disabled?:boolean;

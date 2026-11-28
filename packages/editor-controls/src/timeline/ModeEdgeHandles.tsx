@@ -31,7 +31,7 @@ const HIT=44;
 const ZERO:TrimModePreview={delta:0,clips:{},valid:true};
 
 /** The preview and edit for moving `edge` of the selected clip by `delta` under `mode`. */
-export function modeEdge(p:Omit<ModeEdgeHandlesProps,"onPreview"|"onEdit"|"pxPerFrame"|"height">,edge:"head"|"tail",delta:number):{preview?:TrimModePreview;edit?:TimelineEdit}{
+export function modeEdge(p:Omit<ModeEdgeHandlesProps,"onPreview"|"onEdit"|"pxPerFrame"|"height">,edge:"head"|"tail",delta:number):{preview?:TrimModePreview;edit?:TimelineEdit|undefined}{
   if(p.mode==="roll"){
     const pair=rollPair(p.track,p.clip,edge);
     if(!pair)return {};

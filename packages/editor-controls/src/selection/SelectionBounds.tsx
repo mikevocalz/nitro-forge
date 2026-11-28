@@ -22,7 +22,7 @@ export interface SelectionBoundsProps extends Omit<ViewProps,'children'> {
  renderHandle?:(handle:SelectionHandle,editing:boolean)=>ReactNode;
  className?:string;handleClassName?:string;unstyled?:boolean;
 }
-type Layout={points:Partial<Record<SelectionHandle,DocPoint>>;compact:boolean;panes:Partial<Record<SelectionHandle,Rect2D>>;pane:Rect2D|undefined};
+type Layout={points:Partial<Record<SelectionHandle,DocPoint>>;compact:boolean;panes:Partial<Record<SelectionHandle,Rect2D|undefined>>;pane:Rect2D|undefined};
 type Local={preview:SelectionFrame|undefined;layout:Layout|undefined};
 type WindowFrame={x:number;y:number;width:number;height:number};
 type Active={boundary:string;handle:SelectionHandle;from:SelectionFrame;value:SelectionFrame;start:DocPoint;last:DocPoint;measured:WindowFrame|null;released:boolean;compact:boolean};

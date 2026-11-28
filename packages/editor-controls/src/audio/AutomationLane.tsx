@@ -30,6 +30,7 @@ import {
   type AutomationGeometry, type AutomationMode, type AutomationParam, type AutomationPoint,
 } from "./automation.ts";
 import type { AutomationModePicker } from "./AutomationModePicker.tsx";
+import {exact} from '../exact-optional.ts';
 
 /** Minimum hit size (iOS 44pt / Android 48dp floor). */
 const HIT = 44;
@@ -76,7 +77,7 @@ export interface AutomationLaneProps extends Omit<ViewProps, "children">,ScopedC
   /** For bar lines and the "Bar 2 beat 1" readout. @default 4 */
   readonly beatsPerBar?: number;
   readonly selectedIndex?: number;
-  readonly onSelect?: (index: number) => void;
+  readonly onSelect?: ((index: number) => void) | undefined;
   /**
    * Where the "Add point" button adds, ticks (for example the playhead).
    * @default 0
@@ -100,7 +101,7 @@ export interface AutomationLaneProps extends Omit<ViewProps, "children">,ScopedC
   /** Visible title and accessible name, e.g. `"Vocal volume automation"`. */
   readonly label: string;
   className?: string;
-  unstyled?: boolean;
+  unstyled?: boolean | undefined;
 }
 
 /**
@@ -219,7 +220,7 @@ function AutomationLaneBody({
   return <View {...rest} accessibilityLabel={label} {...{ role: "group" }}
     {...{ className: joinClasses(styled && "rounded-card border border-border bg-surface-raised overflow-hidden", className) }}
     style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", columnGap: 12, rowGap: 2,
       paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8 }}>
       <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>{label}</Text>
@@ -270,7 +271,7 @@ interface PointHandleProps {
   readonly off: boolean;
   readonly disabled: boolean;
   readonly styled: boolean;
-  readonly onSelect?: (index: number) => void;
+  readonly onSelect?: ((index: number) => void) | undefined;
   readonly onMove: AutomationLaneProps["onPointMove"];
   readonly onRemove: AutomationLaneProps["onPointRemove"];
 }

@@ -5,6 +5,7 @@ import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import type {FrameRate} from "../timebase.ts";
 import {formatTime,parseTime,supportsDropFrame,type TimeFormat} from "./time.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode TimecodeDisplay}. */
 export interface TimecodeDisplayProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -73,7 +74,7 @@ function TimecodeDisplayBody({disabledReason,
   const id=(s:string)=>testID?{testID:testID+"-"+s}:{};
   const text=joinClasses(styled&&"text-text text-lg font-semibold");
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-1",className)}} style={[{flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:8},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {onCommit?<TextInput editable={disabledReason===undefined} maxLength={128} value={draft?.text??shown} onChangeText={t=>store.set({text:t})}
       onSubmitEditing={apply} onBlur={apply} selectTextOnFocus autoCorrect={false} autoCapitalize="none"
       accessibilityLabel={`${label}, ${FORMAT_LABEL[current]}`} accessibilityHint={HINT[current]} aria-invalid={Boolean(draft?.error)}

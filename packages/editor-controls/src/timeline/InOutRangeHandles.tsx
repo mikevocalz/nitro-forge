@@ -11,6 +11,7 @@ import {setMark,type InOutRange} from "./edits.ts";
 import {frameForKey} from "./frame-keys.ts";
 import {frameToX,xToFrame,type TimelineViewport} from "./viewport.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode InOutRangeHandles}. */
 export interface InOutRangeHandlesProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -36,7 +37,7 @@ const HIT=44;
 
 function MarkHandle({boundary,restorePreview,mark,frame,range,viewport,durationFrames,rate,onPreview,onCommit,dropFrame,disabled,styled}:{
   boundary:string;restorePreview?:InOutRangeHandlesProps["onPreview"];mark:"in"|"out";frame:number;range:InOutRange;viewport:TimelineViewport;durationFrames:number;rate:FrameRate;
-  onPreview?:(r:InOutRange)=>void;onCommit:(r:InOutRange)=>void;dropFrame:boolean;disabled:boolean;styled:boolean;
+  onPreview?:((r:InOutRange)=>void)|undefined;onCommit:(r:InOutRange)=>void;dropFrame:boolean;disabled:boolean;styled:boolean;
 }){
   const committed=useRef(boundary);
   useLayoutEffect(()=>{committed.current=boundary;},[boundary]);
@@ -107,7 +108,7 @@ function InOutRangeHandlesBody({
   const useBoundary=useEditorBoundary([boundary,disabled]);
   const common={boundary:useBoundary,restorePreview,range,viewport,durationFrames,rate,onPreview,onCommit,dropFrame,disabled,styled};
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {showCommands?<View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
       <Button title="Set in" variant="secondary" size="sm" disabled={disabled} {...id("set-in")}
         onPress={()=>onCommit(setMark(range,"in",latestPlayhead.current,durationFrames))}/>

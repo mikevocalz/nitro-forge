@@ -68,15 +68,16 @@ these subpaths itself. Then run `pnpm install` in the root and in
 
 ## Types and compiler flags
 
-The sources compile under the flags NYC-Tron used for them. Forge's base
-config turns on `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`;
-this package turns both off in `tsconfig.json`, because under them the
-unchanged sources report about 400 errors. Tightening the sources is separate
-work.
+The sources compile under Forge's base flags, `exactOptionalPropertyTypes`
+and `noUncheckedIndexedAccess` included. NYC-Tron UI declares optional props
+without `| undefined`, so a value that may be `undefined` goes to a NYC-Tron
+component through `exact()` in `src/exact-optional.ts`, which drops the
+`undefined` keys.
 
-Consumers compile with Forge's flags, so they must not type-check these
-sources directly. The exports' `types` conditions point at declarations in
-`dist/`, built by:
+The sources import each other with `.ts` and `.tsx` extensions, which
+`tsconfig.json` allows with `allowImportingTsExtensions` and Forge's base
+config does not. So consumers don't type-check these sources directly: the
+exports' `types` conditions point at declarations in `dist/`, built by:
 
 ```sh
 pnpm --filter @nitro-forge/editor-controls build   # tsc -p tsconfig.build.json

@@ -31,6 +31,7 @@ import {
   eqHandlePosition, eqResponseSegments, formatFreq, formatGain, formatQ, isPassBand, stepBand,
   type EqBand, type EqBandEdit, type EqPlot, type EqResponsePoint,
 } from "./eq-graph.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Minimum hit size (iOS 44pt / Android 48dp floor). */
 const HIT = 44;
@@ -57,14 +58,14 @@ export interface EQFrequencyGraphProps extends Omit<ViewProps, "children">,Scope
    */
   readonly onBandCommit: (index: number, edit: EqBandEdit) => void | Promise<unknown>;
   /** Live values while a handle is dragged, and the committed values again on cancel. Never persisted. */
-  readonly onBandChange?: (index: number, edit: EqBandEdit) => void;
+  readonly onBandChange?: ((index: number, edit: EqBandEdit) => void) | undefined;
   /** The band shown in the readout row and drawn as selected. */
   readonly selectedIndex?: number;
   /** A handle was pressed, focused or dragged, or a band chip was chosen. */
-  readonly onSelect?: (index: number) => void;
+  readonly onSelect?: ((index: number) => void) | undefined;
   /** The readout's on/off toggle. Without it the toggle is hidden. */
-  readonly onQCommit?:(index:number,q:number)=>void|Promise<unknown>;
-  readonly onEnabledCommit?: (index: number, enabled: boolean) => void | Promise<unknown>;
+  readonly onQCommit?:((index:number,q:number)=>void|Promise<unknown>)|undefined;
+  readonly onEnabledCommit?: ((index: number, enabled: boolean) => void | Promise<unknown>) | undefined;
   /** Half the visible dB span. @default 18 */
   readonly range?: number;
   /** Plot height, points. @default 200 */
@@ -78,7 +79,7 @@ export interface EQFrequencyGraphProps extends Omit<ViewProps, "children">,Scope
 }
 
 type Drag = { index: number; edit: EqBandEdit };
-type Local = { width: number; drag?: Drag; staleFor?: readonly EqResponsePoint[] };
+type Local = { width: number; drag?: Drag | undefined; staleFor?: readonly EqResponsePoint[] | undefined };
 
 /**
  * Controlled parametric EQ graph. Draws the engine's response curve over a
@@ -246,7 +247,7 @@ function EQFrequencyGraphBody({scope='EQFrequencyGraph',revision=0,gestureBounda
           </View>
           : <Text {...{ className: muted }}>Select a band to see its settings.</Text>}
       </View>}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 function Readout({ label, value, styled }: { label: string; value: string; styled: boolean }) {
@@ -259,8 +260,8 @@ function Readout({ label, value, styled }: { label: string; value: string; style
 interface HandleCtx {
   readonly boundary:string;
   readonly store: StoreApi<Local>;
-  readonly latest: { current: { bands: readonly EqBand[]; response: readonly EqResponsePoint[]; onBandChange?: (index: number, edit: EqBandEdit) => void;
-    onSelect?: (index: number) => void; disabled: boolean } };
+  readonly latest: { current: { bands: readonly EqBand[]; response: readonly EqResponsePoint[]; onBandChange?: ((index: number, edit: EqBandEdit) => void) | undefined;
+    onSelect?: ((index: number) => void) | undefined; disabled: boolean } };
   readonly commit: (index: number, edit: EqBandEdit) => void;
   readonly cancel: () => void;
 }
@@ -269,7 +270,7 @@ interface BandHandleProps {
   readonly index: number;
   readonly band: EqBand;
   readonly plot: EqPlot;
-  readonly preview?: EqBandEdit;
+  readonly preview?: EqBandEdit | undefined;
   readonly selected: boolean;
   readonly disabled: boolean;
   readonly styled: boolean;

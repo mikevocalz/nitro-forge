@@ -3,6 +3,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export type AudioTransportAction='play'|'pause'|'stop'|'record'|'punch-in'|'punch-out'|'request-permission';
 export interface NativeAudioTransportProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  playing:boolean;recording:boolean;punching:boolean;supportsPunch:boolean;canRecord:boolean;
@@ -27,6 +28,6 @@ export function NativeAudioTransport({scope='audio-transport',revision=0,...prop
   <Text {...{className:unstyled?undefined:'text-text'}}>Sample {positionSamples} at {sampleRate} Hz; {(positionSamples/sampleRate).toFixed(3)} s</Text>
   <Text {...{className:unstyled?undefined:'text-text'}}>Measured latency: {latencyMs===undefined?'Not reported':latencyMs.toFixed(2)+' ms'}</Text>
   {onSeek?<PrecisionScrubber scope={scope} revision={revision} label="Audio position samples" value={Math.min(positionSamples,durationSamples)} min={0} max={Math.max(1,durationSamples)} step={1} disabled={off||recording||durationSamples===0} unstyled={unstyled} onCommit={sample=>guard.run('seek',(host,signal)=>!host.recording?host.onSeek?.(Math.min(host.durationSamples,Math.max(0,Math.round(sample))),signal):undefined)}/>:null}
-  {disabledReason?<Text {...{className:unstyled?undefined:'text-text'}}>{disabledReason}</Text>:null}<ErrorMessage message={guard.error??stopGuard.error??undefined} unstyled={unstyled}/>
+  {disabledReason?<Text {...{className:unstyled?undefined:'text-text'}}>{disabledReason}</Text>:null}<ErrorMessage {...exact({message:guard.error??stopGuard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

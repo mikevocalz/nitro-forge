@@ -12,6 +12,7 @@ import { MixGroupBar, type MixGroupBarProps } from "./MixGroupBar.tsx";
 import { FADER_RANGES, type FaderRange } from "./level.ts";
 import { mixGroups } from "./mix-groups.ts";
 import { audibility, type MixerChannel } from "./mixer.ts";
+import {exact} from '../exact-optional.ts';
 
 type Id = MixerChannel["id"];
 
@@ -32,18 +33,18 @@ export interface MixingConsoleProps extends Omit<ViewProps, "children">,ScopedCo
   readonly onMutedCommit: (id: Id, muted: boolean) => void | Promise<unknown>;
   readonly onSoloCommit: (id: Id, solo: boolean) => void | Promise<unknown>;
   /** When given, every strip draws a solo-safe toggle. */
-  readonly onSoloSafeCommit?: (id: Id, safe: boolean) => void | Promise<unknown>;
+  readonly onSoloSafeCommit?: ((id: Id, safe: boolean) => void | Promise<unknown>) | undefined;
   /**
    * Group solo for every member as one engine step. With
    * {@linkcode MixingConsoleProps.onGroupMutedCommit} and at least one
    * grouped channel, a group bar is drawn above the strips.
    */
-  readonly onGroupSoloCommit?: (group: string, solo: boolean) => void | Promise<unknown>;
+  readonly onGroupSoloCommit?: ((group: string, solo: boolean) => void | Promise<unknown>) | undefined;
   /** Group mute for every member as one engine step. */
-  readonly onGroupMutedCommit?: (group: string, muted: boolean) => void | Promise<unknown>;
+  readonly onGroupMutedCommit?: ((group: string, muted: boolean) => void | Promise<unknown>) | undefined;
   /** Live gain preview, e.g. for an audio graph that follows the drag. */
-  readonly onGainChange?: (id: Id, gain: number) => void;
-  readonly onPanChange?: (id: Id, pan: number) => void;
+  readonly onGainChange?: ((id: Id, gain: number) => void) | undefined;
+  readonly onPanChange?: ((id: Id, pan: number) => void) | undefined;
   /**
    * Meter values keyed by `String(channel.id)`: linear sample peak from the
    * Cadence `meter` op, after `createPeakHold`. Omit it and no meters are
@@ -108,7 +109,7 @@ function MixingConsoleBody({actionError,disabledReason,scope='mixing-console',re
   if (channels.length === 0) {
     return <EmptyState {...rest} title={emptyLabels?.title ?? "No tracks to mix"}
       description={emptyLabels?.description ?? "Add a track to the project and its channel strip appears here."}
-      exitAction={emptyAction}
+      {...(emptyAction===undefined?{}:{exitAction:emptyAction})}
       {...{ className: joinClasses(styled && "rounded-card border border-border bg-surface-raised", className) }} />;
   }
   const busNames = new Map<Id, string>();
@@ -142,5 +143,5 @@ function MixingConsoleBody({actionError,disabledReason,scope='mixing-console',re
       </View>)}
     </ScrollView>
     {routing?<BusAndRoutingMatrix {...routing} scope={scope+':routing'} revision={revision} disabled={disabled} unstyled={unstyled}/>:null}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

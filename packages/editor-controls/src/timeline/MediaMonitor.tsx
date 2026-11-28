@@ -9,6 +9,7 @@ import {TimecodeDisplay} from './TimecodeDisplay.tsx';
 import {SeekBar} from './SeekBar.tsx';
 import {SafeAreaOverlay,type SafeAreaOverlayProps} from './SafeAreaOverlay.tsx';
 import {setMark,type InOutRange} from './edits.ts';
+import {exact} from '../exact-optional.ts';
 export interface MediaMonitorProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  kind:'source'|'program';sourceId:string|null;label:string;frame:number;durationFrames:number;rate:FrameRate;playing:boolean;
  /** Last decoded frame actually presented, separate from the requested/clock frame. */
@@ -48,6 +49,6 @@ export function MediaMonitor({scope='media-monitor',revision=0,...props}:MediaMo
    <Text {...{className:unstyled?undefined:'text-text'}}>In: {range.inFrame??'Not set'}; out: {range.outFrame??'Not set'}</Text>
   </View>:null}
   {onOpenSource?<Button title="Open source media" disabled={guard.pending||openGuard.pending||disabledReason!==undefined} unstyled={unstyled} onPress={()=>openGuard.run('open',(host,signal)=>host.onOpenSource?.(signal))}/>:null}
-  <ErrorMessage message={guard.error??openGuard.error??(status==='error'?error:undefined)??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??openGuard.error??(status==='error'?error:undefined)??undefined,unstyled:unstyled})}/>
  </View>;
 }

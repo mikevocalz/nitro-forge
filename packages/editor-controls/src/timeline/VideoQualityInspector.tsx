@@ -3,6 +3,7 @@ import {Select} from '@nyc-tron/ui/components/Select';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {assertFrameRate,type FrameRate} from '../timebase.ts';
+import {exact} from '../exact-optional.ts';
 export interface VideoQualityInspectorProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  media:{width:number;height:number;bitDepth:number;frameRate:FrameRate;codec:string;colorSpace:string;bitrate?:number};
  preview:{supported:boolean;reason?:string};profileId:string;
@@ -20,6 +21,6 @@ export function VideoQualityInspector({scope='video-quality',revision=0,...props
   <Select label="Video export profile" value={profileId} options={profiles.map(p=>({value:p.id,label:p.label,disabled:p.unavailableReason!==undefined}))} disabled={disabledReason!==undefined||guard.pending} unstyled={unstyled}
    onValueChange={id=>guard.run('profile',(host,signal)=>host.profiles.some(p=>p.id===id&&p.unavailableReason===undefined)?host.onProfileChange(id,signal):undefined)}/>
   {profiles.filter(p=>p.unavailableReason).map(p=><Text key={p.id} {...{className:unstyled?undefined:'text-text'}}>{p.label}: {p.unavailableReason}</Text>)}
-  {warnings.map((warning,index)=><Text key={index} {...{className:unstyled?undefined:'text-text'}}>{warning}</Text>)}<ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  {warnings.map((warning,index)=><Text key={index} {...{className:unstyled?undefined:'text-text'}}>{warning}</Text>)}<ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

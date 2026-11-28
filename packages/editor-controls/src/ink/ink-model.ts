@@ -196,9 +196,9 @@ export interface InkToolbarState {
  readonly tools:readonly InkToolOption[];
  readonly tool:InkTool;
  readonly size:InkSize;
- readonly swatches?:readonly InkSwatch[];
- readonly color?:string;
- readonly opacity?:number;
+ readonly swatches?:readonly InkSwatch[]|undefined;
+ readonly color?:string|undefined;
+ readonly opacity?:number|undefined;
  readonly undo:InkAvailability;
  readonly redo:InkAvailability;
 }

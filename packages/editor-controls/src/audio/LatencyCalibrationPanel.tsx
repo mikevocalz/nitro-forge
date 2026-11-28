@@ -4,6 +4,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
+import {exact} from '../exact-optional.ts';
 export interface LatencyCalibrationPanelProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  deviceLabel:string;sampleRate:number;bufferSizes:readonly number[];bufferSamples:number;offsetSamples:number;
  measurement:{roundTripSamples:number;driftPpm:number;confidence:number;measuredAt:string}|null;
@@ -23,6 +24,6 @@ export function LatencyCalibrationPanel({scope='latency-calibration',revision=0,
   <Button title="Measure round-trip latency" disabled={off||unavailableReason!==undefined} accessibilityHint={unavailableReason} unstyled={unstyled} onPress={()=>guard.run('measure',(h,s)=>h.unavailableReason===undefined?h.onMeasure(s):undefined)}/>
   {status==='measuring'||guard.pendingId==='measure'?<Button title="Cancel calibration" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onCancel();}}/>:null}
   <Text accessibilityLiveRegion="polite" {...{className:unstyled?undefined:'text-text'}}>{measurement?`Measured ${(measurement.roundTripSamples/sampleRate*1000).toFixed(2)} ms round trip; ${measurement.driftPpm.toFixed(2)} ppm drift; ${(measurement.confidence*100).toFixed(0)}% confidence; ${measurement.measuredAt}`:'No loopback measurement supplied'}</Text>
-  <ErrorMessage message={guard.error??error??disabledReason??unavailableReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??error??disabledReason??unavailableReason,unstyled:unstyled})}/>
  </View>;
 }

@@ -5,6 +5,7 @@ import {createStore,type StoreApi} from "zustand/vanilla";
 import {useStore} from "zustand";
 import {clamp,scrubValue,snapValue,gestureToAngle,type RangeConfig} from "@nyc-tron/ui/components/shell/precision";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
+import {exact} from "../exact-optional.ts";
 
 type Local={preview:number;draft:string;editing:boolean;active:boolean};
 export interface InstrumentKnobProps extends Omit<ViewProps,"children">,RangeConfig {
@@ -41,7 +42,7 @@ export function InstrumentKnob({
   const commit=(next:number)=>{
     const p=latest.current;
     if(p.disabled){cancel();return;}
-    const rounded=snapValue(next,p);
+    const rounded=snapValue(next,exact(p));
     store.setState({active:false,editing:false,preview:rounded,draft:String(rounded)});
     if(rounded!==p.value)void p.onCommit(rounded);
   };
@@ -56,7 +57,7 @@ export function InstrumentKnob({
     onPanResponderMove:(_event,gesture)=>{
       const p=latest.current;
       if(p.disabled)return;
-      const next=scrubValue(start.current,gesture.dx,gesture.dy,p);
+      const next=scrubValue(start.current,gesture.dx,gesture.dy,exact(p));
       if(next!==store.getState().preview){
         store.setState({preview:next,draft:String(next)});
         p.onPreview?.(next);

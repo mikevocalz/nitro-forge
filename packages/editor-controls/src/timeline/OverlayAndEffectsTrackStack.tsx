@@ -21,6 +21,7 @@ import {TrackHeaders,type TrackFlag} from "./TrackHeaders.tsx";
 import {TimelineClipLane,type TimelineClipLaneProps} from "./TimelineClipLane.tsx";
 import {stackMoveTarget,stackOrder} from "./track-stack.ts";
 import type {TrackKind} from "./edits.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode OverlayAndEffectsTrackStack}. */
 export interface OverlayAndEffectsTrackStackProps extends Omit<TimelineClipLaneProps,"tracks"> {
@@ -86,7 +87,7 @@ function OverlayAndEffectsTrackStackBody({
   const headerProps={laneHeight,onSetFlag,onRename,onMove:onMoveTrack,moveTarget:(trackId:string,d:-1|1)=>stackMoveTarget(tracks,trackId,d),
     reorder,disabled,unstyled};
   return <View {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
       <Button title="Add video track" variant="secondary" size="sm" disabled={disabled} onPress={()=>onAddTrack("video")} {...id("add-video")}/>
       <Button title="Add overlay track" variant="secondary" size="sm" disabled={disabled} onPress={()=>onAddTrack("overlay")} {...id("add-overlay")}/>

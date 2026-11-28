@@ -64,10 +64,10 @@ export interface SparklineGeometryOptions {
   readonly kind: SparklineKind;
   readonly width: number;
   readonly height: number;
-  readonly axisMin?: SparklineAxisMin;
-  readonly showHigh?: boolean;
-  readonly showLow?: boolean;
-  readonly showNegative?: boolean;
+  readonly axisMin?: SparklineAxisMin | undefined;
+  readonly showHigh?: boolean | undefined;
+  readonly showLow?: boolean | undefined;
+  readonly showNegative?: boolean | undefined;
   /** Space between column bars. @default 1 */
   readonly gap?: number;
 }

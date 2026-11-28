@@ -2,7 +2,7 @@ import {useLayoutEffect,useRef} from 'react';
 import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
 
 /** Document identity for controlled editor tools. Native handles remain outside UI state. */
-export interface ScopedControlProps {scope?:string;revision?:string|number;disabledReason?:string}
+export interface ScopedControlProps {scope?:string;revision?:string|number;disabledReason?:string|undefined}
 export function controlIdentity(scope:string,revision:string|number){
  if(!scope.trim()||scope.length>512||typeof revision==='number'&&!Number.isFinite(revision)||typeof revision==='string'&&revision.length>512)throw new RangeError('Invalid control identity');
  return [scope,revision] as const;

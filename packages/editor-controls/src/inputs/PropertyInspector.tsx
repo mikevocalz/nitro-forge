@@ -8,8 +8,9 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from './useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export type PropertyValue=number|string|boolean;
-export type InspectorProperty={id:string;label:string;disabledReason?:string}&(
+export type InspectorProperty={id:string;label:string;disabledReason?:string|undefined}&(
  {kind:'number';value:number;min:number;max:number;step:number;unit?:string;integer?:boolean}|
  {kind:'choice';value:string;choices:readonly {id:string;label:string;disabled?:boolean}[]}|
  {kind:'boolean';value:boolean}|
@@ -31,10 +32,10 @@ export function PropertyInspector({scope='property-inspector',revision=0,...prop
  const change=(id:string,value:PropertyValue)=>guard.run(id,(h,s)=>{const f=h.fields.find(f=>f.id===id);if(!f||f.disabledReason!==undefined)return;if(f.kind==='number'&&(typeof value!=='number'||!Number.isFinite(value)||value<f.min||value>f.max||f.integer&&!Number.isInteger(value))||f.kind==='choice'&&(typeof value!=='string'||!f.choices.some(c=>c.id===value&&!c.disabled))||f.kind==='boolean'&&typeof value!=='boolean'||f.kind==='text'&&(typeof value!=='string'||value.length>f.maxLength))throw new RangeError('Property value is unavailable');return h.onCommit(id,value,s);});
  return <View {...rest} accessibilityLabel={label} style={[{gap:10,minWidth:0},style]}>
   <Text accessibilityRole="header" {...{className:unstyled?undefined:'text-text'}}>{label}</Text>
-  {fields.map(f=><View key={f.id} style={{gap:4}}>{f.kind==='number'?<UnitInput scope={owner+':'+f.id} label={f.unit?f.label+' ('+f.unit+')':f.label} value={f.value} min={f.min} max={f.max} step={f.step} disabled={off||f.disabledReason!==undefined} unstyled={unstyled} onCommit={n=>change(f.id,n)}/>:f.kind==='choice'?<Select label={f.label} value={f.value} options={[...f.choices.map(c=>({value:c.id,label:c.label,disabled:c.disabled})),...(!f.choices.some(c=>c.id===f.value)?[{value:f.value,label:'Unavailable: '+f.value,disabled:true}]:[])]} disabled={off||f.disabledReason!==undefined||f.choices.length===0} unstyled={unstyled} onValueChange={v=>change(f.id,v)}/>:f.kind==='boolean'?<Button title={f.label+': '+(f.value?'on':'off')} variant="secondary" accessibilityState={{checked:f.value}} disabled={off||f.disabledReason!==undefined} unstyled={unstyled} onPress={()=>change(f.id,!f.value)}/>:<InspectorText key={owner+f.id} field={f} disabled={off||f.disabledReason!==undefined} unstyled={unstyled} onApply={v=>change(f.id,v)}/>}
+  {fields.map(f=><View key={f.id} style={{gap:4}}>{f.kind==='number'?<UnitInput scope={owner+':'+f.id} label={f.unit?f.label+' ('+f.unit+')':f.label} value={f.value} min={f.min} max={f.max} step={f.step} disabled={off||f.disabledReason!==undefined} unstyled={unstyled} onCommit={n=>change(f.id,n)}/>:f.kind==='choice'?<Select label={f.label} value={f.value} options={[...f.choices.map(c=>exact({value:c.id,label:c.label,disabled:c.disabled})),...(!f.choices.some(c=>c.id===f.value)?[{value:f.value,label:'Unavailable: '+f.value,disabled:true}]:[])]} disabled={off||f.disabledReason!==undefined||f.choices.length===0} unstyled={unstyled} onValueChange={v=>change(f.id,v)}/>:f.kind==='boolean'?<Button title={f.label+': '+(f.value?'on':'off')} variant="secondary" accessibilityState={{checked:f.value}} disabled={off||f.disabledReason!==undefined} unstyled={unstyled} onPress={()=>change(f.id,!f.value)}/>:<InspectorText key={owner+f.id} field={f} disabled={off||f.disabledReason!==undefined} unstyled={unstyled} onApply={v=>change(f.id,v)}/>}
    {f.disabledReason?<Text {...{className:unstyled?undefined:'text-text-muted'}}>{f.disabledReason}</Text>:null}
   </View>)}
-  <ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/>
  </View>;
 }
 function InspectorText({field,disabled,unstyled,onApply}:{field:Extract<InspectorProperty,{kind:'text'}>;disabled:boolean;unstyled:boolean;onApply:(value:string)=>unknown}){

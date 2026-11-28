@@ -8,6 +8,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {exact} from '../exact-optional.ts';
 export interface DiagramTarget {id:string;label:string;anchors:readonly {id:string;label:string;x:number;y:number}[]}
 export interface DiagramConnector {id:string;label:string;sourceObjectId:string;sourceAnchorId:string;targetObjectId:string;targetAnchorId:string;style:'straight'|'elbow';arrows:'none'|'end'|'both'}
 export interface ConnectorAndDiagramToolsProps extends Omit<ViewProps,'children'>,ScopedControlProps {
@@ -30,7 +31,7 @@ export function ConnectorAndDiagramTools({scope='diagram-connectors',revision=0,
  {id:'targetObjectId',kind:'choice',label:'End object',value:selected.targetObjectId,choices:targets.map(t=>({id:t.id,label:t.label}))},{id:'targetAnchorId',kind:'choice',label:'End anchor',value:selected.targetAnchorId,choices:target?.anchors.map(a=>({id:a.id,label:a.label}))??[]},
  {id:'style',kind:'choice',label:'Connector routing',value:selected.style,choices:['straight','elbow'].map(id=>({id,label:id}))},{id:'arrows',kind:'choice',label:'Direction arrows',value:selected.arrows,choices:[{id:'none',label:'No arrows'},{id:'end',label:'One direction'},{id:'both',label:'Both directions'}]}
  ]} onCommit={(id,value)=>guard.run('connector',(h,s)=>{const current=h.connectors.find(c=>c.id===selected.id);if(!current)return;const next={...current,[id]:value};if(id==='sourceObjectId')next.sourceAnchorId=h.targets.find(t=>t.id===value)?.anchors[0]?.id??'';if(id==='targetObjectId')next.targetAnchorId=h.targets.find(t=>t.id===value)?.anchors[0]?.id??'';if(!h.targets.some(t=>t.id===next.sourceObjectId&&t.anchors.some(a=>a.id===next.sourceAnchorId))||!h.targets.some(t=>t.id===next.targetObjectId&&t.anchors.some(a=>a.id===next.targetAnchorId)))throw new Error('Choose valid connector anchors');return h.onCommit(current.id,next,s);})}/>:null}
- <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}><Button title="Add connector" disabled={off||targets.length<2||connectors.length>=1024} unstyled={unstyled} onPress={()=>guard.run('add',(h,s)=>h.onAdd(s))}/><Button title="Remove selected connector" disabled={off||!selected} unstyled={unstyled} onPress={()=>guard.run('remove',(h,s)=>h.selectedId&&h.connectors.some(c=>c.id===h.selectedId)?h.onRemove(h.selectedId,s):undefined)}/></View><ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/></View>;
+ <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}><Button title="Add connector" disabled={off||targets.length<2||connectors.length>=1024} unstyled={unstyled} onPress={()=>guard.run('add',(h,s)=>h.onAdd(s))}/><Button title="Remove selected connector" disabled={off||!selected} unstyled={unstyled} onPress={()=>guard.run('remove',(h,s)=>h.selectedId&&h.connectors.some(c=>c.id===h.selectedId)?h.onRemove(h.selectedId,s):undefined)}/></View><ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 function makeStore(){return createStore(()=>({width:0}));}

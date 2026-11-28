@@ -7,6 +7,7 @@ import {validateViewport,type CanvasViewport} from '../canvas/canvas-viewport.ts
 import type {Rect2D} from '@nyc-tron/ui/components/overlays/popover-position';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface MotionTrackingOverlayProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  frame:number;playing:boolean;viewport:CanvasViewport;usableRegions?:readonly Rect2D[];surface:ReactNode;seed:SelectionFrame;
  measurement:{frame:number;bounds:SelectionFrame;confidence:number}|null;
@@ -35,6 +36,6 @@ export function MotionTrackingOverlay({scope='motion-tracking',revision=0,...pro
   <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{(['backward','forward'] as const).map(direction=><Button key={direction} title={'Track '+direction} disabled={off} unstyled={unstyled}
    onPress={()=>guard.run('track',(host,signal)=>host.onTrack(direction,host.frame,host.measurement?.frame===host.frame?host.measurement.bounds:host.seed,signal))}/>)}</View>
   {guard.pendingId==='track'||tracking.status==='running'?<Button title="Stop tracking" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onStop();}}/>:null}
-  <ErrorMessage message={guard.error??tracking.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??tracking.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

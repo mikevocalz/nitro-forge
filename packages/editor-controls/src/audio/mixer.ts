@@ -99,11 +99,11 @@ export function audibility(channels: readonly AudibilityInput[]): Audibility[] {
 /** Extra facts {@linkcode describeAudibility} can speak. */
 export interface AudibilityDetails {
   /** @default "track" */
-  readonly kind?: "track" | "bus";
+  readonly kind?: "track" | "bus" | undefined;
   /** @default false */
-  readonly soloSafe?: boolean;
+  readonly soloSafe?: boolean | undefined;
   /** Mix group name. */
-  readonly group?: string;
+  readonly group?: string | undefined;
 }
 
 /**

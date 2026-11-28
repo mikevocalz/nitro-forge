@@ -9,6 +9,7 @@ import {fillTarget,type FillPlan} from './fill-handle.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {exact} from '../exact-optional.ts';
 export interface SelectionPane {id:string;x:number;y:number;width:number;height:number;startRow:number;endRow:number;startColumn:number;endColumn:number;scrollX:number;scrollY:number}
 export interface CellSelectionOverlayProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  range:SheetRange;rowCount:number;columnCount:number;rowHeight:number;columnWidth:number;
@@ -33,7 +34,7 @@ export function CellSelectionOverlay({scope='cell-selection',revision=0,...props
  return <View key={p.id} pointerEvents="box-none" style={{position:'absolute',left:p.x,top:p.y,width:p.width,height:p.height,overflow:'hidden'}}>
   <View pointerEvents="none" {...{className:unstyled?undefined:'border-primary bg-primary/10'}} style={{position:'absolute',left:x,top:y,width:w,height:h,borderTopWidth:sr===shown.startRow?2:0,borderBottomWidth:er===shown.endRow?2:0,borderLeftWidth:sc===shown.startColumn?2:0,borderRightWidth:ec===shown.endColumn?2:0}}/>
   {hasCorner?<RangeHandle key={p.id} boundary={owner} label={interaction==='fill'?'Fill selected cells':'Resize cell selection'} x={Math.min(p.width-44,Math.max(0,cornerX-22))} y={Math.min(p.height-44,Math.max(0,cornerY-22))} rowHeight={rowHeight} columnWidth={columnWidth} disabled={off} unstyled={unstyled} onPreview={update} onCommit={finish} onCancel={cancel}/>:null}
- </View>;})}{panes[0]?<View pointerEvents="none" style={{position:'absolute',left:panes[0].x,top:panes[0].y,maxWidth:panes[0].width,maxHeight:panes[0].height,overflow:'hidden'}}><ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/></View>:null}</View>;
+ </View>;})}{panes[0]?<View pointerEvents="none" style={{position:'absolute',left:panes[0].x,top:panes[0].y,maxWidth:panes[0].width,maxHeight:panes[0].height,overflow:'hidden'}}><ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/></View>:null}</View>;
 }
 function RangeHandle({boundary,label,x,y,rowHeight,columnWidth,disabled,unstyled,onPreview,onCommit,onCancel}:{boundary:string;label:string;x:number;y:number;rowHeight:number;columnWidth:number;disabled:boolean;unstyled:boolean;onPreview:(r:number,c:number)=>unknown;onCommit:(r:number,c:number)=>unknown;onCancel:()=>void}){
  const admission=useRef<ReturnType<typeof createCoordinateAdmission>|null>(null);admission.current??=createCoordinateAdmission();const gate=admission.current;

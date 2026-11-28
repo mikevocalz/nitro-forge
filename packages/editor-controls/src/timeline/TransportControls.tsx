@@ -4,6 +4,7 @@ import {Pressable,Text,View,type ViewProps} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {keyboardKey,type KeyEventLike} from "@nyc-tron/ui/components/gestures/drag-transport";
 import {Glyph,type TransportGlyph} from "./glyphs.tsx";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode TransportControls}. */
 export interface TransportControlsProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -71,7 +72,7 @@ function TransportControlsBody({
     // Media controls are not mirrored in right-to-left layouts (Material and Apple guidance):
     // they describe tape direction, not reading order.
     style={[{flexDirection:"row",alignItems:"center",flexWrap:"wrap",direction:"ltr"},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {button("start","Go to start",()=>seek(0),f===0)}
     {button("previous-frame","Previous frame",()=>seek(f-1),f===0)}
     {button(playing?"pause":"play",playing?"Pause":"Play",onPlayPause,false,true)}

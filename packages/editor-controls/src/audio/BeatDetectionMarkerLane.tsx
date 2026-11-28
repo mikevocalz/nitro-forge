@@ -5,6 +5,7 @@ import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface BeatDetectionMarkerLaneProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  lane:Omit<TimelineMarkersProps,'scope'|'revision'|'disabled'|'disabledReason'|'unstyled'>;
  sensitivity:number;detectedBpm:number|null;status:'idle'|'detecting'|'ready'|'error';progress?:number;error?:string;unavailableReason?:string;
@@ -21,6 +22,6 @@ export function BeatDetectionMarkerLane({scope='beat-markers',revision=0,...prop
   {status==='detecting'||guard.pendingId==='detect'?<Button title="Cancel beat detection" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onCancel();}}/>:null}
   <Text accessibilityLiveRegion="polite" {...{className:unstyled?undefined:'text-text'}}>Detection: {status}{progress===undefined?'':`; ${(progress*100).toFixed(0)}%`} · tempo: {detectedBpm===null?'Not reported':detectedBpm.toFixed(2)+' BPM'}</Text>
   <TimelineMarkers {...lane} scope={scope} revision={revision} disabled={off} unstyled={unstyled} onSelect={id=>guard.current()?.lane.onSelect(id)} onSeek={f=>guard.current()?.lane.onSeek(f)} onAdd={at=>guard.run('add',h=>h.lane.onAdd(at))} onUpdate={(id,u)=>guard.run('edit',h=>h.lane.onUpdate(id,u))} onRemove={id=>guard.run('remove',h=>h.lane.onRemove(id))}/>
-  <ErrorMessage message={guard.error??error??disabledReason??unavailableReason} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??error??disabledReason??unavailableReason,unstyled:unstyled})}/>
  </View>;
 }

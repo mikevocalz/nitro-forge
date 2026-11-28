@@ -21,6 +21,7 @@ import {
   formatDbfs, formatLufs, formatSeconds, formatSigned, historySeconds, lufsToFraction, momentaryBars,
   peakSeverity, targetDelta, type LoudnessTarget,
 } from "./loudness.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Measurement state of a {@linkcode LoudnessMeter}. */
 export type LoudnessStatus = "measuring" | "ready" | "error" | "silent";
@@ -33,7 +34,7 @@ export interface LoudnessMeterProps extends Omit<ViewProps, "children">,ScopedCo
   readonly status: LoudnessStatus;
   /** Gated integrated loudness, LUFS. `null` when silent or shorter than one block. */
   readonly rmsDbfs?:number|null;
-  readonly onReset?:(signal?:AbortSignal)=>void|Promise<unknown>;
+  readonly onReset?:((signal?:AbortSignal)=>void|Promise<unknown>)|undefined;
   readonly integratedLufs: number | null;
   /** Highest 3 s short-term loudness, LUFS. */
   readonly shortTermMaxLufs: number | null;
@@ -52,13 +53,13 @@ export interface LoudnessMeterProps extends Omit<ViewProps, "children">,ScopedCo
    * shown as text and cannot be changed here. A rejected Promise leaves the
    * `target` prop, and so the selection, unchanged.
    */
-  readonly onTargetChange?: (lufs: number) => void | Promise<unknown>;
+  readonly onTargetChange?: ((lufs: number) => void | Promise<unknown>) | undefined;
   /** Target choices. @default LOUDNESS_TARGETS (-14, -16, -23 LUFS) */
   readonly targets?: readonly LoudnessTarget[];
   /** Shown when `status` is `"error"`: what failed, in the app's words. */
   readonly error?: string;
   /** Shown as a Retry button when `status` is `"error"`. */
-  readonly onRetry?: () => void;
+  readonly onRetry?: (() => void) | undefined;
   /** Disables the target choice and Retry. */
   readonly disabled?: boolean;
   /** Height of the momentary history, in pt. @default 112 */
@@ -113,7 +114,7 @@ function TargetChoice({ value, targets, onChange, disabled, unstyled }: {
 }
 
 function Stat({ label, value, note, danger, unstyled }: {
-  label: string; value: string; note?: string; danger?: boolean; unstyled: boolean;
+  label: string; value: string; note?: string | undefined; danger?: boolean; unstyled: boolean;
 }) {
   return <View style={{ minWidth: 132, flexGrow: 1, flexBasis: 132, gap: 2 }}>
     <Text {...{ className: joinClasses(!unstyled && "text-text-muted") }} style={{ fontSize: 12 }}>{label}</Text>
@@ -266,6 +267,6 @@ function LoudnessMeterBody({actionError,disabledReason,rmsDbfs,onReset,
     {header}
     <Text {...{className:!unstyled?'text-text':undefined}}>Measured RMS: {rmsDbfs===undefined||rmsDbfs===null?'Not reported':rmsDbfs.toFixed(2)+' dBFS'}</Text>
     {onReset?<Button title="Reset host loudness integration" disabled={disabled} unstyled={unstyled} onPress={()=>onReset()}/>:null}
-    {body}<ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/>
+    {body}<ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/>
   </View>;
 }

@@ -3,6 +3,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {Select} from '@nyc-tron/ui/components/Select';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface RenderCacheJob {id:string;label:string;state:'queued'|'rendering'|'ready'|'stale'|'error';completed?:number;total?:number;error?:string}
 export interface RenderCacheIndicatorProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  jobs:readonly RenderCacheJob[];quality:string;qualities:readonly {id:string;label:string;disabledReason?:string}[];
@@ -22,6 +23,6 @@ export function RenderCacheIndicator({scope='render-cache',revision=0,...props}:
    {job.state==='error'||job.state==='stale'?<Button title={'Rebuild '+job.label} disabled={off} unstyled={unstyled} onPress={()=>guard.run('retry',(host,signal)=>host.jobs.some(j=>j.id===job.id&&(j.state==='error'||j.state==='stale'))?host.onRetry(job.id,signal):undefined)}/>:null}
    {job.state==='ready'?<Button title={'Invalidate '+job.label} variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>guard.run('invalidate',(host,signal)=>host.jobs.some(j=>j.id===job.id&&j.state==='ready')?host.onInvalidate(job.id,signal):undefined)}/>:null}
   </View>)}
-  {jobs.length===0?<Text {...{className:unstyled?undefined:'text-text'}}>No render cache jobs</Text>:null}<ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  {jobs.length===0?<Text {...{className:unstyled?undefined:'text-text'}}>No render cache jobs</Text>:null}<ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

@@ -4,6 +4,7 @@ import {LiveRecordingWaveform,type LiveRecordingWaveformProps} from '../audio/Li
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface PDFVoiceNoteArtifact {id:string;label:string;durationSamples:number;sampleRate:number;mimeType:string;bytes:number}
 export interface PDFVoiceNoteAttachmentProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  pageId:string;anchor:{x:number;y:number};transport:Omit<NativeAudioTransportProps,'scope'|'revision'>;waveform?:LiveRecordingWaveformProps;
@@ -19,5 +20,5 @@ export function PDFVoiceNoteAttachment({scope='pdf-voice-note',revision=0,...pro
  return <View {...rest} style={[{gap:8},style]} accessibilityLabel="PDF voice note"><NativeAudioTransport {...transport} scope={scope} revision={revision} unstyled={unstyled} disabledReason={disabledReason??transport.disabledReason}/>{waveform?<LiveRecordingWaveform {...waveform} unstyled={unstyled}/>:null}
  <Text {...{className:unstyled?undefined:'text-text'}}>{artifact?artifact.label+' · '+(artifact.durationSamples/artifact.sampleRate).toFixed(2)+' s · '+artifact.bytes+' bytes':'No recorded audio artifact yet'}</Text>
  <Button title={attached?'Voice note attachment acknowledged':'Attach voice note to PDF page'} disabled={off||!artifact||!canAttach||attached} unstyled={unstyled} onPress={()=>guard.run('attach',(h,s)=>{if(!h.artifact||!h.canAttach||h.transport.recording||h.attachedArtifactId===h.artifact.id)throw new Error('Voice note is unavailable');return h.onAttach({artifactId:h.artifact.id,pageId:h.pageId,anchor:h.anchor},s);})}/>
- <Button title="Discard unattached recording" variant="secondary" disabled={off||!artifact||attached} unstyled={unstyled} onPress={()=>guard.run('discard',(h,s)=>h.artifact&&h.attachedArtifactId!==h.artifact.id&&!h.transport.recording?h.onDiscard(h.artifact.id,s):undefined)}/><ErrorMessage message={guard.error??disabledReason} unstyled={unstyled}/></View>;
+ <Button title="Discard unattached recording" variant="secondary" disabled={off||!artifact||attached} unstyled={unstyled} onPress={()=>guard.run('discard',(h,s)=>h.artifact&&h.attachedArtifactId!==h.artifact.id&&!h.transport.recording?h.onDiscard(h.artifact.id,s):undefined)}/><ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/></View>;
 }

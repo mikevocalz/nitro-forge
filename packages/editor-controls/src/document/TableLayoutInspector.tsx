@@ -3,6 +3,7 @@ import {PropertyInspector,type PropertyInspectorProps} from '../inputs/PropertyI
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface TableCellLayout {rowSpan:number;columnSpan:number;horizontal:'start'|'center'|'end'|'justify';vertical:'top'|'middle'|'bottom';padding:number;borderWidth:number;borderStyle:'none'|'solid'|'dashed';borderColor:string;fill:string}
 export interface TableLayoutInspectorProps extends Omit<PropertyInspectorProps,'label'|'fields'|'onCommit'> {
  value:TableCellLayout;colors:readonly {id:string;label:string}[];canMerge:boolean;canSplit:boolean;
@@ -20,5 +21,5 @@ export function TableLayoutInspector({value,colors,canMerge,canSplit,onCommit,on
  {kind:'choice',id:'borderColor',label:'Border color',value:value.borderColor,choices:colors},
  {kind:'choice',id:'fill',label:'Cell fill',value:value.fill,choices:colors}
  ]} onCommit={(id,v)=>guard.run('layout',(h,s)=>h.onCommit({...h.value,[id]:v},s))}/>
- <Button title="Merge selected cells" disabled={off||!canMerge} unstyled={props.unstyled} onPress={()=>guard.run('merge',(h,s)=>h.canMerge?h.onMerge(s):undefined)}/><Button title={`Split ${value.rowSpan} by ${value.columnSpan} cell`} disabled={off||!canSplit} unstyled={props.unstyled} onPress={()=>guard.run('split',(h,s)=>h.canSplit?h.onSplit(s):undefined)}/><ErrorMessage message={guard.error??props.disabledReason} unstyled={props.unstyled}/></View>;
+ <Button title="Merge selected cells" disabled={off||!canMerge} {...exact({unstyled:props.unstyled})} onPress={()=>guard.run('merge',(h,s)=>h.canMerge?h.onMerge(s):undefined)}/><Button title={`Split ${value.rowSpan} by ${value.columnSpan} cell`} disabled={off||!canSplit} {...exact({unstyled:props.unstyled})} onPress={()=>guard.run('split',(h,s)=>h.canSplit?h.onSplit(s):undefined)}/><ErrorMessage {...exact({message:guard.error??props.disabledReason,unstyled:props.unstyled})}/></View>;
 }

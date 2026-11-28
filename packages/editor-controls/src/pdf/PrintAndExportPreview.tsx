@@ -5,6 +5,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {exact} from '../exact-optional.ts';
 export interface PDFOutputSettings {paperId:string;orientation:'portrait'|'landscape';cropToContent:boolean;qualityDpi:number;scalePercent:number;includeAnnotations:boolean;profileId:string}
 export interface PrintAndExportPreviewProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  settings:PDFOutputSettings;configurationRevision:string|number;papers:readonly {id:string;label:string}[];
@@ -30,5 +31,5 @@ export function PrintAndExportPreview({scope='pdf-output',revision=0,...props}:P
  <Button title="Validate selected PDF profile" disabled={off||!profile||profile.unavailableReason!==undefined} unstyled={unstyled} onPress={()=>guard.run('validate',(h,s)=>h.onValidate(s))}/>
  <Button title="Export reviewed PDF" disabled={off||!profile||profile.unavailableReason!==undefined||profile.requiresValidation&&!validated||status!=='ready'} unstyled={unstyled} onPress={()=>guard.run('export',(h,s)=>{const p=h.profiles.find(p=>p.id===h.settings.profileId);if(!p||p.unavailableReason!==undefined||h.status!=='ready'||p.requiresValidation&&!(h.validation.status==='passed'&&h.validation.profileId===p.id&&h.validation.configurationRevision===h.configurationRevision))throw new Error('Current PDF output settings need a valid preview and profile check');return h.onExport(s);})}/>
  {onPrint?<Button title="Open native print dialog" disabled={off||status!=='ready'} unstyled={unstyled} onPress={()=>guard.run('print',(h,s)=>h.status==='ready'?h.onPrint?.(s):undefined)}/>:null}
- {busy||guard.pending?<Button title="Cancel PDF output" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onCancel();}}/>:null}{result?<Text {...{className:unstyled?undefined:'text-text'}}>Output acknowledged: {result.label} · {result.bytes} bytes</Text>:null}<ErrorMessage message={guard.error??error??disabledReason??profile?.unavailableReason} unstyled={unstyled}/></View>;
+ {busy||guard.pending?<Button title="Cancel PDF output" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onCancel();}}/>:null}{result?<Text {...{className:unstyled?undefined:'text-text'}}>Output acknowledged: {result.label} · {result.bytes} bytes</Text>:null}<ErrorMessage {...exact({message:guard.error??error??disabledReason??profile?.unavailableReason,unstyled:unstyled})}/></View>;
 }

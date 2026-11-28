@@ -6,6 +6,7 @@ import { joinClasses } from "@nyc-tron/ui/components/styles";
 import { columnName, parseCellAddress } from "../sheet-window.ts";
 import { freezeFor, type FreezeCommand, type FreezeState, type SplitAxis, type SplitState } from "./freeze-split-model.ts";
 import { PanelHeading } from "./panel-controls.tsx";
+import {exact} from '../exact-optional.ts';
 
 /**
  * Controlled freeze-panes and split-view commands. Frozen panes and the split
@@ -21,7 +22,7 @@ export interface FreezeSplitControlsProps extends Omit<ViewProps, "children">,Sc
   /** Current split, `undefined` when the sheet shows one pane. */
   readonly split?: SplitState;
   /** Supplying this shows the split commands. */
-  readonly onSplitChange?: (next: SplitState | undefined) => void;
+  readonly onSplitChange?: ((next: SplitState | undefined) => void) | undefined;
   readonly disabled?:boolean;
   readonly className?: string;
   readonly unstyled?: boolean;
@@ -82,5 +83,5 @@ function FreezeSplitControlsBody({actionError,disabledReason,disabled=false,
         <Button title="Remove split" unstyled={unstyled} variant="ghost" disabled={disabled||!split} onPress={() => onSplitChange(undefined)} />
       </View>
     </> : null}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

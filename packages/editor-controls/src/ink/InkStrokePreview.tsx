@@ -11,6 +11,7 @@ import {controlIdentity,useScopedControl,type ScopedControlProps} from '../input
 import {createFrameThrottle,type FrameThrottle} from '../frame-throttle.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {MAX_INK_PREVIEW_SAMPLES,validateInkSamples,type InkSample} from './brush-model.ts';
+import {exact} from '../exact-optional.ts';
 export interface InkStrokePreviewProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  width:number;height:number;strokeWidth:number;inkColor:string;
  /** External/native-adapter samples. Omit for the local test pad. */
@@ -70,7 +71,7 @@ export function InkStrokePreview({scope='ink-test',revision=0,...props}:InkStrok
   {s.notice?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{s.notice}</Text>:null}
   {disabledReason||guard.pending?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{disabledReason??'Committing test stroke'}</Text>:null}
   {samples===undefined?<Button title="Clear test stroke" variant="secondary" disabled={guard.pending} unstyled={unstyled} onPress={()=>{cancel();store.setState(v=>({points:[],frame:v.frame+1,notice:null}));}}/>:null}
-  <ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(){return createStore(()=>({points:[] as readonly InkSample[],frame:0,notice:null as string|null}));}

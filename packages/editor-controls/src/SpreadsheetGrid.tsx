@@ -19,6 +19,7 @@ import { colorReferences, referenceEdges, REFERENCE_TONE_CLASSES } from "./sprea
 import { fillFromEdge, fillTarget, type FillPlan } from "./spreadsheet/fill-handle.ts";
 import type { DragPoint, DragTransport } from "@nyc-tron/ui/components/gestures/drag-transport";
 import { PanResponderDrag } from "@nyc-tron/ui/components/gestures/PanResponderDrag";
+import {exact} from './exact-optional.ts';
 
 /** Only presentation data supplied by the app's TallyDocument.getRange(). */
 export interface SpreadsheetCell {
@@ -64,14 +65,14 @@ export interface SpreadsheetGridProps extends Omit<ViewProps, "children">,Scoped
    * Omit to let the grid own selection; pass `null` for "nothing selected".
    */
   readonly selection?: SheetSelection | null;
-  readonly onSelectionChange?: (selection: SheetSelection) => void;
-  readonly onCommitCell?: (address:string,raw:string)=>Promise<unknown>|unknown;
+  readonly onSelectionChange?: ((selection: SheetSelection) => void) | undefined;
+  readonly onCommitCell?: ((address:string,raw:string)=>Promise<unknown>|unknown)|undefined;
   /**
    * Ctrl/Cmd+C or the screen-reader "Copy" action. The kit builds the TSV from
    * `cells` (absent addresses are empty fields) and never touches the
    * clipboard; the app writes it.
    */
-  readonly onCopyRange?: (range: SheetRange, tsv: string) => void;
+  readonly onCopyRange?: ((range: SheetRange, tsv: string) => void) | undefined;
   /** Largest selection {@linkcode SpreadsheetGridProps.onCopyRange} serializes. @default 1_000_000 */
   readonly maxCopyCells?: number;
   /**
@@ -103,7 +104,7 @@ export interface SpreadsheetGridProps extends Omit<ViewProps, "children">,Scoped
    * engine) does the fill; reject to show its message. Omit it when the
    * engine has no fill operation, and the handle is not drawn.
    */
-  readonly onFillRange?: (plan: FillPlan) => Promise<unknown> | unknown;
+  readonly onFillRange?: ((plan: FillPlan) => Promise<unknown> | unknown) | undefined;
   /**
    * Draw something other than the value in a cell, such as a
    * `forge/spreadsheet/Sparkline`. Return `undefined` to show the value. The
@@ -120,7 +121,7 @@ export interface SpreadsheetGridProps extends Omit<ViewProps, "children">,Scoped
   /** Drag recognizer for the fill handle. @default PanResponderDrag */
   readonly fillTransport?: DragTransport;
   /** Ask the host's TallyDocument for just this range. */
-  readonly onWindowChange?: (range: SpreadsheetWindowRequest) => void;
+  readonly onWindowChange?: ((range: SpreadsheetWindowRequest) => void) | undefined;
   readonly className?:string;
   readonly cellClassName?:string;
   readonly headerClassName?:string;
@@ -161,7 +162,7 @@ function SpreadsheetGridBody({interactionBoundary,actionError,readOnly,disabledR
   selection:selectionProp,onSelectionChange,onCommitCell,onCopyRange,maxCopyCells=1_000_000,onPasteRange,maxPasteCells=1_000_000,readClipboard,
   highlightReferences=true,onFillRange,renderCellContent,showFormulaBar=true,fillTransport:FillTransport=PanResponderDrag,onWindowChange,
   className,headerClassName,cellClassName,unstyled=false,onLayout,style,...props
-}:SpreadsheetGridProps&{interactionBoundary:string;actionError?:string|null}) {
+}:Omit<SpreadsheetGridProps,'onPasteRange'>&{onPasteRange?:SpreadsheetGridProps['onPasteRange']|undefined;interactionBoundary:string;actionError?:string|null}) {
   const stateRef=useRef<StoreApi<GridLocal>|null>(null);
   if(!stateRef.current)stateRef.current=createStore<GridLocal>(()=>({
     x:0,y:0,draft:"",dirty:false,pending:false,editVersion:0,error:null,measuredWidth:0,measuredHeight:0,selection:null,
@@ -468,7 +469,7 @@ function SpreadsheetGridBody({interactionBoundary,actionError,readOnly,disabledR
        onCommit={()=>commit()} onCancel={()=>state.setState(current=>({draft:focus?cells[focus]?.raw??'':'',dirty:false,error:null,editVersion:current.editVersion+1}))}/>
 
     </View>:null}
-    <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/>
     {error?<Text selectable accessibilityLiveRegion="polite" accessibilityRole="alert"
       {...{className:joinClasses("px-2",!unstyled&&"text-danger")}}>{error}</Text>:null}
     {/* Keys are handled here, not on the root, so arrows typed in the formula bar never move the selection. */}

@@ -6,6 +6,7 @@ import ts from '@typescript/typescript6';
 import * as audioPreview from '../src/audio/audio-preview-owner.ts';
 import * as level from '../src/audio/level.ts';
 import {audioTargetSize} from '../src/audio/audio-chrome.ts';
+import * as exactOptional from '../src/exact-optional.ts';
 
 test('vertical fader uses compatible RNGH axis activation and failure thresholds',()=>{
   let pan;
@@ -25,7 +26,7 @@ test('vertical fader uses compatible RNGH axis activation and failure thresholds
     },
     'zustand/vanilla':{createStore:init=>{let state=init();return {getState:()=>state,setState:next=>{state={...state,...next};}};}},
     zustand:{useStore:(store,selector)=>selector(store.getState())},
-    './audio-preview-owner.ts':audioPreview,'./audio-chrome.ts':{audioTargetSize},'./level.ts':level,
+    './audio-preview-owner.ts':audioPreview,'./audio-chrome.ts':{audioTargetSize},'./level.ts':level,'../exact-optional.ts':exactOptional,
     '@nyc-tron/ui/components/Button':{Button:'Button'},'@nyc-tron/ui/components/feedback/ErrorMessage':{ErrorMessage:'ErrorMessage'},
     '../inputs/useScopedControl.ts':{controlIdentity:(...parts)=>parts,useScopedControl:(_owner,props)=>({pending:false,current:()=>props,run:()=>{}})},
   };
@@ -47,7 +48,7 @@ test('queued old vertical callbacks cannot clear a replacement source preview or
   'react/jsx-runtime':{jsx:element,jsxs:element},'react-native':{Text:'Text',TextInput:'TextInput',View:'View'},
   'react-native-gesture-handler':{GestureDetector:'GestureDetector',usePanGesture:config=>{pan=config;return config;},useTapGesture:config=>{tap=config;return config;},useCompetingGestures:(...v)=>v},
   'zustand/vanilla':{createStore:init=>{let state=init();return{getState:()=>state,setState:patch=>{state={...state,...patch};}};}},zustand:{useStore:(store,selector)=>selector(store.getState())},
-  './audio-preview-owner.ts':audioPreview,'./audio-chrome.ts':{audioTargetSize},'./level.ts':level,'@nyc-tron/ui/components/Button':{Button:'Button'},'@nyc-tron/ui/components/feedback/ErrorMessage':{ErrorMessage:'ErrorMessage'},
+  './audio-preview-owner.ts':audioPreview,'./audio-chrome.ts':{audioTargetSize},'./level.ts':level,'../exact-optional.ts':exactOptional,'@nyc-tron/ui/components/Button':{Button:'Button'},'@nyc-tron/ui/components/feedback/ErrorMessage':{ErrorMessage:'ErrorMessage'},
   '../inputs/useScopedControl.ts':{controlIdentity:(...parts)=>parts,useScopedControl:(_owner,props)=>({pending:false,current:()=>blocked?null:props,run:(_id,fn)=>{assert.equal(blocked,false,'blocked callbacks cannot reach host write');return Promise.resolve(fn(props));}})},
  };
  const code=ts.transpileModule(readFileSync(new URL('../src/audio/LevelFader.vertical.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;

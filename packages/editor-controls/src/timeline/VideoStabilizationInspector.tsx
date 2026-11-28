@@ -5,6 +5,7 @@ import {SegmentedControl} from '@nyc-tron/ui/components/SegmentedControl';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface VideoStabilizationSettings {strength:number;smoothingFrames:number;quality:'fast'|'balanced'|'high'}
 export interface VideoStabilizationInspectorProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  value:VideoStabilizationSettings;qualities:readonly VideoStabilizationSettings['quality'][];
@@ -26,6 +27,6 @@ export function VideoStabilizationInspector({scope='video-stabilization',revisio
   <Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{analysis.status}{analysis.progress===undefined?'':`; ${(analysis.progress*100).toFixed(0)}%`}</Text>
   <Button title="Analyze stabilization" disabled={off||!qualities.includes(value.quality)} unstyled={unstyled} onPress={()=>guard.run('analyze',(host,signal)=>host.onAnalyze(signal))}/>
   {guard.pendingId==='analyze'||analysis.status==='running'?<Button title="Cancel stabilization analysis" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onCancel();}}/>:null}
-  <ErrorMessage message={guard.error??analysis.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??analysis.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

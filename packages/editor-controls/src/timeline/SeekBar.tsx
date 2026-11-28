@@ -8,6 +8,7 @@ import {formatTimecode,type FrameRate} from "../timebase.ts";
 import type {FrameRange} from "./viewport.ts";
 import {frameForKey} from "./frame-keys.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode SeekBar}. */
 export interface SeekBarProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -71,7 +72,7 @@ function SeekBarBody({
   };
   const step=(d:number)=>{const n=clamp(frame+d);if(!off&&n!==clamp(frame))onSeek(n);};
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-1",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <View {...scrub.handlers}
       {...{onKeyDown,focusable:!off,className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
       onLayout={e=>store.set({width:e.nativeEvent.layout.width})}

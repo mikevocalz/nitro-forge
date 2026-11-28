@@ -11,7 +11,7 @@ import { colorReferences, formulaSegments, REFERENCE_TONE_CLASSES } from "./refe
 export interface FormulaReferenceTextProps extends Omit<TextProps, "children"> {
   readonly formula: string;
   /** References qualified with this sheet count as the current sheet. */
-  readonly sheetName?: string;
+  readonly sheetName?: string | undefined;
   readonly className?: string;
   readonly unstyled?: boolean;
 }

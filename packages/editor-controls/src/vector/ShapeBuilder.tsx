@@ -12,6 +12,7 @@ import {
 } from "./shape-builder-model.ts";
 import {availabilityReason,type BooleanOp} from "./vector-types.ts";
 import {GroupLabel,NoticeLine,VECTOR_TOUCH_TARGET,VectorButton} from "./vector-controls.tsx";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode ShapeBuilder}. Selection and the boolean group come from the host's document. */
 export interface ShapeBuilderProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -71,7 +72,7 @@ function ShapeBuilderBody({
   const text=joinClasses(styled&&"text-text");
   return <View {...rest} {...{className:joinClasses("gap-3",styled&&"rounded-control border border-border bg-surface-raised p-3",className)}}
     style={[{minWidth:0},style]}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Applying change"}</Text>:null}
     <View style={{gap:6}}>
       <GroupLabel styled={styled}>Combine shapes</GroupLabel>

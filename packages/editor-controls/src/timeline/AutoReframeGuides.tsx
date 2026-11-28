@@ -4,6 +4,7 @@ import {SettingSwitch} from '@nyc-tron/ui/components/forms/SettingSwitch';
 import {GuidedCropAndStraighten,type GuidedCropAndStraightenProps} from '../canvas/GuidedCropAndStraighten.tsx';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface AutoReframeGuidesProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  frame:number;manual:boolean;onManualChange:(manual:boolean)=>void;
  crop:Omit<GuidedCropAndStraightenProps,'scope'|'revision'|'disabledReason'>;
@@ -22,6 +23,6 @@ export function AutoReframeGuides({scope='auto-reframe',revision=0,...props}:Aut
   {tracking.status==='lost'?<Text {...{className:unstyled?undefined:'text-text'}}>Subject lost. Use manual crop correction or track again.</Text>:null}
   <Button title="Track subject for reframing" disabled={off} unstyled={unstyled} onPress={()=>guard.run('track',(host,signal)=>host.onTrack(host.frame,signal))}/>
   {guard.pendingId==='track'||tracking.status==='running'?<Button title="Stop reframing tracking" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel())onStop();}}/>:null}
-  <ErrorMessage message={guard.error??tracking.error??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??tracking.error??undefined,unstyled:unstyled})}/>
  </View>;
 }

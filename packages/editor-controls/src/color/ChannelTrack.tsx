@@ -27,12 +27,12 @@ export interface ChannelTrackProps extends Omit<ViewProps,"children"> {
   readonly step?:number;
   /** Page Up/Down step. @default 0.1 */
   readonly pageStep?:number;
-  readonly onPreview?:(value:number)=>void;
+  readonly onPreview?:((value:number)=>void)|undefined;
   /** Once per drag release, key press or screen-reader action that changes the value. */
   readonly onCommit:(value:number)=>void;
   readonly disabled?:boolean;
   /** Track runs right to left. @default I18nManager.isRTL */
-  readonly rtl?:boolean;
+  readonly rtl?:boolean|undefined;
   readonly unstyled?:boolean;
 }
 

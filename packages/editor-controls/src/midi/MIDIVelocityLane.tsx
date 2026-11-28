@@ -28,6 +28,7 @@ import {
 } from "./velocity-line.ts";
 import { MidiValueStepper } from "./MidiChannelPicker.tsx";
 import type { MIDIPianoRoll } from "./MIDIPianoRoll.tsx";
+import {exact} from '../exact-optional.ts';
 
 const HIT = 44;
 const BAR = 8;
@@ -60,7 +61,7 @@ export interface MIDIVelocityLaneProps extends Omit<ViewProps, "children">,Scope
   /** Arrow-key and screen-reader step. @default 4 */
   readonly step?: number;
   readonly selectedIndex?: number;
-  readonly onSelect?: (index: number) => void;
+  readonly onSelect?: ((index: number) => void) | undefined;
   /** Once per finished bar drag or step. */
   readonly onVelocityCommit: (index: number, velocity: number) => void | Promise<unknown>;
   /**
@@ -70,7 +71,7 @@ export interface MIDIVelocityLaneProps extends Omit<ViewProps, "children">,Scope
    * shows the Bars / Line tool row; leaving it out keeps the lane bar-only.
    * A rejected promise leaves the committed velocities as they are.
    */
-  readonly onVelocitiesCommit?: (changes: readonly VelocityChange[]) => void | Promise<unknown>;
+  readonly onVelocitiesCommit?: ((changes: readonly VelocityChange[]) => void | Promise<unknown>) | undefined;
   /** Current tool. Leave out to let the lane keep its own (starting at `"bars"`). */
   readonly tool?: VelocityTool;
   /** Called when the person picks the other tool. */
@@ -296,7 +297,7 @@ function MIDIVelocityLaneBody({actionError,disabledReason,retained,
           : null}
       </View>
     </View>
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }
 
 /** A segment drawn as a rotated view about its centre (the Sparkline technique). */
@@ -323,7 +324,7 @@ interface VelocityBarProps {
   readonly locked: boolean;
   /** Height the line tool would give this bar. */
   readonly preview: number | undefined;
-  readonly onSelect?: (index: number) => void;
+  readonly onSelect?: ((index: number) => void) | undefined;
   readonly onCommit: MIDIVelocityLaneProps["onVelocityCommit"];
 }
 

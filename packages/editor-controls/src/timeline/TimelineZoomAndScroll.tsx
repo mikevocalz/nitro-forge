@@ -16,6 +16,7 @@ import {
   fitRange,frameToX,minimapScroll,minimapWindow,scrollBy,visibleFrames,zoomAt,
   type FrameRange,type TimelineViewport,
 } from "./viewport.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode TimelineZoomAndScroll}. */
 export interface TimelineZoomAndScrollProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -91,7 +92,7 @@ function TimelineZoomAndScrollBody({
   const total=Math.max(1,durationFrames,viewport.startFrame+visibleFrames(viewport));
   const percent=Math.round(Math.min(1,visibleFrames(viewport)/Math.max(1,durationFrames))*100);
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
-    <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+    <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     <View style={{flexDirection:"row",flexWrap:"wrap",gap:8,alignItems:"center"}}>
       <Button title="Zoom out" variant="secondary" size="sm" {...id("zoom-out")}
         disabled={disabled||viewport.pxPerFrame<=limits.min} onPress={()=>change(zoomAt(viewport,anchor,1/STEP,durationFrames,rate))}/>

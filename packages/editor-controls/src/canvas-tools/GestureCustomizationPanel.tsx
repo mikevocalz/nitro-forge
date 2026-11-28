@@ -31,6 +31,7 @@ import {
  keepGestureFor,sameGestureMap,saveProblem,usesHeldGesture,validateGestureCatalog,validateGestureMap,
  type GestureDefinition,type GestureMap,type QuickActionDefinition,
 } from "./gesture-map-model.ts";
+import {exact} from '../exact-optional.ts';
 
 /** Props for {@linkcode GestureCustomizationPanel}. */
 export interface GestureCustomizationPanelProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -93,7 +94,7 @@ function GestureCustomizationPanelBody({
 
  return <View {...rest} role="group" aria-label={label}
   {...{className:joinClasses("gap-3",styled&&"rounded-card border border-border bg-surface-raised p-4",className)}}>
-  <ErrorMessage message={actionError??undefined} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
   {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Saving gestures"}</Text>:null}
   <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
    <Text role="heading" aria-level={2} {...{className:joinClasses(styled&&"text-text text-lg font-semibold")}}>{label}</Text>
@@ -111,7 +112,7 @@ function GestureCustomizationPanelBody({
      options={[{value:NONE,label:"No gesture"},...gestures.map(g=>({value:g.id,
       label:g.reservedBy?`${g.label} (reserved)`:g.unavailableReason?`${g.label} (not on this device)`:g.label,
       disabled:g.reservedBy!==undefined&&g.id!==bound}))]}
-     errorText={errorText} hint={!errorText&&def?.unavailableReason?def.unavailableReason:undefined}
+     {...(errorText===undefined?{}:{errorText})} {...(!errorText&&def?.unavailableReason?{hint:def.unavailableReason}:{})}
      onValueChange={v=>edit(assignGesture(draft,action.id,v===NONE?undefined:v))}/>
     {dupe&&dupe.kind==="duplicate"?<Button size="sm" variant="secondary" unstyled={unstyled} style={{alignSelf:"flex-start"}}
      title={`Keep ${gestureLabel(dupe.gestureId)} for ${action.label}`}

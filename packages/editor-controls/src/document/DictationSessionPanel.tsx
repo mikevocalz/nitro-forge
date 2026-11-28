@@ -5,6 +5,7 @@ import {useStore} from 'zustand';
 import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export interface DictationSessionPanelProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  status:'idle'|'listening'|'processing'|'review'|'error';permission:'unknown'|'granted'|'denied';offline:boolean;supportsOffline:boolean;
  transcript:string;interimText:string;error?:string;canUndo:boolean;
@@ -27,7 +28,7 @@ export function DictationSessionPanel({scope='dictation-session',revision=0,...p
   <Button title="Insert reviewed dictation" disabled={off||status!=='review'||!draft.trim()} unstyled={unstyled} onPress={()=>guard.run('insert',(h,s)=>h.status==='review'?h.onInsert(store.getState().draft,s):undefined)}/>
   <Button title="Discard dictated draft" variant="secondary" disabled={off||status!=='review'} unstyled={unstyled} onPress={()=>{if(guard.current())onDiscard();}}/>
   <Button title="Undo inserted dictation" variant="secondary" disabled={off||!canUndo} unstyled={unstyled} onPress={()=>guard.run('undo',(h,s)=>h.canUndo?h.onUndo(s):undefined)}/>
-  <ErrorMessage message={guard.error??error??disabledReason??(offline&&!supportsOffline?'Offline dictation is unavailable':undefined)} unstyled={unstyled}/>
+  <ErrorMessage {...exact({message:guard.error??error??disabledReason??(offline&&!supportsOffline?'Offline dictation is unavailable':undefined),unstyled:unstyled})}/>
  </View>;
 }
 function makeStore(draft:string){return createStore(()=>({draft}));}

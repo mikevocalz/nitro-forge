@@ -11,6 +11,7 @@ import {
   MAX_BPM, MAX_NUMERATOR, MIN_BPM, TAP_RESET_MS, TIME_SIG_DENOMINATORS,
   addTap, clampBpm, formatTimeSignature, isValidTimeSignature, tapTempo, type TimeSignature,
 } from "./tempo.ts";
+import {exact} from '../exact-optional.ts';
 
 
 export interface TempoLabels {
@@ -48,7 +49,7 @@ export interface TempoAndMetronomeProps extends Omit<ViewProps, "children">,Scop
    * The click switch. Leave it out when nothing can play a click: the
    * control is then not drawn, rather than drawn and dead.
    */
-  readonly metronome?: MetronomeBinding;
+  readonly metronome?: MetronomeBinding | undefined;
   /**
    * Zero-based beat in the bar while the transport runs, for the visual
    * click. Leave it out when stopped.
@@ -126,7 +127,7 @@ function TempoAndMetronomeBody({actionError,disabledReason,
   };
 
   return <View {...rest} {...{ className: joinClasses("gap-4", styled && "rounded-card border border-border bg-surface-raised p-4", className) }}>
-    <PrecisionScrubber targetSize={HIT} labels={copy.precision} label={copy.tempo} value={clampBpm(bpm)} min={MIN_BPM} max={MAX_BPM} step={1} unit=" BPM"
+    <PrecisionScrubber targetSize={HIT} {...(copy.precision===undefined?{}:{labels:copy.precision})} label={copy.tempo} value={clampBpm(bpm)} min={MIN_BPM} max={MAX_BPM} step={1} unit=" BPM"
       disabled={disabled} unstyled={unstyled} onCommit={onTempoCommit} />
     <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={copy.tapName}
@@ -189,5 +190,5 @@ function TempoAndMetronomeBody({actionError,disabledReason,
         })}
       </View> : null}
     </View> : null}
-  <ErrorMessage message={actionError??disabledReason} unstyled={unstyled}/></View>;
+  <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

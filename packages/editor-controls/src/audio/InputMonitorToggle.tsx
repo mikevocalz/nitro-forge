@@ -3,6 +3,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {SegmentedControl} from '@nyc-tron/ui/components/SegmentedControl';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
 export type InputMonitorMode='off'|'hardware'|'software';
 export interface InputMonitorToggleProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  value:InputMonitorMode;hardwareSupported:boolean;softwareSupported:boolean;feedbackRisk:boolean;feedbackAcknowledged:boolean;
@@ -17,6 +18,6 @@ export function InputMonitorToggle({scope='input-monitor',revision=0,...props}:I
    onChange={mode=>guard.run('monitor',(host,signal)=>mode==='off'||mode==='hardware'&&host.hardwareSupported||mode==='software'&&host.softwareSupported&&(!host.feedbackRisk||host.feedbackAcknowledged)?host.onChange(mode,signal):undefined)}/>
   {feedbackRisk?<Text {...{className:unstyled?undefined:'text-text'}}>Software monitoring may feed the speakers into the microphone. Use headphones or a safe routing path.</Text>:null}
   {feedbackRisk&&!feedbackAcknowledged&&softwareSupported?<Button title="Acknowledge software monitoring feedback risk" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>guard.run('ack',(host,signal)=>host.onAcknowledgeFeedback(signal))}/>:null}
-  {!hardwareSupported?<Text {...{className:unstyled?undefined:'text-text'}}>This device does not provide hardware monitoring.</Text>:null}<ErrorMessage message={guard.error??undefined} unstyled={unstyled}/>
+  {!hardwareSupported?<Text {...{className:unstyled?undefined:'text-text'}}>This device does not provide hardware monitoring.</Text>:null}<ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
  </View>;
 }
