@@ -15,6 +15,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "verify:nyc-tron": "node tooling/verify-nyc-tron-pin.mjs",
+    "test:nyc-tron-pin": "node --test tooling/verify-nyc-tron-pin.test.mjs",
     "test:lab-config": "node --test tooling/lab-metro-config.test.cjs",
     "verify:timeline-source": "node tooling/verify-timeline-source.mjs",
     "verify:canvas-source": "node tooling/verify-canvas-source.mjs",

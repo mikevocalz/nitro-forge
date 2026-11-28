@@ -10,6 +10,7 @@ on:
       - "Cargo.lock"
       - "docs/ENGINE_OPS.md"
       - "pnpm-lock.yaml"
+      - "packages/editor-controls/**"
       - ".github/workflows/splice.yml"
   push:
     branches: [master]
@@ -21,6 +22,7 @@ on:
       - "Cargo.lock"
       - "docs/ENGINE_OPS.md"
       - "pnpm-lock.yaml"
+      - "packages/editor-controls/**"
       - ".github/workflows/splice.yml"
 
 permissions:
@@ -38,6 +40,8 @@ jobs:
       - run: corepack enable
       - name: Install Forge workspace
         run: corepack pnpm install --frozen-lockfile
+      - name: Build editor-controls declarations (consumers typecheck against its dist)
+        run: corepack pnpm --filter @nitro-forge/editor-controls build
       - name: Splice engine unit tests
         run: cargo test -p splice-engine
       - name: Format check for the new Splice modules

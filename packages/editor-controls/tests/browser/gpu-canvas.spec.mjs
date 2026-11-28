@@ -1,0 +1,16 @@
+import {test,expect} from 'playwright/test';
+const state=async page=>JSON.parse(await page.getByTestId('gpu-canvas-state').textContent());
+const pixel=(page,x,y)=>page.getByRole('img',{name:'GPU document canvas',exact:true}).locator('canvas').evaluate((canvas,{x,y})=>{const copy=new OffscreenCanvas(canvas.width,canvas.height),ctx=copy.getContext('2d',{colorSpace:canvas.getContext('2d').getContextAttributes().colorSpace});ctx.drawImage(canvas,0,0);return [...ctx.getImageData(x*canvas.width/300,y*canvas.height/240,1,1).data];},{x,y});
+// Cold CanvasKit compilation is asynchronous setup, not a frame-latency assertion.
+test.setTimeout(45000);
+test.beforeEach(async({page})=>{page.gpuErrors=[];page.on('pageerror',error=>page.gpuErrors.push(error.message));await page.goto('/gpu-canvas');await expect(page.getByTestId('gpu-canvas-state')).toBeVisible({timeout:20000});await expect.poll(async()=>(await state(page)).submissions,{timeout:10000}).toBe(1);});
+test.afterEach(async({page})=>{expect(page.gpuErrors).toEqual([]);});
+test('actual CanvasKit surface paints, transforms and replaces the controlled document',async({page})=>{
+ expect((await state(page)).gpu.backend).toBe('WebGL');
+ await expect.poll(()=>pixel(page,40,40)).toEqual([180,80,40,255]);await expect.poll(()=>pixel(page,110,70)).toEqual([0,0,0,0]);
+ await page.getByRole('button',{name:'Zoom GPU canvas',exact:true}).click();await expect.poll(async()=>(await state(page)).submissions).toBe(2);await expect.poll(()=>pixel(page,110,70)).toEqual([180,80,40,255]);
+ await page.getByRole('button',{name:'Replace GPU document',exact:true}).click();await expect.poll(async()=>(await state(page)).submissions).toBe(3);await expect.poll(()=>pixel(page,110,70)).toEqual([40,80,180,255]);expect((await state(page)).error).toBe('');
+});
+test('paused updates defer drawing until resume without rebuilding the surface',async({page})=>{const canvas=page.getByRole('img',{name:'GPU document canvas',exact:true}).locator('canvas');await canvas.evaluate(el=>el.dataset.instance='original');await page.getByRole('button',{name:'Pause GPU canvas',exact:true}).click();await page.getByRole('button',{name:'Replace GPU document',exact:true}).click();expect((await state(page)).submissions).toBe(1);await expect.poll(()=>pixel(page,40,40)).toEqual([180,80,40,255]);await page.getByRole('button',{name:'Pause GPU canvas',exact:true}).click();await expect.poll(async()=>(await state(page)).submissions).toBe(2);await expect.poll(()=>pixel(page,40,40)).toEqual([40,80,180,255]);await expect(canvas).toHaveAttribute('data-instance','original');});
+
+test('renderer failures close the recording, show an error and recover on a new revision',async({page})=>{await page.getByRole('button',{name:'Toggle GPU draw failure',exact:true}).click();await expect(page.getByRole('alert')).toHaveText('Canvas rendering failed: Sample renderer failed');expect((await state(page)).submissions).toBe(1);expect((await state(page)).error).toBe('Sample renderer failed');await page.getByRole('button',{name:'Toggle GPU draw failure',exact:true}).click();await expect.poll(async()=>(await state(page)).submissions).toBe(2);await expect(page.getByRole('alert')).toHaveCount(0);await expect.poll(()=>pixel(page,40,40)).toEqual([180,80,40,255]);});

@@ -1,0 +1,56 @@
+# Rendered web acceptance for @nitro-forge/editor-controls: the moved sources and
+# the installed NYC-Tron UI release bundled through React Native Web in Chromium.
+# Native rendering, native drag and drop, screen readers, Safari and Firefox
+# need separate evidence.
+name: Editor controls rendered web acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'packages/editor-controls/**'
+      - '.github/workflows/editor-controls-browser.yml'
+      - 'patches/**'
+      - 'tooling/nyc-tron.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: packages/editor-controls/tests/browser
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      # NYC-Tron UI comes from the release tarball pinned in tooling/nyc-tron.json,
+      # with patches/@nyc-tron__ui@1.0.0-rc.2.patch applied; the fixtures bundle it
+      # from packages/editor-controls/node_modules with the gesture handler and Skia.
+      - name: Install the Forge workspace
+        working-directory: .
+        run: corepack enable && corepack pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install isolated browser test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Exercise NativeSeekBar, layer panels, color, timeline, audio and MIDI, spreadsheet, office, ink, canvas, selection, vector, photo and motion controls in React Native Web
+        run: npm test
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: editor-controls-browser-captures
+          path: |
+            packages/editor-controls/tests/browser/shots/
+            packages/editor-controls/tests/browser/test-results/
+          if-no-files-found: warn
+          retention-days: 7

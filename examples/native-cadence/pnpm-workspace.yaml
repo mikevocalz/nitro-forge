@@ -7,6 +7,7 @@ packages:
   - "../../packages/cadence"
   - "../../packages/telemetry"
   - "../../packages/prism"
+  - "../../packages/editor-controls"
 # Keep the app and shared Ignition dependency on the same Nitro v1 nightly.
 # Metro must bundle a single react-native-nitro-modules runtime.
 overrides:
@@ -18,3 +19,8 @@ allowBuilds:
 # SwiftPM plugin refuses it. The patch adds its Package.swift (see the file).
 patchedDependencies:
   "@expo/ui@58.0.28": patches/@expo__ui@58.0.28.patch
+  # Bridge for the editor controls moved to @nitro-forge/editor-controls: adds
+  # the 20 export entries Tron's next release ships, pointing at files rc.2
+  # already contains. Shared with the root workspace; delete with the root copy
+  # when the pin moves past rc.2. See packages/editor-controls/README.md.
+  "@nyc-tron/ui@1.0.0-rc.2": ../../patches/@nyc-tron__ui@1.0.0-rc.2.patch

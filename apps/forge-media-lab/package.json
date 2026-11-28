@@ -21,7 +21,8 @@
     "tailwindcss": "4.3.5",
     "uniwind": "1.13.2",
     "zustand": "^5.1.0",
-    "expo-constants": "58.0.16"
+    "expo-constants": "58.0.16",
+    "@nitro-forge/editor-controls": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",

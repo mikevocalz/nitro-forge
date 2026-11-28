@@ -1,0 +1,20 @@
+import {FlatList,View,Text,type ViewProps} from 'react-native';
+import {Button} from '@nyc-tron/ui/components/Button';
+import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
+import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
+export interface DocumentChange {id:string;kind:'insert'|'delete'|'format';author:string;timeLabel:string;before:string;after:string;locationLabel:string;canReview:boolean}
+export interface TrackChangesViewProps extends Omit<ViewProps,'children'>,ScopedControlProps {
+ changes:readonly DocumentChange[];selectedId:string|null;tracking:boolean;filter:'all'|'insert'|'delete'|'format';
+ onFilterChange:(value:TrackChangesViewProps['filter'])=>void;onTrackingChange:(enabled:boolean,signal?:AbortSignal)=>unknown;
+ onSelect:(id:string)=>void;onReview:(ids:readonly string[],decision:'accept'|'reject',signal?:AbortSignal)=>unknown;unstyled?:boolean;
+}
+export function TrackChangesView({scope='track-changes',revision=0,...props}:TrackChangesViewProps){
+ const {changes,selectedId,tracking,filter,onFilterChange:_filter,onTrackingChange:_tracking,onSelect:_select,onReview:_review,unstyled=false,disabledReason,style,...rest}=props;
+ if(changes.length>50000||new Set(changes.map(c=>c.id)).size!==changes.length||changes.some(c=>!c.id.trim()||c.id.length>256||!['insert','delete','format'].includes(c.kind)||c.before.length>65536||c.after.length>65536||c.author.length>1024||c.locationLabel.length>2048))throw new RangeError('Invalid document changes');
+ const owner=JSON.stringify([...controlIdentity(scope,revision),disabledReason]),guard=useScopedControl(owner,props,disabledReason!==undefined),off=guard.pending||disabledReason!==undefined,shown=changes.filter(c=>filter==='all'||c.kind===filter);
+ const review=(ids:readonly string[],decision:'accept'|'reject')=>guard.run('review',(h,s)=>{const allowed=ids.filter(id=>h.changes.some(c=>c.id===id&&c.canReview));return allowed.length?h.onReview(allowed,decision,s):undefined;});
+ return <View {...rest} accessibilityLabel="Tracked changes" style={[{gap:8},style]}><Button title={'Track changes '+(tracking?'on':'off')} accessibilityState={{checked:tracking}} disabled={off} unstyled={unstyled} onPress={()=>guard.run('tracking',(h,s)=>h.onTrackingChange(!h.tracking,s))}/><View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}>{(['all','insert','delete','format'] as const).map(f=><Button key={f} title={f+' changes'} variant="secondary" accessibilityState={{selected:f===filter}} unstyled={unstyled} onPress={()=>guard.current()?.onFilterChange(f)}/>)}</View>
+  <FlatList data={shown} keyExtractor={c=>c.id} initialNumToRender={6} windowSize={5} style={{height:400}} extraData={[selectedId,off]} renderItem={({item})=><View style={{gap:6,paddingVertical:8}}><Button title={`${item.kind} · ${item.author} · ${item.locationLabel}`} variant="secondary" accessibilityState={{selected:item.id===selectedId}} disabled={off} unstyled={unstyled} onPress={()=>guard.current()?.onSelect(item.id)}/><Text {...{className:unstyled?undefined:'text-text-muted'}}>{item.timeLabel}</Text>{item.before?<Text selectable {...{className:unstyled?undefined:'text-text'}} accessibilityLabel={'Previous text: '+item.before} style={{textDecorationLine:item.kind==='delete'?'line-through':'none'}}>{item.before}</Text>:null}{item.after?<Text selectable {...{className:unstyled?undefined:'text-text'}} accessibilityLabel={'Proposed text: '+item.after}>{item.after}</Text>:null}<View style={{flexDirection:'row',gap:6}}>{(['accept','reject'] as const).map(d=><Button key={d} title={d+' change'} disabled={off||!item.canReview} unstyled={unstyled} onPress={()=>review([item.id],d)}/>)}</View></View>}/>
+  <ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/></View>;
+}

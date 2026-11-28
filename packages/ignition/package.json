@@ -34,7 +34,8 @@
     "typescript": "7.0.2",
     "vitest": "5.1.0",
     "nitrogen": "1.0.0-alpha.nightly.136.gdb81de61bd32",
-    "nitro-core": "1.0.0-alpha.nightly.136.gdb81de61bd32"
+    "nitro-core": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+    "@nitro-forge/editor-controls": "workspace:*"
   },
   "imports": {
     "#nitro/*": "./nitrogen/generated/shared/javascript/*.cjs"

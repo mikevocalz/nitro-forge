@@ -4,11 +4,14 @@ The Rust `@nitro-forge/tally` package is the authoritative workbook
 engine, evaluator, snapshot and undo/redo owner. This integration does not
 move any of that state into TanStack or NYC-Tron.
 
-The independent NYC-Tron UI source repository has two related components:
+Two components render Tally data. `DataTable` comes from NYC-Tron UI.
+`SpreadsheetGrid` is a Forge editor control: it was built in NYC-Tron UI and
+moved to `@nitro-forge/editor-controls` on 2026-11-28 (see
+`packages/editor-controls/README.md`).
 
 - `@nyc-tron/ui/components/data/DataTable`: TanStack Table v9 headless
   table for sortable record lists, rendered through custom RN components.
-- `@nyc-tron/ui/components/forge/SpreadsheetGrid`: an Excel-like viewport
+- `@nitro-forge/editor-controls/SpreadsheetGrid`: an Excel-like viewport
   with TanStack Table's core row/column model, an editable formula bar, and
   bounded 2-D visible cell rendering. It deliberately does **not** sort a
   formula-bearing sheet by pretending it is a list of independent records.
@@ -22,7 +25,7 @@ columns the grid pins outside the scrolled body), and writes through
 or TanStack, so it cannot create a UI-engine dependency cycle.
 
 ```tsx
-import { SpreadsheetGrid } from "@nyc-tron/ui/components/forge/SpreadsheetGrid";
+import { SpreadsheetGrid } from "@nitro-forge/editor-controls/SpreadsheetGrid";
 import { readTallyWindow, commitTallyGridCell } from "@nitro-forge/tally/grid-adapter";
 
 // Workbook, cell cache and selection are owned above this component in the app
@@ -108,29 +111,30 @@ TalkBack/VoiceOver, keyboard/IME and 1M-row scroll performance acceptance.
 
 ## Spreadsheet cluster (roster I-01, I-02, I-06, I-08, I-13, I-14, I-17, I-20)
 
-The controls live in NYC-Tron UI under
-`@nyc-tron/ui/components/forge/spreadsheet/*`
-([NYC-Tron-UI #40](https://github.com/mikevocalz/NYC-Tron-UI/pull/40)).
+The controls live in Forge under `@nitro-forge/editor-controls/spreadsheet/*`.
+They were built in NYC-Tron UI
+([NYC-Tron-UI #40](https://github.com/mikevocalz/NYC-Tron-UI/pull/40)) and moved
+here on 2026-11-28.
 `@nitro-forge/tally/grid-cluster` is the engine side. Like `grid-adapter` it
 imports no React and no `@nyc-tron/*`; it returns data and callbacks shaped
-like the NYC-Tron props.
+like the control props.
 
-| ID | NYC-Tron control | Engine side (`grid-cluster` / `grid-adapter`) | Status |
+| ID | Editor control | Engine side (`grid-cluster` / `grid-adapter`) | Status |
 | --- | --- | --- | --- |
-| I-01 | `forge/SpreadsheetGrid` | `readTallyWindow`, `TALLY_SHEET_BOUNDS` | BUILD |
+| I-01 | `SpreadsheetGrid` | `readTallyWindow`, `TALLY_SHEET_BOUNDS` | BUILD |
 | I-02 | `SpreadsheetGrid` `onFillRange` | `commitTallyFill` → `fillRange`; rectangular paste via `setRange` | Implemented in the engine: reference shifting and one undo entry per edit. Callback shape matches the unreleased UI cluster; release-pin update remains pending. |
-| I-06 | `SpreadsheetGrid` outlines, `forge/spreadsheet/FormulaReferenceText` | none needed: references come from the formula text | BUILD |
-| I-08 | `forge/spreadsheet/SheetTabs` | `bindTallySheetTabs` → `onSelect`/`onAdd`/`onRename`/`onRemove` over `setActive`/`addSheet`/`renameSheet`/`removeSheet` | BUILD; duplicate, move, protect and tab color **DEFER** on ops `duplicateSheet`, `moveSheet`, `protectSheet`, `setSheetColor` |
-| I-13 | `forge/spreadsheet/ChartBuilder` | `readTallyRange` for the data; `insertChart`/`updateChart`/`removeChart`/`listCharts` persist bounded specs (schema:5) | BUILD; saving **IMPLEMENTED** (storage-only — host renders) |
-| I-14 | `forge/spreadsheet/SparklineEditor`, `Sparkline` | `readTallyRange`; `setSparkline`/`clearSparkline`/`listSparklines` persist bounded specs (schema:5) | BUILD; saving **IMPLEMENTED** (storage-only — host renders) |
-| I-17 | `forge/spreadsheet/FreezeSplitControls`, `SplitSpreadsheetView` | none: app view state feeding `frozenRows`/`frozenColumns` | BUILD; saving with the workbook **DEFER** on op `setSheetView` |
-| I-20 | `forge/spreadsheet/SpreadsheetCardsView` | `readTallyRange`, `commitTallyCardField` (`setCell`) | BUILD |
+| I-06 | `SpreadsheetGrid` outlines, `spreadsheet/FormulaReferenceText` | none needed: references come from the formula text | BUILD |
+| I-08 | `spreadsheet/SheetTabs` | `bindTallySheetTabs` → `onSelect`/`onAdd`/`onRename`/`onRemove` over `setActive`/`addSheet`/`renameSheet`/`removeSheet` | BUILD; duplicate, move, protect and tab color **DEFER** on ops `duplicateSheet`, `moveSheet`, `protectSheet`, `setSheetColor` |
+| I-13 | `spreadsheet/ChartBuilder` | `readTallyRange` for the data; `insertChart`/`updateChart`/`removeChart`/`listCharts` persist bounded specs (schema:5) | BUILD; saving **IMPLEMENTED** (storage-only — host renders) |
+| I-14 | `spreadsheet/SparklineEditor`, `Sparkline` | `readTallyRange`; `setSparkline`/`clearSparkline`/`listSparklines` persist bounded specs (schema:5) | BUILD; saving **IMPLEMENTED** (storage-only — host renders) |
+| I-17 | `spreadsheet/FreezeSplitControls`, `SplitSpreadsheetView` | none: app view state feeding `frozenRows`/`frozenColumns` | BUILD; saving with the workbook **DEFER** on op `setSheetView` |
+| I-20 | `spreadsheet/SpreadsheetCardsView` | `readTallyRange`, `commitTallyCardField` (`setCell`) | BUILD |
 
 `TALLY_DEFERRED_OPS` lists the deferred op names in code; a unit test checks
 none of them is in `OPS`, so the list has to change when an op lands.
 
 ```tsx
-import { SheetTabs } from "@nyc-tron/ui/components/forge/spreadsheet/SheetTabs";
+import { SheetTabs } from "@nitro-forge/editor-controls/spreadsheet/SheetTabs";
 import { bindTallySheetTabs } from "@nitro-forge/tally/grid-cluster";
 
 // In the app's Zustand store: tabs come from the engine after every write.
@@ -145,6 +149,11 @@ Sheet ids are the engine's sheet indexes. `setActive` changes the sheet that
 Tally records `setActive` in its undo history.
 
 ### NYC-Tron release pin
+
+Since 2026-11-28 the spreadsheet controls are in `@nitro-forge/editor-controls`,
+and `@nitro-forge/tally` takes that package as a devDependency for
+`tests/nyc-tron-consumer.test.ts`. The paragraphs below record the alpha.1
+state, when the controls still shipped in `@nyc-tron/ui`.
 
 `tooling/nyc-tron.json` pins `@nyc-tron/ui` to the `v0.1.0-alpha.1` release
 tarball (same file as

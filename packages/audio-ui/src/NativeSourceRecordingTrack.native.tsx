@@ -1,5 +1,5 @@
 import { useStore } from "zustand";
-import { RecordingTrack } from "@nyc-tron/ui/components/forge/audio/RecordingTrack";
+import { RecordingTrack } from "@nitro-forge/editor-controls/audio/RecordingTrack";
 import { useForgePcmRecorder } from "./useForgePcmRecorder";
 import { inputLevel, toRecordingViewState } from "./recordingView";
 import type { NativeSourceRecordingTrackProps } from "./sourceRecordingTypes";

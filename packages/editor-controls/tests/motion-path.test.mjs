@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {snapMotionPoint,snapMotionTangent,validateMotionPathSnapping} from '../src/motion/motion-path.ts';
+const snap={grid:10,tolerance:5,targets:[],tangentAngleDegrees:45};
+test('point snapping respects tolerance, deterministic target priority and unsnapped originals',()=>{assert.deepEqual(snapMotionPoint({x:12,y:13},snap),{x:10,y:10});const point={x:15,y:15};assert.equal(snapMotionPoint(point,snap),point);assert.deepEqual(snapMotionPoint({x:12,y:10},{...snap,targets:[{x:14,y:10}]}),{x:14,y:10});assert.deepEqual(snapMotionPoint({x:12,y:10},{...snap,grid:0,targets:[{x:13,y:10},{x:11,y:10}]}),{x:13,y:10});});
+test('tangent snapping retains length and signed direction without mutating offsets',()=>{const offset=[10,1],next=snapMotionTangent(offset,45);assert.ok(Math.abs(Math.hypot(...next)-Math.hypot(...offset))<1e-12);assert.equal(next[1],0);assert.equal(snapMotionTangent(offset,0),offset);const negative=snapMotionTangent([-10,-1],45);assert.ok(negative[0]<0);assert.deepEqual(snapMotionTangent([0,0],45),[0,0]);assert.deepEqual(offset,[10,1]);});
+test('invalid snapping contracts are rejected before gesture handling',()=>{for(const value of [{...snap,grid:-1},{...snap,tolerance:Infinity},{...snap,tangentAngleDegrees:181},{...snap,targets:[{x:NaN,y:0}]}])assert.throws(()=>validateMotionPathSnapping(value));assert.throws(()=>snapMotionTangent([1,NaN],45));assert.throws(()=>snapMotionPoint({x:Infinity,y:0},snap));});

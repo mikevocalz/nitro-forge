@@ -1,0 +1,4 @@
+import {AssetPresetGallery,type AssetPresetGalleryProps,type AssetPreset} from '../inputs/AssetPresetGallery.tsx';
+export interface ReusableDesignStyle extends AssetPreset {kind:'color'|'text'|'effect'|'asset';bindingCount:number}
+export interface ReusableStylesPanelProps extends Omit<AssetPresetGalleryProps,'label'|'items'> {items:readonly ReusableDesignStyle[]}
+export function ReusableStylesPanel({items,...props}:ReusableStylesPanelProps){if(items.some(i=>!['color','text','effect','asset'].includes(i.kind)||!Number.isSafeInteger(i.bindingCount)||i.bindingCount<0))throw new RangeError('Invalid reusable style metadata');return <AssetPresetGallery {...props} label="Reusable design styles and assets" items={items.map(i=>({...i,tags:[i.kind,...i.tags],description:i.description+' · '+i.bindingCount+' bindings'}))}/>;}

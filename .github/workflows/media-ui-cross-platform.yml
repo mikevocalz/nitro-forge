@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'packages/media-ui/**'
+      - 'packages/editor-controls/**'
+      - 'patches/**'
       - '.github/workflows/media-ui-cross-platform.yml'
       - 'apps/forge-media-lab/**'
       - 'tooling/nyc-tron.json'
@@ -33,6 +35,8 @@ jobs:
           cache: pnpm
       - name: Install SDK 58 peer-isolated contract dependencies
         run: pnpm install --frozen-lockfile
+      - name: Build editor-controls declarations (consumers typecheck against its dist)
+        run: pnpm --filter @nitro-forge/editor-controls build
       - name: NYC-Tron release pin (URL, lockfile, SHA256SUMS)
         run: node tooling/verify-nyc-tron-pin.mjs --download
       - name: Strict public API typecheck
