@@ -264,8 +264,11 @@ describe("packed tarballs in a clean consumer", { timeout: 300_000 }, () => {
     }, null, 2));
     // A standalone project: no parent workspace, and Ignition's Nitro peers are
     // not auto-installed, so the install needs no registry or network.
+    // pmOnFail: ignore stops pnpm resolving packageManager as a config
+    // dependency, which offline needs registry metadata that a fresh CI cache
+    // does not have (ERR_PNPM_BAD_CONFIG_DEP).
     writeFileSync(join(consumer, "pnpm-workspace.yaml"), ["packages:", '  - "."', "autoInstallPeers: false",
-      "strictPeerDependencies: false", "enableGlobalVirtualStore: false", "minimumReleaseAge: 0", ""].join("\n"));
+      "strictPeerDependencies: false", "enableGlobalVirtualStore: false", "minimumReleaseAge: 0", "pmOnFail: ignore", ""].join("\n"));
     execFileSync("pnpm", ["install", "--offline"], { cwd: consumer, stdio: "inherit", env: { ...process.env, NODE_PATH: "" } });
 
     const consumerReal = realpathSync(consumer);
