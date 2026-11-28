@@ -1,4 +1,4 @@
-import type {BlockKind,ListDefinition,ListFormat,ListItem} from './index';
+import type {BlockKind,ListDefinition,ListFormat,ListItem} from './index.ts';
 export interface QuillMarkerBlock {readonly kind:BlockKind;readonly list?:ListItem}
 const FORMATS:readonly ListFormat[]=['bullet','decimal','lowerLetter','upperLetter','lowerRoman','upperRoman'];
 const KINDS=new Set(['para','h1','h2','h3','list','quote']);

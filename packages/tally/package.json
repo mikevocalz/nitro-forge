@@ -3,15 +3,44 @@
   "version": "0.1.0",
   "description": "Nitro-Forge tally document API.",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "react-native": "./lib/index.js",
   "exports": {
-    ".": "./src/index.ts",
-    "./grid-adapter": "./src/grid-adapter.ts",
-    "./grid-cluster": "./src/grid-cluster.ts",
-    "./transfer": "./src/transfer.ts"
+    ".": {
+      "@nitro-forge/source": "./src/index.ts",
+      "types": "./lib/index.d.ts",
+      "react-native": "./lib/index.js",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./grid-adapter": {
+      "@nitro-forge/source": "./src/grid-adapter.ts",
+      "types": "./lib/grid-adapter.d.ts",
+      "react-native": "./lib/grid-adapter.js",
+      "import": "./lib/grid-adapter.js",
+      "default": "./lib/grid-adapter.js"
+    },
+    "./grid-cluster": {
+      "@nitro-forge/source": "./src/grid-cluster.ts",
+      "types": "./lib/grid-cluster.d.ts",
+      "react-native": "./lib/grid-cluster.js",
+      "import": "./lib/grid-cluster.js",
+      "default": "./lib/grid-cluster.js"
+    },
+    "./transfer": {
+      "@nitro-forge/source": "./src/transfer.ts",
+      "types": "./lib/transfer.d.ts",
+      "react-native": "./lib/transfer.js",
+      "import": "./lib/transfer.js",
+      "default": "./lib/transfer.js"
+    },
+    "./package.json": "./package.json"
   },
+  "sideEffects": false,
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },

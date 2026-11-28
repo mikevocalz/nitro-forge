@@ -4,17 +4,17 @@ import {
   type CommandResult,
   type EngineHost,
 } from "@nitro-forge/ignition";
-import type { Rgba } from "./rgba";
+import type { Rgba } from "./rgba.ts";
 import type {
   AlignEdge, AlignTarget, Artboard, BlendMode, BooleanOp, Brush, BrushPatch, FillRule, LayerBounds, LayerTransform,
   ModeledStroke, NodeKind, Paint, PaintOrder, PaintStrokeOptions, PaintStrokePreview, PaintStrokeResult,
   EraseMode, EraseStrokeOptions, EraseStrokePreview, EraseStrokeResult,
   PathNode, PixelPreview, SampleSource, SelectionMode, SelectionShape, SelectionState, Stroke, StrokeModelParams,
   StrokePredict, StrokeSample, Subpath,
-} from "./canvas-types";
+} from "./canvas-types.ts";
 
-export type { Rgba } from "./rgba";
-export * from "./canvas-types";
+export type { Rgba } from "./rgba.ts";
+export * from "./canvas-types.ts";
 
 /** Op names — mirrors docs/ENGINE_OPS.md § prism. */
 export const OPS = {

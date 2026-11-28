@@ -2,7 +2,7 @@
  * Types for Prism's canvas/layers ops (docs/ENGINE_OPS.md § prism). Field
  * names match the engine's JSON exactly, so values pass through unchanged.
  */
-import type { Rgba } from "./rgba";
+import type { Rgba } from "./rgba.ts";
 
 /** Blend modes accepted by {@linkcode PrismDocument.setLayerBlend}. */
 export type BlendMode =

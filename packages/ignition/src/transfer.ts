@@ -9,7 +9,7 @@
  * to Files, a share sheet or a browser download is the platform layer's job
  * (NYC-Tron platform-services documents, N-12).
  */
-import type { DocumentHandle } from "./document";
+import type { DocumentHandle } from "./document.ts";
 
 /** A quality control the sheet shows for a format. */
 export interface TransferQuality {

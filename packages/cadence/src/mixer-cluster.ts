@@ -1,5 +1,5 @@
-import type {AnalysisRange,AutomationMode,AutomationParam,CadenceDocument,CompressorParams,EqBand,InsertKind,TrackKind} from './index';
-import type {CadenceDescribe} from './editor-adapter';
+import type {AnalysisRange,AutomationMode,AutomationParam,CadenceDocument,CompressorParams,EqBand,InsertKind,TrackKind} from './index.ts';
+import type {CadenceDescribe} from './editor-adapter.ts';
 
 /** An authoritative insert in {@linkcode CadenceMixerState}. */
 export type MixerInsert = {readonly id:number;readonly bypassed:boolean}&(

@@ -1,5 +1,5 @@
-import {runExport,runImport,type ExportFormat,type ImportFormat,type ExportResult} from './transfer';
-import type {DocumentHandle} from './document';
+import {runExport,runImport,type ExportFormat,type ImportFormat,type ExportResult} from './transfer.ts';
+import type {DocumentHandle} from './document.ts';
 
 /** Explicit platform delivery selected by the transfer UI. */
 export type TransferDestination='files'|'share'|'download';

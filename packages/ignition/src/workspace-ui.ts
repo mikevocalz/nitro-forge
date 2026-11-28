@@ -1,4 +1,4 @@
-import type {WorkspaceSession,WorkspaceState} from './workspace';
+import type {WorkspaceSession,WorkspaceState} from './workspace.ts';
 /** Parses opaque persisted layouts using the consuming UI's actual validator. */
 export function workspaceUiView<L>(session:WorkspaceSession,parseLayout:(value:unknown)=>L){
  const s=session.state;

@@ -1,11 +1,11 @@
 import type { EngineHost } from "@nitro-forge/ignition";
-import { CadenceDocument } from "./index";
+import { CadenceDocument } from "./index.ts";
 import {
   createCadenceTrackInstrumentBindings,
   toNativeKnobBinding,
   type CadenceKnobBinding,
   type CadenceNativeKnobBinding,
-} from "./instrument-adapter";
+} from "./instrument-adapter.ts";
 
 /** One real Cadence track. Every value comes from the latest Rust describe() result. */
 export interface CadenceInstrumentState {

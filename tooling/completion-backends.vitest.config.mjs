@@ -1,10 +1,12 @@
 import {fileURLToPath} from 'node:url';
+import {sourceResolve} from './source-condition.mjs';
 
-// These source tests resolve the same entry point as the declared workspace dependency.
+// These source tests resolve the same entry point as the declared workspace dependency,
+// read from src/ through the @nitro-forge/source export condition.
 // They exercise real CLI engines; they do not replace installed/native consumer validation.
 export default {
+ ...sourceResolve,
  root:fileURLToPath(new URL('../',import.meta.url)),
- resolve:{alias:{'@nitro-forge/ignition':fileURLToPath(new URL('../packages/ignition/src/index.ts',import.meta.url))}},
  test:{environment:'node',include:[
   'packages/photo/tests/**/*.test.ts',
   'packages/motion/tests/**/*.test.ts',

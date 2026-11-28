@@ -1,6 +1,6 @@
-export { createTelemetry, type Span, type Telemetry, type TelemetryOptions } from "./telemetry";
-export { instrumentHost } from "./instrument";
-export { redactAttributes, scrubMessage } from "./redact";
+export { createTelemetry, type Span, type Telemetry, type TelemetryOptions } from "./telemetry.ts";
+export { instrumentHost } from "./instrument.ts";
+export { redactAttributes, scrubMessage } from "./redact.ts";
 export type {
   TelemetryAttributes,
   TelemetryConsent,
@@ -8,4 +8,4 @@ export type {
   TelemetrySink,
   TelemetryValue,
   TraceExport,
-} from "./types";
+} from "./types.ts";

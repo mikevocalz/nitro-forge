@@ -91,7 +91,8 @@ it("keeps acknowledged revisions after abrupt process death and serializes CAS a
   const fixturePath = new URL("./fixtures/server.ts", import.meta.url);
   const loader = createRequire(import.meta.url).resolve("tsx");
   async function child() {
-    const process = spawn(globalThis.process.execPath, ["--import", loader, fileURLToPath(fixturePath), f.databasePath],
+    // The condition reads @nitro-forge/ignition from src/, as vitest does, so no build is needed.
+    const process = spawn(globalThis.process.execPath, ["--conditions=@nitro-forge/source", "--import", loader, fileURLToPath(fixturePath), f.databasePath],
       { stdio: ["ignore", "pipe", "pipe"] });
     cleanup.push(async () => { if (process.exitCode === null && process.signalCode === null) {
       const exited = once(process, "exit"); process.kill("SIGTERM"); await exited;

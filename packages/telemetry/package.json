@@ -3,13 +3,30 @@
   "version": "0.1.0",
   "description": "Nitro-Forge test and telemetry adapter: consent-gated engine timings, failures and debug traces, plus a capturing adapter for tests.",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "react-native": "./lib/index.js",
   "exports": {
-    ".": "./src/index.ts",
-    "./testing": "./src/testing.ts"
+    ".": {
+      "@nitro-forge/source": "./src/index.ts",
+      "types": "./lib/index.d.ts",
+      "react-native": "./lib/index.js",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./testing": {
+      "@nitro-forge/source": "./src/testing.ts",
+      "types": "./lib/testing.d.ts",
+      "react-native": "./lib/testing.js",
+      "import": "./lib/testing.js",
+      "default": "./lib/testing.js"
+    },
+    "./package.json": "./package.json"
   },
+  "sideEffects": false,
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },

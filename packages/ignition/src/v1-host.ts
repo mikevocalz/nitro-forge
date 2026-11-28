@@ -1,5 +1,5 @@
-import type { Command, CommandResult, EngineKind, ForgeEvent } from "./types";
-import type { EngineHost } from "./host";
+import type { Command, CommandResult, EngineKind, ForgeEvent } from "./types.ts";
+import type { EngineHost } from "./host.ts";
 
 /**
  * Structural contract of the generated Nitro v1 class API in the isolated

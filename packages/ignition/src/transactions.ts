@@ -1,6 +1,6 @@
-import { ownedJson } from "./owned-json";
-import type { DocumentHandle } from "./document";
-import type { Command, CommandResult } from "./types";
+import { ownedJson } from "./owned-json.ts";
+import type { DocumentHandle } from "./document.ts";
+import type { Command, CommandResult } from "./types.ts";
 
 export type TransactionInput = "pointer" | "touch" | "pen" | "keyboard" | "accessibility" | "controller";
 export interface TransactionState<T> {

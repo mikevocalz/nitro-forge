@@ -110,5 +110,5 @@ export class DraftDocument{
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}
 }
 
-export {bindDraftingCommandLine,bindDraftingSnaps,DRAFT_COMMAND_COMPLETIONS,DRAFT_SNAP_MODES} from './cad-bindings';
-export type {DraftCommandHost,DraftCommandBinding,DraftSnapHost,DraftSnapBinding} from './cad-bindings';
+export {bindDraftingCommandLine,bindDraftingSnaps,DRAFT_COMMAND_COMPLETIONS,DRAFT_SNAP_MODES} from './cad-bindings.ts';
+export type {DraftCommandHost,DraftCommandBinding,DraftSnapHost,DraftSnapBinding} from './cad-bindings.ts';

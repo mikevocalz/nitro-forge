@@ -6,7 +6,7 @@ import {
   type ImportFormat,
 } from "@nitro-forge/ignition/transfer";
 import { base64ToBytes, bytesToBase64 } from "@nitro-forge/ignition";
-import { OPS } from "./index";
+import { OPS } from "./index.ts";
 
 const PDF = { id: "pdf", label: "PDF", extension: "pdf", mime: "application/pdf", metadataFields: [] } as const;
 

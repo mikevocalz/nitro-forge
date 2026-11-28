@@ -1,5 +1,5 @@
 import type { Command, CommandResult, EngineHost, EngineKind } from "@nitro-forge/ignition";
-import type { Telemetry } from "./telemetry";
+import type { Telemetry } from "./telemetry.ts";
 
 /**
  * Wraps an {@link EngineHost} so every engine call is timed and every

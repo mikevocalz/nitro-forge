@@ -1,6 +1,6 @@
-import { ENGINE_KINDS, type EngineKind } from "./types";
-import { validateCheckpoint } from "./autosave";
-import type { CollaborationTransport, RemoteRevision } from "./collaboration";
+import { ENGINE_KINDS, type EngineKind } from "./types.ts";
+import { validateCheckpoint } from "./autosave.ts";
+import type { CollaborationTransport, RemoteRevision } from "./collaboration.ts";
 
 /** Options for an HTTP transport consumed by DocumentCollaboration. */
 export interface HttpCollaborationOptions {

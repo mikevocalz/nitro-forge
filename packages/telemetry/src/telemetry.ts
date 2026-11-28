@@ -1,11 +1,11 @@
 import { EngineError } from "@nitro-forge/ignition";
-import { redactAttributes, scrubMessage } from "./redact";
+import { redactAttributes, scrubMessage } from "./redact.ts";
 import type {
   TelemetryConsent,
   TelemetryEvent,
   TelemetrySink,
   TraceExport,
-} from "./types";
+} from "./types.ts";
 
 /** Options for {@link createTelemetry}. */
 export interface TelemetryOptions {

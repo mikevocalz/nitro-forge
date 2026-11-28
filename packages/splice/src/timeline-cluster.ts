@@ -1,4 +1,4 @@
-import type { BatchableOp, RippleScope, SpeedKey, SpliceDocument, TrackKind, TransitionKind } from "./index";
+import type { BatchableOp, RippleScope, SpeedKey, SpliceDocument, TrackKind, TransitionKind } from "./index.ts";
 
 /**
  * Engine side of NYC-Tron's timeline controls (Forge roster section D). Like
