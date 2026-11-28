@@ -167,16 +167,19 @@ export { parseNativeError as normalizeNativeEngineError };
 
 /**
  * Create the production factory, including native tasks and media caches.
- * Resolve the generated constructor lazily so Node/web imports have no native
- * runtime side effects. Callers own and must close documents and caches.
+ * Callers own and must close documents and caches.
+ *
+ * This is the Node/web build of the entry point. The Nitro runtime only
+ * exists inside a React Native app, so outside one this throws. React Native
+ * resolves `@nitro-forge/ignition` through its `react-native` export
+ * condition to `index.native`, which replaces this function with the one in
+ * `nitro-factory.ts` that constructs the generated HybridObject.
  */
 export function createNativeForgeFactory(): ForgeFactory {
-  // Generated v1 constructor uses getHybridClass, never the removed v0 API.
-  // Loading it only here preserves Node tooling and web host isolation.
-  const { ForgeFactory } = require("#nitro/ForgeFactory") as {
-    ForgeFactory: new () => ForgeFactory;
-  };
-  return new ForgeFactory();
+  throw new Error(
+    "createNativeForgeFactory() needs the Nitro runtime, which only exists in a React Native app. " +
+      "In Node use CliHost from @nitro-forge/ignition/cli.",
+  );
 }
 
 export function createNitroHost(): EngineHost {
