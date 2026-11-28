@@ -4,6 +4,7 @@ import {SegmentedControl} from '@nyc-tron/ui/components/SegmentedControl';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export type InputMonitorMode='off'|'hardware'|'software';
 export interface InputMonitorToggleProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  value:InputMonitorMode;hardwareSupported:boolean;softwareSupported:boolean;feedbackRisk:boolean;feedbackAcknowledged:boolean;
@@ -13,7 +14,7 @@ export function InputMonitorToggle({scope='input-monitor',revision=0,...props}:I
  const {value,hardwareSupported,softwareSupported,feedbackRisk,feedbackAcknowledged,onAcknowledgeFeedback:_ack,onChange:_change,unstyled=false,disabledReason,style,...rest}=props;
  if(!['off','hardware','software'].includes(value))throw new RangeError('Unknown input monitoring mode');
  const guard=useScopedControl(JSON.stringify([...controlIdentity(scope,revision),disabledReason,hardwareSupported,softwareSupported,feedbackRisk,feedbackAcknowledged]),props,disabledReason!==undefined),off=guard.pending||disabledReason!==undefined;
- return <View {...rest} style={[{gap:8},style]} accessibilityLabel="Input monitoring">
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement},style]} accessibilityLabel="Input monitoring">
   <SegmentedControl aria-label="Monitor input" value={value} disabled={off} unstyled={unstyled} options={[{value:'off',label:'Off'},{value:'hardware',label:'Hardware',disabled:!hardwareSupported},{value:'software',label:'Software',disabled:!softwareSupported||feedbackRisk&&!feedbackAcknowledged}]}
    onChange={mode=>guard.run('monitor',(host,signal)=>mode==='off'||mode==='hardware'&&host.hardwareSupported||mode==='software'&&host.softwareSupported&&(!host.feedbackRisk||host.feedbackAcknowledged)?host.onChange(mode,signal):undefined)}/>
   {feedbackRisk?<Text {...{className:unstyled?undefined:'text-text'}}>Software monitoring may feed the speakers into the microphone. Use headphones or a safe routing path.</Text>:null}

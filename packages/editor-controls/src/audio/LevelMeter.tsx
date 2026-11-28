@@ -7,6 +7,7 @@ import { joinClasses } from "@nyc-tron/ui/components/styles";
 import {
   createMeterAnnouncer, METER_BAND_LABELS, meterBand, meterFill, type MeterBand,
 } from "./level-meter.ts";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode LevelMeter}. */
 export interface LevelMeterProps extends Omit<ViewProps, "children"> {
@@ -89,8 +90,8 @@ export function LevelMeter({
         // Pull the 2 pt marker back by up to its own width so a held peak at
         // full scale (clipping, the case that matters most) stays inside the
         // clipped track instead of being drawn past its end.
-        ? { position: "absolute", left: 0, right: 0, height: 2, bottom: extent(hold), marginBottom: -2 * hold }
-        : { position: "absolute", top: 0, bottom: 0, width: 2, left: extent(hold), marginLeft: -2 * hold }}
+        ? { position: "absolute", left: 0, right: 0, height: tokens.spacing.off2, bottom: extent(hold), marginBottom: -tokens.spacing.off2 * hold }
+        : { position: "absolute", top: 0, bottom: 0, width: tokens.spacing.off2, left: extent(hold), marginLeft: -tokens.spacing.off2 * hold }}
     /> : null}
   </View>;
 }

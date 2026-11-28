@@ -23,6 +23,7 @@ import {
   peakSeverity, targetDelta, type LoudnessTarget,
 } from "./loudness.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Measurement state of a {@linkcode LoudnessMeter}. */
 export type LoudnessStatus = "measuring" | "ready" | "error" | "silent";
@@ -87,7 +88,7 @@ function TargetChoice({ value, targets, onChange, disabled, unstyled }: {
   const current = Math.max(0, targets.findIndex(t => t.lufs === value));
   return <View role="radiogroup" aria-label="Loudness target" aria-disabled={disabled || undefined}
     {...{ className: joinClasses(!unstyled && "rounded-control bg-surface-sunken") }}
-    style={{ flexDirection: "row", padding: 2, gap: 2 }}>
+    style={{ flexDirection: "row", padding: tokens.spacing.off2, gap: tokens.spacing.off2 }}>
     {targets.map((t, i) => {
       const checked = t.lufs === value;
       return <Pressable key={t.lufs} ref={(el: unknown) => { refs.current[i] = el as { focus?: () => void } | null; }} role="radio" aria-checked={checked}
@@ -105,10 +106,10 @@ function TargetChoice({ value, targets, onChange, disabled, unstyled }: {
         {...{ className: joinClasses(!unstyled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus",
           !unstyled && (checked ? "bg-surface-raised border border-border" : "border border-transparent"),
           !unstyled && disabled && "opacity-50") }}
-        style={{ minHeight: HIT, minWidth: 64, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" }}>
+        style={{ minHeight: HIT, minWidth: tokens.spacing.fixedPage, paddingHorizontal: tokens.spacing.off10, alignItems: "center", justifyContent: "center" }}>
         <Text {...{ className: joinClasses(!unstyled && (checked ? "text-text font-semibold" : "text-text-muted")) }}
-          style={{ fontSize: 14, fontVariant: ["tabular-nums"] }}>{formatSigned(t.lufs, 0)}</Text>
-        <Text {...{ className: joinClasses(!unstyled && "text-text-muted") }} style={{ fontSize: 11 }}>{t.label}</Text>
+          style={{ fontSize: tokens.text.body, fontVariant: ["tabular-nums"] }}>{formatSigned(t.lufs, 0)}</Text>
+        <Text {...{ className: joinClasses(!unstyled && "text-text-muted") }} style={{ fontSize: tokens.text.off11 }}>{t.label}</Text>
       </Pressable>;
     })}
   </View>;
@@ -117,12 +118,12 @@ function TargetChoice({ value, targets, onChange, disabled, unstyled }: {
 function Stat({ label, value, note, danger, unstyled }: {
   label: string; value: string; note?: string | undefined; danger?: boolean; unstyled: boolean;
 }) {
-  return <View style={{ minWidth: 132, flexGrow: 1, flexBasis: 132, gap: 2 }}>
-    <Text {...{ className: joinClasses(!unstyled && "text-text-muted") }} style={{ fontSize: 12 }}>{label}</Text>
+  return <View style={{ minWidth: controlTokens.extent.fieldWide, flexGrow: 1, flexBasis: controlTokens.extent.fieldWide, gap: tokens.spacing.off2 }}>
+    <Text {...{ className: joinClasses(!unstyled && "text-text-muted") }} style={{ fontSize: tokens.text.label }}>{label}</Text>
     <Text {...{ className: joinClasses(!unstyled && (danger ? "text-danger font-semibold" : "text-text font-medium")) }}
-      style={{ fontSize: 16, fontVariant: ["tabular-nums"] }}>{value}</Text>
+      style={{ fontSize: tokens.text.off15, fontVariant: ["tabular-nums"] }}>{value}</Text>
     {note ? <Text {...{ className: joinClasses(!unstyled && (danger ? "text-danger" : "text-text-muted")) }}
-      style={{ fontSize: 12 }}>{note}</Text> : null}
+      style={{ fontSize: tokens.text.label }}>{note}</Text> : null}
   </View>;
 }
 
@@ -173,90 +174,90 @@ function LoudnessMeterBody({actionError,disabledReason,rmsDbfs,onReset,
       + ", target line at " + formatLufs(target);
   const y = (lufs: number) => historyHeight * (1 - lufsToFraction(lufs));
 
-  const header = <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+  const header = <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: tokens.spacing.fixedElement }}>
     <Text role="heading" aria-level={3} {...{ className: joinClasses(!unstyled && "text-text font-semibold") }}
-      style={{ fontSize: 15, flexShrink: 1 }}>{label}</Text>
+      style={{ fontSize: tokens.text.off15, flexShrink: 1 }}>{label}</Text>
     {onTargetChange
       ? <TargetChoice value={target} targets={targets} onChange={onTargetChange} disabled={disabled} unstyled={unstyled} />
-      : <Text {...{ className: muted }} style={{ fontSize: 13 }}>{"Target " + formatLufs(target)}</Text>}
+      : <Text {...{ className: muted }} style={{ fontSize: tokens.text.off13 }}>{"Target " + formatLufs(target)}</Text>}
   </View>;
 
   let body;
   if (status === "measuring") {
-    body = <View style={{ gap: 12 }}>
-      <Text accessibilityLiveRegion="polite" {...{ className: muted }} style={{ fontSize: 13 }}>
+    body = <View style={{ gap: tokens.spacing.fixedInset }}>
+      <Text accessibilityLiveRegion="polite" {...{ className: muted }} style={{ fontSize: tokens.text.off13 }}>
         Measuring loudness of the selected range
       </Text>
-      <View aria-hidden style={{ flexDirection: "row", gap: 12, flexWrap: "wrap" }}>
-        <View {...{ className: joinClasses(!unstyled && "rounded-control bg-surface-sunken") }} style={{ flexGrow: 1, flexBasis: 80, height: 40 }} />
-        <View {...{ className: joinClasses(!unstyled && "rounded-control bg-surface-sunken") }} style={{ flexGrow: 1, flexBasis: 80, height: 40 }} />
-        <View {...{ className: joinClasses(!unstyled && "rounded-control bg-surface-sunken") }} style={{ flexGrow: 1, flexBasis: 80, height: 40 }} />
+      <View aria-hidden style={{ flexDirection: "row", gap: tokens.spacing.fixedInset, flexWrap: "wrap" }}>
+        <View {...{ className: joinClasses(!unstyled && "rounded-control bg-surface-sunken") }} style={{ flexGrow: 1, flexBasis: tokens.spacing.off76, height: tokens.spacing.off40 }} />
+        <View {...{ className: joinClasses(!unstyled && "rounded-control bg-surface-sunken") }} style={{ flexGrow: 1, flexBasis: tokens.spacing.off76, height: tokens.spacing.off40 }} />
+        <View {...{ className: joinClasses(!unstyled && "rounded-control bg-surface-sunken") }} style={{ flexGrow: 1, flexBasis: tokens.spacing.off76, height: tokens.spacing.off40 }} />
       </View>
       <View aria-hidden {...{ className: joinClasses(!unstyled && "rounded-control bg-surface-sunken") }} style={{ height: historyHeight }} />
     </View>;
   } else if (status === "error") {
-    body = <View accessibilityRole="alert" style={{ gap: 12, alignItems: "flex-start" }}>
-      <Text selectable {...{ className: joinClasses(!unstyled && "text-text") }} style={{ fontSize: 14 }}>
+    body = <View accessibilityRole="alert" style={{ gap: tokens.spacing.fixedInset, alignItems: "flex-start" }}>
+      <Text selectable {...{ className: joinClasses(!unstyled && "text-text") }} style={{ fontSize: tokens.text.body }}>
         {error ?? "Loudness could not be measured."}
       </Text>
       {onRetry ? <Button title="Measure again" variant="secondary" onPress={onRetry} disabled={disabled} /> : null}
     </View>;
   } else if (status === "silent") {
-    body = <Text accessibilityLiveRegion="polite" {...{ className: muted }} style={{ fontSize: 14 }}>
+    body = <Text accessibilityLiveRegion="polite" {...{ className: muted }} style={{ fontSize: tokens.text.body }}>
       This range is silent, so there is no loudness to measure. Select a range with audio.
     </Text>;
   } else {
-    body = <View style={{ gap: 16 }}>
-      <View accessible accessibilityLabel={summary} style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, alignItems: "flex-end" }}>
-        <View style={{ minWidth: 150, gap: 2 }}>
-          <Text {...{ className: muted }} style={{ fontSize: 12 }}>Integrated</Text>
-          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, direction: "ltr" }}>
+    body = <View style={{ gap: tokens.spacing.fixedGroup }}>
+      <View accessible accessibilityLabel={summary} style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.fixedGroup, alignItems: "flex-end" }}>
+        <View style={{ minWidth: controlTokens.extent.column, gap: tokens.spacing.off2 }}>
+          <Text {...{ className: muted }} style={{ fontSize: tokens.text.label }}>Integrated</Text>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: tokens.spacing.off6, direction: "ltr" }}>
             <Text {...{ className: joinClasses(!unstyled && "text-text font-semibold") }}
-              style={{ fontSize: 30, lineHeight: 34, fontVariant: ["tabular-nums"] }}>
+              style={{ fontSize: tokens.text.display, lineHeight: tokens.text.display, fontVariant: ["tabular-nums"] }}>
               {integratedLufs === null ? "No reading" : formatSigned(integratedLufs)}
             </Text>
-            {integratedLufs === null ? null : <Text {...{ className: muted }} style={{ fontSize: 14 }}>LUFS</Text>}
+            {integratedLufs === null ? null : <Text {...{ className: muted }} style={{ fontSize: tokens.text.body }}>LUFS</Text>}
           </View>
-          <Text {...{ className: joinClasses(!unstyled && "text-text") }} style={{ fontSize: 13 }}>
+          <Text {...{ className: joinClasses(!unstyled && "text-text") }} style={{ fontSize: tokens.text.off13 }}>
             {delta ? delta.text : "Too short to gate"}
           </Text>
         </View>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, flexGrow: 1, flexBasis: 280 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.fixedInset, flexGrow: 1, flexBasis: controlTokens.extent.preview }}>
           <Stat label="Short-term max" value={formatLufs(shortTermMaxLufs)} unstyled={unstyled} />
           <Stat label="Momentary max" value={formatLufs(momentaryMaxLufs)} unstyled={unstyled} />
           <Stat label="Sample peak" value={formatDbfs(samplePeakDbfs)} note={PEAK_WARNINGS[severity] || undefined}
             danger={peakDanger} unstyled={unstyled} />
         </View>
       </View>
-      <View style={{ gap: 4, direction: "ltr" }}>
-        <Text aria-hidden {...{ className: muted }} style={{ fontSize: 12 }}>Momentary loudness, LUFS</Text>
+      <View style={{ gap: tokens.spacing.fixedStack, direction: "ltr" }}>
+        <Text aria-hidden {...{ className: muted }} style={{ fontSize: tokens.text.label }}>Momentary loudness, LUFS</Text>
         <View role="img" accessibilityLabel={historyLabel}
           onLayout={e => store.setState({width:e.nativeEvent.layout.width})}
           style={{ height: historyHeight, flexDirection: "row" }}>
           <View aria-hidden style={{ width: AXIS, height: historyHeight }}>
             {GRID.map(g => <Text key={g} {...{ className: muted }}
-              style={{ position: "absolute", right: 6, top: Math.min(historyHeight - 14, Math.max(0, y(g) - 7)), fontSize: 11, fontVariant: ["tabular-nums"] }}>
+              style={{ position: "absolute", right: tokens.spacing.off6, top: Math.min(historyHeight - 14, Math.max(0, y(g) - 7)), fontSize: tokens.text.off11, fontVariant: ["tabular-nums"] }}>
               {formatSigned(g, 0)}
             </Text>)}
           </View>
           <View aria-hidden {...{ className: joinClasses(!unstyled && "bg-surface-sunken rounded-control") }}
-            style={{ flex: 1, height: historyHeight, marginLeft: 8, overflow: "hidden" }}>
+            style={{ flex: 1, height: historyHeight, marginLeft: tokens.spacing.fixedElement, overflow: "hidden" }}>
             {GRID.slice(1, -1).map(g => <View key={g} {...{ className: joinClasses(!unstyled && "bg-border") }}
-              style={{ position: "absolute", left: 0, right: 0, top: y(g), height: 1 }} />)}
+              style={{ position: "absolute", left: 0, right: 0, top: y(g), height: tokens.borderWidth.hairline }} />)}
             {bars.map((b, i) => b.fraction > 0 ? <View key={i} {...{ className: joinClasses(!unstyled && "bg-accent") }}
               style={{ position: "absolute", left: i * slot, width: barW, bottom: 0, height: b.fraction * historyHeight,
                 borderTopLeftRadius: forgeHairlineRadius.tick, borderTopRightRadius: forgeHairlineRadius.tick }} /> : null)}
             <View {...{ className: joinClasses(!unstyled && "bg-text") }}
-              style={{ position: "absolute", left: 0, right: 0, top: y(target) - 1, height: 2 }} />
+              style={{ position: "absolute", left: 0, right: 0, top: y(target) - tokens.borderWidth.hairline, height: tokens.spacing.off2 }} />
           </View>
         </View>
-        <View aria-hidden style={{ flexDirection: "row", justifyContent: "space-between", marginLeft: AXIS + 8 }}>
-          <Text {...{ className: muted }} style={{ fontSize: 11 }}>0 s</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <View {...{ className: joinClasses(!unstyled && "bg-text") }} style={{ width: 14, height: 2 }} />
-            <Text {...{ className: muted }} style={{ fontSize: 11, fontVariant: ["tabular-nums"] }}>{"Target " + formatLufs(target)}</Text>
+        <View aria-hidden style={{ flexDirection: "row", justifyContent: "space-between", marginLeft: AXIS + tokens.spacing.fixedElement }}>
+          <Text {...{ className: muted }} style={{ fontSize: tokens.text.off11 }}>0 s</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.off6 }}>
+            <View {...{ className: joinClasses(!unstyled && "bg-text") }} style={{ width: tokens.spacing.off14, height: tokens.spacing.off2 }} />
+            <Text {...{ className: muted }} style={{ fontSize: tokens.text.off11, fontVariant: ["tabular-nums"] }}>{"Target " + formatLufs(target)}</Text>
           </View>
-          <Text {...{ className: muted }} style={{ fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatSeconds(seconds)}</Text>
+          <Text {...{ className: muted }} style={{ fontSize: tokens.text.off11, fontVariant: ["tabular-nums"] }}>{formatSeconds(seconds)}</Text>
         </View>
       </View>
     </View>;
@@ -264,7 +265,7 @@ function LoudnessMeterBody({actionError,disabledReason,rmsDbfs,onReset,
 
   return <View {...props} role="group" aria-label={label} aria-busy={status === "measuring" || undefined}
     {...{ className: joinClasses(!unstyled && "rounded-card border border-border bg-surface-raised", className) }}
-    style={[{ padding: 16, gap: 14 }, style]}>
+    style={[{ padding: tokens.spacing.fixedGroup, gap: tokens.spacing.off14 }, style]}>
     {header}
     <Text {...{className:!unstyled?'text-text':undefined}}>Measured RMS: {rmsDbfs===undefined||rmsDbfs===null?'Not reported':rmsDbfs.toFixed(2)+' dBFS'}</Text>
     {onReset?<Button title="Reset host loudness integration" disabled={disabled} unstyled={unstyled} onPress={()=>onReset()}/>:null}

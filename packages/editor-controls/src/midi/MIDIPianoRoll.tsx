@@ -16,6 +16,7 @@ import {
 } from "./note-grid.ts";
 import { MidiChannelPicker } from "./MidiChannelPicker.tsx";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 const HIT = 44;
 /** Width of the keyboard column; a {@linkcode MIDIVelocityLane} below insets by it. */
@@ -177,8 +178,8 @@ function MIDIPianoRollBody({actionError,disabledReason,retained,interactionBound
   const picked = selectedIndex !== undefined ? notes[selectedIndex] : undefined;
   return <View {...rest} accessibilityLabel={label} {...{ role: "group" }}
     {...{ className: joinClasses(styled && "rounded-card border border-border bg-surface-raised overflow-hidden", className) }}>
-    {onNoteChannel && picked ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 12, rowGap: 4,
-        paddingHorizontal: 8, paddingVertical: 6 }}
+    {onNoteChannel && picked ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: tokens.spacing.fixedInset, rowGap: tokens.spacing.fixedStack,
+        paddingHorizontal: tokens.spacing.fixedElement, paddingVertical: tokens.spacing.off6 }}
       {...{ className: joinClasses(styled && "border-b border-border") }}>
       <Text {...{ className: joinClasses(styled && "text-text font-semibold") }} style={{ fontVariant: ["tabular-nums"] }}>
         {pitchName(picked.pitch) + ", note " + (selectedIndex! + 1)}
@@ -195,7 +196,7 @@ function MIDIPianoRollBody({actionError,disabledReason,retained,interactionBound
             const keyClass = joinClasses(styled && "justify-center border-b border-border",
               styled && (sharp ? "bg-surface-sunken" : "bg-surface-raised"));
             const text = <Text {...{ className: joinClasses(styled && (pitch % 12 === 0 ? "text-text font-semibold" : "text-text-muted")) }}
-              style={{ paddingHorizontal: 6, fontVariant: ["tabular-nums"] }}>{pitchName(pitch)}</Text>;
+              style={{ paddingHorizontal: tokens.spacing.off6, fontVariant: ["tabular-nums"] }}>{pitchName(pitch)}</Text>;
             return onAudition
               ? <Pressable key={pitch} accessibilityRole="button" accessibilityLabel={"Play " + pitchName(pitch)}
                   disabled={disabled} onPress={() => onAudition(pitch)}
@@ -232,9 +233,9 @@ function MIDIPianoRollBody({actionError,disabledReason,retained,interactionBound
                 style={{ position: "absolute", left: 0, right: 0, top: i * rowHeight, height: rowHeight }} />)}
               {lines.map(line => <View key={line.ticks} pointerEvents="none"
                 {...{ className: joinClasses(styled && (line.bar ? "bg-text-muted" : "bg-border")) }}
-                style={{ position: "absolute", top: 0, bottom: 0, left: line.ticks * pixelsPerTick, width: line.bar ? 2 : 1 }} />)}
+                style={{ position: "absolute", top: 0, bottom: 0, left: line.ticks * pixelsPerTick, width: line.bar ? tokens.spacing.off2 : tokens.borderWidth.hairline }} />)}
               <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-text-muted") }}
-                style={{ position: "absolute", top: 0, bottom: 0, right: 0, width: 2 }} />
+                style={{ position: "absolute", top: 0, bottom: 0, right: 0, width: tokens.spacing.off2 }} />
             </Pressable>
             {notes.map((note, index) => noteRect(note, grid)
               ? <NoteBox key={index} interactionBoundary={interactionBoundary} index={index} note={note} grid={grid} ppq={ppq} withChannel={withChannel}
@@ -367,12 +368,12 @@ function NoteBox({ interactionBoundary, index, note, grid, ppq, withChannel, sel
     hitSlop={{ left: slopX, right: slopX, top: slopY, bottom: slopY }}
     {...{ className: joinClasses(styled && "rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
       styled && (selected || active ? "bg-primary border-focus" : "bg-accent border-accent")) }}
-    style={{ position: "absolute", left: rect.x, top: rect.y + 3, width: Math.max(2, rect.width), height: rect.height - 6,
-      opacity: disabled ? 0.45 : 1, ...noSelect }}>
+    style={{ position: "absolute", left: rect.x, top: rect.y + tokens.spacing.off3, width: Math.max(2, rect.width), height: rect.height - tokens.spacing.off6,
+      opacity: disabled ? tokens.opacity.disabled : 1, ...noSelect }}>
     <View {...end.current.panHandlers}
-      hitSlop={{ left: 6, right: Math.max(8, HIT - grip - 6), top: slopY + 3, bottom: slopY + 3 }}
+      hitSlop={{ left: tokens.spacing.off6, right: Math.max(8, HIT - grip - 6), top: slopY + tokens.spacing.off3, bottom: slopY + tokens.spacing.off3 }}
       {...{ className: joinClasses(styled && (selected || active ? "bg-on-primary" : "bg-surface-raised")) }}
-      style={{ position: "absolute", right: 0, top: 6, bottom: 6, width: grip, borderRadius: forgeHairlineRadius.tick,
+      style={{ position: "absolute", right: 0, top: tokens.spacing.off6, bottom: tokens.spacing.off6, width: grip, borderRadius: forgeHairlineRadius.tick,
         ...(Platform.OS === "web" ? { cursor: "ew-resize" } as unknown as ViewStyle : null) }} />
   </View>;
 }

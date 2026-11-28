@@ -13,6 +13,7 @@ import {loopCommit,loopFromMarks,setLoopEdge,type LoopCommit,type LoopRange} fro
 import {frameToX,xToFrame,type TimelineViewport} from "./viewport.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode LoopRangeBar}. */
 export interface LoopRangeBarProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -81,8 +82,8 @@ function Edge({boundary,restorePreview,edge,range,viewport,durationFrames,rate,o
     style={{position:"absolute",left:x-HIT/2,top:0,width:HIT,height:HIT,alignItems:"center",justifyContent:"center",...NO_SELECT}}>
     {/* A bracket that opens toward the loop. */}
     <View pointerEvents="none" {...{className:joinClasses(styled&&"border-info")}}
-      style={{width:10,height:28,borderTopWidth:3,borderBottomWidth:3,
-        ...(edge==="in"?{borderLeftWidth:3,marginLeft:10}:{borderRightWidth:3,marginRight:10})}}/>
+      style={{width:tokens.spacing.off10,height:tokens.spacing.fixedStatus,borderTopWidth:tokens.borderWidth.off3,borderBottomWidth:tokens.borderWidth.off3,
+        ...(edge==="in"?{borderLeftWidth:tokens.borderWidth.off3,marginLeft:tokens.spacing.off10}:{borderRightWidth:tokens.borderWidth.off3,marginRight:tokens.spacing.off10})}}/>
   </View>;
 }
 
@@ -120,14 +121,14 @@ function LoopRangeBarBody({
   const off=disabled||durationFrames<1;
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
     <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
-    <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
+    <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:tokens.spacing.fixedElement}}>
       <Pressable accessibilityRole="switch" aria-checked={looping} accessibilityState={{checked:looping,disabled:off||!range}}
         disabled={off||!range} accessibilityLabel="Loop playback"
         accessibilityHint={range?"Repeats the loop range while playing":"Set a loop range first"}
         onPress={()=>onLoopingChange(!latestLooping.current)} {...id("toggle")}
         {...{className:joinClasses(styled&&"rounded-control border-2 px-3 focus-visible:ring-2 focus-visible:ring-focus",
           styled&&(looping?"border-focus bg-surface-sunken":"border-border bg-surface-raised"))}}
-        style={{minHeight:44,justifyContent:"center",opacity:off||!range?0.4:1}}>
+        style={{minHeight:tokens.spacing.fixedTarget,justifyContent:"center",opacity:off||!range?tokens.opacity.disabled:1}}>
         <Text {...{className:joinClasses(styled&&(looping?"text-text font-semibold":"text-text"))}}>{looping?"Loop on":"Loop off"}</Text>
       </Pressable>
       <Button title="Loop marked range" variant="secondary" size="sm" disabled={off||!fromMarks} {...id("from-marks")}
@@ -142,7 +143,7 @@ function LoopRangeBarBody({
     <View accessibilityLabel="Loop range" {...{className:joinClasses(styled&&"bg-surface-sunken border-b border-border")}}
       style={{height:HIT,width:viewport.widthPx,overflow:"hidden",direction:"ltr"}}>
       {range&&endX>startX?<View pointerEvents="none" {...{className:joinClasses(styled&&(looping?"bg-info/20 border-y border-info":"bg-info/10 border-y border-info/50"))}}
-        style={{position:"absolute",top:10,bottom:10,left:startX,width:endX-startX}}/>:null}
+        style={{position:"absolute",top:tokens.spacing.off10,bottom:tokens.spacing.off10,left:startX,width:endX-startX}}/>:null}
       {range?<>
         <Edge boundary={useBoundary} restorePreview={restorePreview} edge="in" range={range} viewport={viewport} durationFrames={durationFrames} rate={rate} onPreview={onPreview}
           onCommit={onCommit} dropFrame={dropFrame} disabled={off} styled={styled}/>

@@ -33,6 +33,7 @@ import {
   type EqBand, type EqBandEdit, type EqPlot, type EqResponsePoint,
 } from "./eq-graph.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Minimum hit size (iOS 44pt / Android 48dp floor). */
 const HIT = 44;
@@ -172,8 +173,8 @@ function EQFrequencyGraphBody({scope='EQFrequencyGraph',revision=0,gestureBounda
 
   return <View {...rest} accessibilityLabel={label} {...{ role: "group" }}
     {...{ className: joinClasses(styled && "rounded-card border border-border bg-surface-raised", className) }}
-    style={[{ padding: 16, gap: 10, opacity: disabled ? 0.55 : 1 }, style]}>
-    <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+    style={[{ padding: tokens.spacing.fixedGroup, gap: tokens.spacing.off10, opacity: disabled ? tokens.opacity.disabled : 1 }, style]}>
+    <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: tokens.spacing.fixedElement, flexWrap: "wrap" }}>
       <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>{label}</Text>
       {response.length === 0
         ? <Text {...{ className: muted }} accessibilityLiveRegion="polite">Response unavailable</Text>
@@ -187,17 +188,17 @@ function EQFrequencyGraphBody({scope='EQFrequencyGraph',revision=0,gestureBounda
         {plot ? <>
           {freqLines.map(g => <View key={"f" + g.at} pointerEvents="none" aria-hidden
             {...{ className: joinClasses(styled && "bg-border") }}
-            style={{ position: "absolute", top: 0, bottom: 0, left: g.at, width: 1, opacity: g.major ? 1 : 0.45 }} />)}
+            style={{ position: "absolute", top: 0, bottom: 0, left: g.at, width: tokens.borderWidth.hairline, opacity: g.major ? 1 : controlTokens.opacity.faint }} />)}
           {gainLines.map(g => <View key={"g" + g.at} pointerEvents="none" aria-hidden
             {...{ className: joinClasses(styled && (g.major ? "bg-text-muted" : "bg-border")) }}
-            style={{ position: "absolute", left: 0, right: 0, top: g.at, height: 1, opacity: g.major ? 0.6 : 1 }} />)}
+            style={{ position: "absolute", left: 0, right: 0, top: g.at, height: tokens.borderWidth.hairline, opacity: g.major ? controlTokens.opacity.muted : 1 }} />)}
           {gainLines.map(g => <Text key={"gl" + g.at} pointerEvents="none" aria-hidden
             {...{ className: muted }}
-            style={{ position: "absolute", left: 4, top: g.at - 15, fontSize: 11, lineHeight: 14, ...tabular }}>{g.label}</Text>)}
-          <View pointerEvents="none" aria-hidden style={{ position: "absolute", inset: 0, opacity: dimmed ? 0.3 : 1 }}>
+            style={{ position: "absolute", left: tokens.spacing.fixedStack, top: g.at - tokens.spacing.fixedGroup, fontSize: tokens.text.off11, lineHeight: tokens.text.body, ...tabular }}>{g.label}</Text>)}
+          <View pointerEvents="none" aria-hidden style={{ position: "absolute", inset: 0, opacity: dimmed ? tokens.opacity.disabled : 1 }}>
             {segments.map((s, i) => <View key={i} {...{ className: joinClasses(styled && "bg-primary") }}
-              style={{ position: "absolute", left: s.centerX - s.length / 2 - 0.5, top: s.centerY - 1,
-                width: s.length + 1, height: 2, transform: [{ rotate: `${s.angleDeg}deg` }] }} />)}
+              style={{ position: "absolute", left: s.centerX - s.length / 2 - (tokens.borderWidth.hairline / 2), top: s.centerY - tokens.borderWidth.hairline,
+                width: s.length + tokens.borderWidth.hairline, height: tokens.spacing.off2, transform: [{ rotate: `${s.angleDeg}deg` }] }} />)}
           </View>
           {order.map(i => <BandHandle key={i} index={i} band={bands[i]!} plot={plot}
             preview={drag?.index === i ? drag.edit : undefined} selected={i === selectedIndex}
@@ -206,14 +207,14 @@ function EQFrequencyGraphBody({scope='EQFrequencyGraph',revision=0,gestureBounda
       </View>
       <View aria-hidden style={{ height: AXIS, position: "relative" }}>
         {freqLines.filter(g => g.major).map(g => <Text key={g.label} {...{ className: muted }}
-          style={{ position: "absolute", left: g.at - 20, width: 40, top: 2, textAlign: "center", fontSize: 11, lineHeight: 14 }}>{g.label}</Text>)}
+          style={{ position: "absolute", left: g.at - tokens.spacing.off20, width: tokens.spacing.off40, top: tokens.spacing.off2, textAlign: "center", fontSize: tokens.text.off11, lineHeight: tokens.text.body }}>{g.label}</Text>)}
       </View>
     </View>
     {bands.length === 0
       ? <Text {...{ className: muted }}>No bands on this EQ. Add one from the insert's band list.</Text>
-      : <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 16, rowGap: 8 }}>
+      : <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: tokens.spacing.fixedGroup, rowGap: tokens.spacing.fixedElement }}>
         {onSelect
-          ? <View accessibilityRole="radiogroup" accessibilityLabel={label + " bands"} style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+          ? <View accessibilityRole="radiogroup" accessibilityLabel={label + " bands"} style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.fixedStack }}>
             {bands.map((b, i) => {
               const on = i === selectedIndex;
               return <Pressable key={i} accessibilityRole="radio" accessibilityLabel={"Band " + (i + 1)}
@@ -229,7 +230,7 @@ function EQFrequencyGraphBody({scope='EQFrequencyGraph',revision=0,gestureBounda
           </View>
           : null}
         {shown && selectedIndex !== undefined
-          ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 16, rowGap: 6, flexGrow: 1 }}>
+          ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: tokens.spacing.fixedGroup, rowGap: tokens.spacing.off6, flexGrow: 1 }}>
             <Readout label="Type" value={bandTypeName(shown.type)} styled={styled} />
             <Readout label="Freq" value={formatFreq(shown.freqHz)} styled={styled} />
             <Readout label="Gain" value={isPassBand(shown.type) ? "Not used" : formatGain(shown.gainDb)} styled={styled} />
@@ -240,7 +241,7 @@ function EQFrequencyGraphBody({scope='EQFrequencyGraph',revision=0,gestureBounda
                 disabled={disabled} onPress={() => { void onEnabledCommit(selectedIndex, !shown.enabled); }}
                 {...{ className: joinClasses(styled && "rounded-control items-center justify-center focus-visible:ring-2 focus-visible:ring-focus active:opacity-80",
                   styled && (shown.enabled ? "bg-accent" : "bg-surface-sunken border border-border")) }}
-                style={{ minWidth: HIT + 20, minHeight: HIT, paddingHorizontal: 12, marginStart: "auto" }}>
+                style={{ minWidth: HIT + tokens.spacing.off20, minHeight: HIT, paddingHorizontal: tokens.spacing.fixedInset, marginStart: "auto" }}>
                 <Text {...{ className: joinClasses(styled && "font-semibold", styled && (shown.enabled ? "text-on-primary" : "text-text-muted")) }}>
                   {shown.enabled ? "On" : "Bypassed"}</Text>
               </Pressable>
@@ -252,8 +253,8 @@ function EQFrequencyGraphBody({scope='EQFrequencyGraph',revision=0,gestureBounda
 }
 
 function Readout({ label, value, styled }: { label: string; value: string; styled: boolean }) {
-  return <View accessible accessibilityLabel={label + " " + value} style={{ minWidth: 56 }}>
-    <Text {...{ className: joinClasses(styled && "text-text-muted") }} style={{ fontSize: 12, lineHeight: 16 }}>{label}</Text>
+  return <View accessible accessibilityLabel={label + " " + value} style={{ minWidth: tokens.spacing.fixedToolbar }}>
+    <Text {...{ className: joinClasses(styled && "text-text-muted") }} style={{ fontSize: tokens.text.label, lineHeight: tokens.text.off15 }}>{label}</Text>
     <Text {...{ className: joinClasses(styled && "text-text") }} style={{ fontVariant: ["tabular-nums"] }}>{value}</Text>
   </View>;
 }
@@ -379,19 +380,19 @@ function BandHandle({ index, band, plot, preview, selected, disabled, styled, ct
     onFocus={() => {if(mine.current.ctx.boundary===ctx.boundary)ctx.latest.current.onSelect?.(index);}}
     {...{ className: joinClasses(styled && "rounded-sm focus-visible:ring-2 focus-visible:ring-focus") }}
     style={{ position: "absolute", left: x - HIT / 2, top: y - HIT / 2, width: HIT, height: HIT,
-      alignItems: "center", justifyContent: "center", zIndex: selected || active ? 2 : 1, ...webStyle }}>
+      alignItems: "center", justifyContent: "center", zIndex: selected || active ? controlTokens.layer.lifted : controlTokens.layer.resting, ...webStyle }}>
     <View pointerEvents="none" {...{ className: joinClasses(styled && fill) }}
-      style={{ width: DOT, height: DOT, borderRadius: forgeRadius.sm, borderWidth: 2, alignItems: "center", justifyContent: "center",
+      style={{ width: DOT, height: DOT, borderRadius: forgeRadius.sm, borderWidth: tokens.borderWidth.strong, alignItems: "center", justifyContent: "center",
         borderStyle: band.enabled ? "solid" : "dashed" }}>
       <Text {...{ className: joinClasses(styled && "font-semibold", styled && ink) }}
-        style={{ fontSize: 12, lineHeight: 14, fontVariant: ["tabular-nums"] }}>{index + 1}</Text>
+        style={{ fontSize: tokens.text.label, lineHeight: tokens.text.body, fontVariant: ["tabular-nums"] }}>{index + 1}</Text>
     </View>
     {active
       ? <View pointerEvents="none" aria-hidden
         {...{ className: joinClasses(styled && "rounded-control bg-surface-raised border border-border") }}
-        style={{ position: "absolute", top: tipAbove ? -24 : HIT + 2, paddingHorizontal: 6, paddingVertical: 2, minWidth: 96, alignItems: "center" }}>
+        style={{ position: "absolute", top: tipAbove ? -tokens.spacing.fixedSection : HIT + tokens.spacing.off2, paddingHorizontal: tokens.spacing.off6, paddingVertical: tokens.spacing.off2, minWidth: tokens.spacing.off96, alignItems: "center" }}>
         <Text {...{ className: joinClasses(styled && "text-text") }} numberOfLines={1}
-          style={{ fontSize: 12, lineHeight: 16, fontVariant: ["tabular-nums"] }}>
+          style={{ fontSize: tokens.text.label, lineHeight: tokens.text.off15, fontVariant: ["tabular-nums"] }}>
           {pass ? formatFreq(current.freqHz) : formatFreq(current.freqHz) + "  " + formatGain(current.gainDb)}</Text>
       </View>
       : null}

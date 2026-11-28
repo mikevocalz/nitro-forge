@@ -9,6 +9,7 @@ import {ErrorMessage} from "@nyc-tron/ui/components/feedback/ErrorMessage";
 import {useOwnedAction} from "@nyc-tron/ui/components/shell/useOwnedAction";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {assertRgba,rgbaToHex,type RgbaColor} from "../color.ts";
+import { tokens } from "../tokens.ts";
 /** Exact document/revision/pixel selection sent to the host's document sampler. */
 export interface EyedropperRequest {readonly documentId:string;readonly revision:string;readonly sourceId:string;readonly x:number;readonly y:number;readonly radius:number}
 /** Profile-preserving sampled channels plus a separate display-only sRGB preview. */
@@ -38,7 +39,7 @@ export function EyedropperTool({request,documentWidth,documentHeight,sources,onR
  const scope=JSON.stringify([request,documentWidth,documentHeight,disabled]),action=useOwnedAction(scope);
  const local=useRef<StoreApi<{sample:SampledColor|null;scope:string}>|null>(null);local.current??=createStore(()=>({sample:null as SampledColor|null,scope:''}));const store=local.current,state=useStore(store,s=>s),sample=state.scope===scope?state.sample:null,pending=action.pending!==null,locked=disabled||pending;
  const set=(change:Partial<EyedropperRequest>)=>{if(!locked)onRequestChange({...request,...change});};
- return <View {...props} style={[{gap:8},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
   <Select label="Document sampling source" value={request.sourceId} options={sources.map(s=>({value:s.id,label:s.label}))} onValueChange={sourceId=>set({sourceId})} disabled={locked} unstyled={unstyled}/>
   <UnitInput label="Sample pixel X" value={request.x} min={0} max={documentWidth-1} step={1} precision={0} disabled={locked} unstyled={unstyled} onCommit={x=>set({x:Math.round(x)})}/>
   <UnitInput label="Sample pixel Y" value={request.y} min={0} max={documentHeight-1} step={1} precision={0} disabled={locked} unstyled={unstyled} onCommit={y=>set({y:Math.round(y)})}/>

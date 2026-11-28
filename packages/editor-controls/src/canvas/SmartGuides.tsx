@@ -3,6 +3,7 @@ import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {docToScreen,validateViewport,type CanvasViewport} from "./canvas-viewport.ts";
 import {formatRulerNumber} from "./ruler-model.ts";
 import {smartGuideSummary,validateSmartGuideResult,type SmartGuideResult} from "./smart-guides-model.ts";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode SmartGuides}. */
 export interface SmartGuidesProps extends Omit<ViewProps,"children"> {
@@ -38,23 +39,23 @@ export function SmartGuides({viewport,result,names,formatGap=formatRulerNumber,c
   return <View {...rest} pointerEvents="none" {...{className:joinClasses(className)}}
     style={[{position:"absolute",left:0,top:0,width:viewport.width,height:viewport.height,overflow:"hidden",direction:"ltr"},style]}>
     {result?.alignments.map((g,i)=>g.axis==="x"
-      ?<View key={"a"+i} {...{className:accent}} style={{position:"absolute",left:sx(g.value)-0.5,width:1,top:sy(g.from),height:Math.max(1,sy(g.to)-sy(g.from))}}/>
-      :<View key={"a"+i} {...{className:accent}} style={{position:"absolute",top:sy(g.value)-0.5,height:1,left:sx(g.from),width:Math.max(1,sx(g.to)-sx(g.from))}}/>)}
+      ?<View key={"a"+i} {...{className:accent}} style={{position:"absolute",left:sx(g.value)-(tokens.borderWidth.hairline / 2),width:tokens.borderWidth.hairline,top:sy(g.from),height:Math.max(1,sy(g.to)-sy(g.from))}}/>
+      :<View key={"a"+i} {...{className:accent}} style={{position:"absolute",top:sy(g.value)-(tokens.borderWidth.hairline / 2),height:tokens.borderWidth.hairline,left:sx(g.from),width:Math.max(1,sx(g.to)-sx(g.from))}}/>)}
     {result?.spacings.flatMap((s,i)=>s.gaps.map((m,j)=>{
       const horizontal=s.axis==="x";
       const a=horizontal?sx(m.from):sy(m.from),b=horizontal?sx(m.to):sy(m.to),at=horizontal?sy(m.at):sx(m.at);
       const len=Math.max(1,b-a);
-      return <View key={`s${i}-${j}`} style={{position:"absolute",...(horizontal?{left:a,top:at-6,width:len,height:12}:{top:a,left:at-6,height:len,width:12}),
+      return <View key={`s${i}-${j}`} style={{position:"absolute",...(horizontal?{left:a,top:at-tokens.spacing.off6,width:len,height:tokens.spacing.fixedInset}:{top:a,left:at-tokens.spacing.off6,height:len,width:tokens.spacing.fixedInset}),
         alignItems:"center",justifyContent:"center"}}>
-        <View {...{className:accent}} style={horizontal?{position:"absolute",left:0,right:0,top:5.5,height:1}:{position:"absolute",top:0,bottom:0,left:5.5,width:1}}/>
-        <View {...{className:accent}} style={horizontal?{position:"absolute",left:0,top:0,width:1,height:12}:{position:"absolute",top:0,left:0,height:1,width:12}}/>
-        <View {...{className:accent}} style={horizontal?{position:"absolute",right:0,top:0,width:1,height:12}:{position:"absolute",bottom:0,left:0,height:1,width:12}}/>
+        <View {...{className:accent}} style={horizontal?{position:"absolute",left:0,right:0,top:tokens.spacing.off5_75,height:tokens.borderWidth.hairline}:{position:"absolute",top:0,bottom:0,left:tokens.spacing.off5_75,width:tokens.borderWidth.hairline}}/>
+        <View {...{className:accent}} style={horizontal?{position:"absolute",left:0,top:0,width:tokens.borderWidth.hairline,height:tokens.spacing.fixedInset}:{position:"absolute",top:0,left:0,height:tokens.borderWidth.hairline,width:tokens.spacing.fixedInset}}/>
+        <View {...{className:accent}} style={horizontal?{position:"absolute",right:0,top:0,width:tokens.borderWidth.hairline,height:tokens.spacing.fixedInset}:{position:"absolute",bottom:0,left:0,height:tokens.borderWidth.hairline,width:tokens.spacing.fixedInset}}/>
         {len>=28?<Text numberOfLines={1} {...{className:joinClasses(styled&&"bg-accent text-surface-raised rounded-control")}}
-          style={{fontSize:10,lineHeight:14,paddingHorizontal:4,fontVariant:["tabular-nums"],
-            ...(horizontal?{position:"absolute",top:14}:{position:"absolute",left:14})}}>{formatGap(s.gap)}</Text>:null}
+          style={{fontSize:tokens.text.micro,lineHeight:tokens.text.body,paddingHorizontal:tokens.spacing.fixedStack,fontVariant:["tabular-nums"],
+            ...(horizontal?{position:"absolute",top:tokens.spacing.off14}:{position:"absolute",left:tokens.spacing.off14})}}>{formatGap(s.gap)}</Text>:null}
       </View>;
     }))}
     <Text accessibilityLiveRegion="polite" aria-live="polite"
-      style={{position:"absolute",width:1,height:1,overflow:"hidden",opacity:0}}>{summary??""}</Text>
+      style={{position:"absolute",width:tokens.borderWidth.hairline,height:tokens.borderWidth.hairline,overflow:"hidden",opacity:0}}>{summary??""}</Text>
   </View>;
 }

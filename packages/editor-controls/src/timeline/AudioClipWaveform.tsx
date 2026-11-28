@@ -8,6 +8,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {createWaveformCache,sharedWaveformCache,mediaProviderId} from './waveform-cache.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface AudioClipWaveformProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  sourceId:string;sourceRevision:number;range:WaveformRange;columns?:number;height?:number;position?:number;
  /** Real decoded min/max peaks for the requested source interval. */
@@ -23,7 +24,7 @@ export function AudioClipWaveform({scope='clip-waveform',revision=0,...props}:Au
  const version=useStore(cache.store,s=>s.version),state=cache.get(key),guard=useScopedControl(key,props,disabledReason!==undefined);
  useEffect(()=>cache.retain(key),[cache,key]);
  useEffect(()=>{cache.request(key,signal=>loadPeaks(range,columns,signal));},[cache,key,version]);
- return <View {...rest} style={[{minWidth:0,gap:4},style]} accessibilityLabel="Audio clip waveform">
+ return <View {...rest} style={[{minWidth:0,gap:tokens.spacing.fixedStack},style]} accessibilityLabel="Audio clip waveform">
   {state.kind==='ready'&&state.peaks.length?<WaveformLane key={key} peaks={state.peaks} columns={columns} height={height} unstyled={unstyled}
    {...(position===undefined?{}:{position:Math.min(1,Math.max(0,(position-range.start)/(range.end-range.start)))})}
    {...(onSeek&&disabledReason===undefined?{onSeekNormalized:(value:number)=>guard.run('seek',(host,signal)=>host.onSeek?.(host.range.start+value*(host.range.end-host.range.start),signal))}:{})}/>

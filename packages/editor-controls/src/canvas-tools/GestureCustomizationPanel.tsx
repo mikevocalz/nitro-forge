@@ -32,6 +32,7 @@ import {
  type GestureDefinition,type GestureMap,type QuickActionDefinition,
 } from "./gesture-map-model.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode GestureCustomizationPanel}. */
 export interface GestureCustomizationPanelProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -96,7 +97,7 @@ function GestureCustomizationPanelBody({
   {...{className:joinClasses("gap-3",styled&&"rounded-card border border-border bg-surface-raised p-4",className)}}>
   <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
   {disabledReason||busy?<Text accessibilityLiveRegion="polite">{disabledReason??"Saving gestures"}</Text>:null}
-  <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+  <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:tokens.spacing.fixedElement,flexWrap:"wrap"}}>
    <Text role="heading" aria-level={2} {...{className:joinClasses(styled&&"text-text text-lg font-semibold")}}>{label}</Text>
    <Text {...{className:joinClasses(styled&&"text-xs",styled&&(dirty?"text-text":"text-text-muted"))}}>
     {dirty?"Unsaved changes":"All changes saved"}</Text>
@@ -107,7 +108,7 @@ function GestureCustomizationPanelBody({
    const errorText=mine.length?mine.map(c=>conflictMessage(c,gestures,actions)).join(". "):undefined;
    const def=gestures.find(g=>g.id===bound);
    const dupe=mine.find(c=>c.kind==="duplicate");
-   return <View key={action.id} style={{gap:6,zIndex:actions.length-index}}>
+   return <View key={action.id} style={{gap:tokens.spacing.off6,zIndex:actions.length-index}}>
     <Select disabled={unavailable} label={action.label} value={bound??NONE} unstyled={unstyled}
      options={[{value:NONE,label:"No gesture"},...gestures.map(g=>({value:g.id,
       label:g.reservedBy?`${g.label} (reserved)`:g.unavailableReason?`${g.label} (not on this device)`:g.label,
@@ -120,13 +121,13 @@ function GestureCustomizationPanelBody({
       `${gestureLabel(dupe.gestureId)} now runs ${action.label} only. ${dupe.actionIds.filter(a=>a!==action.id).map(actionLabel).join(", ")} has no gesture.`)}/>:null}
    </View>;
   })}
-  <View style={{gap:4}}>
+  <View style={{gap:tokens.spacing.fixedStack}}>
    <PrecisionScrubber label="Hold delay" unit=" s" value={draft.holdDelayS} min={MIN_HOLD_DELAY_S} max={MAX_HOLD_DELAY_S} step={0.05}
     disabled={!held||unavailable} unstyled={unstyled} onCommit={v=>edit({...draft,holdDelayS:clampHoldDelay(v)})}/>
    {!held?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}}>
     Applies when an action uses a held gesture such as Touch and hold.</Text>:null}
   </View>
-  <View style={{flexDirection:"row",flexWrap:"wrap",gap:8,alignItems:"center"}}>
+  <View style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.fixedElement,alignItems:"center"}}>
    <Button variant="secondary" title="Reset to defaults" disabled={unavailable} unstyled={unstyled}
     onPress={()=>sameGestureMap(draft,defaults)?store.setState({notice:"Gestures are already at their defaults"})
      :edit(defaults,"Defaults restored. Save to keep them, or Cancel to go back.")}/>

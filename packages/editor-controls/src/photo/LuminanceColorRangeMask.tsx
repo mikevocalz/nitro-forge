@@ -11,6 +11,7 @@ import {SettingSwitch} from '@nyc-tron/ui/components/forms/SettingSwitch';
 import {joinClasses} from '@nyc-tron/ui/components/styles';
 import type {ProfileColor} from '../color/color-management.ts';
 import {validatePhotoRange,validatePhotoImageSize,type PhotoRangeMask,type PhotoImageSize,type PhotoMaskCombine} from './photo-masks.ts';
+import { tokens } from '../tokens.ts';
 export type {PhotoRangeMask} from './photo-masks.ts';
 export interface PhotoRangeSampleRequest {readonly photoId:string;readonly expectedRevision:string;readonly x:number;readonly y:number}
 export interface LuminanceColorRangeMaskProps extends Omit<ViewProps,'children'> {
@@ -26,7 +27,7 @@ export function LuminanceColorRangeMask({photoId,revision,imageSize,value,onChan
  const action=useOwnedAction(JSON.stringify([photoId,revision])),locked=disabled||action.pending!==null;
  const local=useRef<ReturnType<typeof makeStore>|null>(null);local.current??=makeStore();const store=local.current,point=useStore(store,s=>s);
  const set=(change:Partial<PhotoRangeMask>)=>{if(locked)return;const next={...value,...change};validatePhotoRange(next);onChange(next);};
- return <View {...props} style={[{gap:8},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
   <Select label="Photo range mask kind" value={value.mode} options={[{value:'luminance',label:'Luminance range'},{value:'color',label:'Color range'}]} disabled={locked} unstyled={unstyled} onValueChange={mode=>set({mode:mode as PhotoRangeMask['mode']})}/>
   <UnitInput label="Normalized mask luminance minimum" value={value.minimum} min={0} max={value.maximum} step={.01} disabled={locked||value.mode!=='luminance'} unstyled={unstyled} onCommit={minimum=>set({minimum})}/>
   <UnitInput label="Normalized mask luminance maximum" value={value.maximum} min={value.minimum} max={1} step={.01} disabled={locked||value.mode!=='luminance'} unstyled={unstyled} onCommit={maximum=>set({maximum})}/>

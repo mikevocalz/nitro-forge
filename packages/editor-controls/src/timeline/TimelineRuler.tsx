@@ -7,6 +7,7 @@ import {rulerTicks} from "./ruler.ts";
 import {frameToX,visibleFrames,xToFrame,type TimelineViewport} from "./viewport.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** A named point on the ruler. */
 export interface TimelineMark {
@@ -62,23 +63,23 @@ function TimelineRulerBody({
   return <View {...rest} {...scrub.handlers} {...(testID?{testID}:{})}
     accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden
     {...{className:joinClasses(styled&&"bg-surface-sunken border-b border-border",className)}}
-    style={[{height:44,overflow:"hidden",direction:"ltr",...NO_SELECT},style]}>
+    style={[{height:tokens.spacing.fixedTarget,overflow:"hidden",direction:"ltr",...NO_SELECT},style]}>
     <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {ticks.map((t,i)=>{
       const x=frameToX(viewport,t.frame);
       // The wrapper is as wide as a label: a one-unit wrapper caps the label's
       // width at one unit on web (numberOfLines sets max-width: 100%).
-      return <View key={i} pointerEvents="none" style={{position:"absolute",left:x,bottom:0,width:90,alignItems:"flex-start"}}>
+      return <View key={i} pointerEvents="none" style={{position:"absolute",left:x,bottom:0,width:controlTokens.extent.field,alignItems:"flex-start"}}>
         {t.label?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}} numberOfLines={1}
-          style={{position:"absolute",bottom:14,left:3,fontVariant:["tabular-nums"],width:90}}>{t.label}</Text>:null}
-        <View {...{className:joinClasses(styled&&(t.label?"bg-text-muted":"bg-border"))}} style={{width:1,height:t.label?12:5}}/>
+          style={{position:"absolute",bottom:tokens.spacing.off14,left:tokens.spacing.off3,fontVariant:["tabular-nums"],width:controlTokens.extent.field}}>{t.label}</Text>:null}
+        <View {...{className:joinClasses(styled&&(t.label?"bg-text-muted":"bg-border"))}} style={{width:tokens.borderWidth.hairline,height:t.label?tokens.spacing.fixedInset:tokens.spacing.off5}}/>
       </View>;
     })}
     {marks.map((m,i)=>{
       const x=frameToX(viewport,m.frame);
       if(x<-80||x>viewport.widthPx)return null;
-      return <View key={"m"+i} pointerEvents="none" style={{position:"absolute",left:x,top:2,flexDirection:"row",alignItems:"center",gap:3}}>
-        <View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:2,height:14}}/>
+      return <View key={"m"+i} pointerEvents="none" style={{position:"absolute",left:x,top:tokens.spacing.off2,flexDirection:"row",alignItems:"center",gap:tokens.spacing.off3}}>
+        <View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:tokens.spacing.off2,height:tokens.spacing.off14}}/>
         <Text {...{className:joinClasses(styled&&"text-text text-xs")}} numberOfLines={1}>{m.label}</Text>
       </View>;
     })}

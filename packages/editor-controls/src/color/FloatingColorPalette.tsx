@@ -8,6 +8,7 @@ import {
   FLOATING_PALETTE_WIDTH,PALETTE_MODES,placeFloatingPalette,
   type PaletteMode,type PalettePosition,type PaletteRect,
 } from "./floating-palette.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode FloatingColorPalette}. */
 export interface FloatingColorPaletteProps extends Omit<ViewProps,"children"> {
@@ -53,41 +54,41 @@ export function FloatingColorPalette({
 }:FloatingColorPaletteProps){
   const [state,store]=useLocalStore(()=>({x:0,y:0,width:0,height:0,preview:undefined as PalettePosition|undefined}));
   const styled=!unstyled;
-  const size={width:docked?state.width||floatingWidth:floatingWidth,height:state.height||320};
+  const size={width:docked?state.width||floatingWidth:floatingWidth,height:state.height||controlTokens.extent.list};
   const placed=placeFloatingPalette(state.preview??position,{width:floatingWidth,height:size.height},bounds,obstacles);
   const origin=docked?{x:state.x,y:state.y}:placed.position;
   const id=(s:string)=>testID?{testID:testID+"-"+s}:{};
-  const floatingStyle=docked?null:{position:"absolute" as const,left:placed.position.x,top:placed.position.y,width:floatingWidth,zIndex:10};
+  const floatingStyle=docked?null:{position:"absolute" as const,left:placed.position.x,top:placed.position.y,width:floatingWidth,zIndex:controlTokens.layer.floating};
   return <View {...rest} {...(testID?{testID}:{})}
     role={docked?"region":"dialog"} accessibilityLabel={docked?title:`${title}, floating`}
     onLayout={e=>{const l=e.nativeEvent.layout;store.set(s=>({...s,x:docked?l.x:s.x,y:docked?l.y:s.y,width:l.width,height:l.height}));}}
     {...{className:joinClasses(styled&&"rounded-card border border-border bg-surface-raised",styled&&!docked&&"shadow-lg",className)}}
-    style={[{paddingBottom:12,gap:8},floatingStyle,style]}>
-    <View style={{paddingTop:2}}>
+    style={[{paddingBottom:tokens.spacing.fixedInset,gap:tokens.spacing.fixedElement},floatingStyle,style]}>
+    <View style={{paddingTop:tokens.spacing.off2}}>
       <FloatingPaletteUndockHandle docked={docked} origin={origin} size={{width:floatingWidth,height:size.height}}
         bounds={bounds} obstacles={obstacles} unstyled={unstyled} label={title+" palette"}
         onPreview={p=>store.set(s=>({...s,preview:p}))} onUndock={onUndock} onMove={onMove} onDock={onDock} {...id("handle")}/>
     </View>
-    <View style={{flexDirection:"row",alignItems:"center",paddingHorizontal:12,gap:8}}>
+    <View style={{flexDirection:"row",alignItems:"center",paddingHorizontal:tokens.spacing.fixedInset,gap:tokens.spacing.fixedElement}}>
       <Text accessibilityRole="header" {...{className:joinClasses(styled&&"text-text text-lg font-semibold")}} style={{flex:1}}>{title}</Text>
       {docked?null:<Button title="Dock" variant="secondary" size="sm" onPress={onDock} {...id("dock")}/>}
       {!docked&&onClose?<Button title="Close" variant="ghost" size="sm" onPress={onClose} {...id("close")}/>:null}
     </View>
-    {placed.overlapsObstacle&&!docked?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}} style={{paddingHorizontal:12}}>
+    {placed.overlapsObstacle&&!docked?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}} style={{paddingHorizontal:tokens.spacing.fixedInset}}>
       This screen is too small to keep the palette clear of the fold.
     </Text>:null}
-    <View accessibilityRole="tablist" style={{flexDirection:"row",paddingHorizontal:12,gap:6}}>
+    <View accessibilityRole="tablist" style={{flexDirection:"row",paddingHorizontal:tokens.spacing.fixedInset,gap:tokens.spacing.off6}}>
       {PALETTE_MODES.map(m=>{
         const on=m.mode===mode;
         return <Pressable key={m.mode} accessibilityRole="tab" aria-selected={on} accessibilityState={{selected:on}}
           onPress={()=>onModeChange(m.mode)} {...id("mode-"+m.mode)}
           {...{className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
             styled&&(on?"border-focus bg-surface-sunken":"border-transparent"))}}
-          style={{flex:1,minHeight:44,alignItems:"center",justifyContent:"center"}}>
+          style={{flex:1,minHeight:tokens.spacing.fixedTarget,alignItems:"center",justifyContent:"center"}}>
           <Text {...{className:joinClasses(styled&&"text-sm",styled&&(on?"text-text font-semibold":"text-text-muted"))}}>{m.label}</Text>
         </Pressable>;
       })}
     </View>
-    <View style={{paddingHorizontal:12}}>{children(mode)}</View>
+    <View style={{paddingHorizontal:tokens.spacing.fixedInset}}>{children(mode)}</View>
   </View>;
 }

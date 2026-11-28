@@ -6,6 +6,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface PDFOutputSettings {paperId:string;orientation:'portrait'|'landscape';cropToContent:boolean;qualityDpi:number;scalePercent:number;includeAnnotations:boolean;profileId:string}
 export interface PrintAndExportPreviewProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  settings:PDFOutputSettings;configurationRevision:string|number;papers:readonly {id:string;label:string}[];
@@ -19,7 +20,7 @@ export function PrintAndExportPreview({scope='pdf-output',revision=0,...props}:P
  const {settings,configurationRevision,papers,profiles,renderPreview,validation,status,progress,error,result,onSettingsCommit:_settings,onValidate:_validate,onExport:_export,onCancel,onPrint,unstyled=false,disabledReason,style,...rest}=props;
  if(papers.length>256||profiles.length>128||new Set(papers.map(p=>p.id)).size!==papers.length||new Set(profiles.map(p=>p.id)).size!==profiles.length||!['idle','rendering','ready','exporting','complete','error'].includes(status)||progress!==undefined&&(!Number.isFinite(progress)||progress<0||progress>1)||result&&(!result.fileId.trim()||result.fileId.length>8192||!Number.isSafeInteger(result.bytes)||result.bytes<0))throw new RangeError('Invalid PDF output configuration');
  const owner=useEditorBoundary([JSON.stringify([...controlIdentity(scope,revision),disabledReason])]),busy=status==='rendering'||status==='exporting'||validation.status==='running',guard=useScopedControl(owner,props,disabledReason!==undefined||busy),off=guard.pending||disabledReason!==undefined||busy,profile=profiles.find(p=>p.id===settings.profileId),validated=validation.status==='passed'&&validation.configurationRevision===configurationRevision&&validation.profileId===settings.profileId;
- return <View {...rest} style={[{gap:8},style]} accessibilityLabel="PDF print and export preview"><PropertyInspector scope={owner} label="PDF output settings" disabledReason={off?'Output edit unavailable':undefined} unstyled={unstyled} fields={[
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement},style]} accessibilityLabel="PDF print and export preview"><PropertyInspector scope={owner} label="PDF output settings" disabledReason={off?'Output edit unavailable':undefined} unstyled={unstyled} fields={[
  {kind:'choice',id:'paperId',label:'Paper size',value:settings.paperId,choices:papers},{kind:'choice',id:'orientation',label:'Paper orientation',value:settings.orientation,choices:['portrait','landscape'].map(id=>({id,label:id}))},
  {kind:'boolean',id:'cropToContent',label:'Crop to content',value:settings.cropToContent},{kind:'boolean',id:'includeAnnotations',label:'Include annotations',value:settings.includeAnnotations},
  {kind:'number',id:'qualityDpi',label:'Raster output resolution',value:settings.qualityDpi,min:36,max:2400,step:1,integer:true,unit:'DPI'},

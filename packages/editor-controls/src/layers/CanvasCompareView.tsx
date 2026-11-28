@@ -15,6 +15,7 @@ import {
   splitFromDrag,splitFromKey,splitValueText,type CompareImage,type CompareMode,type CompareSource,
 } from "./compare-model.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode CanvasCompareView}. Mode, split and opacity are host state. */
 export interface CanvasCompareViewProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -113,14 +114,14 @@ function CanvasCompareViewBody({
       style={{position:"absolute",left:box.x,top:box.y,width:box.width,height:box.height,...extra}}/>;
   const chip=(text:string,position:object)=><View pointerEvents="none"
     {...{className:joinClasses(styled&&"rounded-control bg-surface-raised border border-border")}}
-    style={{position:"absolute",paddingHorizontal:8,paddingVertical:3,...position}}>
+    style={{position:"absolute",paddingHorizontal:tokens.spacing.fixedElement,paddingVertical:tokens.spacing.off3,...position}}>
     <Text {...{className:joinClasses(styled&&"text-text text-xs font-semibold")}}>{text}</Text>
   </View>;
 
   const stage=()=>{
     if(!frame||width<=0)return null;
     if(missing&&mode!=="reference"){
-      return <View style={{flex:1,alignItems:"center",justifyContent:"center",padding:16}}>
+      return <View style={{flex:1,alignItems:"center",justifyContent:"center",padding:tokens.spacing.fixedGroup}}>
         <Text {...{className:joinClasses(styled&&"text-text-muted text-sm")}} style={{textAlign:"center"}}>{missing}</Text>
       </View>;
     }
@@ -133,7 +134,7 @@ function CanvasCompareViewBody({
         return <View accessible accessibilityRole="image" accessibilityLabel={text+" image"}
           style={{position:"absolute",left:offset.x,top:offset.y,width:paneW,height:paneH,overflow:"hidden"}}>
           {picture(image,f)}
-          {chip(text,{left:f.x+8,top:f.y+8})}
+          {chip(text,{left:f.x+tokens.spacing.fixedElement,top:f.y+tokens.spacing.fixedElement})}
         </View>;
       };
       return <>
@@ -150,8 +151,8 @@ function CanvasCompareViewBody({
           <View style={{position:"absolute",left:frame.x,top:frame.y,width:cut,height:frame.height,overflow:"hidden"}}>
             {picture(beforeImage,{x:0,y:0,width:frame.width,height:frame.height})}
           </View>
-          {cut>72?chip(beforeLabel,{left:frame.x+8,top:frame.y+8}):null}
-          {frame.width-cut>72?chip(afterLabel,{right:width-frame.x-frame.width+8,top:frame.y+8}):null}
+          {cut>72?chip(beforeLabel,{left:frame.x+tokens.spacing.fixedElement,top:frame.y+tokens.spacing.fixedElement}):null}
+          {frame.width-cut>72?chip(afterLabel,{right:width-frame.x-frame.width+tokens.spacing.fixedElement,top:frame.y+tokens.spacing.fixedElement}):null}
         </View>
         <PanResponderDrag
           onBegin={p=>{if(busy||disabledReason!==undefined)return;drag.current={start:latest.current.split,from:p,frameWidth:frame.width};store.setState({split:latest.current.split});}}
@@ -181,14 +182,13 @@ function CanvasCompareViewBody({
             }}
             {...{onKeyDown:onDividerKey,focusable:true,tabIndex:0,
               className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
-            style={{position:"absolute",left:frame.x+cut-22,top:frame.y,width:44,height:frame.height,
+            style={{position:"absolute",left:frame.x+cut-tokens.spacing.off22,top:frame.y,width:tokens.spacing.fixedTarget,height:frame.height,
               alignItems:"center",justifyContent:"center",...NO_SELECT,...COL_RESIZE}}>
             <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised")}}
-              style={{position:"absolute",top:0,bottom:0,width:2}}/>
-            <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised border border-border")}}
-              style={{width:28,height:44,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center",flexDirection:"row",gap:3,
-                boxShadow:"0 1px 3px rgba(0,0,0,0.25)"}}>
-              {[0,1].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}} style={{width:1.5,height:14,borderRadius:forgeHairlineRadius.tick}}/>)}
+              style={{position:"absolute",top:0,bottom:0,width:tokens.spacing.off2}}/>
+            <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised border border-border shadow-sm")}}
+              style={{width:tokens.spacing.fixedStatus,height:tokens.spacing.fixedTarget,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center",flexDirection:"row",gap:tokens.spacing.off3}}>
+              {[0,1].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}} style={{width:tokens.spacing.off1_5,height:tokens.spacing.off14,borderRadius:forgeHairlineRadius.tick}}/>)}
             </View>
           </View>
         </PanResponderDrag>
@@ -214,12 +214,11 @@ function CanvasCompareViewBody({
           <Text {...{className:joinClasses(styled&&"text-text-muted text-sm")}}>{compareReason(true,false,beforeLabel,afterLabel)}</Text>
         </View>}
       {beforeImage&&ref?<View accessible accessibilityRole="image" accessibilityLabel={beforeLabel+" image"}
-        {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-raised")}}
-        style={{position:"absolute",top:12,end:12,width:ref.width+8,height:ref.height+8,padding:4,overflow:"hidden",
-          boxShadow:"0 4px 12px rgba(0,0,0,0.18)"}}>
+        {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-raised shadow-md")}}
+        style={{position:"absolute",top:tokens.spacing.fixedInset,end:tokens.spacing.fixedInset,width:ref.width+tokens.spacing.fixedElement,height:ref.height+tokens.spacing.fixedElement,padding:tokens.spacing.fixedStack,overflow:"hidden"}}>
         <Image source={{uri:beforeImage.uri}} accessibilityIgnoresInvertColors resizeMode="stretch"
           style={{width:ref.width,height:ref.height}}/>
-        {chip(beforeLabel,{start:8,bottom:8})}
+        {chip(beforeLabel,{start:8,bottom:tokens.spacing.fixedElement})}
       </View>:null}
     </>;
   };
@@ -235,8 +234,8 @@ function CanvasCompareViewBody({
         if(w!==s.width||h!==s.height){cancelSplit();store.setState({width:w,height:h});}
       }}
       {...{className:joinClasses("overflow-hidden",styled&&"rounded-card bg-surface-sunken border border-border")}}
-      style={{flex:1,minHeight:200,...NO_SELECT}}>
-      {primary?stage():<View style={{flex:1,alignItems:"center",justifyContent:"center",padding:16}}>
+      style={{flex:1,minHeight:controlTokens.extent.previewCompact,...NO_SELECT}}>
+      {primary?stage():<View style={{flex:1,alignItems:"center",justifyContent:"center",padding:tokens.spacing.fixedGroup}}>
         <Text {...{className:joinClasses(styled&&"text-text-muted text-sm")}} style={{textAlign:"center"}}>{missing}</Text>
       </View>}
     </View>

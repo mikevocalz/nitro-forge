@@ -8,6 +8,7 @@ import {fitCropAspect,validateCrop,type CropRect} from '../graphics/crop.ts';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface GuidedCropValue {readonly rect:CropRect;readonly angle:number;readonly ratio:'free'|'original'|'1:1'|'4:3'|'3:2'|'16:9'}
 export interface GuidedCropAndStraightenProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  value:GuidedCropValue;imageWidth:number;imageHeight:number;width:number;height:number;
@@ -31,7 +32,7 @@ export function GuidedCropAndStraighten({scope='guided-crop',revision=0,...props
  const angle=(n:number)=>((n+180)%360+360)%360-180;
  // Forward View props only; host operations and image dimensions are not native attributes.
  const {onCommit:_commit,onPreview:_preview,disabledReason,...viewProps}=rest;
- return <View {...viewProps} style={[{minWidth:0,gap:8},style]} accessibilityLabel="Crop and straighten">
+ return <View {...viewProps} style={[{minWidth:0,gap:tokens.spacing.fixedElement},style]} accessibilityLabel="Crop and straighten">
   <ErrorMessage {...exact({message:guard.error??undefined,unstyled:unstyled})}/>
   {off?<Text {...{className:unstyled?undefined:'text-text'}} accessibilityLiveRegion="polite">{disabledReason??'Applying crop'}</Text>:null}
   <SegmentedControl aria-label="Crop ratio" disabled={off} options={RATIOS} value={value.ratio} unstyled={unstyled} onChange={name=>{const r=ratio(name);void commit({...value,ratio:name,rect:r===undefined?value.rect:fitCropAspect(value.rect,r)});}}/>
@@ -39,10 +40,10 @@ export function GuidedCropAndStraighten({scope='guided-crop',revision=0,...props
    onPreview={rect=>guard.current()?.onPreview?.({...value,rect})} onCommit={rect=>commit({...value,rect})}>{children}</ImageCropOverlay>
   <PrecisionScrubber scope={scope} revision={revision} label="Straighten" unit="°" min={-180} max={180} step={0.1} value={value.angle} disabled={off} unstyled={unstyled}
    onPreview={degrees=>guard.current()?.onPreview?.({...value,angle:degrees})} onCommit={degrees=>commit({...value,angle:degrees})}/>
-  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+  <View style={{flexDirection:'row',flexWrap:'wrap',gap:tokens.spacing.fixedElement}}>
    <Button title="Rotate left" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>commit({...value,angle:angle(value.angle-90)})}/>
    <Button title="Rotate right" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>commit({...value,angle:angle(value.angle+90)})}/>
-   <Button title="Reset crop" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>commit({rect:{x:0,y:0,width:1,height:1},angle:0,ratio:'free'})}/>
+   <Button title="Reset crop" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>commit({rect:{x:0,y:0,width:tokens.borderWidth.hairline,height:tokens.borderWidth.hairline},angle:0,ratio:'free'})}/>
   </View>
   {onGridChange?<SegmentedControl aria-label="Crop guides" disabled={off} value={grid} options={[{value:'thirds',label:'Thirds'},{value:'center',label:'Centre'},{value:'none',label:'None'}]} unstyled={unstyled} onChange={next=>{if(guard.current())onGridChange(next);}}/>:null}
  </View>;

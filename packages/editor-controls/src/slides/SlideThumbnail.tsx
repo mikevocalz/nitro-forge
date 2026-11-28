@@ -2,6 +2,7 @@ import type {ReactNode} from "react";
 import {Text,View} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {SLIDE_DEFAULT_SIZE,rgbaCss,type SlideObject,type SlideSize,type SlideSummary} from "./slide-model.ts";
+import { controlTokens } from "../tokens.ts";
 
 /** Props for {@linkcode SlideThumbnail}. */
 export interface SlideThumbnailProps {
@@ -46,7 +47,7 @@ export function SlideObjectView({object:o,scale,renderImage,styled}:{
   const fontSize=Math.max(1,(o.fontSize??18)*scale);
   return <View style={{...box,overflow:"hidden"}}>
     <Text {...{className:joinClasses(styled&&!o.color&&"text-text")}}
-      style={{fontSize,lineHeight:fontSize*1.2,fontWeight:o.bold?"700":"400",fontStyle:o.italic?"italic":"normal",
+      style={{fontSize,lineHeight:fontSize*controlTokens.leadingRatio.thumbnail,fontWeight:o.bold?"700":"400",fontStyle:o.italic?"italic":"normal",
         ...(o.color?{color:rgbaCss(o.color)}:null)}}>{o.text??""}</Text>
   </View>;
 }

@@ -11,6 +11,7 @@ import {IconButton} from "@nyc-tron/ui/components/IconButton";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {trackSilenced,type TimelineTrack,type TrackKind} from "./edits.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** A track switch Splice stores (`setTrackFlags`). */
 export type TrackFlag="locked"|"hidden"|"muted"|"solo";
@@ -63,26 +64,26 @@ export const trackFlags=(kind:TrackKind):readonly TrackFlag[]=>kind==="audio"?["
 
 function LockGlyph({open,styled}:{open:boolean;styled:boolean}){
   const ink=styled?"border-text":"";
-  return <View style={{alignItems:"center",width:16,height:18}}>
-    <View {...{className:ink}} style={{width:10,height:8,borderWidth:2,borderBottomWidth:0,borderTopLeftRadius:forgeRadius.sm,borderTopRightRadius:forgeRadius.sm,
-      marginLeft:open?8:0}}/>
-    <View {...{className:styled?"bg-text":""}} style={{width:14,height:9,borderRadius:forgeHairlineRadius.tick}}/>
+  return <View style={{alignItems:"center",width:tokens.spacing.fixedGroup,height:tokens.spacing.off18}}>
+    <View {...{className:ink}} style={{width:tokens.spacing.off10,height:tokens.spacing.fixedElement,borderWidth:tokens.borderWidth.strong,borderBottomWidth:0,borderTopLeftRadius:forgeRadius.sm,borderTopRightRadius:forgeRadius.sm,
+      marginLeft:open?tokens.spacing.fixedElement:0}}/>
+    <View {...{className:styled?"bg-text":""}} style={{width:tokens.spacing.off14,height:tokens.spacing.fixedElement,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
 }
 function EyeGlyph({off,styled}:{off:boolean;styled:boolean}){
-  return <View style={{width:20,height:16,alignItems:"center",justifyContent:"center"}}>
-    <View {...{className:styled?"border-text":""}} style={{width:18,height:11,borderWidth:2,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center"}}>
-      <View {...{className:styled?"bg-text":""}} style={{width:5,height:5,borderRadius:forgeHairlineRadius.tick}}/>
+  return <View style={{width:tokens.spacing.off20,height:tokens.spacing.fixedGroup,alignItems:"center",justifyContent:"center"}}>
+    <View {...{className:styled?"border-text":""}} style={{width:tokens.spacing.off18,height:tokens.spacing.fixedInset,borderWidth:tokens.borderWidth.strong,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center"}}>
+      <View {...{className:styled?"bg-text":""}} style={{width:tokens.spacing.off5,height:tokens.spacing.off5,borderRadius:forgeHairlineRadius.tick}}/>
     </View>
-    {off?<View {...{className:styled?"bg-text":""}} style={{position:"absolute",width:22,height:2,transform:[{rotate:"-35deg"}]}}/>:null}
+    {off?<View {...{className:styled?"bg-text":""}} style={{position:"absolute",width:tokens.spacing.off22,height:tokens.spacing.off2,transform:[{rotate:"-35deg"}]}}/>:null}
   </View>;
 }
 function Letter({ch,styled}:{ch:string;styled:boolean}){
   return <Text {...{className:joinClasses(styled&&"text-text font-semibold")}}>{ch}</Text>;
 }
 function Chevron({up,styled}:{up:boolean;styled:boolean}){
-  return <View {...{className:styled?(up?"border-b-text":"border-t-text"):""}} style={{width:0,height:0,borderLeftWidth:7,borderRightWidth:7,
-    borderLeftColor:"transparent",borderRightColor:"transparent",...(up?{borderBottomWidth:9}:{borderTopWidth:9})}}/>;
+  return <View {...{className:styled?(up?"border-b-text":"border-t-text"):""}} style={{width:0,height:0,borderLeftWidth:tokens.spacing.off7,borderRightWidth:tokens.spacing.off7,
+    borderLeftColor:"transparent",borderRightColor:"transparent",...(up?{borderBottomWidth:tokens.spacing.fixedElement}:{borderTopWidth:tokens.spacing.fixedElement})}}/>;
 }
 
 function NameField({track,onRename,disabled,styled}:{track:TimelineTrack;onRename:(id:string,name:string)=>void;disabled:boolean;styled:boolean}){
@@ -103,7 +104,7 @@ function NameField({track,onRename,disabled,styled}:{track:TimelineTrack;onRenam
     onFocus={()=>{editing.current=true;}} onChangeText={t=>{dirty.current=true;store.set(t);}} onSubmitEditing={commit} onBlur={commit}
     onKeyPress={e=>{if(e.nativeEvent.key==="Escape"){editing.current=false;dirty.current=false;store.set(track.label);}}}
     {...{className:joinClasses(styled&&"rounded-control text-text text-sm font-semibold px-1 focus-visible:ring-2 focus-visible:ring-focus")}}
-    style={{minHeight:28,minWidth:0,flexShrink:1,paddingVertical:2}}/>;
+    style={{minHeight:tokens.spacing.fixedStatus,minWidth:0,flexShrink:1,paddingVertical:tokens.spacing.off2}}/>;
 }
 
 /**
@@ -159,7 +160,7 @@ function TrackHeadersBody({
             onPress={()=>onOpenTrack?.(open?undefined:track.id)} {...id(track.id+"-open")}
             {...{className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
               styled&&(open?"border-focus bg-surface-sunken":"border-transparent"))}}
-            style={{width:44,minHeight:44,alignItems:"center",justifyContent:"center",gap:1}}>
+            style={{width:tokens.spacing.fixedTarget,minHeight:tokens.spacing.fixedTarget,alignItems:"center",justifyContent:"center",gap:tokens.borderWidth.hairline}}>
             <Text {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}}>{trackCode(track,tracks)}</Text>
             {status!==TRACK_KIND_LABEL[track.kind]?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}}>
               {track.locked?"Locked":silenced?(track.kind==="audio"?"Silent":"Hidden"):""}</Text>:null}
@@ -169,8 +170,8 @@ function TrackHeadersBody({
       const up=target(track.id,-1),down=target(track.id,1);
       return <View key={track.id} accessibilityLabel={`${track.label}, ${status}`}
         {...{className:joinClasses(styled&&"bg-surface-raised border-b border-border")}}
-        style={{height:laneHeight,flexDirection:"row",alignItems:"center",gap:4,paddingStart:8,paddingEnd:2}}>
-        <View style={{flex:1,minWidth:0,gap:1}}>
+        style={{height:laneHeight,flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedStack,paddingStart:8,paddingEnd:2}}>
+        <View style={{flex:1,minWidth:0,gap:tokens.borderWidth.hairline}}>
           <NameField track={track} onRename={onRename} disabled={disabled} styled={styled}/>
           <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text-muted text-xs px-1")}}>{status}</Text>
         </View>

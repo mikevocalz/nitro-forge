@@ -7,6 +7,7 @@ import {
   AVAILABLE,MITER_LIMIT_RANGE,roundCoord,unavailable,validateDash,
   type Availability,type GradientStop,type Paint,type Rgba,type Stroke,
 } from "./vector-types.ts";
+import { tokens } from "../tokens.ts";
 
 /** Fill choice in the inspector: no paint, or one of the {@linkcode Paint} types. */
 export type FillType="none"|Paint["type"];
@@ -84,7 +85,7 @@ export function withPaintColor(paint:Paint,color:Rgba,stopIndex=0):Paint{
 
 /** Stroke a path gets when its stroke is switched on. */
 export function defaultStroke(color:Rgba):Stroke{
-  return {paint:{type:"solid",color},width:2,join:"miter",cap:"butt",miter_limit:4,dash:[],dash_offset:0};
+  return {paint:{type:"solid",color},width:tokens.spacing.off2,join:"miter",cap:"butt",miter_limit:4,dash:[],dash_offset:0};
 }
 
 /** Dash presets as multiples of the stroke width, so they scale with it. */

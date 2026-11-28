@@ -2,6 +2,7 @@ import {forgeRadius} from "../radius.ts";
 import type {ReactNode} from "react";
 import {Pressable,Text,View} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
+import { tokens } from "../tokens.ts";
 
 /**
  * Internal 44pt button shared by the layer panels. A control that cannot run
@@ -25,15 +26,15 @@ export function PanelButton({label,onPress,reason,role="button",checked,tone="se
     accessibilityHint={reason} testID={testID}
     onPress={()=>{if(!off)onPress();}}
     {...{className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",styled&&fill)}}
-    style={{minHeight:44,minWidth:44,paddingHorizontal:12,flexDirection:"row",alignItems:"center",justifyContent:"center",
-      gap:8,opacity:off?0.45:1,...(grow?{flexGrow:1}:null)}}>
+    style={{minHeight:tokens.spacing.fixedTarget,minWidth:tokens.spacing.fixedTarget,paddingHorizontal:tokens.spacing.fixedInset,flexDirection:"row",alignItems:"center",justifyContent:"center",
+      gap:tokens.spacing.fixedElement,opacity:off?tokens.opacity.disabled:1,...(grow?{flexGrow:1}:null)}}>
     {icon??null}
     <Text numberOfLines={1} {...{className:joinClasses(styled&&ink,styled&&"text-sm font-medium")}}>{label}</Text>
     {role==="switch"?<View pointerEvents="none"
       {...{className:joinClasses(styled&&(on?"bg-primary border-primary":"bg-surface-sunken border-border"))}}
-      style={{width:30,height:18,borderRadius:forgeRadius.sm,borderWidth:1,justifyContent:"center",paddingHorizontal:2,
+      style={{width:tokens.spacing.fixedCanvas,height:tokens.spacing.off18,borderRadius:forgeRadius.sm,borderWidth:tokens.borderWidth.hairline,justifyContent:"center",paddingHorizontal:tokens.spacing.off2,
         alignItems:on?"flex-end":"flex-start"}}>
-      <View {...{className:joinClasses(styled&&(on?"bg-on-primary":"bg-text-muted"))}} style={{width:12,height:12,borderRadius:forgeRadius.sm}}/>
+      <View {...{className:joinClasses(styled&&(on?"bg-on-primary":"bg-text-muted"))}} style={{width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset,borderRadius:forgeRadius.sm}}/>
     </View>:null}
   </Pressable>;
 }
@@ -41,5 +42,5 @@ export function PanelButton({label,onPress,reason,role="button",checked,tone="se
 /** Visible reason line under a group of controls; renders nothing without a reason. */
 export function Reason({text,styled}:{text:string|undefined;styled:boolean}){
   if(!text)return null;
-  return <Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}} style={{lineHeight:16}}>{text}</Text>;
+  return <Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}} style={{lineHeight:tokens.text.off15}}>{text}</Text>;
 }

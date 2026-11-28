@@ -7,6 +7,7 @@ import {joinClasses} from '@nyc-tron/ui/components/styles';
 import {SettingSwitch} from '@nyc-tron/ui/components/forms/SettingSwitch';
 import {MotionVectorFields} from './MotionVectorFields.tsx';
 import {validateMotionCamera,validateMotionLight,type MotionCamera,type MotionLight} from './motion-settings.ts';
+import { tokens } from '../tokens.ts';
 export type {MotionCamera,MotionLight} from './motion-settings.ts';
 export interface CameraAndLightControlsProps extends Omit<ViewProps,'children'> {readonly camera:MotionCamera;readonly light:MotionLight;readonly onCameraCommit:(value:MotionCamera)=>void;readonly onLightCommit:(value:MotionLight)=>void;readonly disabled?:boolean;readonly unstyled?:boolean}
 /** Lens/view/depth and lighting values, independent from native app window dimensions. */
@@ -15,7 +16,7 @@ export function CameraAndLightControls({camera,light,onCameraCommit,onLightCommi
  const [local,store]=useLocalStore(()=>({error:null as string|null}));
  const setCamera=(change:Partial<MotionCamera>)=>{if(disabled)return;const next={...camera,...change};try{validateMotionCamera(next);}catch(error){store.set({error:error instanceof Error?error.message:'Invalid camera target'});return;}store.set({error:null});onCameraCommit(next);};
  const setLight=(change:Partial<MotionLight>)=>{if(disabled)return;const next={...light,...change};validateMotionLight(next);onLightCommit(next);};
- return <View {...props} style={[{gap:10},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.off10},props.style]}>
   <ErrorMessage {...(local.error?{message:local.error}:{})} unstyled={unstyled}/>
   <Select label="Camera projection" value={camera.projection} options={[{value:'perspective',label:'Perspective'},{value:'orthographic',label:'Orthographic'}]} disabled={disabled} unstyled={unstyled} onValueChange={projection=>setCamera({projection:projection as MotionCamera['projection']})}/>
   <MotionVectorFields label="Camera position" value={camera.position} disabled={disabled} unstyled={unstyled} onCommit={position=>setCamera({position})}/>

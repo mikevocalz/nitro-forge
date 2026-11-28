@@ -6,6 +6,7 @@ import {Button} from "@nyc-tron/ui/components/Button";
 import {OFFICE_TOUCH_TARGET,SkipGlyph,ToolButton,officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {groupHitsByPage,searchSummary,stepHit,type PdfSearchHit} from "./search-model.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Search progress reported by the host while it walks the pages. */
 export interface PdfSearchProgress {
@@ -94,29 +95,29 @@ function TextSearchResultsBody({
   const trimmed=query.trim();
   const summary=searchSummary(hits.length,progress.searched,progress.pageCount,progress.running,progress.capped);
   return <View {...rest} accessibilityRole="search" accessibilityLabel="Search document" {...{onKeyDown}}
-    {...{className:joinClasses("min-w-0",className)}} style={[{gap:10},rest.style as object]}>
-    <View style={{flexDirection:"row",gap:6,alignItems:"center"}}>
+    {...{className:joinClasses("min-w-0",className)}} style={[{gap:tokens.spacing.off10},rest.style as object]}>
+    <View style={{flexDirection:"row",gap:tokens.spacing.off6,alignItems:"center"}}>
       <TextInput editable={disabledReason===undefined} maxLength={8192} value={query} onChangeText={onQueryChange} onSubmitEditing={submit} returnKeyType="search"
         placeholder="Find in document" accessibilityLabel="Find in document" autoCorrect={false} autoCapitalize="none"
         {...{enterKeyHint:"search",className:joinClasses(styled&&"rounded-control border border-border bg-surface-sunken text-text px-3 focus:border-focus")}}
         style={{flex:1,minWidth:0,minHeight:OFFICE_TOUCH_TARGET}}/>
       <Button title="Search" unstyled={unstyled} variant="secondary" disabled={!trimmed||disabledReason!==undefined} onPress={submit}/>
     </View>
-    {onCaseSensitiveChange||onWholeWordsChange?<View style={{flexDirection:"row",gap:6,flexWrap:"wrap"}}>
+    {onCaseSensitiveChange||onWholeWordsChange?<View style={{flexDirection:"row",gap:tokens.spacing.off6,flexWrap:"wrap"}}>
       {onCaseSensitiveChange?<ToolButton label="Match case" checked={caseSensitive} styled={styled}
         onPress={()=>onCaseSensitiveChange(!caseSensitive)}/>:null}
       {onWholeWordsChange?<ToolButton label="Whole words" checked={wholeWords} styled={styled}
         onPress={()=>onWholeWordsChange(!wholeWords)}/>:null}
     </View>:null}
     {error
-      ?<View style={{gap:8,alignItems:"flex-start"}}>
+      ?<View style={{gap:tokens.spacing.fixedElement,alignItems:"flex-start"}}>
         <Text accessibilityLiveRegion="polite" {...{className:text}}>{error}</Text>
         <Button title="Search again" variant="secondary" size="sm" onPress={()=>trimmed&&onSubmit(trimmed)}/>
       </View>
       :searchedQuery===undefined&&hits.length===0&&!progress.running
         ?<Text {...{className:muted}}>Search every page for a word or phrase.</Text>
         :<>
-          <View style={{flexDirection:"row",alignItems:"center",gap:4}}>
+          <View style={{flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedStack}}>
             <Text accessibilityLiveRegion="polite" {...{className:muted}} style={{flex:1,fontVariant:["tabular-nums"]}}>
               {hits.length===0&&!progress.running?"No matches for “"+(searchedQuery??trimmed)+"”.":
                 (current>=0?"Match "+(current+1)+" of "+hits.length+(progress.running?", searching":progress.capped?", later matches not shown":""):summary)}
@@ -138,9 +139,9 @@ function TextSearchResultsBody({
                   accessibilityLabel={"Page "+(hit.page+1)+": "+hit.before+hit.match+hit.after}
                   onPress={()=>onSelect(index,hit)}
                   {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus",styled&&on&&"bg-accent/10")}}
-                  style={{minHeight:OFFICE_TOUCH_TARGET,paddingVertical:8,paddingHorizontal:8,justifyContent:"center"}}>
-                  <Text numberOfLines={2} {...{className:text}} style={{lineHeight:20}}>
-                    {hit.before}<Text style={{fontWeight:"700"}}>{hit.match}</Text>{hit.after}
+                  style={{minHeight:OFFICE_TOUCH_TARGET,paddingVertical:tokens.spacing.fixedElement,paddingHorizontal:tokens.spacing.fixedElement,justifyContent:"center"}}>
+                  <Text numberOfLines={2} {...{className:text}} style={{lineHeight:tokens.text.title}}>
+                    {hit.before}<Text style={{fontWeight:tokens.fontWeight.bold}}>{hit.match}</Text>{hit.after}
                   </Text>
                 </Pressable>;
               }}/>

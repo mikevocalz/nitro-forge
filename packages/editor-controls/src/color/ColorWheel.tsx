@@ -9,6 +9,7 @@ import {createValueGesture} from "@nyc-tron/ui/components/gestures/value-gesture
 import {assertHsv,hsvToRgb,rgbaToHex,wrapHue,type HsvColor} from "../color.ts";
 import {createRingDrag,hueToRingPoint,RING_INNER_FRACTION} from "./wheel-geometry.ts";
 import {HueRingLayer} from "./wheel-layers.tsx";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ColorWheel}. */
 export interface ColorWheelProps extends Omit<ViewProps,"children"> {
@@ -101,18 +102,18 @@ export function ColorWheel({
         if(e.nativeEvent.actionName==="increment")commitHue(value.h+step);
         if(e.nativeEvent.actionName==="decrement")commitHue(value.h-step);
       }}
-      style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: colour-well */opacity:disabled?0.45:1,...NO_SELECT}}>
+      style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: colour-well */opacity:disabled?tokens.opacity.disabled:1,...NO_SELECT}}>
       <HueRingLayer size={size} inner={inner}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised")}}
-        style={{position:"absolute",left:size/2-inner,top:size/2-inner,width:inner*2,height:inner*2,borderRadius:inner /* radius-exempt: colour-well */}}/>
+        style={{position:"absolute",left:size/2-inner,top:size/2-inner,width:inner*tokens.spacing.off2,height:inner*tokens.spacing.off2,borderRadius:inner /* radius-exempt: colour-well */}}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"border-border")}}
         style={{position:"absolute",left:size/2-center/2,top:size/2-center/2,width:center,height:center,borderRadius:center/2, /* radius-exempt: colour-well */
-          borderWidth:1,backgroundColor:rgbaToHex(hsvToRgb({...value,h:hue,alpha:1}),false)}}/>
+          borderWidth:tokens.borderWidth.hairline,backgroundColor:rgbaToHex(hsvToRgb({...value,h:hue,alpha:1}),false)}}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"border-text")}}
         style={{position:"absolute",left:thumb.x-THUMB/2,top:thumb.y-THUMB/2,width:THUMB,height:THUMB,borderRadius:THUMB/2, /* radius-exempt: colour-well */
-          borderWidth:2,alignItems:"center",justifyContent:"center"}}>
+          borderWidth:tokens.borderWidth.strong,alignItems:"center",justifyContent:"center"}}>
         <View {...{className:joinClasses(styled&&"border-surface-raised")}}
-          style={{width:THUMB-4,height:THUMB-4,borderRadius:(THUMB-4)/2, /* radius-exempt: colour-well */borderWidth:2,
+          style={{width:THUMB-tokens.spacing.fixedStack,height:THUMB-tokens.spacing.fixedStack,borderRadius:(THUMB-(tokens.spacing.fixedElement / 2))/2, /* radius-exempt: colour-well */borderWidth:tokens.borderWidth.strong,
             backgroundColor:rgbaToHex(hsvToRgb({h:hue,s:1,v:1,alpha:1}),false)}}/>
       </View>
     </View>

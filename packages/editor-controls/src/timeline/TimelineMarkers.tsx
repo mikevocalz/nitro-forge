@@ -19,6 +19,7 @@ import {framesToSeconds} from "./time.ts";
 import {adjacentMarker,moveMarker,resizeMarker,sortMarkers,type MarkerUpdate,type TimelineMarker} from "./markers.ts";
 import {frameToX,type TimelineViewport} from "./viewport.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode TimelineMarkers}. */
 export interface TimelineMarkersProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -103,7 +104,7 @@ function Flag({m,color,snapFrames=[],snapThreshold=0,viewport,rate,durationFrame
   const ink=styled?(selected?"bg-focus":"bg-info"):"";
   return <>
     {len>0?<View pointerEvents="none" {...{className:joinClasses(styled&&(selected?"bg-focus/20 border-y border-focus":"bg-info/15 border-y border-info/60"))}}
-      style={{position:"absolute",left:x,top:22,height:12,width:len}}/>:null}
+      style={{position:"absolute",left:x,top:tokens.spacing.off22,height:tokens.spacing.fixedInset,width:len}}/>:null}
     <View {...handlers}
       {...{onKeyDown,focusable:!disabled,className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
       accessible accessibilityRole="adjustable"
@@ -120,8 +121,8 @@ function Flag({m,color,snapFrames=[],snapThreshold=0,viewport,rate,durationFrame
       }}
       style={{position:"absolute",left:x-HIT/2,top:0,width:HIT,height:HIT,alignItems:"center",...NO_SELECT}}>
       {/* A pennant on a staff. */}
-      <View pointerEvents="none" style={{position:"absolute",left:HIT/2-1,top:6,width:2,height:32,...(color?{backgroundColor:color}:{})}} {...{className:ink}}/>
-      <View pointerEvents="none" style={{position:"absolute",left:HIT/2+1,top:6,width:12,height:10,borderTopRightRadius:forgeRadius.sm,borderBottomRightRadius:forgeRadius.sm,...(color?{backgroundColor:color}:{})}} {...{className:ink}}/>
+      <View pointerEvents="none" style={{position:"absolute",left:HIT/2-tokens.borderWidth.hairline,top:tokens.spacing.off6,width:tokens.spacing.off2,height:tokens.spacing.fixedCanvas,...(color?{backgroundColor:color}:{})}} {...{className:ink}}/>
+      <View pointerEvents="none" style={{position:"absolute",left:HIT/2+tokens.borderWidth.hairline,top:tokens.spacing.off6,width:tokens.spacing.fixedInset,height:tokens.spacing.off10,borderTopRightRadius:forgeRadius.sm,borderBottomRightRadius:forgeRadius.sm,...(color?{backgroundColor:color}:{})}} {...{className:ink}}/>
     </View>
   </>;
 }
@@ -173,7 +174,7 @@ function TimelineMarkersBody({
   };
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
     <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
-    <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
+    <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:tokens.spacing.fixedElement}}>
       <Button title="Add marker" variant="secondary" size="sm" disabled={disabled||durationFrames<0} {...id("add")}
         accessibilityHint={`Adds a marker at ${tc(playheadFrame)}`}
         onPress={()=>{const f=Math.min(durationFrames,Math.max(0,Math.round(playheadFrame)));onAdd({frame:f,seconds:framesToSeconds(f,rate)});}}/>
@@ -192,17 +193,17 @@ function TimelineMarkersBody({
         dropFrame={dropFrame} disabled={disabled} styled={styled}/>)}
     </View>
     {selected?<View {...id("editor")} {...{className:joinClasses(styled&&"rounded-card border border-border bg-surface-raised")}}
-      style={{padding:12,gap:10}}>
-      <View style={{flexDirection:"row",flexWrap:"wrap",gap:12}}>
-        <TextField id={"marker-name-"+selected.id} maxLength={1024} label="Marker name" value={draft.name} editable={!disabled} style={{minWidth:160}}
+      style={{padding:tokens.spacing.fixedInset,gap:tokens.spacing.off10}}>
+      <View style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.fixedInset}}>
+        <TextField id={"marker-name-"+selected.id} maxLength={1024} label="Marker name" value={draft.name} editable={!disabled} style={{minWidth:controlTokens.extent.column}}
           className="grow" onChangeText={name=>{dirty.current.name=true;store.set(d=>({...d,name}));}} onBlur={()=>commitText("name")} onSubmitEditing={()=>commitText("name")}
           onKeyPress={e=>{if(e.nativeEvent.key==="Escape"){dirty.current.name=false;store.set(d=>({...d,name:selected.name}));}}}/>
-        <TextField id={"marker-note-"+selected.id} label="Note" value={draft.note} editable={!disabled} style={{minWidth:160}}
+        <TextField id={"marker-note-"+selected.id} label="Note" value={draft.note} editable={!disabled} style={{minWidth:controlTokens.extent.column}}
           className="grow" onChangeText={note=>{dirty.current.note=true;store.set(d=>({...d,note}));}} onBlur={()=>commitText("note")} onSubmitEditing={()=>commitText("note")}
           onKeyPress={e=>{if(e.nativeEvent.key==="Escape"){dirty.current.note=false;store.set(d=>({...d,note:selected.note??""}));}}}/>
       </View>
       {onColorChange?<Select label="Marker color" value={selected.colorId??""} options={[{value:"",label:"Default"},...colors.map(c=>({value:c.id,label:c.label}))]} disabled={disabled} unstyled={unstyled} onValueChange={color=>onColorChange(selected.id,color||undefined)}/>:null}
-      <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
+      <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:tokens.spacing.fixedElement}}>
         <Text {...{className:joinClasses(styled&&"text-text text-sm")}} style={{fontVariant:["tabular-nums"]}}>
           {selected.durationFrames?`${tc(selected.frame)} for ${tc(selected.durationFrames)}`:`At ${tc(selected.frame)}`}
         </Text>

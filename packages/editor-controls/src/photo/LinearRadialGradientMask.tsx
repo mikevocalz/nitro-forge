@@ -8,6 +8,7 @@ import {GradientOnCanvasHandles} from '../vector/GradientOnCanvasHandles.tsx';
 import type {GradientPaint} from '../vector/vector-types.ts';
 import {rasterToImage} from '../layers/layer-thumbnail-model.ts';
 import {validatePhotoGradient,photoGradientCoverage,type PhotoGradientMask,type PhotoImageSize,type PhotoMaskCombine} from './photo-masks.ts';
+import { tokens } from '../tokens.ts';
 export type {PhotoGradientMask,PhotoGradientGeometry} from './photo-masks.ts';
 export interface LinearRadialGradientMaskProps extends Omit<ViewProps,'children'> {
  /** Photo identity and revision. Changing scope abandons an in-progress geometry edit. */
@@ -32,7 +33,7 @@ export function LinearRadialGradientMask({scope,value,imageSize,width,onCommit,o
  const preview=useMemo(()=>{const factor=64/Math.max(imageSize.width,imageSize.height),w=Math.max(1,Math.round(imageSize.width*factor)),h=Math.max(1,Math.round(imageSize.height*factor)),pixels=new Uint8Array(w*h*4);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;pixels[i]=80;pixels[i+1]=180;pixels[i+2]=255;pixels[i+3]=Math.round(photoGradientCoverage(shown,(x+.5)/w*imageSize.width,(y+.5)/h*imageSize.height)*115);}return rasterToImage({width:w,height:h,pixels});},[shown,imageSize.width,imageSize.height]);
  const set=(change:Partial<PhotoGradientMask>)=>{if(disabled||committed.current!==boundary)return;const next={...value,...change};validatePhotoGradient(next,imageSize);onCommit(next);};
  const content=<View style={{width,height}}>{children}<Image source={{uri:preview.uri}} accessible={false} resizeMode="stretch" style={{position:'absolute',inset:0}}/></View>;
- return <View {...props} style={[{gap:8},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
   <Select label="Photo gradient mask type" value={value.geometry.type} options={[{value:'linear',label:'Linear mask'},{value:'radial',label:'Radial mask'}]} disabled={disabled} unstyled={unstyled} onValueChange={type=>{if(type===value.geometry.type)return;set({geometry:type==='linear'?{type:'linear',x0:imageSize.width*.25,y0:imageSize.height*.5,x1:imageSize.width*.75,y1:imageSize.height*.5}:{type:'radial',cx:imageSize.width*.5,cy:imageSize.height*.5,radius:Math.max(.5,Math.min(imageSize.width,imageSize.height)*.4)}});}}/>
   <UnitInput label="Gradient mask feather" value={value.feather} min={0} max={1} step={.05} disabled={disabled} unstyled={unstyled} onCommit={feather=>set({feather})}/>
   <Select label="Gradient mask combine" value={value.combine} options={['replace','add','subtract','intersect'].map(value=>({value,label:value}))} disabled={disabled} unstyled={unstyled} onValueChange={combine=>set({combine:combine as PhotoMaskCombine})}/>

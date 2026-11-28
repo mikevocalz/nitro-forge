@@ -4,6 +4,7 @@ import {useStore} from 'zustand';
 import {Text,View,type ViewProps} from 'react-native';
 import {LevelMeter} from './LevelMeter.tsx';
 import {normalizePeak,peaksToBars,type WaveformPeak} from '../waveform.ts';
+import { tokens } from '../tokens.ts';
 export interface RecordingPeakWindow extends WaveformPeak {timeMs:number}
 export interface LiveRecordingWaveformProps extends Omit<ViewProps,'children'> {
  capturing:boolean;elapsedSamples:number;sampleRate:number;windows:readonly RecordingPeakWindow[];
@@ -17,7 +18,7 @@ export function LiveRecordingWaveform({capturing,elapsedSamples,sampleRate,windo
  const visible=windows.filter(w=>w.timeMs>=windowStartMs&&w.timeMs<=windowEndMs);
  const count=Math.max(1,Math.min(1024,Math.floor(width))),buckets=new Map<number,WaveformPeak>();
  for(const sample of visible){const index=Math.min(count-1,Math.floor((sample.timeMs-windowStartMs)/(windowEndMs-windowStartMs)*count)),old=buckets.get(index);buckets.set(index,{min:Math.min(old?.min??1,sample.min),max:Math.max(old?.max??-1,sample.max)});}
- return <View {...props} onLayout={event=>{const width=event.nativeEvent.layout.width;if(Number.isFinite(width)&&width>=0)store.setState({width});props.onLayout?.(event);}} style={[{gap:8,minWidth:0},style]} accessibilityLabel="Live recording waveform">
+ return <View {...props} onLayout={event=>{const width=event.nativeEvent.layout.width;if(Number.isFinite(width)&&width>=0)store.setState({width});props.onLayout?.(event);}} style={[{gap:tokens.spacing.fixedElement,minWidth:0},style]} accessibilityLabel="Live recording waveform">
   <Text {...{className:unstyled?undefined:'text-text'}}>{capturing?'Capturing input':'Capture stopped'}; {(elapsedSamples/sampleRate).toFixed(3)} s; {elapsedSamples} samples</Text>
   {visible.length?<View accessible accessibilityRole="image" accessibilityLabel={`Measured capture waveform, ${visible.length} windows, ${droppedWindows} dropped`} style={{height,position:'relative',overflow:'hidden'}}>{[...buckets].map(([index,peak])=>{const bar=peaksToBars([peak],height)[0]!;return <View key={index} pointerEvents="none" {...{className:unstyled?undefined:'bg-accent'}} style={{position:'absolute',left:index/count*width,width:Math.max(1,width/count),top:bar.top,height:bar.height}}/>;})}</View>:<Text {...{className:unstyled?undefined:'text-text'}}>No measured capture windows in this range</Text>}
   {level===undefined?<Text {...{className:unstyled?undefined:'text-text'}}>Input peak not reported</Text>:<LevelMeter level={level} accessibilityLabel="Measured recording input peak" unstyled={unstyled}/>}

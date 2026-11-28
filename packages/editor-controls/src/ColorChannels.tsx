@@ -2,6 +2,7 @@ import { Host,Slider } from "@expo/ui";
 import { Text,View,type ViewProps } from "react-native";
 import { joinClasses } from "@nyc-tron/ui/components/styles";
 import { alphaPercent,assertRgba,rgbaToHex,type RgbaColor } from "./color.ts";
+import { tokens } from "./tokens.ts";
 export interface ColorChannelsProps extends Omit<ViewProps,"children"> {
  readonly value:RgbaColor;
  readonly onValueChange:(value:RgbaColor)=>void;
@@ -27,7 +28,7 @@ export function ColorChannels({
  // not the app theme, and turned black on a dark app surface in light mode.
  const muted=labelClassName??joinClasses(!unstyled&&"text-text-muted");
  const channel=(label:string,v:number,max:number,step:number,on:(n:number)=>void)=>
-   <View style={{gap:4}}>
+   <View style={{gap:tokens.spacing.fixedStack}}>
      <Text {...{className:muted}} style={{fontVariant:["tabular-nums"]}}>{label}</Text>
      <Host style={{width:"100%"}}>
        <Slider value={v} min={0} max={max} step={step} disabled={disabled} onValueChange={on}/>

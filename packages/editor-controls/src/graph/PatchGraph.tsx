@@ -11,6 +11,7 @@ import {ErrorMessage} from "@nyc-tron/ui/components/feedback/ErrorMessage";
 import {createGraphRequests,currentGraphOutput,graphInteractionBoundary,graphDragPoint,graphDisplayedNodes} from "./patch-interaction-model.ts";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 type Local={positions:Readonly<Record<string,GraphPoint>>;output:GraphSelection|null;error:string|null};
 export interface PatchGraphProps extends Omit<ViewProps,"children">{
@@ -80,7 +81,7 @@ export function PatchGraph({
          const prev=points[i]!,dx=p.x-prev.x,dy=p.y-prev.y,len=Math.hypot(dx,dy);
          return <View key={edge.id+"-"+i} pointerEvents="none"
            {...{className:joinClasses(styled&&!accentColor&&"bg-accent")}} style={{position:"absolute",left:(p.x+prev.x-len)/2,
-           top:(p.y+prev.y)/2-1,width:len,height:2,...(accentColor?{backgroundColor:accentColor}:null),
+           top:(p.y+prev.y)/2-tokens.borderWidth.hairline,width:len,height:tokens.spacing.off2,...(accentColor?{backgroundColor:accentColor}:null),
            transform:[{rotate:Math.atan2(dy,dx)*180/Math.PI+"deg"}]}}/>;
        });
      })}
@@ -96,7 +97,7 @@ export function PatchGraph({
    </ScrollView>
   </ScrollView>
   {output?<Pressable accessibilityRole="button" accessibilityLabel="Cancel cable connection"
-    onPress={cancelPending} style={{minHeight:44,justifyContent:"center",paddingHorizontal:12}}>
+    onPress={cancelPending} style={{minHeight:tokens.spacing.fixedTarget,justifyContent:"center",paddingHorizontal:tokens.spacing.fixedInset}}>
       <Text {...{className:joinClasses(styled&&"text-text")}}>Connecting {output.nodeId}:{output.portId} · Tap an input, or cancel</Text>
     </Pressable>:null}
   <ErrorMessage {...exact({message:error??undefined,unstyled:unstyled})}/>
@@ -132,7 +133,7 @@ function PatchNode({node,boundary,interactionScale,disabled,selected,accentColor
  });
  const w=node.width??200;
  const height=GRAPH_HEADER_HEIGHT+14+Math.max(node.inputs.length,node.outputs.length)*GRAPH_PORT_ROW_HEIGHT;
- const portRing=<View style={{width:12,height:12,borderRadius:forgeRadius.sm,borderWidth:2,...(accentColor?{borderColor:accentColor}:null)}}
+ const portRing=<View style={{width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset,borderRadius:forgeRadius.sm,borderWidth:tokens.borderWidth.strong,...(accentColor?{borderColor:accentColor}:null)}}
    {...{className:joinClasses(styled&&!accentColor&&"border-accent")}}/>;
  const portLabel=joinClasses(styled&&"text-text-muted");
  // A View with pan handlers has no onPress, so the screen-reader activate
@@ -140,7 +141,7 @@ function PatchNode({node,boundary,interactionScale,disabled,selected,accentColor
  return <View {...{className:joinClasses(styled&&"rounded-control bg-surface-raised",
      styled&&(selected?(accentColor?undefined:"border-accent"):"border-border"))}}
    style={{position:"absolute",left:node.x,top:node.y,width:w,minHeight:height,
-   borderWidth:selected?2:1,...(selected&&accentColor?{borderColor:accentColor}:null),overflow:"hidden"}}>
+   borderWidth:selected?tokens.borderWidth.strong:tokens.borderWidth.hairline,...(selected&&accentColor?{borderColor:accentColor}:null),overflow:"hidden"}}>
    <View {...pan.current.panHandlers} accessible accessibilityRole="button"
      accessibilityLabel={node.title}
      accessibilityHint="Drag to move. Double tap to select."
@@ -149,17 +150,17 @@ function PatchNode({node,boundary,interactionScale,disabled,selected,accentColor
      accessibilityActions={[{name:"activate"}]}
      onAccessibilityAction={e=>{if(!disabled&&e.nativeEvent.actionName==="activate")onSelect();}}
      {...{className:joinClasses(styled&&"bg-surface-sunken")}}
-     style={{height:GRAPH_HEADER_HEIGHT,justifyContent:"center",paddingHorizontal:12}}>
-     <Text {...{className:joinClasses(styled&&"text-text")}} style={{fontWeight:"700"}}>{node.title}</Text>
+     style={{height:GRAPH_HEADER_HEIGHT,justifyContent:"center",paddingHorizontal:tokens.spacing.fixedInset}}>
+     <Text {...{className:joinClasses(styled&&"text-text")}} style={{fontWeight:tokens.fontWeight.bold}}>{node.title}</Text>
    </View>
    <View style={{flexDirection:"row",justifyContent:"space-between"}}>
     <View style={{flex:1}}>
      {node.inputs.map(p=><Pressable key={p.id} accessibilityRole="button" disabled={disabled}
        accessibilityLabel={"Connect input "+p.label+" ("+p.dataType+")"}
        onPress={()=>onInput(p.id)}
-       style={{height:GRAPH_PORT_ROW_HEIGHT,flexDirection:"row",alignItems:"center",gap:6,paddingLeft:2}}>
+       style={{height:GRAPH_PORT_ROW_HEIGHT,flexDirection:"row",alignItems:"center",gap:tokens.spacing.off6,paddingLeft:tokens.spacing.off2}}>
        {portRing}
-       <Text numberOfLines={1} {...{className:portLabel}} style={{fontSize:11}}>{p.label}</Text>
+       <Text numberOfLines={1} {...{className:portLabel}} style={{fontSize:tokens.text.off11}}>{p.label}</Text>
      </Pressable>)}
     </View>
     <View style={{flex:1}}>
@@ -167,8 +168,8 @@ function PatchNode({node,boundary,interactionScale,disabled,selected,accentColor
        accessibilityLabel={"Select output "+p.label+" ("+p.dataType+")"}
        accessibilityState={{selected:pendingOutput===p.id,disabled}}
        onPress={()=>onOutput(p.id)}
-       style={{height:GRAPH_PORT_ROW_HEIGHT,flexDirection:"row",alignItems:"center",justifyContent:"flex-end",gap:6,paddingRight:2}}>
-       <Text numberOfLines={1} {...{className:portLabel}} style={{fontSize:11}}>{p.label}</Text>
+       style={{height:GRAPH_PORT_ROW_HEIGHT,flexDirection:"row",alignItems:"center",justifyContent:"flex-end",gap:tokens.spacing.off6,paddingRight:tokens.spacing.off2}}>
+       <Text numberOfLines={1} {...{className:portLabel}} style={{fontSize:tokens.text.off11}}>{p.label}</Text>
        {portRing}
      </Pressable>)}
     </View>

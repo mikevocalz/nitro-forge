@@ -7,6 +7,7 @@ import {LevelMeter} from './LevelMeter.tsx';
 import {createPeakHold,type PeakHoldOptions} from './meter-ballistics.ts';
 import {formatDb} from './level.ts';
 import {controlIdentity} from '../inputs/useScopedControl.ts';
+import { tokens } from '../tokens.ts';
 export interface RealtimePeakMeasurement {timeMs:number;samplePeak:number;truePeak?:number;rms?:number}
 export interface RealtimePeakMeterProps extends Omit<ViewProps,'children'>,PeakHoldOptions {
  scope?:string;revision?:string|number;measurement:RealtimePeakMeasurement|null;
@@ -26,8 +27,8 @@ export function RealtimePeakMeter({scope='realtime-meter',revision=0,measurement
   store.setState(current.meter(fresh?peak:0,clockMs));
  },[owner,measurement?.timeMs,peak,clockMs,s.reset]);
  const clipping=measurement!==null&&(measurement.samplePeak>=1||(measurement.truePeak??0)>=1);
- return <View {...props} style={[{gap:8,minWidth:0},style]} accessibilityLabel={mode==='true'?'True peak meter':'Sample peak meter'}>
-  {peak===undefined?<Text {...{className:unstyled?undefined:'text-text'}}>{measurement===null?'No meter measurement':'True peak measurement not reported'}</Text>:<View style={orientation==='vertical'?{height:length,width:44,alignItems:'center'}:{height:16,width:'100%'}}><LevelMeter level={s.level} peakHold={s.hold} orientation={orientation} unstyled={unstyled} accessibilityLabel={mode==='true'?'Measured true peak':'Measured sample peak'}/></View>}
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement,minWidth:0},style]} accessibilityLabel={mode==='true'?'True peak meter':'Sample peak meter'}>
+  {peak===undefined?<Text {...{className:unstyled?undefined:'text-text'}}>{measurement===null?'No meter measurement':'True peak measurement not reported'}</Text>:<View style={orientation==='vertical'?{height:length,width:tokens.spacing.fixedTarget,alignItems:'center'}:{height:tokens.spacing.fixedGroup,width:'100%'}}><LevelMeter level={s.level} peakHold={s.hold} orientation={orientation} unstyled={unstyled} accessibilityLabel={mode==='true'?'Measured true peak':'Measured sample peak'}/></View>}
   <Text {...{className:unstyled?undefined:'text-text'}}>{peak===undefined?'Not reported':formatDb(peak)+'FS'}{clipping?'; clipping':''}; RMS {measurement?.rms===undefined?'not reported':measurement.rms.toFixed(4)}</Text>
   <Button title="Reset visual peak hold" variant="ghost" unstyled={unstyled} onPress={()=>{engine.current=null;store.setState(v=>({reset:v.reset+1}));}}/>
  </View>;

@@ -420,6 +420,77 @@
       "property": "size",
       "value": "14",
       "reason": "ForgeIcon size 14: no icon size token has this value (tokens.size holds 12, 16, 20, 24, 28, 32, 48). Minting an off-scale icon size token is a design call (decision 13)."
+    },
+    {
+      "file": "packages/editor-controls/src/inputs/InstrumentKnob.tsx",
+      "kind": "number",
+      "property": "height",
+      "value": "0.28",
+      "reason": "Knob pointer length as a proportion of the knob size (size * 0.28). Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/office/office-controls.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "0.85",
+      "reason": "Play glyph width as a proportion of its size (size * 0.85). Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/office/office-controls.tsx",
+      "kind": "number",
+      "property": "gap",
+      "value": "0.28",
+      "reason": "Gap between the pause bars as a proportion of the glyph size (size * 0.28). Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/office/office-controls.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "0.3",
+      "count": 2,
+      "reason": "Pause bar width as a proportion of the glyph size (size * 0.3). Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/timeline/glyphs.tsx",
+      "kind": "number",
+      "property": "borderLeftWidth",
+      "value": "0.85",
+      "reason": "Play-triangle depth as a proportion of the glyph size (size * 0.85); the border draws the triangle. Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/timeline/glyphs.tsx",
+      "kind": "number",
+      "property": "borderRightWidth",
+      "value": "0.85",
+      "reason": "Reverse-triangle depth as a proportion of the glyph size (size * 0.85); the border draws the triangle. Glyph geometry, outside the token scale."
+    },
+    {
+      "file": "packages/editor-controls/src/photo/photo-export.ts",
+      "kind": "number",
+      "property": "opacity",
+      "value": ".7",
+      "reason": "Default watermark opacity in the photo export settings: document data for the exporter, not a view style."
+    },
+    {
+      "file": "packages/editor-controls/src/photo/photo-export.ts",
+      "kind": "number",
+      "property": "fontSize",
+      "value": "24",
+      "reason": "Default watermark text size in the photo export settings: document data for the exporter, not a view style."
+    },
+    {
+      "file": "packages/editor-controls/src/slides/slide-model.ts",
+      "kind": "number",
+      "property": "width",
+      "value": "960",
+      "reason": "Default slide width of the slide document model (960 x 540): document data, not a view style."
+    },
+    {
+      "file": "packages/editor-controls/src/slides/slide-model.ts",
+      "kind": "number",
+      "property": "height",
+      "value": "540",
+      "reason": "Default slide height of the slide document model (960 x 540): document data, not a view style."
     }
   ]
 }

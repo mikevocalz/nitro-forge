@@ -30,6 +30,7 @@ import {
 import { MidiValueStepper } from "./MidiChannelPicker.tsx";
 import type { MIDIPianoRoll } from "./MIDIPianoRoll.tsx";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 const HIT = 44;
 const BAR = 8;
@@ -211,29 +212,29 @@ function MIDIVelocityLaneBody({actionError,disabledReason,retained,
     styled && (on ? "bg-primary" : "bg-transparent"));
   const segmentText = (on: boolean) => joinClasses(styled && "font-semibold", styled && (on ? "text-on-primary" : "text-text"));
 
-  const toolbar = batch ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 12, rowGap: 8, padding: 8 }}
+  const toolbar = batch ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: tokens.spacing.fixedInset, rowGap: tokens.spacing.fixedElement, padding: tokens.spacing.fixedElement }}
     {...{ className: joinClasses(styled && "border-b border-border") }}>
     <View accessibilityRole="radiogroup" accessibilityLabel="Velocity tool"
       {...{ className: joinClasses(styled && "rounded-control border border-border bg-surface-sunken") }}
-      style={{ flexDirection: "row", padding: 2, gap: 2, opacity: disabled ? 0.45 : 1 }}>
+      style={{ flexDirection: "row", padding: tokens.spacing.off2, gap: tokens.spacing.off2, opacity: disabled ? tokens.opacity.disabled : 1 }}>
       {(["bars", "line"] as const).map(t => <Pressable key={t} accessibilityRole="radio"
         accessibilityLabel={t === "bars" ? "Bars" : "Line"}
         accessibilityHint={t === "bars" ? "Drag one bar at a time" : "Drag across the lane to draw a straight line"}
         accessibilityState={{ checked: activeTool === t, disabled }} disabled={disabled} onPress={() => pickTool(t)}
-        {...{ className: segment(activeTool === t) }} style={{ minWidth: HIT + 16, minHeight: HIT, paddingHorizontal: 12 }}>
+        {...{ className: segment(activeTool === t) }} style={{ minWidth: HIT + tokens.spacing.fixedGroup, minHeight: HIT, paddingHorizontal: tokens.spacing.fixedInset }}>
         <Text {...{ className: segmentText(activeTool === t) }}>{t === "bars" ? "Bars" : "Line"}</Text>
       </Pressable>)}
     </View>
     {activeTool === "line" ? (selected !== undefined && room >= 2
       ? <View {...{role:"group"}} accessibilityLabel={`Ramp from ${pitchName(notes[selected]!.pitch)} note ${selected + 1}`}
-          style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 12, rowGap: 8, flexShrink: 1, maxWidth: "100%" }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: tokens.spacing.fixedInset, rowGap: tokens.spacing.fixedElement, flexShrink: 1, maxWidth: "100%" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.off6 }}>
             <Text aria-hidden {...{ className: muted }}>Notes</Text>
             <MidiValueStepper value={count} min={2} max={room} label="Ramp length in notes" pageStep={4}
               valueText={v => `${v} notes`} disabled={disabled} unstyled={unstyled}
               onValueCommit={v => store.setState({ rampCount: v })} />
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.off6 }}>
             <Text aria-hidden {...{ className: muted }}>End</Text>
             <MidiValueStepper value={clampVelocity(rampEnd)} min={0} max={127} step={step} pageStep={16}
               label="Ramp end velocity" valueText={v => `velocity ${v}`} disabled={disabled} unstyled={unstyled}
@@ -243,7 +244,7 @@ function MIDIVelocityLaneBody({actionError,disabledReason,retained,
             accessibilityHint={`Sets ${count} velocities from ${notes[selected]!.velocity} to ${clampVelocity(rampEnd)}`}
             disabled={disabled || rampChanges.length === 0} onPress={() => commitBatch(rampChanges)}
             {...{ className: joinClasses(styled && "rounded-control items-center justify-center border border-primary focus-visible:ring-2 focus-visible:ring-focus active:opacity-80") }}
-            style={{ minWidth: HIT, minHeight: HIT, paddingHorizontal: 14, opacity: disabled || rampChanges.length === 0 ? 0.45 : 1 }}>
+            style={{ minWidth: HIT, minHeight: HIT, paddingHorizontal: tokens.spacing.off14, opacity: disabled || rampChanges.length === 0 ? tokens.opacity.disabled : 1 }}>
             <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>Ramp</Text>
           </Pressable>
         </View>
@@ -256,14 +257,14 @@ function MIDIVelocityLaneBody({actionError,disabledReason,retained,
 
   const content = <View style={{ width, height, direction: "ltr" }}>
     {notes.length === 0 ? null : [0.25, 0.5, 0.75].map(f => <View key={f} pointerEvents="none" {...{ className: joinClasses(styled && "bg-border") }}
-      style={{ position: "absolute", left: 0, right: 0, top: height * (1 - f), height: 1 }} />)}
+      style={{ position: "absolute", left: 0, right: 0, top: height * (tokens.borderWidth.hairline - f), height: tokens.borderWidth.hairline }} />)}
     {notes.map((note, index) => <VelocityBar key={index} index={index} note={note} x={note.startTicks * pixelsPerTick}
       laneHeight={height} step={step} selected={index === selectedIndex} disabled={disabled} styled={styled}
       locked={activeTool === "line"} preview={preview.get(index)}
       onSelect={onSelect} onCommit={onVelocityCommit} />)}
   </View>;
   const empty = notes.length === 0
-    ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 8 }}>
+    ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: tokens.spacing.fixedElement }}>
         <Text {...{ className: muted }} style={{ textAlign: "center" }}>No notes yet. Add notes in the piano roll to set their velocity.</Text>
       </View>
     : null;
@@ -275,7 +276,7 @@ function MIDIVelocityLaneBody({actionError,disabledReason,retained,
     {toolbar}
     <View style={{ flexDirection: "row", direction: "ltr" }}>
       <View style={{ width: inset, justifyContent: "center" }}>
-        {inset >= 40 ? <Text {...{ className: muted }} style={{ paddingHorizontal: 6 }}>Vel</Text> : null}
+        {inset >= 40 ? <Text {...{ className: muted }} style={{ paddingHorizontal: tokens.spacing.off6 }}>Vel</Text> : null}
       </View>
       <View style={{ flex: 1, height, overflow: "hidden" }}>
         {scrollX === undefined
@@ -288,11 +289,11 @@ function MIDIVelocityLaneBody({actionError,disabledReason,retained,
               style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...webDraw }}>
               {segmentView ? <>
                 <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-primary") }}
-                  style={{ position: "absolute", left: segmentView.centerX - segmentView.length / 2, top: segmentView.centerY - 1,
-                    width: segmentView.length, height: 2, borderRadius: forgeHairlineRadius.tick, transform: [{ rotate: `${segmentView.angleDeg}deg` }] }} />
+                  style={{ position: "absolute", left: segmentView.centerX - segmentView.length / 2, top: segmentView.centerY - tokens.borderWidth.hairline,
+                    width: segmentView.length, height: tokens.spacing.off2, borderRadius: forgeHairlineRadius.tick, transform: [{ rotate: `${segmentView.angleDeg}deg` }] }} />
                 {[line!.start, line!.end].map((p, i) => <View key={i} pointerEvents="none"
                   {...{ className: joinClasses(styled && "bg-primary border-2 border-surface-raised") }}
-                  style={{ position: "absolute", left: p.x - 5, top: p.y - 5, width: 10, height: 10, borderRadius: forgeRadius.sm }} />)}
+                  style={{ position: "absolute", left: p.x - tokens.spacing.off5, top: p.y - tokens.spacing.off5, width: tokens.spacing.off10, height: tokens.spacing.off10, borderRadius: forgeRadius.sm }} />)}
               </> : null}
             </View>
           : null}
@@ -394,11 +395,11 @@ function VelocityBar({ index, note, x, laneHeight, step, selected, disabled, sty
     onFocus={() => onSelect?.(index)}
     {...{ className: joinClasses(styled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus") }}
     style={{ position: "absolute", left: x - (HIT - BAR) / 2, top: 0, width: HIT, height: laneHeight,
-      opacity: disabled ? 0.45 : 1, ...webStyle }}>
+      opacity: disabled ? tokens.opacity.disabled : 1, ...webStyle }}>
     <View pointerEvents="none" {...{ className: joinClasses(styled && (lit ? "bg-primary" : "bg-accent")) }}
       style={{ position: "absolute", left: (HIT - BAR) / 2, width: BAR, bottom: 0, height: Math.max(2, h), borderRadius: forgeHairlineRadius.tick }} />
     <View pointerEvents="none" {...{ className: joinClasses(styled && (lit ? "bg-primary" : "bg-accent")) }}
-      style={{ position: "absolute", left: (HIT - BAR) / 2 - 3, width: BAR + 6, height: 4, borderRadius: forgeHairlineRadius.tick, bottom: Math.max(2, h) - 2 }} />
+      style={{ position: "absolute", left: (HIT - BAR) / 2 - tokens.spacing.off3, width: BAR + tokens.spacing.off6, height: tokens.spacing.fixedStack, borderRadius: forgeHairlineRadius.tick, bottom: Math.max(2, h) - tokens.spacing.off2 }} />
   </View>;
 }
 

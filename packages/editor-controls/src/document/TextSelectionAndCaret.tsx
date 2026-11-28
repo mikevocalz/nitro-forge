@@ -5,6 +5,7 @@ import {useStore} from 'zustand';
 import {PropertyInspector} from '../inputs/PropertyInspector.tsx';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import { tokens } from '../tokens.ts';
 export interface DocumentTextSelection {start:number;end:number}
 export interface TextSelectionAndCaretProps extends ScopedControlProps {
  /** Native buffer seed. Change contentRevision to replace external content intentionally. */
@@ -27,12 +28,12 @@ function NativeTextEditor({scope='native-text',revision=0,initialText,selection,
  const props={onTextChange,onSelectionChange,onContentSizeChange,onFocus,onBlur,readOnly},guard=useScopedControl(scope,props,disabledReason!==undefined),off=readOnly||disabledReason!==undefined;
  const start=Math.min(selection.start,length),end=Math.min(Math.max(start,selection.end),length);
  const changeSelection=(next:DocumentTextSelection)=>{if(disabledReason===undefined&&next.start>=0&&next.end>=next.start&&next.end<=store.getState().text.length)guard.current()?.onSelectionChange(next);};
- return <View style={{gap:8,minWidth:0}} accessibilityLabel={label+' editor'}>
+ return <View style={{gap:tokens.spacing.fixedElement,minWidth:0}} accessibilityLabel={label+' editor'}>
   <TextInput {...nativeInputProps} ref={node=>{ref.current=node;if(typeof editorRef==='function')editorRef(node);else if(editorRef)editorRef.current=node;}} accessibilityLabel={label} defaultValue={initialText} multiline editable={!off} selection={{start,end}} textAlignVertical="top"
    onChangeText={text=>{const h=guard.current();if(!h||h.readOnly||text.length>1048576)return;store.setState({text});h.onTextChange(text);}}
    onSelectionChange={e=>changeSelection(e.nativeEvent.selection)} onFocus={()=>guard.current()?.onFocus?.()} onBlur={()=>guard.current()?.onBlur?.()}
    onContentSizeChange={e=>guard.current()?.onContentSizeChange?.(e.nativeEvent.contentSize)}
-   style={[{minHeight:44,padding:8,writingDirection:direction==='auto'?undefined:direction},inputStyle]} {...{className:unstyled?undefined:'text-text'}}/>
+   style={[{minHeight:tokens.spacing.fixedTarget,padding:tokens.spacing.fixedElement,writingDirection:direction==='auto'?undefined:direction},inputStyle]} {...{className:unstyled?undefined:'text-text'}}/>
   {showSelectionFields&&length>0?<PropertyInspector scope={scope} label="Text selection" unstyled={unstyled} disabledReason={disabledReason} fields={[{kind:'number',id:'start',label:'Selection start (UTF-16)',value:start,min:0,max:length,step:1,integer:true},{kind:'number',id:'end',label:'Selection end (UTF-16)',value:end,min:0,max:length,step:1,integer:true}]} onCommit={(id,value)=>{if(typeof value!=='number')return;if(id==='start')changeSelection({start:value,end:Math.max(value,end)});else changeSelection({start:Math.min(start,value),end:value});ref.current?.focus();}}/>:null}
   {disabledReason?<Text {...{className:unstyled?undefined:'text-text-muted'}}>{disabledReason}</Text>:null}
  </View>;

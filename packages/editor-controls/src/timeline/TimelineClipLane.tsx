@@ -25,6 +25,7 @@ import {
 import {positionToSeconds} from "./time.ts";
 import {frameToX,scrollBy,visibleRange,zoomAt,type TimelineViewport} from "./viewport.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /**
  * What a press or drag on a clip does. `razor` splits at the pressed frame
@@ -224,7 +225,7 @@ function ClipView(p:ClipViewProps){
   const marked=selected||inSet;
   return <>
     {mine?.snappedTo!==undefined?<View pointerEvents="none" {...{className:joinClasses(styled&&"bg-focus")}}
-      style={{position:"absolute",left:frameToX(viewport,mine.snappedTo)-0.5,top:0,bottom:0,width:1,zIndex:3}}/>:null}
+      style={{position:"absolute",left:frameToX(viewport,mine.snappedTo)-(tokens.borderWidth.hairline / 2),top:0,bottom:0,width:tokens.borderWidth.hairline,zIndex:controlTokens.layer.guide}}/>:null}
     <View {...handlers}
       {...{onKeyDown,focusable:!disabled,className:joinClasses(
         styled&&"rounded-control bg-surface-raised focus-visible:ring-2 focus-visible:ring-focus",
@@ -247,26 +248,26 @@ function ClipView(p:ClipViewProps){
         else if(a==="split")split();
         else if(a==="toggleSelect")p.onToggleSelect?.(clip.id);
       }}
-      style={{position:"absolute",left,top:4,width,height,zIndex:selected?2:1,overflow:"visible",...NO_SELECT}}>
-      <View pointerEvents="none" style={{flex:1,overflow:"hidden",paddingHorizontal:6,paddingVertical:4,gap:2}}>
-        <View style={{flexDirection:"row",justifyContent:"space-between",gap:6}}>
+      style={{position:"absolute",left,top:tokens.spacing.fixedStack,width,height,zIndex:selected?controlTokens.layer.lifted:controlTokens.layer.resting,overflow:"visible",...NO_SELECT}}>
+      <View pointerEvents="none" style={{flex:1,overflow:"hidden",paddingHorizontal:tokens.spacing.off6,paddingVertical:tokens.spacing.fixedStack,gap:tokens.spacing.off2}}>
+        <View style={{flexDirection:"row",justifyContent:"space-between",gap:tokens.spacing.off6}}>
           <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text text-xs font-semibold")}} style={{flexShrink:1}}>{name}</Text>
           {selected&&width>96?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}} style={{fontVariant:["tabular-nums"]}}>{seconds.toFixed(1)+" s"}</Text>:null}
         </View>
         {invalid?<Text {...{className:joinClasses(styled&&"text-danger text-xs")}} numberOfLines={1}>{mine?.problem??"Overlaps another clip"}</Text>
-          :p.renderClipContent?.(clip,track,{width,height:height-24})??null}
+          :p.renderClipContent?.(clip,track,{width,height:height-tokens.spacing.fixedSection})??null}
       </View>
     </View>
     {/* Siblings, not children: an accessible clip hides its children from
         VoiceOver and TalkBack, so the adjustable edges sit beside it. */}
-    {selected&&!locked&&tool==="select"?<View pointerEvents="box-none" style={{position:"absolute",left,top:4,width,height,zIndex:3}}>
+    {selected&&!locked&&tool==="select"?<View pointerEvents="box-none" style={{position:"absolute",left,top:tokens.spacing.fixedStack,width,height,zIndex:controlTokens.layer.guide}}>
       <ClipTrimHandles clip={clip} track={track} rate={rate} pxPerFrame={viewport.pxPerFrame} height={height}
         snapTargets={snapping?snapTargets(p.tracks,clip.id,[playheadFrame]):[]} snapThreshold={threshold}
         dropFrame={dropFrame} disabled={disabled} unstyled={!styled}
         onPreview={(_,preview)=>drag.set(preview?{clipId:clip.id,clips:{[clip.id]:preview},valid:preview.valid,
           ...(preview.snappedTo===undefined?{}:{snappedTo:preview.snappedTo})}:undefined)} onEdit={p.onEdit}/>
     </View>:null}
-    {selected&&!locked&&(tool==="roll"||tool==="ripple")?<View pointerEvents="box-none" style={{position:"absolute",left,top:4,width,height,zIndex:3}}>
+    {selected&&!locked&&(tool==="roll"||tool==="ripple")?<View pointerEvents="box-none" style={{position:"absolute",left,top:tokens.spacing.fixedStack,width,height,zIndex:controlTokens.layer.guide}}>
       <ModeEdgeHandles mode={tool} clip={clip} track={track} tracks={p.tracks} rate={rate} pxPerFrame={viewport.pxPerFrame}
         height={height} scope={p.rippleScope} disabled={disabled} unstyled={!styled}
         onPreview={preview=>drag.set(preview?fromTrimMode(clip.id,preview):undefined)} onEdit={p.onEdit}/>
@@ -372,7 +373,7 @@ function TimelineClipLaneBody({
         accessibilityLabel={track.label+(track.locked?", locked":"")+(silenced?", "+(track.kind==="audio"?"silent":"hidden"):"")}
         style={{height:laneHeight,overflow:"hidden",...NO_SELECT}}>
         <Text pointerEvents="none" numberOfLines={1} {...{className:joinClasses(styled&&"text-text-muted text-xs")}}
-          style={{position:"absolute",left:6,bottom:2,zIndex:0}}>{track.label+(track.locked?" (locked)":"")}</Text>
+          style={{position:"absolute",left:tokens.spacing.off6,bottom:tokens.spacing.off2,zIndex:0}}>{track.label+(track.locked?" (locked)":"")}</Text>
         <View pointerEvents="box-none" {...{className:joinClasses(styled&&silenced&&"opacity-50")}} style={{position:"absolute",left:0,top:0,right:0,bottom:0}}>
           {clips.map(clip=><ClipView key={clip.id} clip={clip} track={track} tracks={tracks} viewport={viewport} rate={rate}
             laneHeight={laneHeight} selected={clip.id===selectedClipId} inSet={inSet.has(clip.id)} tool={tool} playheadFrame={playheadFrame}
@@ -383,10 +384,10 @@ function TimelineClipLaneBody({
         {ghost?<>
           {foreign?<View pointerEvents="none"
             {...{className:joinClasses(styled&&"rounded-control border-2",styled&&(dragState?.valid?"border-focus":"border-danger"))}}
-            style={{position:"absolute",left:frameToX(viewport,ghost.target.startFrame),top:4,height:laneHeight-8,
-              width:Math.max(2,clipLength(ghost.clip)*viewport.pxPerFrame),borderStyle:"dashed",zIndex:4}}/>:null}
+            style={{position:"absolute",left:frameToX(viewport,ghost.target.startFrame),top:tokens.spacing.fixedStack,height:laneHeight-tokens.spacing.fixedElement,
+              width:Math.max(2,clipLength(ghost.clip)*viewport.pxPerFrame),borderStyle:"dashed",zIndex:controlTokens.layer.ghost}}/>:null}
           {ghost.target.insert?<View pointerEvents="none" {...{className:joinClasses(styled&&"bg-focus")}}
-            style={{position:"absolute",left:frameToX(viewport,ghost.target.startFrame)-1,top:0,bottom:0,width:3,zIndex:5}}/>:null}
+            style={{position:"absolute",left:frameToX(viewport,ghost.target.startFrame)-tokens.borderWidth.hairline,top:0,bottom:0,width:tokens.spacing.off3,zIndex:controlTokens.layer.indicator}}/>:null}
         </>:null}
       </View>;
     })}

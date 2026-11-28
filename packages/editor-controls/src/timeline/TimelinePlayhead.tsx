@@ -9,6 +9,7 @@ import {frameForKey} from "./frame-keys.ts";
 import {frameToX,xToFrame,type TimelineViewport} from "./viewport.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode TimelinePlayhead}. */
 export interface TimelinePlayheadProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -74,7 +75,7 @@ function TimelinePlayheadBody({
     style={[{position:"absolute",left:0,top:0,width:viewport.widthPx,height,direction:"ltr"},style]}>
     <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {inView?<View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}}
-      style={{position:"absolute",left:x-1,top:0,width:2,height}}/>:null}
+      style={{position:"absolute",left:x-tokens.borderWidth.hairline,top:0,width:tokens.spacing.off2,height}}/>:null}
     <View {...scrub.handlers}
       {...{onKeyDown,focusable:!disabled,className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
       accessible accessibilityRole="adjustable" accessibilityLabel="Playhead"
@@ -83,9 +84,9 @@ function TimelinePlayheadBody({
       aria-disabled={disabled}
       accessibilityActions={[{name:"increment",label:"Next frame"},{name:"decrement",label:"Previous frame"}]}
       onAccessibilityAction={e=>{if(e.nativeEvent.actionName==="increment")step(1);if(e.nativeEvent.actionName==="decrement")step(-1);}}
-      style={{position:"absolute",left:scrub.active?shownHead:headLeft,top:0,width:HIT,height:HIT,alignItems:"center",opacity:inView?1:0.6,...NO_SELECT}}>
+      style={{position:"absolute",left:scrub.active?shownHead:headLeft,top:0,width:HIT,height:HIT,alignItems:"center",opacity:inView?1:controlTokens.opacity.muted,...NO_SELECT}}>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}}
-        style={{marginTop:4,width:14,height:18,borderRadius:forgeRadius.sm}}/>
+        style={{marginTop:tokens.spacing.fixedStack,width:tokens.spacing.off14,height:tokens.spacing.off18,borderRadius:forgeRadius.sm}}/>
     </View>
   </View>;
 }

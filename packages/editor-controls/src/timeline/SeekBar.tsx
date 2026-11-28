@@ -10,6 +10,7 @@ import type {FrameRange} from "./viewport.ts";
 import {frameForKey} from "./frame-keys.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode SeekBar}. */
 export interface SeekBarProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -83,9 +84,9 @@ function SeekBarBody({
       aria-valuetext={`${tc(scrub.shown)} of ${tc(durationFrames)}`} aria-disabled={off}
       accessibilityActions={[{name:"increment",label:"Next frame"},{name:"decrement",label:"Previous frame"}]}
       onAccessibilityAction={e=>{if(e.nativeEvent.actionName==="increment")step(1);if(e.nativeEvent.actionName==="decrement")step(-1);}}
-      style={{height:44,justifyContent:"center",direction:"ltr",opacity:off?0.45:1,...NO_SELECT}}>
+      style={{height:tokens.spacing.fixedTarget,justifyContent:"center",direction:"ltr",opacity:off?tokens.opacity.disabled:1,...NO_SELECT}}>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"rounded-control bg-surface-sunken border border-border")}}
-        style={{position:"absolute",left:THUMB/2,right:THUMB/2,height:8,overflow:"hidden"}}>
+        style={{position:"absolute",left:THUMB/2,right:THUMB/2,height:tokens.spacing.fixedElement,overflow:"hidden"}}>
         {buffered.map((r,i)=><View key={i} {...{className:joinClasses(styled&&"bg-border")}}
           style={{position:"absolute",top:0,bottom:0,left:`${pos(Math.max(0,r.start))*100}%`,
             width:`${Math.max(0,pos(Math.min(durationFrames,r.end))-pos(Math.max(0,r.start)))*100}%`}}/>)}

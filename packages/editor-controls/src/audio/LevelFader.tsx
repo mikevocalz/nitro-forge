@@ -18,6 +18,7 @@ import {
   type FaderRange,
 } from "./level.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Visual thickness of the thumb along the travel axis, in points. */
 const THUMB = 16;
@@ -210,22 +211,22 @@ function LevelFaderBody({
     ? { width: HIT, height: length }
     : { width: length, height: HIT };
   const railStyle = vertical
-    ? { position: "absolute" as const, top: THUMB / 2, bottom: THUMB / 2, width: 6, left: (HIT - 6) / 2, borderRadius: forgeHairlineRadius.tick }
-    : { position: "absolute" as const, start: THUMB / 2, end: THUMB / 2, height: 6, top: (HIT - 6) / 2, borderRadius: forgeHairlineRadius.tick };
+    ? { position: "absolute" as const, top: THUMB / 2, bottom: THUMB / 2, width: tokens.spacing.off6, left: (HIT - tokens.spacing.off6) / 2, borderRadius: forgeHairlineRadius.tick }
+    : { position: "absolute" as const, start: THUMB / 2, end: THUMB / 2, height: tokens.spacing.off6, top: (HIT - tokens.spacing.off6) / 2, borderRadius: forgeHairlineRadius.tick };
   const fillStyle = vertical
-    ? { position: "absolute" as const, bottom: THUMB / 2, height: offset, width: 6, left: (HIT - 6) / 2, borderRadius: forgeHairlineRadius.tick }
-    : { position: "absolute" as const, start: THUMB / 2, width: offset, height: 6, top: (HIT - 6) / 2, borderRadius: forgeHairlineRadius.tick };
+    ? { position: "absolute" as const, bottom: THUMB / 2, height: offset, width: tokens.spacing.off6, left: (HIT - tokens.spacing.off6) / 2, borderRadius: forgeHairlineRadius.tick }
+    : { position: "absolute" as const, start: THUMB / 2, width: offset, height: tokens.spacing.off6, top: (HIT - tokens.spacing.off6) / 2, borderRadius: forgeHairlineRadius.tick };
   const thumbStyle = vertical
-    ? { position: "absolute" as const, bottom: offset, left: 4, width: HIT - 8, height: THUMB, borderRadius: forgeRadius.sm, borderWidth: 2 }
-    : { position: "absolute" as const, start: offset, top: 4, width: THUMB, height: HIT - 8, borderRadius: forgeRadius.sm, borderWidth: 2 };
+    ? { position: "absolute" as const, bottom: offset, left: tokens.spacing.fixedStack, width: HIT - tokens.spacing.fixedElement, height: THUMB, borderRadius: forgeRadius.sm, borderWidth: tokens.borderWidth.strong }
+    : { position: "absolute" as const, start: offset, top: tokens.spacing.fixedStack, width: THUMB, height: HIT - tokens.spacing.fixedElement, borderRadius: forgeRadius.sm, borderWidth: tokens.borderWidth.strong };
   const text = joinClasses(styled && "text-text");
-  const stepButton = { minWidth: HIT, minHeight: HIT, justifyContent: "center" as const, alignItems: "center" as const, opacity: disabled ? 0.45 : 1 };
+  const stepButton = { minWidth: HIT, minHeight: HIT, justifyContent: "center" as const, alignItems: "center" as const, opacity: disabled ? tokens.opacity.disabled : 1 };
   const stepClass = joinClasses(styled && "rounded-control border border-border bg-surface-sunken active:opacity-80 focus-visible:ring-2 focus-visible:ring-focus");
   // Unity (0 dB) mark for ranges with headroom; on UNITY it is the top stop.
   const unity = range.maxDb > 0 ? gainToPosition(1, range) * travel + THUMB / 2 : undefined;
   const unityStyle = unity === undefined ? undefined : vertical
-    ? { position: "absolute" as const, bottom: unity - 1, height: 2, left: (HIT - 18) / 2, width: 18 }
-    : { position: "absolute" as const, start: unity - 1, width: 2, top: (HIT - 18) / 2, height: 18 };
+    ? { position: "absolute" as const, bottom: unity - tokens.borderWidth.hairline, height: tokens.spacing.off2, left: (HIT - tokens.spacing.off18) / 2, width: tokens.spacing.off18 }
+    : { position: "absolute" as const, start: unity - 1, width: tokens.spacing.off2, top: (HIT - tokens.spacing.off18) / 2, height: tokens.spacing.off18 };
   // Web only: the browser keeps the cross axis for page or mixer scrolling.
   // `touchAction` is a react-native-web style key, absent from RN's ViewStyle.
   const webTrack = Platform.OS === "web"
@@ -255,7 +256,7 @@ function LevelFaderBody({
       }}
       onKeyDown={onKeyDown}
       {...{ className: joinClasses(styled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus") }}
-      style={{ ...trackStyle, ...webTrack, opacity: disabled ? 0.45 : 1 }}>
+      style={{ ...trackStyle, ...webTrack, opacity: disabled ? tokens.opacity.disabled : 1 }}>
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-surface-sunken") }} style={railStyle} />
       {unityStyle ? <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-text-muted") }} style={unityStyle} /> : null}
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-accent") }} style={fillStyle} />
@@ -265,7 +266,7 @@ function LevelFaderBody({
     </View>
     <Text {...{ className: joinClasses(styled && "text-text-muted") }}
       style={{ fontVariant: ["tabular-nums"] }}>{readout}</Text>
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.off6 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={labels?.lower?.(label,stepDb)??`Lower ${label} by ${stepDb} dB`}
         disabled={disabled} onPress={() => nudge(-1)} {...{ className: stepClass }} style={stepButton}>
         <Text {...{ className: text }}>−</Text>

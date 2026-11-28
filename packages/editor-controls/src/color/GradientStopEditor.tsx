@@ -11,6 +11,7 @@ import { rgbToHsv,hsvToRgb } from "../color.ts";
 import {validateGradientOptions,sampleGradient,changeGradientType,rotateGradient,type GradientOptions} from "./gradient-options.ts";
 import { addStop,moveStop,removeStop,validateGradient,addStopAvailability,removeStopAvailability } from "../vector/gradient-handles-model.ts";
 import type { GradientPaint } from "../vector/vector-types.ts";
+import { tokens } from "../tokens.ts";
 /** Gradient stop selection and paint commit are owned by the consuming document. */
 export interface GradientStopEditorProps extends Omit<ViewProps,"children"> {
  readonly value:GradientPaint;
@@ -30,7 +31,7 @@ export function GradientStopEditor({value,selectedIndex,options,onSelect,onCommi
  const add=addStopAvailability(value),remove=removeStopAvailability(value,selectedIndex);
  const color={r:stop.color[0],g:stop.color[1],b:stop.color[2],alpha:stop.color[3]/255};
  const commit=(paint:GradientPaint,index=selectedIndex,nextOptions=options)=>{validateGradientOptions(paint,nextOptions);onCommit(paint,index,nextOptions);};
- return <View {...props} style={[{gap:8},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
   <Select label="Gradient type" value={value.type} options={[{value:'linear',label:'Linear'},{value:'radial',label:'Radial'}]} disabled={disabled} unstyled={unstyled} onValueChange={type=>{if(!disabled)commit(changeGradientType(value,type as GradientPaint['type']));}}/>
   {value.type==='linear'?<UnitInput label="Gradient angle degrees" value={Math.atan2(value.y1-value.y0,value.x1-value.x0)*180/Math.PI} min={-180} max={180} step={1} precision={3} disabled={disabled} unstyled={unstyled} onCommit={degrees=>{if(!disabled)commit(rotateGradient(value,degrees));}}/>:null}
   <Select label="Gradient interpolation" value={options.interpolation} options={[{value:'srgb',label:'sRGB'},{value:'linear-rgb',label:'Linear-light RGB'}]} disabled={disabled} unstyled={unstyled} onValueChange={interpolation=>{if(!disabled)commit(value,selectedIndex,{...options,interpolation:interpolation as GradientOptions['interpolation']});}}/>
@@ -40,7 +41,7 @@ export function GradientStopEditor({value,selectedIndex,options,onSelect,onCommi
   <ColorChannelFields value={rgbToHsv(color)} model={model} onModelChange={model=>store.setState({model})} disabled={disabled} unstyled={unstyled} onCommit={next=>{
     if(disabled)return;const c=hsvToRgb(next);commit({...value,stops:value.stops.map((item,index)=>index===selectedIndex?{...item,color:[c.r,c.g,c.b,Math.round(c.alpha*255)]}:item)},selectedIndex);
   }}/>
-  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+  <View style={{flexDirection:'row',flexWrap:'wrap',gap:tokens.spacing.fixedElement}}>
    <Button title="Add gradient stop" disabled={disabled||!add.enabled} unstyled={unstyled} onPress={()=>{if(disabled||!add.enabled)return;const next=addStop(value,(stop.offset+(value.stops[selectedIndex+1]?.offset??1))/2);const offset=next.paint.stops[next.index]!.offset,color=sampleGradient(value,options,offset);
     const paint={...next.paint,stops:next.paint.stops.map((s,i)=>i===next.index?{...s,color}:s)};
     const interval=Math.min(options.midpoints.length-1,Math.max(0,next.index-1));

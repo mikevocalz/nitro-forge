@@ -4,6 +4,7 @@ import {Select} from '@nyc-tron/ui/components/Select';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {exact} from '../exact-optional.ts';
 import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
+import { tokens } from '../tokens.ts';
 export interface VideoExportOutput {width:number;height:number;codecId:string}
 export interface VideoExportCodec {id:string;label:string;maxWidth:number;maxHeight:number;widthMultiple:number;heightMultiple:number;unavailableReason?:string}
 export interface ExportMonitorProps extends Omit<RenderQueuePanelProps,'onEnqueue'> {
@@ -17,7 +18,7 @@ export function ExportMonitor({revision=0,output,codecs,onOutputChange:_output,o
  const reasonFor=(candidate:VideoExportOutput,choices:readonly VideoExportCodec[])=>{const codec=choices.find(c=>c.id===candidate.codecId);return !codec?'Encoder is not available':codec.unavailableReason??(candidate.width>codec.maxWidth||candidate.height>codec.maxHeight?'Resolution exceeds this encoder capability':candidate.width%codec.widthMultiple||candidate.height%codec.heightMultiple?`Encoder dimensions require multiples of ${codec.widthMultiple} × ${codec.heightMultiple}`:undefined);};
  const reason=reasonFor(output,codecs);
  const set=(patch:Partial<VideoExportOutput>)=>{const current=guard.current();if(current)current.onOutputChange({...current.output,...patch});};
- return <View style={{gap:8,minWidth:0}} accessibilityLabel="Video export monitor">
+ return <View style={{gap:tokens.spacing.fixedElement,minWidth:0}} accessibilityLabel="Video export monitor">
   <Select label="Video codec" value={output.codecId} options={codecs.map(c=>({value:c.id,label:c.label,disabled:c.unavailableReason!==undefined}))} {...exact({disabled:props.disabled,unstyled:props.unstyled})} onValueChange={codecId=>set({codecId})}/>
   {(['width','height'] as const).map(key=><PrecisionScrubber key={key} scope={props.scope} revision={revision} label={'Export '+key+' pixels'} value={output[key]} min={1} max={16384} step={1} {...exact({disabled:props.disabled,unstyled:props.unstyled})} onCommit={n=>set({[key]:Math.round(n)})}/>)}
   {reason?<Text {...{className:props.unstyled?undefined:'text-text'}}>{reason}</Text>:null}

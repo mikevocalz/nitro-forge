@@ -20,6 +20,7 @@ import { joinClasses } from "@nyc-tron/ui/components/styles";
 import { useStatusAnnouncement } from "@nyc-tron/ui/components/feedback/announce";
 import { INSERT_KIND_LABELS, filterPresets, type InsertKind, type InsertPreset } from "./inserts.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 const HIT = 44;
 
@@ -106,31 +107,31 @@ function PluginPresetBrowserBody({actionError,disabledReason,
   const checkedVisible = shown.some(p => p.id === currentId);
   let content;
   if (status === "loading") {
-    content = <Text accessibilityLiveRegion="polite" {...{ className: muted }} style={{ paddingVertical: 12 }}>{statusText}…</Text>;
+    content = <Text accessibilityLiveRegion="polite" {...{ className: muted }} style={{ paddingVertical: tokens.spacing.fixedInset }}>{statusText}…</Text>;
   } else if (status === "error") {
-    content = <View style={{ gap: 8, paddingVertical: 8, alignItems: "flex-start" }}>
+    content = <View style={{ gap: tokens.spacing.fixedElement, paddingVertical: tokens.spacing.fixedElement, alignItems: "flex-start" }}>
       <Text accessibilityLiveRegion="polite" {...{ className: body }}>{`${statusText}. The effect keeps its current settings.`}</Text>
       {onRetry ? <Pressable role="button" accessibilityLabel={`Retry loading ${name} presets`} onPress={onRetry}
         {...{ className: joinClasses(styled && "rounded-control border border-border bg-surface-sunken items-center justify-center focus-visible:ring-2 focus-visible:ring-focus active:opacity-80") }}
-        style={{ minHeight: HIT, paddingHorizontal: 16 }}>
+        style={{ minHeight: HIT, paddingHorizontal: tokens.spacing.fixedGroup }}>
         <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>Retry</Text>
       </Pressable> : null}
     </View>;
   } else if (presets.length === 0) {
-    content = <Text {...{ className: muted }} style={{ paddingVertical: 12 }}>{`No presets for ${name} yet.`}</Text>;
+    content = <Text {...{ className: muted }} style={{ paddingVertical: tokens.spacing.fixedInset }}>{`No presets for ${name} yet.`}</Text>;
   } else {
     content = <>
       <TextInput value={query} onChangeText={q => store.setState({ query: q })}
         accessibilityLabel={`Search ${name} presets`} placeholder="Search presets"
         autoCorrect={false} autoCapitalize="none" editable={!disabled} {...{ inputMode: "search" }}
         {...{ className: joinClasses(styled && "rounded-control border border-border bg-surface-sunken text-text placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-focus") }}
-        style={{ minHeight: HIT, paddingHorizontal: 12, fontSize: 16, opacity: disabled ? 0.45 : 1 }} />
+        style={{ minHeight: HIT, paddingHorizontal: tokens.spacing.fixedInset, fontSize: controlTokens.type.input, opacity: disabled ? tokens.opacity.disabled : 1 }} />
       {shown.length === 0
-        ? <View style={{ gap: 8, alignItems: "flex-start", paddingVertical: 4 }}>
+        ? <View style={{ gap: tokens.spacing.fixedElement, alignItems: "flex-start", paddingVertical: tokens.spacing.fixedStack }}>
             <Text accessibilityLiveRegion="polite" {...{ className: body }}>{`No ${name} presets match "${query.trim()}".`}</Text>
             <Pressable role="button" onPress={() => store.setState({ query: "" })}
               {...{ className: joinClasses(styled && "rounded-control border border-border items-center justify-center focus-visible:ring-2 focus-visible:ring-focus active:opacity-80") }}
-              style={{ minHeight: HIT, paddingHorizontal: 16 }}>
+              style={{ minHeight: HIT, paddingHorizontal: tokens.spacing.fixedGroup }}>
               <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>Clear search</Text>
             </Pressable>
           </View>
@@ -145,10 +146,10 @@ function PluginPresetBrowserBody({actionError,disabledReason,
                 onPress={() => apply(preset.id)} onKeyDown={onKeyDown}
                 {...{ className: joinClasses(styled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus active:opacity-80",
                   styled && checked && "bg-surface-sunken") }}
-                style={{ minHeight: HIT, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 10, opacity: disabled ? 0.45 : 1 }}>
-                <View pointerEvents="none" style={{ width: 20, height: 20, borderRadius: 10, /* radius-exempt: radio */ borderWidth: 2, alignItems: "center", justifyContent: "center" }}
+                style={{ minHeight: HIT, flexDirection: "row", alignItems: "center", gap: tokens.spacing.fixedInset, paddingHorizontal: tokens.spacing.off10, opacity: disabled ? tokens.opacity.disabled : 1 }}>
+                <View pointerEvents="none" style={{ width: tokens.spacing.off20, height: tokens.spacing.off20, borderRadius: tokens.spacing.off20 / 2, /* radius-exempt: radio */ borderWidth: tokens.borderWidth.strong, alignItems: "center", justifyContent: "center" }}
                   {...{ className: joinClasses(styled && (checked ? "border-primary" : "border-text-muted")) }}>
-                  {checked ? <View style={{ width: 10, height: 10, borderRadius: 5 /* radius-exempt: radio */ }} {...{ className: joinClasses(styled && "bg-primary") }} /> : null}
+                  {checked ? <View style={{ width: tokens.spacing.off10, height: tokens.spacing.off10, borderRadius: tokens.spacing.off10 / 2 /* radius-exempt: radio */ }} {...{ className: joinClasses(styled && "bg-primary") }} /> : null}
                 </View>
                 <Text numberOfLines={1} style={{ flex: 1 }} {...{ className: joinClasses(styled && "text-text", styled && checked && "font-semibold") }}>{preset.label}</Text>
                 {checked ? <Text {...{ className: muted }}>Current</Text> : null}
@@ -159,10 +160,10 @@ function PluginPresetBrowserBody({actionError,disabledReason,
   }
   return <View {...rest} accessibilityLabel={`${name} preset browser`} {...{ role: "group" }}
     {...{ className: joinClasses(styled && "rounded-card border border-border bg-surface-raised", className) }}
-    style={[{ padding: 12, gap: 10 }, rest.style]}>
+    style={[{ padding: tokens.spacing.fixedInset, gap: tokens.spacing.off10 }, rest.style]}>
     <Text role="heading" {...{ "aria-level": 3 }} {...{ className: joinClasses(styled && "text-text font-semibold text-base") }}>{`${name} presets`}</Text>
-    {comparison?<View style={{gap:6}}><Text {...{className:body}}>Comparison: {comparison.active}</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{(['A','B'] as const).map(slot=><View key={slot} style={{gap:6}}><Button title={'Capture '+slot} disabled={disabled} unstyled={unstyled} onPress={()=>comparison.onCapture(slot)}/><Button title={'Recall '+slot} disabled={disabled||!(slot==='A'?comparison.hasA:comparison.hasB)} unstyled={unstyled} onPress={()=>comparison.onRecall(slot)}/></View>)}</View></View>:null}
-    {onSave?<View style={{gap:6}}><TextInput accessibilityLabel="New preset name" value={saveName} maxLength={256} editable={!disabled} onChangeText={name=>store.setState({name})} style={{minHeight:44,padding:8}} {...{className:body}}/><Button title="Save current settings as preset" disabled={disabled||!saveName.trim()} unstyled={unstyled} onPress={()=>onSave(saveName.trim())}/></View>:null}
+    {comparison?<View style={{gap:tokens.spacing.off6}}><Text {...{className:body}}>Comparison: {comparison.active}</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:tokens.spacing.off6}}>{(['A','B'] as const).map(slot=><View key={slot} style={{gap:tokens.spacing.off6}}><Button title={'Capture '+slot} disabled={disabled} unstyled={unstyled} onPress={()=>comparison.onCapture(slot)}/><Button title={'Recall '+slot} disabled={disabled||!(slot==='A'?comparison.hasA:comparison.hasB)} unstyled={unstyled} onPress={()=>comparison.onRecall(slot)}/></View>)}</View></View>:null}
+    {onSave?<View style={{gap:tokens.spacing.off6}}><TextInput accessibilityLabel="New preset name" value={saveName} maxLength={256} editable={!disabled} onChangeText={name=>store.setState({name})} style={{minHeight:tokens.spacing.fixedTarget,padding:tokens.spacing.fixedElement}} {...{className:body}}/><Button title="Save current settings as preset" disabled={disabled||!saveName.trim()} unstyled={unstyled} onPress={()=>onSave(saveName.trim())}/></View>:null}
     {content}
   <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/></View>;
 }

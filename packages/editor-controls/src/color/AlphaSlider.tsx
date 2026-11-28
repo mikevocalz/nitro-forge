@@ -4,6 +4,7 @@ import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {alphaPercent,assertRgba,rgbaToHex,type RgbaColor} from "../color.ts";
 import {ChannelTrack} from "./ChannelTrack.tsx";
 import {parseOpacityPercent} from "./channel-fields.ts";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode AlphaSlider}. */
 export interface AlphaSliderProps extends Omit<ViewProps,"children"> {
@@ -49,17 +50,17 @@ export function AlphaSlider({
     if(alpha!==value.alpha)onCommit({...value,alpha});
   };
   return <View {...rest} testID={testID} {...{className:joinClasses("gap-1",className)}} style={style}>
-    <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8,minHeight:44}}>
+    <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:tokens.spacing.fixedElement,minHeight:tokens.spacing.fixedTarget}}>
       <Text {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}}>{label}</Text>
       <View {...{className:joinClasses(styled&&"rounded-control border bg-surface-sunken",styled&&(draft.error?"border-danger":"border-border"))}}
-        style={{flexDirection:"row",alignItems:"center",minHeight:44,paddingHorizontal:10}}>
+        style={{flexDirection:"row",alignItems:"center",minHeight:tokens.spacing.fixedTarget,paddingHorizontal:tokens.spacing.off10}}>
         <TextInput value={shown} editable={!disabled} keyboardType="decimal-pad" returnKeyType="done" selectTextOnFocus
           accessibilityLabel={label+" percent"}
           onChangeText={text=>store.set({text,error:false})}
           onSubmitEditing={apply} onBlur={apply}
           {...{className:joinClasses(styled&&"text-text font-semibold")}}
-          style={{width:44,textAlign:"right",fontVariant:["tabular-nums"],paddingVertical:6}}/>
-        <Text {...{className:joinClasses(styled&&"text-text-muted text-sm")}} style={{paddingLeft:2}}>%</Text>
+          style={{width:tokens.spacing.fixedTarget,textAlign:"right",fontVariant:["tabular-nums"],paddingVertical:tokens.spacing.off6}}/>
+        <Text {...{className:joinClasses(styled&&"text-text-muted text-sm")}} style={{paddingLeft:tokens.spacing.off2}}>%</Text>
       </View>
     </View>
     <ChannelTrack label={label} value={value.alpha} checker step={0.01} rtl={rtl} disabled={disabled} unstyled={unstyled}

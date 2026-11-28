@@ -3,6 +3,7 @@ import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {alphaPercent,assertHsv,hsvToRgb,parseHexColor,rgbaEditToHsv,rgbaToHex,type HsvColor} from "../color.ts";
 import {CHANNEL_MODELS,channelFields,parseChannel,parseOpacityPercent,readChannels,writeChannel,type ChannelModel} from "./channel-fields.ts";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ColorChannelFields}. */
 export interface ColorChannelFieldsProps extends Omit<ViewProps,"children"> {
@@ -53,10 +54,10 @@ export function ColorChannelFields({
   const field=(key:string,label:string,shown:string,parse:(text:string)=>HsvColor|string,step?:(d:1|-1)=>void,width?:number,unit?:string)=>{
     const editing=draft?.key===key;
     const error=editing?draft.error:undefined;
-    return <View key={key} style={{flex:width?undefined:1,width,minWidth:0,gap:4}}>
+    return <View key={key} style={{flex:width?undefined:1,width,minWidth:0,gap:tokens.spacing.fixedStack}}>
       <Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}}>{label}</Text>
       <View {...{className:joinClasses(styled&&"rounded-control border bg-surface-sunken",styled&&(error?"border-danger":"border-border"))}}
-        style={{flexDirection:"row",alignItems:"center",minHeight:44,paddingHorizontal:8}}>
+        style={{flexDirection:"row",alignItems:"center",minHeight:tokens.spacing.fixedTarget,paddingHorizontal:tokens.spacing.fixedElement}}>
       <TextInput value={editing?draft.text:shown} editable={!disabled} selectTextOnFocus
         accessibilityLabel={label} aria-invalid={Boolean(error)}
         autoCapitalize="characters" autoCorrect={false}
@@ -67,26 +68,26 @@ export function ColorChannelFields({
           if(step&&(k==="ArrowUp"||k==="ArrowDown")){store.set(undefined);step(k==="ArrowUp"?1:-1);}
         }}
         {...{className:joinClasses(styled&&"text-text")}}
-        style={{flex:1,minWidth:0,minHeight:40,fontVariant:["tabular-nums"]}}/>
+        style={{flex:1,minWidth:0,minHeight:tokens.spacing.off40,fontVariant:["tabular-nums"]}}/>
       {unit?<Text {...{className:joinClasses(styled&&"text-text-muted text-sm")}}>{unit}</Text>:null}
       </View>
       {error?<Text accessibilityLiveRegion="polite" {...{className:joinClasses(styled&&"text-danger text-xs")}}>{error}</Text>:null}
     </View>;
   };
   return <View {...rest} testID={testID} {...{className:joinClasses("gap-3",styled&&"rounded-control bg-surface-raised p-3",className)}} style={style}>
-    <View accessibilityRole="radiogroup" accessibilityLabel="Color model" style={{flexDirection:"row",gap:6}}>
+    <View accessibilityRole="radiogroup" accessibilityLabel="Color model" style={{flexDirection:"row",gap:tokens.spacing.off6}}>
       {CHANNEL_MODELS.map(m=>{
         const on=m.model===model;
         return <Pressable key={m.model} accessibilityRole="radio" accessibilityState={{checked:on,disabled}}
           aria-checked={on} disabled={disabled} onPress={()=>{store.set(undefined);onModelChange(m.model);}}
           {...{className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
             styled&&(on?"border-focus bg-surface-sunken":"border-border bg-surface-raised"))}}
-          style={{flex:1,minHeight:44,alignItems:"center",justifyContent:"center"}}>
+          style={{flex:1,minHeight:tokens.spacing.fixedTarget,alignItems:"center",justifyContent:"center"}}>
           <Text {...{className:joinClasses(styled&&(on?"text-text font-semibold":"text-text-muted"))}}>{m.label}</Text>
         </Pressable>;
       })}
     </View>
-    <View style={{flexDirection:"row",gap:8}}>
+    <View style={{flexDirection:"row",gap:tokens.spacing.fixedElement}}>
       {fields.map((f,i)=>{
         const index=i as 0|1|2;
         const range=`Enter ${f.label.toLowerCase()} from 0 to ${f.max}${f.unit==="%"?" percent":f.unit==="°"?" degrees":""}.`;
@@ -95,7 +96,7 @@ export function ColorChannelFields({
           d=>{const n=Math.max(0,Math.min(f.max,values[i]!+d));commit(writeChannel(value,model,index,n));},undefined,f.unit||undefined);
       })}
     </View>
-    <View style={{flexDirection:"row",gap:8}}>
+    <View style={{flexDirection:"row",gap:tokens.spacing.fixedElement}}>
       {field("hex","Hex",hex,text=>{
         try{
           const parsed=parseHexColor(text);

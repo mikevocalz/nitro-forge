@@ -10,6 +10,7 @@
  */
 
 /** Filter shape of one EQ band, as the Cadence engine names it. */
+import { tokens } from "../tokens.ts";
 export type EqBandType = "peak" | "low_shelf" | "high_shelf" | "low_pass" | "high_pass";
 
 /** One band of an EQ insert, in the camelCase the UI props use. */
@@ -131,14 +132,14 @@ export function xToFreq(x: number, width: number): number {
 
 /** y in points for a gain, +range at 0 and -range at `height`. Values past the range clamp to the edge. */
 export function dbToY(db: number, height: number, rangeDb: number): number {
-  assertPlot({ width: 1, height, rangeDb });
+  assertPlot({ width: tokens.borderWidth.hairline, height, rangeDb });
   if (!Number.isFinite(db)) throw new RangeError("Gain must be finite");
   return height / 2 - (clamp(db, -rangeDb, rangeDb) / rangeDb) * (height / 2);
 }
 
 /** Gain at `y` points down a plot `height` tall. */
 export function yToDb(y: number, height: number, rangeDb: number): number {
-  assertPlot({ width: 1, height, rangeDb });
+  assertPlot({ width: tokens.borderWidth.hairline, height, rangeDb });
   if (!Number.isFinite(y)) throw new RangeError("Invalid y");
   return ((height / 2 - clamp(y, 0, height)) / (height / 2)) * rangeDb;
 }

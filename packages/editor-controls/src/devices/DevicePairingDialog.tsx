@@ -6,6 +6,7 @@ import { useStatusAnnouncement } from "@nyc-tron/ui/components/feedback/announce
 import {
   presentPairing, signalLabel, type PairingAction, type PairingDevice, type PairingState,
 } from "./pairing-model.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 /**
  * Coarse phase handed to {@linkcode DevicePairingDialogProps.renderStatusArt}.
@@ -155,12 +156,13 @@ export function DevicePairingDialog(props: DevicePairingDialogProps) {
   const art = renderStatusArt?.(artPhase(state), state);
   const showIntro = intro !== undefined && intro !== "" && state.kind === "idle";
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16, backgroundColor: "rgba(0,0,0,0.5)" }}>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: tokens.spacing.fixedGroup }}>
+      <View pointerEvents="none" {...{ className: "bg-black" }} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, opacity: tokens.opacity.scrim }} />
       <View
         accessibilityViewIsModal
         {...(testID ? { testID } : {})}
         {...{ className: joinClasses("w-full gap-4 p-5", styled && "rounded-control border border-border bg-surface-raised", className) }}
-        style={{ maxWidth: 480, maxHeight: "90%" }}
+        style={{ maxWidth: tokens.spacing.off480, maxHeight: "90%" }}
       >
         <View {...{ className: "flex-row items-center gap-3" }}>
           <Text accessibilityRole="header" {...{ className: joinClasses("flex-1 text-start", styled && "text-lg font-semibold text-text") }}>{title}</Text>
@@ -174,7 +176,7 @@ export function DevicePairingDialog(props: DevicePairingDialogProps) {
         </View>
         {art !== undefined && art !== null ? <View
           accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-          {...{ className: "items-center justify-center" }} style={{ minHeight: 96 }}
+          {...{ className: "items-center justify-center" }} style={{ minHeight: tokens.spacing.off96 }}
         >{art}</View> : view.isBusy ? <ActivityIndicator accessibilityElementsHidden importantForAccessibility="no" size="large" /> : null}
         {showIntro ? <Text
           {...(testID ? { testID: testID + "-intro" } : {})}
@@ -187,8 +189,8 @@ export function DevicePairingDialog(props: DevicePairingDialogProps) {
         {view.steps ? <StepList steps={view.steps} styled={styled} /> : null}
         {view.devices && view.devices.length ? <ScrollView
           accessibilityLabel={"Found " + view.devices.length + (view.devices.length === 1 ? " device" : " devices")}
-          style={{ maxHeight: 240 }}
-          contentContainerStyle={{ gap: 8 }}
+          style={{ maxHeight: controlTokens.extent.preview }}
+          contentContainerStyle={{ gap: tokens.spacing.fixedElement }}
         >{view.devices.map(device => <DeviceRow
           key={device.id}
           device={device}

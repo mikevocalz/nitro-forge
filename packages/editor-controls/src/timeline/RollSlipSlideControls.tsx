@@ -16,6 +16,7 @@ import {
 } from "./trim-modes.ts";
 import type {TimelineTool} from "./TimelineClipLane.tsx";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode RollSlipSlideControls}. */
 export interface RollSlipSlideControlsProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -99,17 +100,17 @@ function RollSlipSlideControlsBody({
     <SegmentedControl aria-label="Trim tool" options={MODES} value={MODES.some(m=>m.value===tool)?tool:""}
       onChange={onToolChange} disabled={disabled} unstyled={unstyled} {...id("tool")}/>
     {isMode(tool)?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}}>{HELP[tool]}</Text>:null}
-    <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
+    <View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:tokens.spacing.fixedElement}}>
       {tool==="roll"||tool==="ripple"?<SegmentedControl aria-label="Edge" value={edge} onChange={v=>edgeStore.set(v)}
         options={[{value:"head",label:"Start"},{value:"tail",label:"End"}]} disabled={disabled} unstyled={unstyled} {...id("edge")}/>:null}
       {/* Earlier to later, left to right in every layout direction: these step through time. */}
-      <View style={{flexDirection:"row",gap:8,direction:"ltr"}}>
+      <View style={{flexDirection:"row",gap:tokens.spacing.fixedElement,direction:"ltr"}}>
       {steps.map((d,i)=>{
         const r=results[i]!;
         return <Button key={d} title={(d>0?"+":"−")+Math.abs(d)} variant="secondary" size="sm" {...id("nudge"+d)}
           accessibilityLabel={stepLabel(d)} disabled={disabled||!r.edit}
           accessibilityHint={r.preview&&!r.preview.valid&&r.preview.problem?TRIM_MODE_PROBLEM_TEXT[r.preview.problem]:undefined}
-          onPress={()=>{if(r.edit)onEdit(r.edit);}} style={{minWidth:52}}/>;
+          onPress={()=>{if(r.edit)onEdit(r.edit);}} style={{minWidth:tokens.spacing.fixedToolbar}}/>;
       })}
       </View>
     </View>

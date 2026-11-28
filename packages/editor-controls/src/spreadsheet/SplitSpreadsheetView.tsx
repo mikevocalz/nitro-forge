@@ -8,6 +8,7 @@ import { joinClasses } from "@nyc-tron/ui/components/styles";
 import type { DragTransport } from "@nyc-tron/ui/components/gestures/drag-transport";
 import { PanResponderDrag } from "@nyc-tron/ui/components/gestures/PanResponderDrag";
 import { dragSplitRatio, splitGeometry, SPLIT_KEY_STEP, type SplitState } from "./freeze-split-model.ts";
+import { tokens } from "../tokens.ts";
 
 /**
  * Two panes of one sheet with a draggable divider. Each pane is whatever
@@ -118,9 +119,9 @@ function SplitSpreadsheetViewBody({boundary,disabledReason,
         style={{ ...(stacked ? { height: DIVIDER, width: w } : { width: DIVIDER, height: h }),
           alignItems: "center", justifyContent: "center" }}
         // The visible bar is 12pt; hitSlop widens the grab area to 44pt.
-        hitSlop={stacked ? { top: 16, bottom: 16 } : { left: 16, right: 16 }}>
+        hitSlop={stacked ? { top: tokens.spacing.fixedGroup, bottom: tokens.spacing.fixedGroup } : { left: tokens.spacing.fixedGroup, right: tokens.spacing.fixedGroup }}>
         <View aria-hidden {...{ className: !unstyled ? "bg-text-muted" : undefined }}
-          style={{ borderRadius: forgeHairlineRadius.tick, ...(stacked ? { width: 36, height: 4 } : { width: 4, height: 36 }) }} />
+          style={{ borderRadius: forgeHairlineRadius.tick, ...(stacked ? { width: tokens.spacing.off33, height: tokens.spacing.fixedStack } : { width: tokens.spacing.fixedStack, height: tokens.spacing.off33 }) }} />
       </View>
     </Transport>
     <View style={size1}>{total > 0 ? renderPane(1, size1) : null}</View>

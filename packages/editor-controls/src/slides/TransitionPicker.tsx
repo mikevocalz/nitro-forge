@@ -5,6 +5,7 @@ import {Button} from '@nyc-tron/ui/components/Button';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface SlideTransition {effectId:string;durationMs:number;advance:'manual'|'after';advanceAfterMs:number;easing:'linear'|'ease-in'|'ease-out'|'ease-in-out'}
 export interface TransitionPickerProps extends Omit<PropertyInspectorProps,'label'|'fields'|'onCommit'> {
  value:SlideTransition;effects:readonly {id:string;label:string;minDurationMs:number;maxDurationMs:number;unavailableReason?:string}[];
@@ -14,7 +15,7 @@ export interface TransitionPickerProps extends Omit<PropertyInspectorProps,'labe
 export function TransitionPicker({value,effects,previewProgress,renderPreview,onCommit,onPreview,...props}:TransitionPickerProps){
  if(effects.length>256||new Set(effects.map(e=>e.id)).size!==effects.length||effects.some(e=>!e.id.trim()||e.id.length>256||!e.label.trim()||![e.minDurationMs,e.maxDurationMs].every(Number.isFinite)||e.minDurationMs<0||e.maxDurationMs<e.minDurationMs||e.maxDurationMs>600000)||!Number.isFinite(previewProgress)||previewProgress<0||previewProgress>1)throw new RangeError('Invalid transition catalog');
  const effect=effects.find(e=>e.id===value.effectId),min=effect?.minDurationMs??0,max=effect?.maxDurationMs??600000,owner=JSON.stringify([...controlIdentity(props.scope??'slide-transition',props.revision??0),props.disabledReason]),guard=useScopedControl(owner,{value,effects,onCommit,onPreview},props.disabledReason!==undefined),off=guard.pending||props.disabledReason!==undefined;
- return <View style={{gap:8}}><PropertyInspector {...props} disabledReason={off?'Transition edit unavailable':undefined} label="Slide transition" fields={[
+ return <View style={{gap:tokens.spacing.fixedElement}}><PropertyInspector {...props} disabledReason={off?'Transition edit unavailable':undefined} label="Slide transition" fields={[
  {kind:'choice',id:'effectId',label:'Transition effect',value:value.effectId,choices:effects.map(e=>({id:e.id,label:e.label,disabled:e.unavailableReason!==undefined}))},
  ...(max>min?[{kind:'number' as const,id:'durationMs',label:'Transition duration',value:value.durationMs,min,max,step:10,unit:'ms'}]:[]),
  {kind:'choice',id:'easing',label:'Transition easing',value:value.easing,choices:['linear','ease-in','ease-out','ease-in-out'].map(id=>({id,label:id}))},

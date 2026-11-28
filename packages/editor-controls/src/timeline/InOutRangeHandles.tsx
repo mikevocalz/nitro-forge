@@ -13,6 +13,7 @@ import {frameForKey} from "./frame-keys.ts";
 import {frameToX,xToFrame,type TimelineViewport} from "./viewport.ts";
 import {useFrameScrub} from "./useFrameScrub.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode InOutRangeHandles}. */
 export interface InOutRangeHandlesProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -75,7 +76,7 @@ function MarkHandle({boundary,restorePreview,mark,frame,range,viewport,durationF
     }}
     style={{position:"absolute",left:shownX-HIT/2,top:0,width:HIT,height:HIT,alignItems:"center",justifyContent:"center",...NO_SELECT}}>
     <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}}
-      style={{width:4,height:30,borderRadius:forgeHairlineRadius.tick}}/>
+      style={{width:tokens.spacing.fixedStack,height:tokens.spacing.fixedCanvas,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
 }
 
@@ -110,7 +111,7 @@ function InOutRangeHandlesBody({
   const common={boundary:useBoundary,restorePreview,range,viewport,durationFrames,rate,onPreview,onCommit,dropFrame,disabled,styled};
   return <View {...rest} {...(testID?{testID}:{})} {...{className:joinClasses("gap-2",className)}} style={style}>
     <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
-    {showCommands?<View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:8}}>
+    {showCommands?<View style={{flexDirection:"row",flexWrap:"wrap",alignItems:"center",gap:tokens.spacing.fixedElement}}>
       <Button title="Set in" variant="secondary" size="sm" disabled={disabled} {...id("set-in")}
         onPress={()=>onCommit(setMark(range,"in",latestPlayhead.current,durationFrames))}/>
       <Button title="Set out" variant="secondary" size="sm" disabled={disabled} {...id("set-out")}
@@ -124,7 +125,7 @@ function InOutRangeHandlesBody({
     <View {...{className:joinClasses(styled&&"bg-surface-sunken border-b border-border")}}
       style={{height:HIT,width:viewport.widthPx,overflow:"hidden",direction:"ltr"}}>
       {hasRange?<View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent/10 border-y border-accent")}}
-        style={{position:"absolute",top:8,bottom:8,left:Math.max(0,startX),width:Math.max(0,Math.min(viewport.widthPx,endX)-Math.max(0,startX))}}/>:null}
+        style={{position:"absolute",top:tokens.spacing.fixedElement,bottom:tokens.spacing.fixedElement,left:Math.max(0,startX),width:Math.max(0,Math.min(viewport.widthPx,endX)-Math.max(0,startX))}}/>:null}
       {range.inFrame!==undefined?<MarkHandle mark="in" frame={range.inFrame} {...common}/>:null}
       {range.outFrame!==undefined?<MarkHandle mark="out" frame={range.outFrame} {...common}/>:null}
     </View>

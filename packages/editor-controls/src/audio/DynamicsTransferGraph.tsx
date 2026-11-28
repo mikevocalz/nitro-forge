@@ -33,6 +33,7 @@ import {
   type DynamicsCurvePoint, type DynamicsParams,
 } from "./dynamics-graph.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Minimum hit size (iOS 44pt / Android 48dp floor). */
 const HIT = 44;
@@ -213,7 +214,7 @@ function DynamicsTransferGraphBody({actionError,disabledReason,
     <View style={{ flexDirection: "row" }}>
       <View aria-hidden style={{ width: GUTTER, height: size }}>
         {grid.map(g => <Text key={g.db} {...{ className: muted }}
-          style={{ position: "absolute", right: 4, top: size - g.at - 7, fontSize: 11, lineHeight: 14, ...tabular }}>{g.label}</Text>)}
+          style={{ position: "absolute", right: tokens.spacing.fixedStack, top: size - g.at - tokens.spacing.off7, fontSize: tokens.text.off11, lineHeight: tokens.text.body, ...tabular }}>{g.label}</Text>)}
       </View>
       <View accessible accessibilityRole="image" accessibilityLabel={label + " transfer curve"}
         {...valueAccessibility({ text: describeDynamics({ ...params, thresholdDb: threshold }, inputLevelDb) })}
@@ -223,20 +224,20 @@ function DynamicsTransferGraphBody({actionError,disabledReason,
         {grid.map(g => line("v" + g.db, g.at, 0, 1, size, "bg-border"))}
         {grid.map(g => line("h" + g.db, 0, size - g.at, size, 1, "bg-border"))}
         {unity ? <View pointerEvents="none" aria-hidden {...{ className: joinClasses(styled && "bg-text-muted") }}
-          style={{ position: "absolute", left: unity.centerX - unity.length / 2, top: unity.centerY - 0.5, width: unity.length,
-            height: 1, opacity: 0.5, transform: [{ rotate: `${unity.angleDeg}deg` }] }} /> : null}
+          style={{ position: "absolute", left: unity.centerX - unity.length / 2, top: unity.centerY - (tokens.borderWidth.hairline / 2), width: unity.length,
+            height: tokens.borderWidth.hairline, opacity: controlTokens.opacity.muted, transform: [{ rotate: `${unity.angleDeg}deg` }] }} /> : null}
         {line("thr", thrX - 1, 0, 2, size, "bg-accent", 0.8)}
-        <View pointerEvents="none" aria-hidden style={{ position: "absolute", inset: 0, opacity: dimmed ? 0.3 : 1 }}>
+        <View pointerEvents="none" aria-hidden style={{ position: "absolute", inset: 0, opacity: dimmed ? tokens.opacity.disabled : 1 }}>
           {segments.map((s, i) => <View key={i} {...{ className: joinClasses(styled && "bg-primary") }}
-            style={{ position: "absolute", left: s.centerX - s.length / 2 - 0.5, top: s.centerY - 1, width: s.length + 1,
-              height: 2, transform: [{ rotate: `${s.angleDeg}deg` }] }} />)}
+            style={{ position: "absolute", left: s.centerX - s.length / 2 - (tokens.borderWidth.hairline / 2), top: s.centerY - tokens.borderWidth.hairline, width: s.length + tokens.borderWidth.hairline,
+              height: tokens.spacing.off2, transform: [{ rotate: `${s.angleDeg}deg` }] }} />)}
           {thrDot ? line("thrDot", thrDot.x - 4, thrDot.y - 4, 8, 8, "bg-accent") : null}
         </View>
         {levelDot ? line("lvl", levelDot.x - 5, levelDot.y - 5, 10, 10, "bg-success rounded-sm border-2 border-surface-raised") : null}
-        <Text aria-hidden {...{ className: muted }} style={{ position: "absolute", left: 6, top: 4, fontSize: 11, lineHeight: 14 }}>Out</Text>
-        <Text aria-hidden {...{ className: muted }} style={{ position: "absolute", right: 6, bottom: 4, fontSize: 11, lineHeight: 14 }}>In</Text>
+        <Text aria-hidden {...{ className: muted }} style={{ position: "absolute", left: tokens.spacing.off6, top: tokens.spacing.fixedStack, fontSize: tokens.text.off11, lineHeight: tokens.text.body }}>Out</Text>
+        <Text aria-hidden {...{ className: muted }} style={{ position: "absolute", right: tokens.spacing.off6, bottom: tokens.spacing.fixedStack, fontSize: tokens.text.off11, lineHeight: tokens.text.body }}>In</Text>
         {curve.length === 0
-          ? <Text {...{ className: muted }} style={{ position: "absolute", left: 0, right: 0, top: size / 2 - 10, textAlign: "center" }}>Curve unavailable</Text>
+          ? <Text {...{ className: muted }} style={{ position: "absolute", left: 0, right: 0, top: size / 2 - tokens.spacing.off10, textAlign: "center" }}>Curve unavailable</Text>
           : null}
       </View>
     </View>
@@ -260,12 +261,12 @@ function DynamicsTransferGraphBody({actionError,disabledReason,
 
   return <View {...rest} accessibilityLabel={label} {...{ role: "group" }}
     {...{ className: joinClasses(styled && "rounded-card border border-border bg-surface-raised", className) }}
-    style={[{ padding: 16, gap: 10, opacity: disabled ? 0.55 : 1 }, style]}>
+    style={[{ padding: tokens.spacing.fixedGroup, gap: tokens.spacing.off10, opacity: disabled ? tokens.opacity.disabled : 1 }, style]}>
     <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>{label}</Text>
-    <View onLayout={onLayout} style={{ flexDirection: wide ? "row" : "column", gap: wide ? 24 : 12, alignItems: wide ? "flex-start" : "stretch" }}>
+    <View onLayout={onLayout} style={{ flexDirection: wide ? "row" : "column", gap: wide ? tokens.spacing.fixedSection : tokens.spacing.fixedInset, alignItems: wide ? "flex-start" : "stretch" }}>
       {plot}
-      <View style={{ gap: 12, flexShrink: 1 }}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 20, rowGap: 8 }}>
+      <View style={{ gap: tokens.spacing.fixedInset, flexShrink: 1 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: tokens.spacing.off20, rowGap: tokens.spacing.fixedElement }}>
           <Readout label="Threshold" value={formatThreshold(threshold)} styled={styled} />
           {onKneeCommit?<PrecisionScrubber label="Compressor knee" value={params.kneeDb} min={0} max={24} step={.1} unit="dB" disabled={disabled} unstyled={unstyled} onCommit={onKneeCommit}/>:<Readout label="Knee" value={formatKnee(params.kneeDb)} styled={styled}/>}
           {onMakeupCommit?<PrecisionScrubber label="Compressor makeup" value={params.makeupDb} min={0} max={24} step={.1} unit="dB" disabled={disabled} unstyled={unstyled} onCommit={onMakeupCommit}/>:<Readout label="Makeup" value={formatMakeup(params.makeupDb)} styled={styled}/>}
@@ -273,19 +274,19 @@ function DynamicsTransferGraphBody({actionError,disabledReason,
           {inputLevelDb !== undefined && Number.isFinite(inputLevelDb)
             ? <Readout label="Input" value={Math.round(inputLevelDb) + " dB"} styled={styled} /> : null}
         </View>
-        <View accessibilityLabel="Ratio" {...{ role: "group" }} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View accessibilityLabel="Ratio" {...{ role: "group" }} style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.fixedElement }}>
           <Pressable accessibilityRole="button" accessibilityLabel="Lower ratio"
             disabled={disabled || lower === ratio || ratio <= DYN_MIN_RATIO} onPress={() => { void onRatioCommit(lower); }}
-            {...{ className: chip }} style={{ minWidth: HIT, minHeight: HIT, opacity: ratio <= DYN_MIN_RATIO ? 0.45 : 1 }}>
+            {...{ className: chip }} style={{ minWidth: HIT, minHeight: HIT, opacity: ratio <= DYN_MIN_RATIO ? tokens.opacity.disabled : 1 }}>
             <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>−</Text>
           </Pressable>
-          <View accessible accessibilityLabel={"Ratio " + formatRatio(ratio)} style={{ minWidth: 72, alignItems: "center" }}>
-            <Text {...{ className: muted }} style={{ fontSize: 12, lineHeight: 16 }}>Ratio</Text>
+          <View accessible accessibilityLabel={"Ratio " + formatRatio(ratio)} style={{ minWidth: tokens.spacing.fixedRail, alignItems: "center" }}>
+            <Text {...{ className: muted }} style={{ fontSize: tokens.text.label, lineHeight: tokens.text.off15 }}>Ratio</Text>
             <Text {...{ className: joinClasses(styled && "text-text font-semibold") }} style={tabular}>{formatRatio(ratio)}</Text>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel="Raise ratio"
             disabled={disabled || higher === ratio || ratio >= DYN_MAX_RATIO} onPress={() => { void onRatioCommit(higher); }}
-            {...{ className: chip }} style={{ minWidth: HIT, minHeight: HIT, opacity: ratio >= DYN_MAX_RATIO ? 0.45 : 1 }}>
+            {...{ className: chip }} style={{ minWidth: HIT, minHeight: HIT, opacity: ratio >= DYN_MAX_RATIO ? tokens.opacity.disabled : 1 }}>
             <Text {...{ className: joinClasses(styled && "text-text font-semibold") }}>+</Text>
           </Pressable>
         </View>
@@ -295,8 +296,8 @@ function DynamicsTransferGraphBody({actionError,disabledReason,
 }
 
 function Readout({ label, value, styled }: { label: string; value: string; styled: boolean }) {
-  return <View accessible accessibilityLabel={label + " " + value} style={{ minWidth: 64 }}>
-    <Text {...{ className: joinClasses(styled && "text-text-muted") }} style={{ fontSize: 12, lineHeight: 16 }}>{label}</Text>
+  return <View accessible accessibilityLabel={label + " " + value} style={{ minWidth: tokens.spacing.fixedPage }}>
+    <Text {...{ className: joinClasses(styled && "text-text-muted") }} style={{ fontSize: tokens.text.label, lineHeight: tokens.text.off15 }}>{label}</Text>
     <Text {...{ className: joinClasses(styled && "text-text") }} style={{ fontVariant: ["tabular-nums"] }}>{value}</Text>
   </View>;
 }

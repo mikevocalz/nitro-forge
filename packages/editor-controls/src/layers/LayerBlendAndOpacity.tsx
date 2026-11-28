@@ -6,6 +6,7 @@ import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
 import {joinClasses} from '@nyc-tron/ui/components/styles';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import {defaultAlphaModes,layerBlendProblem,layerOpacityFromPercent,validateLayerBlend,type LayerAlphaMode,type LayerAlphaOption,type LayerBlendMode,type LayerBlendSpace,type LayerBlendValue} from './layer-blend-model.ts';
+import { tokens } from '../tokens.ts';
 export type {LayerAlphaMode,LayerAlphaOption,LayerBlendMode,LayerBlendSpace,LayerBlendValue} from './layer-blend-model.ts';
 export {defaultAlphaModes} from './layer-blend-model.ts';
 export interface LayerBlendAndOpacityProps extends Omit<ViewProps,'children'> {
@@ -43,7 +44,7 @@ export function LayerBlendAndOpacity({scope,revision=0,layerId,value,modes,space
  // Reasons stay on screen whenever the menu can't show them: text mode, a locked menu, or a current reason the alert line doesn't carry.
  const alphaLocked=!alphaMenu||disabled||!!blendProblem,alphaNotes=alphaModes===undefined?[]:alphaCatalog.filter(item=>item.unavailableReason&&(item===alpha?problem!==item.unavailableReason:alphaLocked));
  const alphaControl=<MenuButton key={alphaNotes.length?'menu':undefined} label="Layer alpha representation" editScope={JSON.stringify([scope,revision,layerId,'alpha'])} accessibilityValue={{text:alpha.label}} items={alphaCatalog.map(item=>({id:item.id,label:item.label,...(item.unavailableReason?{description:item.unavailableReason,disabled:true}:{})}))} disabled={disabled||pending||!!blendProblem} unstyled={unstyled} onSelect={alphaMode=>{if(alphaCatalog.some(item=>item.id===alphaMode&&!item.unavailableReason))void commit({alphaMode:alphaMode as LayerAlphaMode},'alpha');}}><Text {...{className:joinClasses(!unstyled&&'text-text')}}>{alpha.label}</Text></MenuButton>;
- return <View key={owner} {...rest} {...{className:joinClasses(className)}} style={[{gap:8},style]}>
+ return <View key={owner} {...rest} {...{className:joinClasses(className)}} style={[{gap:tokens.spacing.fixedElement},style]}>
   <Text {...{className:joinClasses(!unstyled&&'text-text')}}>Layer blend mode</Text>
   <MenuButton label="Layer blend mode" editScope={JSON.stringify([scope,revision,layerId,'mode'])} accessibilityValue={{text:modes.find(mode=>mode.id===value.mode)!.label}} items={modes.map(mode=>({id:mode.id,label:mode.label,...(mode.unavailableReason?{description:mode.unavailableReason}:{}),disabled:!!mode.unavailableReason||!!space.unavailableReason||!space.modeIds.includes(mode.id)}))} disabled={disabled||pending||alphaProblem} unstyled={unstyled} onSelect={mode=>{if(modes.some(item=>item.id===mode))void commit({mode},'mode');}}><Text {...{className:joinClasses(!unstyled&&'text-text')}}>{modes.find(mode=>mode.id===value.mode)!.label}</Text></MenuButton>
   <PrecisionScrubber key={JSON.stringify([value.mode,value.spaceId,value.alphaMode])} scope={layerId} revision={revision} label="Layer opacity" value={value.opacity*100} min={0} max={100} step={.0001} detents={[0,25,50,75,100]} unit="%" disabled={disabled||pending||!!problem} unstyled={unstyled} onPreview={percent=>{const p=current();if(p&&!problem)p.onPreview?.({...value,opacity:layerOpacityFromPercent(percent)});}} onCommit={percent=>commit({opacity:layerOpacityFromPercent(percent)},'opacity')}/>

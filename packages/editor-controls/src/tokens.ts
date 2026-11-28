@@ -14,9 +14,9 @@
  *   role. Each is listed, with why it exists, in
  *   docs/design/editor-controls-tokens-2026-11-28.md.
  *
- * Radius stays in `radius.ts` (mirror of `forgeRadius`). Colours come from the
- * NYC-Tron theme classes (`bg-accent`, `border-border` ...) or from the
- * scheme-independent workspace tokens mirrored here. */
+ * Radius stays in `radius.ts` (mirror of `forgeRadius`). Colours and shadows
+ * are never values here: they come from theme classes (`bg-accent`,
+ * `border-border`, `shadow-sm` ...), so a host theme or rebrand reaches them. */
 export const tokens = {
   spacing: {
     fixedStack: 4,
@@ -45,8 +45,6 @@ export const tokens = {
   fontWeight: { regular: '400', medium: '500', semibold: '600', bold: '700' },
   opacity: { disabled: 0.52, scrim: 0.45 },
   size: { iconXs: 12, iconSm: 16, iconToolbar: 20, iconDefault: 24, iconTouch: 28, iconFeature: 32, iconHero: 48 },
-  shadow: { floatSm: '0 3px 12px #00000020', floatMd: '0 4px 16px #00000030' },
-  color: { scrim: '#000000' },
 } as const;
 
 /** Roles with no workspace token. Named by role; values chosen as described in the doc. */

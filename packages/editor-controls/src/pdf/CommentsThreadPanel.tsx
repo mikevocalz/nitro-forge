@@ -8,6 +8,7 @@ import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {OFFICE_TOUCH_TARGET,ToolButton} from "../office/office-controls.tsx";
 import {groupThreads,resolveReply,threadCounts,threadLabel,type CommentEntry,type CommentFilter,type CommentThread} from "./comments-model.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode CommentsThreadPanel}. Each action renders only when its callback is passed. */
 export interface CommentsThreadPanelProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -75,18 +76,18 @@ function CommentsThreadPanelBody({actionError,disabledReason,disabled=false,ment
     }
   };
   return <View {...rest} accessibilityLabel={label} {...{role:"region",className:joinClasses("min-w-0",className)}}
-    style={[{gap:10},rest.style as object]}>
+    style={[{gap:tokens.spacing.off10},rest.style as object]}>
     <ErrorMessage {...exact({message:actionError??disabledReason,unstyled:unstyled})}/>
-    {canFilter?<View accessibilityRole="radiogroup" accessibilityLabel="Show comments" style={{flexDirection:"row",gap:4,flexWrap:"wrap"}}>
+    {canFilter?<View accessibilityRole="radiogroup" accessibilityLabel="Show comments" style={{flexDirection:"row",gap:tokens.spacing.fixedStack,flexWrap:"wrap"}}>
       {(["open","resolved","all"] as const).map(f=><Pressable key={f} accessibilityRole="radio" accessibilityState={{checked:filter===f}}
         onPress={()=>onFilterChange!(f)}
         {...{className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
           styled&&(filter===f?"border-accent bg-accent/10":"border-border"))}}
-        style={{minHeight:OFFICE_TOUCH_TARGET,paddingHorizontal:12,justifyContent:"center"}}>
+        style={{minHeight:OFFICE_TOUCH_TARGET,paddingHorizontal:tokens.spacing.fixedInset,justifyContent:"center"}}>
         <Text {...{className:joinClasses(styled&&"text-text text-sm")}}>{(f==="open"?"Open":f==="resolved"?"Resolved":"All")+" ("+counts[f]+")"}</Text>
       </Pressable>)}
     </View>:null}
-    {error?<View style={{gap:8,alignItems:"flex-start"}}>
+    {error?<View style={{gap:tokens.spacing.fixedElement,alignItems:"flex-start"}}>
       <Text accessibilityLiveRegion="polite" {...{className:text}}>{error}</Text>
       {onRetry?<Button title="Load comments again" variant="secondary" size="sm" onPress={onRetry}/>:null}
     </View>
@@ -102,18 +103,18 @@ function CommentsThreadPanelBody({actionError,disabledReason,disabled=false,ment
           const busy=local.busy[t.id]===true||disabled;
           return <View key={t.id}
             {...{className:joinClasses(styled&&"rounded-card border",styled&&(on?"border-accent bg-surface-raised":"border-border bg-surface-raised"))}}
-            style={{padding:10,gap:8,marginBottom:8,opacity:t.resolved?0.7:1}}>
+            style={{padding:tokens.spacing.off10,gap:tokens.spacing.fixedElement,marginBottom:tokens.spacing.fixedElement,opacity:t.resolved?controlTokens.opacity.muted:1}}>
             <Pressable accessibilityRole="button" accessibilityLabel={describeLocation?describeLocation(t)+', '+threadLabel(t).replace(/^Page [0-9]+, /,''):threadLabel(t)} accessibilityState={{selected:on}}
               accessibilityHint="Shows this comment on its page" onPress={()=>onSelect(t.id)}
               {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
-              style={{minHeight:OFFICE_TOUCH_TARGET,gap:2,justifyContent:"center"}}>
+              style={{minHeight:OFFICE_TOUCH_TARGET,gap:tokens.spacing.off2,justifyContent:"center"}}>
               {describeLocation?<Text {...{className:muted}}>{describeLocation(t)}</Text>:null}<Entry entry={t} styled={styled}/>
             </Pressable>
-            {t.replies.length?<View {...{className:joinClasses(styled&&"border-border")}} style={{gap:8,borderStartWidth:1,paddingStart:10}}>
+            {t.replies.length?<View {...{className:joinClasses(styled&&"border-border")}} style={{gap:tokens.spacing.fixedElement,borderStartWidth:1,paddingStart:10}}>
               {t.replies.map(r=><Entry key={r.id} entry={r} styled={styled}/>)}
             </View>:null}
-            {onReply&&!t.resolved?<View style={{gap:6}}>{mentions.length?<Select label="Mention collaborator" value="none" options={[{value:'none',label:'Mention someone',disabled:true},...mentions.map(m=>({value:m.id,label:m.label}))]} disabled={busy} unstyled={unstyled} onValueChange={id=>{const person=mentions.find(m=>m.id===id);if(!person)return;store.set(s=>({...s,drafts:{...s.drafts,[t.id]:(s.drafts[t.id]??'')+' @'+person.label+' '},mentions:{...s.mentions,[t.id]:[...new Set([...(s.mentions[t.id]??[]),id])]}}));}}/>:null}
-              <View style={{flexDirection:"row",gap:6,alignItems:"center"}}>
+            {onReply&&!t.resolved?<View style={{gap:tokens.spacing.off6}}>{mentions.length?<Select label="Mention collaborator" value="none" options={[{value:'none',label:'Mention someone',disabled:true},...mentions.map(m=>({value:m.id,label:m.label}))]} disabled={busy} unstyled={unstyled} onValueChange={id=>{const person=mentions.find(m=>m.id===id);if(!person)return;store.set(s=>({...s,drafts:{...s.drafts,[t.id]:(s.drafts[t.id]??'')+' @'+person.label+' '},mentions:{...s.mentions,[t.id]:[...new Set([...(s.mentions[t.id]??[]),id])]}}));}}/>:null}
+              <View style={{flexDirection:"row",gap:tokens.spacing.off6,alignItems:"center"}}>
                 <TextInput value={draft} placeholder="Write a reply" accessibilityLabel={"Reply to "+(t.author??"comment on page "+(t.page+1))}
                   maxLength={65536} editable={!busy&&!disabled} onChangeText={v=>store.set(s=>({...s,drafts:{...s.drafts,[t.id]:v}}))}
                   onSubmitEditing={()=>void send(t.id)} returnKeyType="send"
@@ -123,7 +124,7 @@ function CommentsThreadPanelBody({actionError,disabledReason,disabled=false,ment
               </View>
               {failed?<Text accessibilityLiveRegion="assertive" {...{className:joinClasses(styled&&"text-danger text-sm")}}>{failed}</Text>:null}
             </View>:null}
-            {onResolvedChange||onDelete?<View style={{flexDirection:"row",gap:6,flexWrap:"wrap"}}>
+            {onResolvedChange||onDelete?<View style={{flexDirection:"row",gap:tokens.spacing.off6,flexWrap:"wrap"}}>
               {onResolvedChange&&t.resolved!==undefined?<ToolButton label={t.resolved?"Reopen":"Resolve"} styled={styled}
                 onPress={()=>void onResolvedChange(t.id,!t.resolved)}/>:null}
               {onDelete?<ToolButton label="Delete" styled={styled} accessibilityLabel={"Delete comment on page "+(t.page+1)}
@@ -136,9 +137,9 @@ function CommentsThreadPanelBody({actionError,disabledReason,disabled=false,ment
 
 function Entry({entry,styled}:{entry:CommentEntry;styled:boolean}){
   const meta=[entry.author,entry.timeLabel].filter(Boolean).join(", ");
-  return <View style={{gap:2}}>
-    {meta?<Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text-muted text-sm")}} style={{fontWeight:"600"}}>{meta}</Text>:null}
-    <Text selectable {...{className:joinClasses(styled&&"text-text")}} style={{lineHeight:21}}>
+  return <View style={{gap:tokens.spacing.off2}}>
+    {meta?<Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text-muted text-sm")}} style={{fontWeight:tokens.fontWeight.semibold}}>{meta}</Text>:null}
+    <Text selectable {...{className:joinClasses(styled&&"text-text")}} style={{lineHeight:tokens.text.title}}>
       {entry.body||"No note text"}
     </Text>
   </View>;

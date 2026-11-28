@@ -12,6 +12,7 @@ import {
   guideKeyCommand,guidePositionAt,isOverOwnRuler,rulerTicks,validateGuides,
   type CanvasGuide,type NewCanvasGuide,type RulerUnit,
 } from "./ruler-model.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** A guide being dragged: a new one out of a ruler, or an existing one by `id`. */
 export interface GuidePreview {
@@ -211,20 +212,20 @@ function Ruler({orientation,ctx,pointer}:{orientation:CanvasGuide["orientation"]
         const size=t.level==="major"?thickness:t.level==="half"?thickness*0.45:thickness*0.25;
         return <View key={i} pointerEvents="none">
           <View {...{className:joinClasses(styled&&(t.level==="major"?"bg-text-muted":"bg-border"))}}
-            style={horizontal?{position:"absolute",left:at,bottom:0,width:1,height:size}:{position:"absolute",top:at,right:0,height:1,width:size}}/>
+            style={horizontal?{position:"absolute",left:at,bottom:0,width:tokens.borderWidth.hairline,height:size}:{position:"absolute",top:at,right:0,height:tokens.borderWidth.hairline,width:size}}/>
           {/* Labels sit in a fixed-width box: on web numberOfLines caps a Text at its
               parent's width, which is only the ruler's thickness on the side ruler.
               Side-ruler labels are turned to read upward, ending at their tick. */}
           {t.label!==undefined?<View style={horizontal
-            ?{position:"absolute",left:at+3,top:1,width:52,height:12}
-            :{position:"absolute",left:thickness/2-26-2,top:at+3+26-6,width:52,height:12,transform:[{rotate:"-90deg"}]}}>
+            ?{position:"absolute",left:at+tokens.spacing.off3,top:tokens.borderWidth.hairline,width:tokens.spacing.fixedToolbar,height:tokens.spacing.fixedInset}
+            :{position:"absolute",left:thickness/2-tokens.spacing.off26-tokens.spacing.off2,top:at+tokens.spacing.off3+tokens.spacing.off26-tokens.spacing.off6,width:tokens.spacing.fixedToolbar,height:tokens.spacing.fixedInset,transform:[{rotate:"-90deg"}]}}>
             <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text-muted")}}
-              style={{fontSize:10,lineHeight:12,fontVariant:["tabular-nums"],textAlign:horizontal?"left":"right"}}>{t.label}</Text>
+              style={{fontSize:tokens.text.micro,lineHeight:tokens.text.label,fontVariant:["tabular-nums"],textAlign:horizontal?"left":"right"}}>{t.label}</Text>
           </View>:null}
         </View>;
       })}
       {marker!==undefined&&marker>=0&&marker<=length?<View {...{className:joinClasses(styled&&"bg-accent")}}
-        style={horizontal?{position:"absolute",left:marker,top:0,width:1,height:thickness}:{position:"absolute",top:marker,left:0,height:1,width:thickness}}/>:null}
+        style={horizontal?{position:"absolute",left:marker,top:0,width:tokens.borderWidth.hairline,height:thickness}:{position:"absolute",top:marker,left:0,height:tokens.borderWidth.hairline,width:thickness}}/>:null}
     </View>
   </View>;
 }
@@ -268,7 +269,7 @@ function GuideLine({guide,ctx,focused,dragging}:{guide:CanvasGuide;ctx:Ctx;focus
     style={{position:"absolute",justifyContent:"center",alignItems:"center",
       ...(horizontal?{left:0,width:length,top:offset-half,height:band}:{top:0,height:length,left:offset-half,width:band}),...NO_SELECT}}>
     <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-info")}}
-      style={{...(horizontal?{width:"100%",height:focused?2:1}:{height:"100%",width:focused?2:1}),opacity:dragging?0:1}}/>
+      style={{...(horizontal?{width:"100%",height:focused?tokens.spacing.off2:tokens.borderWidth.hairline}:{height:"100%",width:focused?tokens.spacing.off2:tokens.borderWidth.hairline}),opacity:dragging?0:1}}/>
   </View>;
 }
 
@@ -277,8 +278,8 @@ function GuideStroke({ctx,orientation,offset,removing,emphasized}:{
 }){
   const horizontal=orientation==="horizontal";
   return <View pointerEvents="none" {...{className:joinClasses(ctx.styled&&"bg-info")}}
-    style={{position:"absolute",opacity:removing?0.35:emphasized?1:0.6,
-      ...(horizontal?{left:0,right:0,top:offset-(emphasized?1:0.5),height:emphasized?2:1}:{top:0,bottom:0,left:offset-(emphasized?1:0.5),width:emphasized?2:1})}}/>;
+    style={{position:"absolute",opacity:removing?controlTokens.opacity.faint:emphasized?1:controlTokens.opacity.muted,
+      ...(horizontal?{left:0,right:0,top:offset-(emphasized?tokens.borderWidth.hairline:tokens.borderWidth.hairline / 2),height:emphasized?tokens.spacing.off2:tokens.borderWidth.hairline}:{top:0,bottom:0,left:offset-(emphasized?tokens.borderWidth.hairline:tokens.borderWidth.hairline / 2),width:emphasized?tokens.spacing.off2:tokens.borderWidth.hairline})}}/>;
 }
 
 function Readout({ctx,at,text}:{ctx:Ctx;at:LocalPoint;text:string}){
@@ -289,7 +290,7 @@ function Readout({ctx,at,text}:{ctx:Ctx;at:LocalPoint;text:string}){
   return <View pointerEvents="none" style={{position:"absolute",left,top,width,alignItems:"flex-start"}}>
     <Text accessibilityLiveRegion="polite" numberOfLines={1}
       {...{className:joinClasses(styled&&"bg-surface-raised border border-border rounded-control text-text text-xs")}}
-      style={{paddingHorizontal:6,paddingVertical:3,fontVariant:["tabular-nums"]}}>{text}</Text>
+      style={{paddingHorizontal:tokens.spacing.off6,paddingVertical:tokens.spacing.off3,fontVariant:["tabular-nums"]}}>{text}</Text>
   </View>;
 }
 
@@ -326,7 +327,7 @@ function Corner({ctx}:{ctx:Ctx}){
       className:joinClasses(styled&&"bg-surface-raised border-border border-b border-r focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus")}}
       style={{width:thickness,height:thickness,alignItems:"center",justifyContent:"center"}}>
       <Text numberOfLines={1} {...{className:joinClasses(styled&&(moved?"text-accent":"text-text-muted"))}}
-        style={{fontSize:9,fontWeight:"600"}}>{unit}</Text>
+        style={{fontSize:tokens.text.off9,fontWeight:tokens.fontWeight.semibold}}>{unit}</Text>
     </View>
   </View>;
 }

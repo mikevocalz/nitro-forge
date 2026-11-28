@@ -9,6 +9,7 @@ import {PanResponder,Pressable,Text,View,type GestureResponderEvent} from "react
 import {createCanvasResponder} from "@nyc-tron/ui/components/gestures/canvas-responder";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import type {Point} from "./vector-types.ts";
+import { tokens } from "../tokens.ts";
 
 /** Every vector-tools control target is at least this many points square. */
 export const VECTOR_TOUCH_TARGET=44;
@@ -44,18 +45,18 @@ export function VectorButton({label,reason,onPress,onBlocked,role="button",check
     onPress={()=>{if(reason!==undefined)onBlocked(reason);else onPress();}}
     {...{className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
       styled&&(on?"border-primary bg-primary":"border-border bg-surface-raised"))}}
-    style={{minWidth:VECTOR_TOUCH_TARGET,minHeight:VECTOR_TOUCH_TARGET,paddingHorizontal:12,
-      flexDirection:"row",alignItems:"center",justifyContent:"center",gap:6,opacity:disabled?0.5:1}}>
+    style={{minWidth:VECTOR_TOUCH_TARGET,minHeight:VECTOR_TOUCH_TARGET,paddingHorizontal:tokens.spacing.fixedInset,
+      flexDirection:"row",alignItems:"center",justifyContent:"center",gap:tokens.spacing.off6,opacity:disabled?tokens.opacity.disabled:1}}>
     {children}
     <Text numberOfLines={1} {...{className:joinClasses(styled&&(on?"text-on-primary":"text-text"))}}
-      style={{fontSize:13,fontWeight:on?"700":"500"}}>{label}</Text>
+      style={{fontSize:tokens.text.off13,fontWeight:on?"700":"500"}}>{label}</Text>
   </Pressable>;
 }
 
 /** Polite status line: hints, and the reason an unavailable command did not run. */
 export function NoticeLine({text,styled,testID}:{text:string|undefined;styled:boolean;testID?:string}){
   return <Text accessibilityLiveRegion="polite" aria-live="polite" testID={testID}
-    {...{className:joinClasses(styled&&"text-text-muted text-xs")}} style={{minHeight:18}}>{text??""}</Text>;
+    {...{className:joinClasses(styled&&"text-text-muted text-xs")}} style={{minHeight:tokens.spacing.off18}}>{text??""}</Text>;
 }
 
 /** Group heading inside an inspector or bar. */

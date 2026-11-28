@@ -11,6 +11,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {assertFaderRange,clampGain,dbToGain,dragToGain,FADER_RANGES,formatDb,gainToPosition,stepGain,type FaderRange} from './level.ts';
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from '../tokens.ts';
 export interface NativeVerticalFaderProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  targetSize?:number;labels?:LevelFaderLabels|undefined;
  value:number;label:string;range?:FaderRange;length?:number;stepDb?:number;className?:string;
@@ -45,18 +46,18 @@ export function NativeVerticalFader({scope='vertical-fader',revision=0,...props}
   store.setState({dirty:false,error:null});void commit(gain);
  };
  const key=(event:{key?:string;shiftKey?:boolean;preventDefault?:()=>void})=>{if(off||!admitted())return;const direction=event.key==='ArrowUp'?1:event.key==='ArrowDown'?-1:0;if(event.key==='Escape'){event.preventDefault?.();cancel();return;}if(direction){event.preventDefault?.();void commit(stepGain(value,direction as -1|1,event.shiftKey ? stepDb/10 : stepDb,range));}else if(event.key==='Home'){event.preventDefault?.();void commit(0);}else if(event.key==='End'){event.preventDefault?.();void commit(dbToGain(range.maxDb));}};
- return <View {...rest} style={[{gap:8,minWidth:88,maxWidth:'100%',alignItems:'center'},style]} accessibilityLabel={labels?.faderName?.(label)??label+' fader'}>
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement,minWidth:controlTokens.extent.field,maxWidth:'100%',alignItems:'center'},style]} accessibilityLabel={labels?.faderName?.(label)??label+' fader'}>
   <Text {...{className:unstyled?undefined:'text-text'}}>{label}</Text>
   <GestureDetector gesture={gesture} touchAction="pan-x" userSelect="none"><View collapsable={false} accessible accessibilityRole="adjustable" accessibilityLabel={label} accessibilityState={{disabled:off}}
    accessibilityValue={{min:0,max:100,now:position*100,text:formatDb(shown)}} accessibilityActions={[{name:'increment',label:labels?.raiseAction??'Raise gain'},{name:'decrement',label:labels?.lowerAction??'Lower gain'},{name:'reset',label:labels?.resetAction??'Reset to unity'}]}
    onAccessibilityAction={e=>{if(off)return;if(e.nativeEvent.actionName==='reset')void reset();else if(e.nativeEvent.actionName==='increment'||e.nativeEvent.actionName==='decrement')void commit(stepGain(value,e.nativeEvent.actionName==='increment'?1:-1,stepDb,range));}}
-   {...{onKeyDown:key,focusable:!off}} style={{width:target,height:length,position:'relative',opacity:off ? .5 : 1}}>
-   <View pointerEvents="none" {...{className:unstyled?undefined:'bg-surface-sunken border border-border'}} style={{position:'absolute',left:(target-8)/2,top:8,bottom:8,width:8}}/>
-   <View pointerEvents="none" {...{className:unstyled?undefined:'bg-accent'}} style={{position:'absolute',left:(target-8)/2,bottom:8,width:8,height:position*(length-16)}}/>
-   <View pointerEvents="none" {...{className:unstyled?undefined:'bg-surface-raised border-2 border-accent'}} style={{position:'absolute',left:0,top:(1-position)*(length-16),width:target,height:16}}/>
+   {...{onKeyDown:key,focusable:!off}} style={{width:target,height:length,position:'relative',opacity:off ? tokens.opacity.disabled : 1}}>
+   <View pointerEvents="none" {...{className:unstyled?undefined:'bg-surface-sunken border border-border'}} style={{position:'absolute',left:(target-tokens.spacing.fixedElement)/2,top:tokens.spacing.fixedElement,bottom:tokens.spacing.fixedElement,width:tokens.spacing.fixedElement}}/>
+   <View pointerEvents="none" {...{className:unstyled?undefined:'bg-accent'}} style={{position:'absolute',left:(target-tokens.spacing.fixedElement)/2,bottom:tokens.spacing.fixedElement,width:tokens.spacing.fixedElement,height:position*(length-tokens.spacing.fixedGroup)}}/>
+   <View pointerEvents="none" {...{className:unstyled?undefined:'bg-surface-raised border-2 border-accent'}} style={{position:'absolute',left:0,top:(tokens.borderWidth.hairline-position)*(length-tokens.spacing.fixedGroup),width:target,height:tokens.spacing.fixedGroup}}/>
   </View></GestureDetector>
-  <TextInput accessibilityLabel={labels?.gainInput?.(label)??label+' gain decibels'} value={s.dirty?s.draft:formatDb(shown)} maxLength={64} editable={!off} onChangeText={draft=>{if(admitted())store.setState({draft,dirty:true,error:null});}} onSubmitEditing={numeric} onBlur={numeric} style={{minHeight:target,minWidth:88,maxWidth:'100%',padding:8}} {...{className:unstyled?undefined:'text-text border border-border rounded-control'}}/>
-  <View style={{flexDirection:'row',gap:4}}><Button targetSize={target} title="−" accessibilityLabel={labels?.lower?.(label,stepDb)??`Lower ${label} by ${stepDb} dB`} disabled={off} unstyled={unstyled} onPress={()=>commit(stepGain(value,-1,stepDb,range))}/><Button targetSize={target} title="+" accessibilityLabel={labels?.raise?.(label,stepDb)??`Raise ${label} by ${stepDb} dB`} disabled={off} unstyled={unstyled} onPress={()=>commit(stepGain(value,1,stepDb,range))}/></View>
+  <TextInput accessibilityLabel={labels?.gainInput?.(label)??label+' gain decibels'} value={s.dirty?s.draft:formatDb(shown)} maxLength={64} editable={!off} onChangeText={draft=>{if(admitted())store.setState({draft,dirty:true,error:null});}} onSubmitEditing={numeric} onBlur={numeric} style={{minHeight:target,minWidth:controlTokens.extent.field,maxWidth:'100%',padding:tokens.spacing.fixedElement}} {...{className:unstyled?undefined:'text-text border border-border rounded-control'}}/>
+  <View style={{flexDirection:'row',gap:tokens.spacing.fixedStack}}><Button targetSize={target} title="−" accessibilityLabel={labels?.lower?.(label,stepDb)??`Lower ${label} by ${stepDb} dB`} disabled={off} unstyled={unstyled} onPress={()=>commit(stepGain(value,-1,stepDb,range))}/><Button targetSize={target} title="+" accessibilityLabel={labels?.raise?.(label,stepDb)??`Raise ${label} by ${stepDb} dB`} disabled={off} unstyled={unstyled} onPress={()=>commit(stepGain(value,1,stepDb,range))}/></View>
   <Button targetSize={target} title={s.fine?(labels?.fineOn??'Fine on'):(labels?.fineOff??'Fine off')} accessibilityLabel={s.fine?(labels?.fineOnName??'Fine gain on'):(labels?.fineOffName??'Fine gain off')} variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>{if(admitted())store.setState({fine:!s.fine});}}/>
   <Button targetSize={target} title={labels?.reset??'Reset unity'} accessibilityLabel={labels?.resetName??'Reset gain to unity'} variant="ghost" disabled={off} unstyled={unstyled} onPress={reset}/>
   <ErrorMessage {...exact({message:s.error??guard.error??undefined,unstyled:unstyled})}/>

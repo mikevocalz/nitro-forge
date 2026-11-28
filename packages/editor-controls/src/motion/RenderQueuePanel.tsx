@@ -10,6 +10,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
 import {joinClasses} from '@nyc-tron/ui/components/styles';
 import {moveQueuedRenderJob,validateRenderChoices,validateMotionRenderSettings,validateMotionRenderJobs,type MotionRenderSettings,type MotionRenderJob,type MotionRenderFormat,type MotionRenderProfile} from './motion-render.ts';
+import { tokens } from '../tokens.ts';
 export type {MotionRenderSettings,MotionRenderJob,MotionRenderFormat,MotionRenderProfile} from './motion-render.ts';
 export interface RenderQueuePanelProps extends Omit<ViewProps,'children'> {
  /** Project identity; progress updates alone should not change this scope. */
@@ -31,9 +32,9 @@ export function RenderQueuePanel({scope,value,jobs,compositions,formats,profiles
  const set=(change:Partial<MotionRenderSettings>)=>{if(locked)return;const next={...value,...change};validateMotionRenderSettings(next,true);onChange(next);};
  const options=(choices:readonly {id:string;label:string}[],current:string)=>choices.some(c=>c.id===current)?choices.map(c=>({value:c.id,label:c.label})): [...choices.map(c=>({value:c.id,label:c.label})),{value:current,label:`Unavailable: ${current}`,disabled:true}];
  const queued=jobs.filter(job=>job.status==='queued').map(job=>job.id);
- return <View {...props} style={[{gap:8},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
   <SegmentedControl aria-label="Render queue view" value={local.section} options={[{value:'settings',label:'Render settings'},{value:'queue',label:'Queued renders'}]} disabled={locked} unstyled={unstyled} onChange={section=>store.set({section})}/>
-  {local.section==='settings'?<ScrollView style={{height}} contentContainerStyle={{gap:8}} keyboardShouldPersistTaps="handled">
+  {local.section==='settings'?<ScrollView style={{height}} contentContainerStyle={{gap:tokens.spacing.fixedElement}} keyboardShouldPersistTaps="handled">
   <Select label="Render composition" value={value.compositionId} options={options(compositions,value.compositionId)} disabled={locked} unstyled={unstyled} onValueChange={compositionId=>set({compositionId})}/>
   <Select label="Render encoder format" value={value.formatId} options={options(formats,value.formatId)} disabled={locked} unstyled={unstyled} onValueChange={formatId=>{const next=formats.find(format=>format.id===formatId);set({formatId,...(next&&!next.supportsAlpha?{alpha:'none' as const}:{})});}}/>
   <Select label="Render output profile" value={value.profileId} options={options(profiles,value.profileId)} disabled={locked} unstyled={unstyled} onValueChange={profileId=>set({profileId})}/>
@@ -49,11 +50,11 @@ export function RenderQueuePanel({scope,value,jobs,compositions,formats,profiles
   <Button title="Add composition to render queue" disabled={locked||!available||!compatible||!validName(value)} unstyled={unstyled} onPress={()=>{if(locked||!available||!compatible||!validName(value))return;void action.run('enqueue',signal=>onEnqueue({...value,frameRate:{...value.frameRate}},signal),()=>store.set({section:'queue'}));}}/>
   {local.section==='queue'?<FlatList data={jobs} keyExtractor={job=>job.id} style={{height}} initialNumToRender={8} windowSize={5} accessibilityLabel="Composition render queue" extraData={locked}
    ListEmptyComponent={<Text {...{className:joinClasses(!unstyled&&'text-text-muted')}}>No queued renders</Text>}
-   renderItem={({item})=><View style={{padding:8,gap:6}}>
+   renderItem={({item})=><View style={{padding:tokens.spacing.fixedElement,gap:tokens.spacing.off6}}>
     <Text {...{className:joinClasses(!unstyled&&'text-text')}}>{`${item.label}: ${item.status}`}</Text>
     <Text accessibilityLiveRegion="polite" {...{className:joinClasses(!unstyled&&'text-text-muted')}}>{item.progress?`${item.progress.completedFrames} of ${item.progress.totalFrames} frames reported`:'Frame progress not reported'}</Text>
     {item.error?<Text {...{className:joinClasses(!unstyled&&'text-danger')}}>{item.error}</Text>:null}{item.outputLabel?<Text selectable {...{className:joinClasses(!unstyled&&'text-text')}}>{item.outputLabel}</Text>:null}
-    <View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>
+    <View style={{flexDirection:'row',flexWrap:'wrap',gap:tokens.spacing.off6}}>
      {item.status==='queued'?([-1,1] as const).map(direction=><Button key={direction} title={direction===-1?'Move earlier':'Move later'} accessibilityLabel={`${direction===-1?'Move earlier':'Move later'} ${item.label}`} disabled={locked||queued.indexOf(item.id)===(direction===-1?0:queued.length-1)} unstyled={unstyled} onPress={()=>{if(!locked)void action.run('reorder',signal=>onReorder(moveQueuedRenderJob(jobs,item.id,direction),signal));}}/>):null}
      {item.status==='queued'||item.status==='running'?<Button title={`Cancel ${item.label}`} disabled={locked} unstyled={unstyled} onPress={()=>{if(!locked)void action.run('cancel-job',signal=>onCancelJob(item.id,signal));}}/>:null}
      {item.status!=='running'?<Button title={`Remove ${item.label}`} disabled={locked} unstyled={unstyled} onPress={()=>{if(!locked)void action.run('remove-job',signal=>onRemoveJob(item.id,signal));}}/>:null}

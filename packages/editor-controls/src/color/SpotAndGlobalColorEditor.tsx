@@ -13,6 +13,7 @@ import { joinClasses } from "@nyc-tron/ui/components/styles";
 import { validateNamedColor, type NamedColor } from "./color-management.ts";
 import { ColorChannelFields } from "./ColorChannelFields.tsx";
 import { rgbToHsv, hsvToRgb } from "../color.ts";
+import { tokens } from "../tokens.ts";
 export type { NamedColor } from "./color-management.ts";
 /** Controlled definition and explicit commit boundary for SpotAndGlobalColorEditor. */
 export interface SpotAndGlobalColorEditorProps extends Omit<ViewProps, "children"> {
@@ -34,9 +35,9 @@ export function SpotAndGlobalColorEditor({ value, onChange, onSave, disabled = f
   const locked = disabled || pending;
   // Empty draft names remain editable; only Save requires a nonempty name.
   validateNamedColor({ ...value, name: value.name.trim() ? value.name : "Untitled" });
-  return <View {...props} style={[{ gap: 8 }, props.style]}>
+  return <View {...props} style={[{ gap: tokens.spacing.fixedElement }, props.style]}>
     <Text {...{ className: joinClasses(!unstyled && "text-text") }}>Color name</Text>
-    <TextInput accessibilityLabel="Color name" value={value.name} editable={!locked} maxLength={256} onChangeText={name => { if (!locked) onChange({ ...value, name }); }} style={{ minHeight: 44, padding: 8 }} {...{ className: joinClasses(!unstyled && "border border-border rounded-control bg-surface-sunken text-text") }}/>
+    <TextInput accessibilityLabel="Color name" value={value.name} editable={!locked} maxLength={256} onChangeText={name => { if (!locked) onChange({ ...value, name }); }} style={{ minHeight: tokens.spacing.fixedTarget, padding: tokens.spacing.fixedElement }} {...{ className: joinClasses(!unstyled && "border border-border rounded-control bg-surface-sunken text-text") }}/>
     <SegmentedControl aria-label="Named color kind" value={value.kind} options={[{ value: "spot", label: "Spot ink" }, { value: "global", label: "Global color" }]} disabled={locked} unstyled={unstyled} onChange={kind => { if (!locked) onChange({ ...value, kind }); }}/>
     <SettingSwitch label="Overprint named color" on={value.overprint??false} onChange={overprint=>{if(!locked)onChange({...value,overprint});}} disabled={locked} styled={!unstyled}/>
     <UnitInput label="Ink tint percent" value={value.tint} min={0} max={100} disabled={locked} unstyled={unstyled} onCommit={tint => { if (!locked) onChange({ ...value, tint }); }}/>

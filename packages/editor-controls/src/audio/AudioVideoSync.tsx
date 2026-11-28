@@ -5,6 +5,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {assertFrameRate,type FrameRate} from '../timebase.ts';
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from '../tokens.ts';
 export interface AudioVideoSyncProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  surface:ReactNode;aspectRatio:number;sampleRate:number;audioSample:number;presentedFrame:number|null;
  rate:FrameRate;pictureOffsetSamples:number;toleranceSamples:number;playing:boolean;
@@ -16,7 +17,7 @@ export function AudioVideoSync({scope='audio-video-sync',revision=0,...props}:Au
  if(!Number.isFinite(sampleRate)||sampleRate<1||sampleRate>768000||!Number.isSafeInteger(audioSample)||audioSample<0||presentedFrame!==null&&(!Number.isSafeInteger(presentedFrame)||presentedFrame<0)||!Number.isSafeInteger(pictureOffsetSamples)||!Number.isSafeInteger(toleranceSamples)||toleranceSamples<0||!Number.isFinite(aspectRatio)||aspectRatio<=0||aspectRatio>10||!['unlocked','locking','locked','error'].includes(lockStatus))throw new RangeError('Invalid AV clock telemetry');
  const owner=JSON.stringify([...controlIdentity(scope,revision),sampleRate,rate,pictureOffsetSamples,disabledReason]),guard=useScopedControl(owner,props,disabledReason!==undefined),off=guard.pending||disabledReason!==undefined;
  const frameSamples=presentedFrame===null?null:presentedFrame*rate.denominator/rate.numerator*sampleRate,drift=frameSamples===null?null:frameSamples+pictureOffsetSamples-audioSample;
- return <View {...rest} style={[{gap:8},style]} accessibilityLabel="Audio picture synchronization"><View style={{aspectRatio,minHeight:120,overflow:'hidden'}}>{surface}</View>
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement},style]} accessibilityLabel="Audio picture synchronization"><View style={{aspectRatio,minHeight:controlTokens.extent.fieldWide,overflow:'hidden'}}>{surface}</View>
   <Text accessibilityLiveRegion="polite" {...{className:unstyled?undefined:'text-text'}}>{lockStatus} · {playing?'Playing':'Stopped'} · audio master {audioSample} samples</Text>
   <Text {...{className:unstyled?undefined:'text-text'}}>{drift===null?'No presented-frame measurement supplied':`Picture ${drift>=0?'ahead':'behind'} by ${Math.abs(drift/sampleRate*1000).toFixed(2)} ms · ${Math.abs(drift)<=toleranceSamples?'within tolerance':'outside tolerance'}`}</Text>
   <Button title="Lock picture to audio clock" disabled={off||lockStatus==='locked'||lockStatus==='locking'} unstyled={unstyled} onPress={()=>guard.run('lock',(h,s)=>h.onLock(s))}/>

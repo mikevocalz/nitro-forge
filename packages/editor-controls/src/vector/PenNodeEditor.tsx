@@ -21,6 +21,7 @@ import {
 } from "./vector-types.ts";
 import {CanvasKnob,LinePiece,NoticeLine,VectorButton,type CanvasKeyEvent,type DragModifiers} from "./vector-controls.tsx";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** Source contract for hosts that require scoped, focus-preserving canvas edits.
  * Older alpha.4 artifacts omit this marker; availability must be detected at runtime. */
@@ -368,8 +369,8 @@ function PenNodeEditorBody({
       }))}
     </View>
     {showCommands?<View accessibilityRole="toolbar" aria-label="Node commands"
-      style={{flexDirection:"row",flexWrap:"wrap",gap:6,maxWidth:Math.max(width,320)}}>
-      <View role="radiogroup" aria-label="Node kind" style={{flexDirection:"row",gap:6}}>
+      style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.off6,maxWidth:Math.max(width,320)}}>
+      <View role="radiogroup" aria-label="Node kind" style={{flexDirection:"row",gap:tokens.spacing.off6}}>
         {NODE_KINDS.map(k=><VectorButton key={k.value} role="radio" label={k.label} styled={styled}
           checked={selNode?.kind===k.value}
           reason={availabilityReason(kindAvailability(shown,selected))}
@@ -404,7 +405,7 @@ function KnobGlyph({shape,selected,styled,accentColor}:{shape:NodeKind|"handle";
   const size=shape==="handle"?PEN_HANDLE_SIZE:PEN_NODE_SIZE;
   const fill=selected?joinClasses(styled&&!accentColor&&"bg-accent"):joinClasses(styled&&"bg-surface-raised");
   return <View pointerEvents="none" {...{className:joinClasses(fill,styled&&!accentColor&&"border-accent")}}
-    style={{width:size,height:size,borderWidth:2,...(accentColor?{borderColor:accentColor}:null),
+    style={{width:size,height:size,borderWidth:tokens.borderWidth.strong,...(accentColor?{borderColor:accentColor}:null),
       ...(selected&&accentColor?{backgroundColor:accentColor}:null),
       borderRadius:shape==="smooth"||shape==="handle"?forgeRadius.sm:shape==="corner"?forgeHairlineRadius.tick:0,
       transform:shape==="symmetric"?[{rotate:"45deg"}]:undefined}}/>;

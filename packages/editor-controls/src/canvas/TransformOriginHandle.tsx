@@ -12,6 +12,7 @@ import {
   originAccessibilityValue,originKeyCommand,originPayload,pivotInDoc,validateTransform,
   type BoundsCorners,type LayerTransform,type OriginAnchor,
 } from "./transform-origin-model.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode TransformOriginHandle}. */
 export interface TransformOriginHandleProps extends Omit<ViewProps,"children"> {
@@ -126,7 +127,7 @@ export function TransformOriginHandle({
         const p=docPointToScreen(viewport,anchorPoint(corners,anchor));
         const hot=dragAnchor===anchor;
         return <View key={anchor} {...{className:joinClasses(styled&&"border",styled&&(hot?"bg-primary border-primary":"bg-surface-raised border-primary"))}}
-          style={{position:"absolute",left:p.x-(hot?5:4),top:p.y-(hot?5:4),width:hot?10:8,height:hot?10:8}}/>;
+          style={{position:"absolute",left:p.x-(hot?tokens.spacing.off5:tokens.spacing.fixedStack),top:p.y-(hot?tokens.spacing.off5:tokens.spacing.fixedStack),width:hot?tokens.spacing.off10:tokens.spacing.fixedElement,height:hot?tokens.spacing.off10:tokens.spacing.fixedElement}}/>;
       })}
     </View>:null}
     {transform?<View {...handlers} collapsable={false}
@@ -141,18 +142,18 @@ export function TransformOriginHandle({
       aria-disabled={disabled}
       {...{onKeyDown,focusable:!disabled,className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}
       style={{position:"absolute",left:handleLeft,top:handleTop,width:HIT,height:HIT,alignItems:"center",justifyContent:"center",
-        opacity:disabled?0.5:1,...NO_SELECT}}>
-      <View pointerEvents="none" style={{width:22,height:22,alignItems:"center",justifyContent:"center"}}>
-        <View {...{className:joinClasses(styled&&"bg-primary")}} style={{position:"absolute",width:22,height:2}}/>
-        <View {...{className:joinClasses(styled&&"bg-primary")}} style={{position:"absolute",width:2,height:22}}/>
+        opacity:disabled?tokens.opacity.disabled:1,...NO_SELECT}}>
+      <View pointerEvents="none" style={{width:tokens.spacing.off22,height:tokens.spacing.off22,alignItems:"center",justifyContent:"center"}}>
+        <View {...{className:joinClasses(styled&&"bg-primary")}} style={{position:"absolute",width:tokens.spacing.off22,height:tokens.spacing.off2}}/>
+        <View {...{className:joinClasses(styled&&"bg-primary")}} style={{position:"absolute",width:tokens.spacing.off2,height:tokens.spacing.off22}}/>
         <View {...{className:joinClasses(styled&&"border-2",styled&&(state.drag?"border-accent bg-surface-raised":"border-primary bg-surface-raised"))}}
-          style={{width:12,height:12,borderRadius:forgeRadius.sm}}/>
+          style={{width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset,borderRadius:forgeRadius.sm}}/>
       </View>
     </View>:null}
-    {!transform&&unavailableReason?<View pointerEvents="none" style={{position:"absolute",left:Math.max(4,Math.min(center.x-110,viewport.width-224)),top:center.y-14,width:220,alignItems:"center"}}>
+    {!transform&&unavailableReason?<View pointerEvents="none" style={{position:"absolute",left:Math.max(4,Math.min(center.x-110,viewport.width-224)),top:center.y-tokens.spacing.off14,width:controlTokens.extent.preview,alignItems:"center"}}>
       <Text accessibilityLiveRegion="polite"
         {...{className:joinClasses(styled&&"bg-surface-raised border border-border rounded-control text-text text-xs")}}
-        style={{paddingHorizontal:8,paddingVertical:4,textAlign:"center"}}>{unavailableReason}</Text>
+        style={{paddingHorizontal:tokens.spacing.fixedElement,paddingVertical:tokens.spacing.fixedStack,textAlign:"center"}}>{unavailableReason}</Text>
     </View>:null}
   </View>;
 }

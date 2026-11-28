@@ -4,6 +4,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {assertFrameRate,type FrameRate} from '../timebase.ts';
 import {exact} from '../exact-optional.ts';
+import { tokens } from '../tokens.ts';
 export interface VideoQualityInspectorProps extends Omit<ViewProps,'children'>,ScopedControlProps {
  media:{width:number;height:number;bitDepth:number;frameRate:FrameRate;codec:string;colorSpace:string;bitrate?:number};
  preview:{supported:boolean;reason?:string};profileId:string;
@@ -14,7 +15,7 @@ export function VideoQualityInspector({scope='video-quality',revision=0,...props
  const {media,preview,profileId,profiles,warnings,onProfileChange:_change,unstyled=false,disabledReason,style,...rest}=props;assertFrameRate(media.frameRate);
  if(![media.width,media.height,media.bitDepth].every(n=>Number.isSafeInteger(n)&&n>0)||media.bitDepth>64||media.bitrate!==undefined&&(!Number.isFinite(media.bitrate)||media.bitrate<=0)||!media.codec.trim()||!media.colorSpace.trim()||profiles.length>256||new Set(profiles.map(p=>p.id)).size!==profiles.length||warnings.length>128||warnings.some(w=>w.length>4096))throw new RangeError('Invalid video quality metadata');
  const guard=useScopedControl(JSON.stringify([...controlIdentity(scope,revision),disabledReason]),props,disabledReason!==undefined);
- return <View {...rest} style={[{gap:8,minWidth:0},style]} accessibilityLabel="Video quality">
+ return <View {...rest} style={[{gap:tokens.spacing.fixedElement,minWidth:0},style]} accessibilityLabel="Video quality">
   <Text {...{className:unstyled?undefined:'text-text'}}>{media.width} × {media.height}; {media.bitDepth}-bit; {media.codec}; {media.colorSpace}</Text>
   <Text {...{className:unstyled?undefined:'text-text'}}>{media.frameRate.numerator}/{media.frameRate.denominator} fps; bitrate: {media.bitrate===undefined?'Not reported':media.bitrate+' bit/s'}</Text>
   <Text {...{className:unstyled?undefined:'text-text'}}>Native preview: {preview.supported?'Supported':preview.reason??'Not supported by this host'}</Text>

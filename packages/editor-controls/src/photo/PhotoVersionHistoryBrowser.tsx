@@ -5,6 +5,7 @@ import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
 import {joinClasses} from '@nyc-tron/ui/components/styles';
 import {validatePhotoDevelop,type PhotoDevelopSettings} from './photo-adjustments.ts';
+import { tokens } from '../tokens.ts';
 export interface PhotoVersion {readonly id:string;readonly name:string;readonly timestampMs:number;readonly settings:PhotoDevelopSettings}
 export interface PhotoVersionHistoryBrowserProps extends Omit<ViewProps,'children'> {
  readonly photoId:string;readonly revision:string;readonly versions:readonly PhotoVersion[];readonly originalVersionId:string|null;readonly selectedId:string|null;readonly currentId:string|null;
@@ -19,10 +20,10 @@ export function PhotoVersionHistoryBrowser({photoId,revision,versions,originalVe
  const action=useOwnedAction(JSON.stringify([photoId,revision])),locked=disabled||action.pending!==null,selected=selectedId===null?undefined:byId.get(selectedId),original=originalVersionId===null?undefined:byId.get(originalVersionId);
  useLayoutEffect(()=>()=>onCompare(undefined),[photoId,revision]);
  const restore=(version:PhotoVersion)=>{if(!locked&&version.id!==currentId)void action.run('restore',signal=>onRestore(version,signal));};
- return <View {...props} style={[{gap:8},props.style]}>
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
   <FlatList data={versions} keyExtractor={version=>version.id} initialNumToRender={10} windowSize={5} style={{height}} accessibilityLabel="Photo edit versions" extraData={[selectedId,currentId,locked,originalVersionId]}
    ListEmptyComponent={<Text {...{className:joinClasses(!unstyled&&'text-text-muted')}}>No photo versions supplied</Text>}
-   renderItem={({item})=><Pressable accessibilityRole="radio" accessibilityLabel={`${item.name}${item.id===originalVersionId?', original':''}${item.id===currentId?', current':''}`} accessibilityState={{checked:item.id===selectedId,disabled:locked}} aria-checked={item.id===selectedId} disabled={locked} onPress={()=>{if(!locked)onSelect(item.id);}} style={{minHeight:56,padding:8,gap:4}}><Text {...{className:joinClasses(!unstyled&&'text-text')}}>{item.name}</Text><Text {...{className:joinClasses(!unstyled&&'text-text-muted')}}>{new Date(item.timestampMs).toLocaleString()}</Text></Pressable>}/>
+   renderItem={({item})=><Pressable accessibilityRole="radio" accessibilityLabel={`${item.name}${item.id===originalVersionId?', original':''}${item.id===currentId?', current':''}`} accessibilityState={{checked:item.id===selectedId,disabled:locked}} aria-checked={item.id===selectedId} disabled={locked} onPress={()=>{if(!locked)onSelect(item.id);}} style={{minHeight:tokens.spacing.fixedToolbar,padding:tokens.spacing.fixedElement,gap:tokens.spacing.fixedStack}}><Text {...{className:joinClasses(!unstyled&&'text-text')}}>{item.name}</Text><Text {...{className:joinClasses(!unstyled&&'text-text-muted')}}>{new Date(item.timestampMs).toLocaleString()}</Text></Pressable>}/>
   <Button title="Compare selected photo version" disabled={locked||!selected} unstyled={unstyled} onPress={()=>{if(!locked&&selected)onCompare(selected);}}/>
   <Button title="Close photo version comparison" unstyled={unstyled} onPress={()=>onCompare(undefined)}/>
   <Button title="Restore selected photo version" disabled={locked||!selected||selected.id===currentId} unstyled={unstyled} onPress={()=>{if(selected)restore(selected);}}/>

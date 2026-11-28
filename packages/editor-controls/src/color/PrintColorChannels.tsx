@@ -2,6 +2,7 @@ import { View, type ViewProps } from "react-native";
 import { Select } from "@nyc-tron/ui/components/Select";
 import { UnitInput } from "@nyc-tron/ui/components/shell/UnitInput";
 import { validatePrintColor, type PrintColor, type ColorConversionPolicy } from "./color-management.ts";
+import { tokens } from "../tokens.ts";
 export type { PrintColor } from "./color-management.ts";
 /** Controlled, profile-preserving CMYK/Lab editor; every field acceptance commits one change. */
 export interface PrintColorChannelsProps extends Omit<ViewProps, "children"> {
@@ -20,7 +21,7 @@ export function PrintColorChannels({ value, onCommit, conversionPolicy = "preser
   validatePrintColor(value,labRange);
   if(!["preserve-numbers","preserve-appearance"].includes(conversionPolicy))throw new TypeError("Unknown color conversion policy");
   const labels=value.model==='lab'?["Lightness L*","Lab a*","Lab b*"]:["Cyan percent","Magenta percent","Yellow percent","Black percent"];
-  return <View {...props} style={[{ gap: 8 }, props.style]}>
+  return <View {...props} style={[{ gap: tokens.spacing.fixedElement }, props.style]}>
     <Select label="Print conversion policy" value={conversionPolicy} options={[{value:"preserve-numbers",label:"Preserve channel numbers"},{value:"preserve-appearance",label:"Preserve color appearance"}]} disabled={disabled||!onConversionPolicyChange} unstyled={unstyled} onValueChange={policy=>onConversionPolicyChange?.(policy as ColorConversionPolicy)}/>
     {labels.map((label, index) => <UnitInput key={label} label={label} value={value.channels[index]!} min={value.model==='lab'&&index>0?labRange[0]:0} max={value.model==='lab'&&index>0?labRange[1]:100} step={1} precision={2} disabled={disabled} unstyled={unstyled}
       onCommit={number => { if (disabled || number === value.channels[index]) return; const channels = [...value.channels] as PrintColor["channels"] & number[]; channels[index] = number; onCommit({ ...value, channels }); }}/>) }

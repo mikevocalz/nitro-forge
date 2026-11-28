@@ -8,6 +8,7 @@ import { SoloMuteButtons, type SoloMuteButtonsProps } from "./SoloMuteButtons.ts
 import { FADER_RANGES, gainToDb, type FaderRange } from "./level.ts";
 import type { MeterBand } from "./level-meter.ts";
 import { describeAudibility, type Audibility, type MixerChannel } from "./mixer.ts";
+import { tokens } from "../tokens.ts";
 
 /**
  * Meter values for one strip, linear sample peak as the Cadence `meter` op
@@ -144,17 +145,17 @@ export function ChannelStrip({
   }}
     {...{ className: joinClasses("items-center gap-2 py-2", styled && bus && "bg-surface-sunken", className) }}
     style={[{ width }, style]}>
-    {lines > 0 ? <View style={{ minHeight: lines * ROUTING_LINE, alignSelf: "stretch", paddingHorizontal: 6, justifyContent: "flex-end" }}>
+    {lines > 0 ? <View style={{ minHeight: lines * ROUTING_LINE, alignSelf: "stretch", paddingHorizontal: tokens.spacing.off6, justifyContent: "flex-end" }}>
       {meta.map((line, i) => <Text key={line + i} numberOfLines={1}
         {...{ className: i === 0 && bus ? joinClasses(styled && "text-xs font-semibold text-text") : small }}
         style={{ textAlign: "center", lineHeight: ROUTING_LINE }}>{line}</Text>)}
     </View> : null}
     {/* Keep numeric entry inside its strip instead of using its intrinsic input width. */}
-    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 4, width: "100%" }}>
+    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: tokens.spacing.fixedStack, width: "100%" }}>
       <LevelFader targetSize={target} labels={labels?.fader} value={channel.gain} label={channel.name} range={range} length={faderLength}
         disabled={disabled} onChange={onGainChange} onCommit={onGainCommit} unstyled={unstyled}
         style={{ width: stripWidth, minWidth: 0, flexShrink: 1 }} />
-      {meter ? <View style={{ width: CHANNEL_STRIP_METER_WIDTH - 4, alignItems: "center", gap: 9, paddingTop: 12 }}>
+      {meter ? <View style={{ width: CHANNEL_STRIP_METER_WIDTH - tokens.spacing.fixedStack, alignItems: "center", gap: tokens.spacing.fixedElement, paddingTop: tokens.spacing.fixedInset }}>
         <Text numberOfLines={1}
           {...{ className: joinClasses(styled && "text-xs", styled && (clipped ? "font-semibold text-danger" : "text-text-muted")) }}
           style={{ fontVariant: ["tabular-nums"] }}>{holdReadout(hold ?? 0)}</Text>
@@ -163,7 +164,7 @@ export function ChannelStrip({
           style={{ height: faderLength }} />
       </View> : null}
     </View>
-    <PanControl targetSize={target} labels={labels?.pan} value={channel.pan} label={channel.name} mode={bus ? "balance" : "pan"} width={stripWidth - 16}
+    <PanControl targetSize={target} labels={labels?.pan} value={channel.pan} label={channel.name} mode={bus ? "balance" : "pan"} width={stripWidth - tokens.spacing.fixedGroup}
       disabled={disabled} onChange={onPanChange} onCommit={onPanCommit} unstyled={unstyled} />
     <SoloMuteButtons targetSize={target} labels={labels?.toggles} label={channel.name} muted={channel.muted} solo={channel.solo} audibility={state}
       soloSafe={channel.soloSafe ?? false} onSoloSafeCommit={onSoloSafeCommit}

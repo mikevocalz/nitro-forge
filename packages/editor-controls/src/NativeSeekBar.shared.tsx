@@ -8,6 +8,7 @@ import { clampFrame, formatTimecode, frameToPosition, positionToFrame } from "./
 import type { NativeSeekBarProps } from "./NativeSeekBar.types.ts";
 
 import {controlIdentity} from "./inputs/useScopedControl.ts";
+import { tokens } from "./tokens.ts";
 
 type Drag = { preview: number | undefined };
 
@@ -108,7 +109,7 @@ export function SeekBarLayout({ props, shown, step, off, slider }: {
     {...{ className: joinClasses("w-full", !unstyled && "rounded-control bg-surface-raised p-3", className) }}
     style={style}>
     {slider}
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.fixedElement, marginTop: tokens.spacing.fixedElement }}>
       <Button title={`−${stepFrames} frame`} variant="secondary" size="sm" disabled={off}
         onPress={() => step(-stepFrames)} />
       <Text selectable {...{ className: joinClasses(!unstyled && "text-text") }}

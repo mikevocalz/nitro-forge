@@ -32,6 +32,7 @@ import {
   normalizeRefine,refineOp,refineReason,validateMaskInfo,
   type AddMaskOp,type InvertMaskOp,type MaskInfo,type RefineDraft,type RefineMaskOp,type RemoveMaskOp,type SetMaskEnabledOp,
 } from "./mask-model.ts";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode MaskThumbnailAndEditor}. Each `on*` payload is one engine op's argument. */
 export interface MaskThumbnailAndEditorProps extends Omit<ViewProps,"children"> {
@@ -105,7 +106,7 @@ function MaskThumbnailEditorBody({
       {...{className:joinClasses("gap-2",styled&&"rounded-card bg-surface-raised border border-border p-3",className)}}>
       {heading}
       <Text {...{className:muted}}>{layerName+" has no mask. Start one:"}</Text>
-      <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>
+      <View style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.fixedElement}}>
         {MASK_FILLS.map((o,i)=><PanelButton key={o.fill} label={o.label} styled={styled} reason={reasons[i]} grow
           tone={o.fill==="reveal"?"primary":"secondary"} onPress={()=>onAddMask({id:layerId,fill:o.fill})}/>)}
       </View>
@@ -118,32 +119,32 @@ function MaskThumbnailEditorBody({
   const dirty=draft.feather!==0||draft.grow!==0;
   return <View {...rest} accessibilityLabel={"Mask for "+layerName}
     {...{className:joinClasses("gap-3",styled&&"rounded-card bg-surface-raised border border-border p-3",className)}}>
-    <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
+    <View style={{flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedInset}}>
       <View>
-        <LayerThumbnail scope={scope} variant="mask" width={64} height={48} label={"Mask of "+layerName}
+        <LayerThumbnail scope={scope} variant="mask" width={tokens.spacing.fixedPage} height={tokens.spacing.off48} label={"Mask of "+layerName}
           source={{kind:"loader",id:maskThumbnailId(layerId),revision:mask.revision,load:(_id,max,signal)=>loadMaskThumbnail(layerId,max,signal)}}
-          {...(cache?{cache}:{})} unstyled={unstyled} style={{opacity:mask.enabled?1:0.45}}/>
+          {...(cache?{cache}:{})} unstyled={unstyled} style={{opacity:mask.enabled?1:tokens.opacity.disabled}}/>
         {mask.enabled?null:<View pointerEvents="none" {...{className:joinClasses(styled&&"bg-danger")}}
-          style={{position:"absolute",left:-2,right:-2,top:23,height:2,transform:[{rotate:"-36deg"}]}}/>}
+          style={{position:"absolute",left:-tokens.spacing.off2,right:-tokens.spacing.off2,top:tokens.spacing.fixedSection,height:tokens.spacing.off2,transform:[{rotate:"-36deg"}]}}/>}
       </View>
-      <View style={{flex:1,minWidth:0,gap:2}}>
+      <View style={{flex:1,minWidth:0,gap:tokens.spacing.off2}}>
         {heading}
         <Text numberOfLines={1} {...{className:muted}}>{maskStatusText(mask)}</Text>
       </View>
     </View>
     <Reason text={blocked} styled={styled}/>
-    <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>
+    <View style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.fixedElement}}>
       <PanelButton role="switch" label="Enabled" checked={mask.enabled} reason={blocked} styled={styled} grow
         onPress={()=>onSetMaskEnabled({id:layerId,enabled:!mask.enabled})}/>
       <PanelButton role="switch" label="Inverted" checked={mask.inverted} reason={blocked} styled={styled} grow
         onPress={()=>onInvertMask({id:layerId})}/>
     </View>
-    <View style={{gap:4}}>
+    <View style={{gap:tokens.spacing.fixedStack}}>
       <PrecisionScrubber scope={layerId} revision={revision} label="Feather" unit=" px" {...FEATHER_RANGE} value={draft.feather} disabled={locked}
         unstyled={unstyled} onCommit={feather=>onRefineDraftChange({...draft,feather})}/>
       <PrecisionScrubber scope={layerId} revision={revision} label="Grow" unit=" px" {...GROW_RANGE} value={draft.grow} disabled={locked}
         unstyled={unstyled} onCommit={grow=>onRefineDraftChange({...draft,grow})}/>
-      <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>
+      <View style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.fixedElement}}>
         <PanelButton label="Refine mask" tone="primary" reason={refineBlocked} styled={styled} grow
           onPress={()=>onRefineMask(refineOp(layerId,draft))}/>
         <PanelButton label="Reset" reason={blocked??(dirty?undefined:"Nothing to reset")} styled={styled}
@@ -152,7 +153,7 @@ function MaskThumbnailEditorBody({
       <Reason text={blocked?undefined:refineBlocked} styled={styled}/>
     </View>
     <View {...{className:joinClasses(styled&&"border-t border-border")}}
-      style={{flexDirection:"row",flexWrap:"wrap",gap:8,paddingTop:12}}>
+      style={{flexDirection:"row",flexWrap:"wrap",gap:tokens.spacing.fixedElement,paddingTop:tokens.spacing.fixedInset}}>
       <PanelButton label="Apply mask" reason={blocked} styled={styled} grow
         onPress={()=>onRemoveMask({id:layerId,apply:true})}/>
       <PanelButton label="Delete mask" reason={blocked} styled={styled} grow

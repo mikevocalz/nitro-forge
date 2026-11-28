@@ -5,6 +5,7 @@ import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {speedLabel} from "./ruler.ts";
 import {exact} from '../exact-optional.ts';
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode PlaybackRateMenu}. */
 export interface PlaybackRateMenuProps extends Omit<ViewProps,"children">,ScopedControlProps {
@@ -51,17 +52,17 @@ function PlaybackRateMenuBody({
       accessibilityState={{expanded:open,disabled}} aria-expanded={open} disabled={disabled}
       onPress={()=>store.set(o=>!o)} {...id("toggle")}
       {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-raised px-3 focus-visible:ring-2 focus-visible:ring-focus")}}
-      style={{minHeight:44,minWidth:72,alignItems:"center",justifyContent:"center",alignSelf:"flex-start",opacity:disabled?0.4:1}}>
+      style={{minHeight:tokens.spacing.fixedTarget,minWidth:tokens.spacing.fixedRail,alignItems:"center",justifyContent:"center",alignSelf:"flex-start",opacity:disabled?tokens.opacity.disabled:1}}>
       <Text {...{className:joinClasses(styled&&"text-text font-semibold")}} style={{fontVariant:["tabular-nums"]}}>{speedLabel(rate)}</Text>
     </Pressable>
-    {open?<View {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-raised p-1")}} style={{gap:2,alignSelf:"flex-start",minWidth:180}}>
+    {open?<View {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-raised p-1")}} style={{gap:tokens.spacing.off2,alignSelf:"flex-start",minWidth:controlTokens.extent.previewCompact}}>
       <View accessibilityRole="radiogroup" accessibilityLabel="Playback speed">
         {options.map(r=>{
           const on=r===rate;
           return <Pressable key={r} accessibilityRole="radio" aria-checked={on} accessibilityState={{checked:on}}
             onPress={()=>{store.set(false);if(r!==rate)onRateChange(r);}} {...id("rate-"+r)}
             {...{className:joinClasses(styled&&"rounded-control px-3 focus-visible:ring-2 focus-visible:ring-focus",styled&&on&&"bg-surface-sunken")}}
-            style={{minHeight:44,flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12}}>
+            style={{minHeight:tokens.spacing.fixedTarget,flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:tokens.spacing.fixedInset}}>
             <Text {...{className:joinClasses(styled&&(on?"text-text font-semibold":"text-text"))}} style={{fontVariant:["tabular-nums"]}}>
               {r<0?"Reverse":speedLabel(r)}
             </Text>
@@ -69,7 +70,7 @@ function PlaybackRateMenuBody({
           </Pressable>;
         })}
       </View>
-      {onPreservePitchChange?<View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",minHeight:44,paddingHorizontal:12,gap:12}}>
+      {onPreservePitchChange?<View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",minHeight:tokens.spacing.fixedTarget,paddingHorizontal:tokens.spacing.fixedInset,gap:tokens.spacing.fixedInset}}>
         <Text {...{className:joinClasses(styled&&"text-text text-sm")}}>Preserve pitch</Text>
         <Switch value={preservePitch??true} onValueChange={onPreservePitchChange} accessibilityLabel="Preserve pitch" {...id("pitch")}/>
       </View>:null}

@@ -7,6 +7,7 @@ import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {ChevronGlyph,OFFICE_TOUCH_TARGET,officeKey,type OfficeKeyEvent} from "../office/office-controls.tsx";
 import {headingAtBlock,headingsByPage,rowForHeading,visibleOutline,type OutlineHeading} from "./outline-model.ts";
 import {exact} from '../exact-optional.ts';
+import { tokens } from "../tokens.ts";
 
 /** A named place in the document. */
 export interface OutlineBookmark {
@@ -76,19 +77,19 @@ function NavigationOutlineBody({actionError,disabledReason,disabled=false,
   const muted=joinClasses(styled&&"text-text-muted text-sm");
   const rowClass=(on:boolean)=>joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus",styled&&on&&"bg-accent/10");
   return <View {...rest} accessibilityLabel="Navigation" {...{role:"navigation",className:joinClasses("min-w-0",className)}}
-    style={[{gap:8},rest.style as object]}>
-    {views.length>1?<View accessibilityRole="tablist" style={{flexDirection:"row",gap:4}}>
+    style={[{gap:tokens.spacing.fixedElement},rest.style as object]}>
+    {views.length>1?<View accessibilityRole="tablist" style={{flexDirection:"row",gap:tokens.spacing.fixedStack}}>
       {views.map(v=><Pressable key={v} accessibilityRole="tab" accessibilityState={{selected:view===v}}
         onPress={()=>store.set(s=>({...s,view:v}))}
         {...{className:joinClasses(styled&&"rounded-control border focus-visible:ring-2 focus-visible:ring-focus",
           styled&&(view===v?"border-accent bg-accent/10":"border-transparent"))}}
-        style={{minHeight:OFFICE_TOUCH_TARGET,paddingHorizontal:12,justifyContent:"center"}}>
+        style={{minHeight:OFFICE_TOUCH_TARGET,paddingHorizontal:tokens.spacing.fixedInset,justifyContent:"center"}}>
         <Text {...{className:joinClasses(styled&&"text-text text-sm")}} style={{fontWeight:view===v?"600":"400"}}>
           {v==="headings"?"Headings":v==="pages"?"Pages":"Bookmarks"}
         </Text>
       </Pressable>)}
     </View>:null}
-    <ScrollView style={{flexShrink:1}} contentContainerStyle={{gap:2}}>
+    <ScrollView style={{flexShrink:1}} contentContainerStyle={{gap:tokens.spacing.off2}}>
       {view==="headings"?(rows.length===0
         ?<Text {...{className:muted}}>No headings yet. Apply a heading style to a paragraph and it appears here.</Text>
         :rows.map((row,r)=>{
@@ -114,25 +115,25 @@ function NavigationOutlineBody({actionError,disabledReason,disabled=false,
             <Pressable accessibilityRole="link" accessibilityLabel={"Heading "+h.level+", "+h.text}
               accessibilityState={{selected:on}} onPress={()=>onJumpToHeading(h)} {...{onKeyDown,"aria-current":on?"location":undefined}}
               {...{className:rowClass(on)}}
-              style={{flex:1,minWidth:0,minHeight:OFFICE_TOUCH_TARGET,flexDirection:"row",alignItems:"center",gap:8,paddingHorizontal:8}}>
+              style={{flex:1,minWidth:0,minHeight:OFFICE_TOUCH_TARGET,flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedElement,paddingHorizontal:tokens.spacing.fixedElement}}>
               <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text")}}
-                style={{flex:1,fontWeight:h.level===1?"700":on?"600":"400",fontSize:h.level===1?16:15}}>{h.text||"Untitled heading"}</Text>
+                style={{flex:1,fontWeight:h.level===1?"700":on?"600":"400",fontSize:h.level===1?tokens.text.off15:tokens.text.off15}}>{h.text||"Untitled heading"}</Text>
               {h.page!==undefined?<Text {...{className:muted}} style={{fontVariant:["tabular-nums"]}}>{h.page+1}</Text>:null}
             </Pressable>
           </View>;
         }))
       :view==="pages"?headingsByPage(headings,pageCount??0).map((h,page)=><Pressable key={page} accessibilityRole="link"
           accessibilityLabel={"Page "+(page+1)+(h?", "+h.text:"")} onPress={()=>onJumpToPage!(page)} {...{className:rowClass(false)}}
-          style={{minHeight:OFFICE_TOUCH_TARGET,flexDirection:"row",alignItems:"center",gap:10,padding:6}}>
+          style={{minHeight:OFFICE_TOUCH_TARGET,flexDirection:"row",alignItems:"center",gap:tokens.spacing.off10,padding:tokens.spacing.off6}}>
           {renderPageThumbnail?<View pointerEvents="none" {...{"aria-hidden":true,className:joinClasses(styled&&"border border-border bg-surface-raised")}}
-            style={{width:48,height:64,overflow:"hidden"}}>{renderPageThumbnail(page)}</View>:null}
-          <Text {...{className:joinClasses(styled&&"text-text")}} style={{fontVariant:["tabular-nums"],minWidth:56}}>{"Page "+(page+1)}</Text>
+            style={{width:tokens.spacing.off48,height:tokens.spacing.fixedPage,overflow:"hidden"}}>{renderPageThumbnail(page)}</View>:null}
+          <Text {...{className:joinClasses(styled&&"text-text")}} style={{fontVariant:["tabular-nums"],minWidth:tokens.spacing.fixedToolbar}}>{"Page "+(page+1)}</Text>
           <Text numberOfLines={1} {...{className:muted}} style={{flex:1}}>{h?.text??""}</Text>
         </Pressable>)
       :(bookmarks??[]).length===0?<Text {...{className:muted}}>No bookmarks in this document.</Text>
       :(bookmarks??[]).map(b=><Pressable key={b.id} accessibilityRole="link" accessibilityLabel={"Bookmark "+b.name}
           onPress={()=>onJumpToBookmark!(b)} {...{className:rowClass(false)}}
-          style={{minHeight:OFFICE_TOUCH_TARGET,flexDirection:"row",alignItems:"center",gap:8,paddingHorizontal:8}}>
+          style={{minHeight:OFFICE_TOUCH_TARGET,flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedElement,paddingHorizontal:tokens.spacing.fixedElement}}>
           <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text")}} style={{flex:1}}>{b.name}</Text>
           {b.page!==undefined?<Text {...{className:muted}}>{"Page "+(b.page+1)}</Text>:null}
         </Pressable>)}

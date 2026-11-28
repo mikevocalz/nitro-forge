@@ -10,6 +10,7 @@ import type {RippleScope,TimelineClip,TimelineEdit,TimelineTrack} from "./edits.
 import {
   rippleTrimEdit,rippleTrimPreview,rollEdit,rollPair,rollPreview,type TrimModePreview,
 } from "./trim-modes.ts";
+import { controlTokens, tokens } from "../tokens.ts";
 
 /** Props for {@linkcode ModeEdgeHandles}. */
 export interface ModeEdgeHandlesProps {
@@ -94,11 +95,11 @@ function Edge({edge,...p}:ModeEdgeHandlesProps&{edge:"head"|"tail"}){
     accessibilityActions={[{name:"increment",label:"Later"},{name:"decrement",label:"Earlier"}]}
     onAccessibilityAction={e=>{if(e.nativeEvent.actionName==="increment")nudge(1);if(e.nativeEvent.actionName==="decrement")nudge(-1);}}
     style={{position:"absolute",top:0,height:Math.max(HIT,p.height),width:HIT,
-      ...(edge==="head"?{left:-HIT/2}:{right:-HIT/2}),alignItems:"center",justifyContent:"center",zIndex:2,...NO_SELECT}}>
+      ...(edge==="head"?{left:-HIT/2}:{right:-HIT/2}),alignItems:"center",justifyContent:"center",zIndex:controlTokens.layer.lifted,...NO_SELECT}}>
     {/* Roll draws a bar on both sides of the cut; ripple a bracket that opens toward the clip. */}
-    <View pointerEvents="none" style={{flexDirection:"row",gap:2,alignItems:"center",direction:"ltr"}}>
-      {p.mode==="roll"||edge==="tail"?<View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:4,height:Math.max(20,p.height-12),borderRadius:forgeHairlineRadius.tick}}/>:null}
-      {p.mode==="roll"||edge==="head"?<View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:4,height:Math.max(20,p.height-12),borderRadius:forgeHairlineRadius.tick}}/>:null}
+    <View pointerEvents="none" style={{flexDirection:"row",gap:tokens.spacing.off2,alignItems:"center",direction:"ltr"}}>
+      {p.mode==="roll"||edge==="tail"?<View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:tokens.spacing.fixedStack,height:Math.max(20,p.height-12),borderRadius:forgeHairlineRadius.tick}}/>:null}
+      {p.mode==="roll"||edge==="head"?<View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:tokens.spacing.fixedStack,height:Math.max(20,p.height-12),borderRadius:forgeHairlineRadius.tick}}/>:null}
     </View>
   </View>;
 }

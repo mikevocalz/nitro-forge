@@ -7,6 +7,7 @@ import {useStore} from "zustand";
 import {clamp,scrubValue,snapValue,gestureToAngle,type RangeConfig} from "@nyc-tron/ui/components/shell/precision";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {exact} from "../exact-optional.ts";
+import { tokens } from "../tokens.ts";
 
 type Local={preview:number;draft:string;editing:boolean;active:boolean};
 export interface InstrumentKnobProps extends Omit<ViewProps,"children">,RangeConfig {
@@ -92,25 +93,25 @@ export function InstrumentKnob({
       {...{className:joinClasses(styled&&!accentColor&&"border-accent")}}
       accessibilityActions={[{name:"increment"},{name:"decrement"}]}
       onAccessibilityAction={e=>{if(e.nativeEvent.actionName==="increment")nudge(1);if(e.nativeEvent.actionName==="decrement")nudge(-1);}}
-      style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: knob */borderWidth:8,...accentBorder,alignItems:"center",justifyContent:"center",opacity:disabled?0.45:1}}>
+      style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: knob */borderWidth:tokens.spacing.fixedElement,...accentBorder,alignItems:"center",justifyContent:"center",opacity:disabled?tokens.opacity.disabled:1}}>
       <View pointerEvents="none" {...{className:joinClasses(styled&&!accentColor&&"bg-accent")}}
-        style={{position:"absolute",width:3,height:size*0.28,...accentFill,
+        style={{position:"absolute",width:tokens.spacing.off3,height:size*0.28,...accentFill,
         borderRadius:forgeHairlineRadius.tick,transform:[{translateY:-size*0.2},{rotate:gestureToAngle(current,min,max)+"deg"}]}} />
       <Text {...{className:joinClasses(!unstyled&&"text-text font-semibold")}}>{String(current)}</Text>
     </View>
-    <View style={{flexDirection:"row",alignItems:"center",gap:6}}>
+    <View style={{flexDirection:"row",alignItems:"center",gap:tokens.spacing.off6}}>
       <Pressable accessibilityRole="button" accessibilityLabel={"Decrease "+label} disabled={disabled}
-        onPress={()=>nudge(-1)} style={{minWidth:44,minHeight:44,justifyContent:"center",alignItems:"center",opacity:disabled?0.45:1}}><Text {...{className:text}}>−</Text></Pressable>
+        onPress={()=>nudge(-1)} style={{minWidth:tokens.spacing.fixedTarget,minHeight:tokens.spacing.fixedTarget,justifyContent:"center",alignItems:"center",opacity:disabled?tokens.opacity.disabled:1}}><Text {...{className:text}}>−</Text></Pressable>
       <TextInput accessibilityLabel={label+" numeric value"} keyboardType="decimal-pad" editable={!disabled}
         {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-sunken text-text")}}
-        style={{minWidth:64,minHeight:44,textAlign:"center"}}
+        style={{minWidth:tokens.spacing.fixedPage,minHeight:tokens.spacing.fixedTarget,textAlign:"center"}}
         value={editing?draft:String(current)}
         onFocus={()=>store.setState({editing:true,draft:String(value),preview:value})}
         onChangeText={v=>store.setState({draft:v})}
         onSubmitEditing={enter}
         onBlur={enter}/>
       <Pressable accessibilityRole="button" accessibilityLabel={"Increase "+label} disabled={disabled}
-        onPress={()=>nudge(1)} style={{minWidth:44,minHeight:44,justifyContent:"center",alignItems:"center",opacity:disabled?0.45:1}}><Text {...{className:text}}>+</Text></Pressable>
+        onPress={()=>nudge(1)} style={{minWidth:tokens.spacing.fixedTarget,minHeight:tokens.spacing.fixedTarget,justifyContent:"center",alignItems:"center",opacity:disabled?tokens.opacity.disabled:1}}><Text {...{className:text}}>+</Text></Pressable>
     </View>
     {unit?<Text {...{className:joinClasses(styled&&"text-text-muted")}}>{unit}</Text>:null}
   </View>;

@@ -7,6 +7,7 @@ import {nodeIsRTL,shellKey} from '@nyc-tron/ui/components/shell/shell-keys';
 import {joinClasses} from '@nyc-tron/ui/components/styles';
 import {validatePresets} from '@nyc-tron/ui/components/shell/preset-model';
 import {validatePhotoTargets} from './photo-presets.ts';
+import { controlTokens, tokens } from '../tokens.ts';
 export interface FilmstripPreset {readonly id:string;readonly name:string;readonly preview:ReactNode;readonly favorite:boolean}
 export interface PresetFilmstripProps extends Omit<ViewProps,'children'> {
  readonly scope:string;readonly presets:readonly FilmstripPreset[];readonly selectedId:string|null;readonly photoIds:readonly string[];
@@ -23,13 +24,13 @@ export function PresetFilmstrip({scope,presets,selectedId,photoIds,onSelect,onPr
  useLayoutEffect(()=>()=>onPreview(undefined),[scope]);
  const key=(index:number,event:unknown)=>{if(locked)return;const k=shellKey(event);if(k.altKey||k.ctrlKey||k.metaKey)return;const rtl=nodeIsRTL(k.target)||I18nManager.isRTL;const next=k.key==='Home'?0:k.key==='End'?presets.length-1:k.key==='ArrowRight'?index+(rtl?-1:1):k.key==='ArrowLeft'?index+(rtl?1:-1):null;if(next===null)return;k.preventDefault();const target=presets[Math.max(0,Math.min(presets.length-1,next))];if(target)refs.current.get(target.id)?.focus();};
  const selected=presets.some(p=>p.id===selectedId);
- return <View {...props} style={[{gap:8},props.style]}>
-  <FlatList horizontal data={presets} keyExtractor={preset=>preset.id} initialNumToRender={8} windowSize={5} style={{height:156}} accessibilityLabel="Photo preset filmstrip" extraData={[selectedId,locked]}
+ return <View {...props} style={[{gap:tokens.spacing.fixedElement},props.style]}>
+  <FlatList horizontal data={presets} keyExtractor={preset=>preset.id} initialNumToRender={8} windowSize={5} style={{height:controlTokens.extent.column}} accessibilityLabel="Photo preset filmstrip" extraData={[selectedId,locked]}
    ListEmptyComponent={<Text {...{className:joinClasses(!unstyled&&'text-text-muted')}}>No photo presets</Text>}
-   renderItem={({item,index})=><View style={{width:144,padding:4,gap:4}}>
+   renderItem={({item,index})=><View style={{width:controlTokens.extent.column,padding:tokens.spacing.fixedStack,gap:tokens.spacing.fixedStack}}>
     <Pressable ref={ref=>{if(ref)refs.current.set(item.id,ref);else refs.current.delete(item.id);}} accessibilityRole="radio" accessibilityLabel={`Preview ${item.name}`} accessibilityState={{checked:item.id===selectedId,disabled:locked}} aria-checked={item.id===selectedId} disabled={locked}
-     onPress={()=>{if(!locked){onSelect(item.id);onPreview(item.id);}}} onHoverIn={()=>{if(!locked)onPreview(item.id);}} onHoverOut={()=>onPreview(undefined)} onFocus={()=>{if(!locked)onPreview(item.id);}} onBlur={()=>onPreview(undefined)} {...{onKeyDown:(event:unknown)=>key(index,event)}} style={{minHeight:96,gap:4}}>
-     <View pointerEvents="none" style={{height:64,overflow:'hidden'}}>{item.preview}</View><Text {...{className:joinClasses(!unstyled&&'text-text')}}>{item.name}</Text>
+     onPress={()=>{if(!locked){onSelect(item.id);onPreview(item.id);}}} onHoverIn={()=>{if(!locked)onPreview(item.id);}} onHoverOut={()=>onPreview(undefined)} onFocus={()=>{if(!locked)onPreview(item.id);}} onBlur={()=>onPreview(undefined)} {...{onKeyDown:(event:unknown)=>key(index,event)}} style={{minHeight:tokens.spacing.off96,gap:tokens.spacing.fixedStack}}>
+     <View pointerEvents="none" style={{height:tokens.spacing.fixedPage,overflow:'hidden'}}>{item.preview}</View><Text {...{className:joinClasses(!unstyled&&'text-text')}}>{item.name}</Text>
     </Pressable>
     <Button title={item.favorite?'Unfavorite':'Favorite'} accessibilityLabel={`${item.favorite?'Unfavorite':'Favorite'} ${item.name}`} disabled={locked} unstyled={unstyled} onPress={()=>{if(!locked)onFavoriteChange(item.id,!item.favorite);}}/>
    </View>}/>

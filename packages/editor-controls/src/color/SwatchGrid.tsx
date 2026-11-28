@@ -6,6 +6,7 @@ import {useLocalStore} from "@nyc-tron/ui/components/useLocalStore";
 import {keyboardKey,type KeyEventLike} from "@nyc-tron/ui/components/gestures/drag-transport";
 import {rgbaToHex} from "../color.ts";
 import {filterSwatchGroups,swatchColumns,swatchGridMove,swatchKey,type Swatch,type SwatchGroup,type SwatchGroupKind} from "./swatches.ts";
+import { tokens } from "../tokens.ts";
 
 /** Props for {@linkcode SwatchGrid}. */
 export interface SwatchGridProps extends Omit<ViewProps,"children"> {
@@ -56,14 +57,14 @@ export function SwatchGrid({
       placeholder="Search by name or hex" accessibilityLabel="Search swatches"
       autoCorrect={false} autoCapitalize="none" returnKeyType="search"
       {...{className:joinClasses(styled&&"rounded-control border border-border bg-surface-sunken text-text px-3 focus:border-focus")}}
-      style={{minHeight:44}}/>
-    {trimmed&&shown.length===0?<View style={{gap:8,alignItems:"flex-start"}}>
+      style={{minHeight:tokens.spacing.fixedTarget}}/>
+    {trimmed&&shown.length===0?<View style={{gap:tokens.spacing.fixedElement,alignItems:"flex-start"}}>
       <Text accessibilityLiveRegion="polite" {...{className:joinClasses(styled&&"text-text-muted text-sm")}}>
         {`No swatches match “${trimmed}”.`}
       </Text>
       <Button title="Clear search" variant="secondary" size="sm" disabled={disabled} onPress={()=>onQueryChange("")}/>
     </View>:null}
-    {shown.map(group=><View key={group.id} style={{gap:6}}>
+    {shown.map(group=><View key={group.id} style={{gap:tokens.spacing.off6}}>
       <Text accessibilityRole="header" {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}}>{group.label}</Text>
       {group.swatches.length===0?<Text {...{className:joinClasses(styled&&"text-text-muted text-sm")}}>{EMPTY[group.kind]}</Text>:
       <View style={{flexDirection:"row",flexWrap:"wrap",gap:GAP}}>
@@ -84,7 +85,7 @@ export function SwatchGrid({
             disabled={disabled} onPress={()=>onSelect(swatch,group)}
             {...{onKeyDown,className:joinClasses(styled&&"rounded-control border-2 focus-visible:ring-2 focus-visible:ring-focus",
               styled&&(on?"border-focus":"border-border"))}}
-            style={{width:CELL,height:CELL,padding:2}}>
+            style={{width:CELL,height:CELL,padding:tokens.spacing.off2}}>
             <View pointerEvents="none" {...{className:joinClasses(styled&&"rounded-control")}}
               style={{flex:1,backgroundColor:rgbaToHex(swatch.color)}}/>
           </Pressable>;
