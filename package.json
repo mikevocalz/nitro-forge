@@ -26,7 +26,8 @@
     "test:completion": "node --test tooling/verify-completion-plan.test.mjs",
     "validate:v1": "node tooling/validate-v1.mjs",
     "validate:v1:prerelease": "node tooling/validate-v1.mjs --version 1.0.0-rc.1",
-    "test:validate-v1": "node --test tooling/validate-v1.test.mjs"
+    "test:validate-v1": "node --test tooling/validate-v1.test.mjs",
+    "test:readme-examples": "node tooling/readme-example.mjs --check && cargo build --locked -p nf-cli && pnpm --filter @nitro-forge/ignition --filter @nitro-forge/prism --filter @nitro-forge/cadence --filter @nitro-forge/splice --filter @nitro-forge/folio --filter @nitro-forge/pitch --filter @nitro-forge/tally --filter @nitro-forge/quill --filter @nitro-forge/telemetry exec vitest run tests/readme-example.e2e.test.ts && vitest run --config tooling/completion-backends.vitest.config.mjs readme-example"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

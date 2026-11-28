@@ -1,11 +1,78 @@
-# Motion: bounded 2D engine source
+# @nitro-forge/motion
 
-Motion is registered after Photo as engine tag 8. It persists flat rect/ellipse and immutable raster-asset layers plus nested compositions (schema:2, up to 16 comps, depth 8, acyclic), 2D transforms/opacity, same-composition transform parenting, W3C blend modes, clipping, alpha/luma track mattes with feather, a bounded CPU layer effect stack (invert, grayscale, brightness, contrast, gaussian-blur, fill) and scalar hold/linear/Bezier keyframes, and renders genuine RGBA frames through Prism — each comp layer through its own ephemeral Prism scene at its own dimensions. NFD1's header is unchanged; JSON payload owns `kind:"motion",schema:2` and restores schema:1 snapshots.
+2D motion graphics documents: shape, raster and nested-composition layers with
+keyframed transforms, parenting, blend modes, mattes and CPU effects, rendered
+to RGBA frames by a Rust engine through Prism.
 
-The document has a 16 MiB serialized-state cap, sixteen Arc/COW history entries, at most 128 layers across all compositions and 128 curves, 100k keys total, and one-megapixel frame output per composition. Scale animation retains a nonzero base sign to satisfy Prism's public transform API. See [ENGINE_OPS](../../docs/ENGINE_OPS.md) for exact operations and budgets.
+**Status:** deferred. Not in the v1 release set:
+[RELEASE_TRAIN.md](../../docs/release/RELEASE_TRAIN.md) names Ignition and the
+seven engines only, so v1 releases attach no tarball for this package. The
+source, the Rust engine and the tests stay in this repository. Registration in
+`nf-cli` and the native factory is not an app rollout or native binary
+validation.
 
-`MotionDocument.openSnapshot` uses the shared borrowed-byte ownership helper. CLI and FFI factories, checkpoint tags and generated native enum include Motion 8 without changing tags 0..7. This source registration is not an app rollout, native binary validation or completed P11 acceptance. Spring, media decoding, GPU effects or effect kinds/parameters beyond the bounded CPU registry, expressions, 3D and encoded render queues remain unsupported.
+## Install
 
-Focused validation covers scalar math, actual moved/pivot-mirrored pixels, JSON/binary results, history/no-op/batch atomicity, corrupt/foreign/oversized restore, cancellation, resource caps, CLI/shared-snapshot opening and FFI/checkpoint/native-enum registration. No native target build or release was performed.
+There is no release tarball. Inside this repository, add it as a workspace
+dependency:
 
-Raster assets own packed `rgba8-straight-srgb` bytes in Arc storage, with at most 16 assets and 4 MiB decoded total. Multiple layers can reference one immutable asset. Native asset dimensions must fit the composition; logical current raster canvas backing is capped at 16 MiB. Actual rendering uses Prism's binary raster upload/compositor. This storage bound does not claim peak RSS. The typed JSON facade copies/encodes caller views synchronously; native binary input is separately tested. See the [raster source report](../../docs/completion/reports/P11-motion-raster-source.md).
+```json
+{ "dependencies": { "@nitro-forge/motion": "workspace:*" } }
+```
+
+It depends on [`@nitro-forge/ignition`](../ignition/README.md), whose peer
+dependencies are `react-native-nitro-modules` and `nitro-core` at
+`1.0.0-alpha.nightly.136.gdb81de61bd32`. Motion declares no peer dependencies of
+its own.
+
+## Usage
+
+<!-- readme-example -->
+```ts
+import { createNitroHost } from "@nitro-forge/ignition";
+import { MotionDocument } from "@nitro-forge/motion";
+
+const host = createNitroHost();
+const comp = await MotionDocument.open(host, { title: "Intro", width: 320, height: 180, duration_s: 2 });
+await comp.addShapeLayer({ kind: "rect", x: 20, y: 20, w: 80, h: 40, fill: [0, 128, 255, 255] }, "Box");
+
+const bytes = await comp.save(); // NFD1 snapshot
+await comp.close();
+
+const reopened = await MotionDocument.openSnapshot(host, bytes);
+const layers = async () => (await reopened.describe()).data.layers.length;
+console.log(await layers()); // 1
+await reopened.addShapeLayer({ kind: "ellipse", x: 200, y: 60, w: 60, h: 60, fill: [255, 255, 255, 255] });
+await reopened.undo();
+console.log(await layers()); // 1
+await reopened.redo();
+console.log(await layers()); // 2
+
+const frame = await reopened.renderFrame(0.5); // RGBA at t = 0.5 s
+console.log(frame.data.width, frame.data.height); // 320 180
+await reopened.close();
+await host.dispose();
+```
+
+Every method maps to one engine op and resolves to `{ data, events }`. A
+rejected call throws `EngineError` and leaves the document unchanged. Raster
+assets are packed `rgba8-straight-srgb` bytes; decoding image files is the
+host's job.
+
+Limits include a 16 MiB serialized-state cap, at most 128 layers and 16
+compositions, and one-megapixel frames. Media decoding, GPU effects and encoded
+render output are not supported. The full list is in ENGINE_OPS.md.
+
+This example runs in CI: `tests/readme-example.e2e.test.ts` runs it against the
+Rust engine through `nf-cli`, with `createNitroHost()` replaced by `CliHost`.
+
+## Entry points
+
+| Import | Use it for |
+| --- | --- |
+| `@nitro-forge/motion` | `MotionDocument` and the layer, keyframe, effect and composition types. |
+
+## Reference
+
+- Ops, payloads and limits: [ENGINE_OPS.md, motion-engine](../../docs/ENGINE_OPS.md#motion-engine--motionenginenew-bounded-2d-slice)
+- Threading, undo, snapshot envelope and error codes: [ARCHITECTURE.md](../../docs/ARCHITECTURE.md)

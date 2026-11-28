@@ -1,0 +1,43 @@
+name: README examples
+on:
+  pull_request:
+    paths:
+      - 'packages/*/README.md'
+      - 'packages/*/src/**'
+      - 'packages/*/rust/**'
+      - 'packages/*/tests/readme-example*'
+      - 'rust/**'
+      - 'tooling/readme-example.*'
+      - 'tooling/completion-backends.vitest.config.mjs'
+      - 'Cargo.lock'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/readme-examples.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readme-examples:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - run: corepack enable && pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm --filter @nitro-forge/editor-controls build
+      - name: Typecheck the packages and their README examples
+        run: >-
+          pnpm
+          --filter @nitro-forge/ignition --filter @nitro-forge/prism
+          --filter @nitro-forge/cadence --filter @nitro-forge/splice
+          --filter @nitro-forge/folio --filter @nitro-forge/pitch
+          --filter @nitro-forge/tally --filter @nitro-forge/quill
+          --filter @nitro-forge/design --filter @nitro-forge/draft
+          --filter @nitro-forge/motion --filter @nitro-forge/photo
+          --filter @nitro-forge/scene --filter @nitro-forge/telemetry
+          run typecheck
+      - name: Run the README examples against the Rust engines
+        run: pnpm run test:readme-examples
+        env:
+          NF_CLI: ${{ github.workspace }}/target/debug/nf-cli
