@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import type {ReactNode} from "react";
 import {Pressable,Text,View} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
@@ -30,9 +31,9 @@ export function PanelButton({label,onPress,reason,role="button",checked,tone="se
     <Text numberOfLines={1} {...{className:joinClasses(styled&&ink,styled&&"text-sm font-medium")}}>{label}</Text>
     {role==="switch"?<View pointerEvents="none"
       {...{className:joinClasses(styled&&(on?"bg-primary border-primary":"bg-surface-sunken border-border"))}}
-      style={{width:30,height:18,borderRadius:9,borderWidth:1,justifyContent:"center",paddingHorizontal:2,
+      style={{width:30,height:18,borderRadius:forgeRadius.sm,borderWidth:1,justifyContent:"center",paddingHorizontal:2,
         alignItems:on?"flex-end":"flex-start"}}>
-      <View {...{className:joinClasses(styled&&(on?"bg-on-primary":"bg-text-muted"))}} style={{width:12,height:12,borderRadius:6}}/>
+      <View {...{className:joinClasses(styled&&(on?"bg-on-primary":"bg-text-muted"))}} style={{width:12,height:12,borderRadius:forgeRadius.sm}}/>
     </View>:null}
   </Pressable>;
 }

@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import { workspaceThemes, workspaceScale, workspaceStatus } from './src/theme.ts';
+import { forgeRadius, workspaceThemes, workspaceScale, workspaceStatus } from './src/theme.ts';
 const names = { base: 'surface', raised: 'raised', deep: 'mat', line: 'border', text: 'text', muted: 'muted', accent: 'accent', ink: 'on-accent', soft: 'tint', paper: 'paper', paperInk: 'paper-ink', paperMuted: 'paper-muted', error: 'error' };
 const forge = values => Object.entries(values).map(([key, value]) => `  --color-forge-${names[key]}: ${value};`);
 // NYC-Tron UI ships no colours: its recipes read these variables
@@ -13,11 +13,15 @@ const nycTron = scheme => {
   }).map(([key, value]) => `  --color-${key}: ${value};`);
 };
 const rules = scheme => [...forge(workspaceThemes[scheme]), ...nycTron(scheme)].join('\n');
-const metrics = `  --spacing-forge-target: ${workspaceScale.size.target}px;
-  --radius-sm: ${workspaceScale.radius.control}px;
+// The two Forge radii, plus the aliases NYC-Tron recipes read (`rounded-control`
+// for controls, `rounded-card` for cards) and Forge's own control alias.
+const radii = `  --radius-sm: ${forgeRadius.sm}px;
+  --radius-md: ${forgeRadius.md}px;
   --radius-forge-control: ${workspaceScale.radius.control}px;
   --radius-control: ${workspaceScale.radius.control}px;
-  --radius-card: ${workspaceScale.radius.panel}px;
+  --radius-card: ${workspaceScale.radius.panel}px;`;
+const metrics = `  --spacing-forge-target: ${workspaceScale.size.target}px;
+${radii}
   --font-forge-editorial: Georgia, 'Times New Roman', serif;`;
 // `.dark` is NYC-Tron's NightScope on web (Uniwind ScopedTheme's class), so a
 // night surface inside a light page keeps the dark values. It follows the
@@ -41,3 +45,10 @@ ${rules('dark')}
 }
 `;
 writeFileSync(new URL('./src/theme.native.css', import.meta.url), nativeOutput);
+
+// Radius only, for hosts that keep their own palette (the audio and media labs).
+writeFileSync(new URL('./src/radius.css', import.meta.url), `/* Generated from theme.ts; do not edit. Forge radius tokens only. */
+@theme {
+${radii}
+}
+`);

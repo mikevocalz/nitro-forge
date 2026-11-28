@@ -1,0 +1,214 @@
+TAP version 13
+# Subtest: E-35 ticks and seconds convert with ppq * bpm / 60; markers become lane markers in frames
+ok 1 - E-35 ticks and seconds convert with ppq * bpm / 60; markers become lane markers in frames
+  ---
+  duration_ms: 1.623095
+  type: 'test'
+  ...
+# Subtest: E-35 sensitivity is host state checked to 0..1
+ok 2 - E-35 sensitivity is host state checked to 0..1
+  ---
+  duration_ms: 0.144372
+  type: 'test'
+  ...
+# Subtest: E-35 detection passes sensitivity, then adds only new onsets in one addMarkers call
+ok 3 - E-35 detection passes sensitivity, then adds only new onsets in one addMarkers call
+  ---
+  duration_ms: 0.668789
+  type: 'test'
+  ...
+# Subtest: E-35 onsets offset by the range start, dedupe within one run, and respect the 8192-marker cap
+ok 4 - E-35 onsets offset by the range start, dedupe within one run, and respect the 8192-marker cap
+  ---
+  duration_ms: 2.307217
+  type: 'test'
+  ...
+# Subtest: E-35 lane add, update and remove map to addMarker, updateMarker and removeMarker in ticks
+ok 5 - E-35 lane add, update and remove map to addMarker, updateMarker and removeMarker in ticks
+  ---
+  duration_ms: 0.48854
+  type: 'test'
+  ...
+# Subtest: E-35 cancellation during analysis skips the write, but cancellation after dispatch reports the atomic write
+ok 6 - E-35 cancellation during analysis skips the write, but cancellation after dispatch reports the atomic write
+  ---
+  duration_ms: 0.336908
+  type: 'test'
+  ...
+# Subtest: E-35 a failed in-flight marker write still rejects after cancellation
+ok 7 - E-35 a failed in-flight marker write still rejects after cancellation
+  ---
+  duration_ms: 0.28607
+  type: 'test'
+  ...
+# Subtest: E-35 rounded lane metadata and length edits preserve authoritative sub-frame marker ticks
+ok 8 - E-35 rounded lane metadata and length edits preserve authoritative sub-frame marker ticks
+  ---
+  duration_ms: 0.202711
+  type: 'test'
+  ...
+# Subtest: E-14 a fader commit is one setTrackGain with the linear gain as volume; out-of-range never reaches the engine
+ok 9 - E-14 a fader commit is one setTrackGain with the linear gain as volume; out-of-range never reaches the engine
+  ---
+  duration_ms: 2.093519
+  type: 'test'
+  ...
+# Subtest: C-11 a sample is one samplePixels read and Apply writes the same channels to the active slot
+ok 10 - C-11 a sample is one samplePixels read and Apply writes the same channels to the active slot
+  ---
+  duration_ms: 1.36058
+  type: 'test'
+  ...
+# Subtest: C-11 a sample taken against an older revision is never offered or applied
+ok 11 - C-11 a sample taken against an older revision is never offered or applied
+  ---
+  duration_ms: 0.576573
+  type: 'test'
+  ...
+# Subtest: old and incomplete controls never activate node gestures
+ok 12 - old and incomplete controls never activate node gestures
+  ---
+  duration_ms: 2.185946
+  type: 'test'
+  ...
+# Subtest: maps pivoted rotated nonuniform mirrored path through nested groups and actual viewport
+ok 13 - maps pivoted rotated nonuniform mirrored path through nested groups and actual viewport
+  ---
+  duration_ms: 1.212266
+  type: 'test'
+  ...
+# Subtest: rejects singular/nonfinite layer transforms and unusable measured dimensions
+ok 14 - rejects singular/nonfinite layer transforms and unusable measured dimensions
+  ---
+  duration_ms: 0.40354
+  type: 'test'
+  ...
+# Subtest: rejects unavailable paths and unavailable ancestor chains
+ok 15 - rejects unavailable paths and unavailable ancestor chains
+  ---
+  duration_ms: 0.153486
+  type: 'test'
+  ...
+# Subtest: trim edits and track flags reach the Splice bindings with the control payload
+ok 16 - trim edits and track flags reach the Splice bindings with the control payload
+  ---
+  duration_ms: 1.61658
+  type: 'test'
+  ...
+# Subtest: an engine rejection is not swallowed: it reaches commit and stays observed
+ok 17 - an engine rejection is not swallowed: it reaches commit and stays observed
+  ---
+  duration_ms: 0.912043
+  type: 'test'
+  ...
+# Subtest: a write the admission gate refuses never calls the engine
+ok 18 - a write the admission gate refuses never calls the engine
+  ---
+  duration_ms: 0.312828
+  type: 'test'
+  ...
+# Subtest: a sheet switch closes admission until fresh binding and cells settle
+ok 19 - a sheet switch closes admission until fresh binding and cells settle
+  ---
+  duration_ms: 0.792851
+  type: 'test'
+  ...
+# Subtest: failed reads and writes cannot report a stale generation ready
+ok 20 - failed reads and writes cannot report a stale generation ready
+  ---
+  duration_ms: 0.135951
+  type: 'test'
+  ...
+# Subtest: document, viewport and host-busy changes reject captured callbacks
+ok 21 - document, viewport and host-busy changes reject captured callbacks
+  ---
+  duration_ms: 0.114601
+  type: 'test'
+  ...
+# Subtest: a rejected host commit stays rejected and never reopens readiness
+ok 22 - a rejected host commit stays rejected and never reopens readiness
+  ---
+  duration_ms: 0.416022
+  type: 'test'
+  ...
+# Subtest: I-15 fields are the source columns; the output sits one column right of the source
+ok 23 - I-15 fields are the source columns; the output sits one column right of the source
+  ---
+  duration_ms: 1.711161
+  type: 'test'
+  ...
+# Subtest: I-15 a filters assignment is a filter with no values ("All"); axes and values map to offsets and aggregates
+ok 24 - I-15 a filters assignment is a filter with no values ("All"); axes and values map to offsets and aggregates
+  ---
+  duration_ms: 0.515427
+  type: 'test'
+  ...
+# Subtest: I-15 aggregate, order and remove edit the spec; text fields only count
+ok 25 - I-15 aggregate, order and remove edit the spec; text fields only count
+  ---
+  duration_ms: 0.668578
+  type: 'test'
+  ...
+# Subtest: I-15 a draft without a value calls nothing; the first value inserts; later edits update; the last value is kept
+ok 26 - I-15 a draft without a value calls nothing; the first value inserts; later edits update; the last value is kept
+  ---
+  duration_ms: 0.711387
+  type: 'test'
+  ...
+# Subtest: I-15 reads the sheet pivot and per-column numeric flags from computed values
+ok 27 - I-15 reads the sheet pivot and per-column numeric flags from computed values
+  ---
+  duration_ms: 0.586141
+  type: 'test'
+  ...
+# Subtest: I-12 sort keys reach sortRange in priority order with direction mapped to ascending
+ok 28 - I-12 sort keys reach sortRange in priority order with direction mapped to ascending
+  ---
+  duration_ms: 2.218668
+  type: 'test'
+  ...
+# Subtest: I-12 filter operators become COUNTIF criteria and round-trip from stored rules
+ok 29 - I-12 filter operators become COUNTIF criteria and round-trip from stored rules
+  ---
+  duration_ms: 0.538328
+  type: 'test'
+  ...
+# Subtest: I-12 a changed filter sets the new rule before clearing the old one; "all" only clears
+ok 30 - I-12 a changed filter sets the new rule before clearing the old one; "all" only clears
+  ---
+  duration_ms: 0.497053
+  type: 'test'
+  ...
+# Subtest: I-12 read reports the range filters and the engine pass count
+ok 31 - I-12 read reports the range filters and the engine pass count
+  ---
+  duration_ms: 0.473709
+  type: 'test'
+  ...
+# Subtest: I-04 listNames feeds NameBox with this sheet's names and navigation is a selection change
+ok 32 - I-04 listNames feeds NameBox with this sheet's names and navigation is a selection change
+  ---
+  duration_ms: 0.539297
+  type: 'test'
+  ...
+# Subtest: I-11 validateCell supplies the list choices and status; a pick is one setCell
+ok 33 - I-11 validateCell supplies the list choices and status; a pick is one setCell
+  ---
+  duration_ms: 0.453543
+  type: 'test'
+  ...
+# Subtest: I-07 copy fills with fillRange, series with fillSeries, and formulas is refused
+ok 34 - I-07 copy fills with fillRange, series with fillSeries, and formulas is refused
+  ---
+  duration_ms: 0.325987
+  type: 'test'
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 34
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 333.936527

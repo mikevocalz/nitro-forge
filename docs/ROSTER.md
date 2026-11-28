@@ -2781,6 +2781,132 @@ Owner chose option B for both rows (`docs/proposals/F3-deferred-rows.md`).
 - Studio preview: `PivotFieldList` (Tally "Pivot" tab) and `BeatDetectionMarkerLane` (Cadence Analysis "Beat markers" tab) are wired. Node tests with recorded calls and `tests/f3-rows.e2e.test.ts` against nf-cli passed locally on macOS.
 - On-screen check in the browser harness: NOT RUN. At `c83c871` the harness page does not mount in Chromium (`react-native-reanimated` served from source; see the PR). Native iOS and Android: NOT RUN.
 
+## F3 B-11 split: Tron blend model, Forge opacity (2026-11-23, `f3-b11-split`)
+
+Decision D7. Recorded at `a5634ed`, run locally on Linux, node v22.23.5,
+pnpm 12.18.0. The Prism Layers panel no longer mounts `LayerBlendAndOpacity`.
+Blend mode is Tron's `MenuButton` (`@nyc-tron/ui/components/shell/MenuButton`)
+with items from the B-11 model catalogs; "Straight alpha" is text under the
+mode label; opacity is Forge's `PrecisionScrubber` with its pre-`80e5934`
+props (`forcedColors={forced}`, step 1, `targetSize={scale.size.target}`,
+label "Layer opacity"). `prismBlendCommand` takes `{ kind: 'mode' }` or
+`{ kind: 'opacity', percent }`, validates with Tron's `validateLayerBlend` /
+`layerOpacityFromPercent`, and returns one `setLayerBlend` or
+`setLayerOpacity`. `prism-layout.ts` budgets 320 px for the panel head
+(was 184) and keeps at least one 56 px layer row.
+
+- Failing first, against `4cc8796` with only the tests changed:
+  `verify-prism-blend.mjs` failed 4 of 5 scenarios. Forced colours: 0 ticks
+  in the opacity track painted through forced colours (computed styles, no
+  pixel probe). Nudge: after one "−" the track read `99.9999%`, not 99 %.
+  Six layers at 1280x1000 and at 1024x768: "Straight alpha" was clipped
+  under the blend ScrollView's fold. The Multiply + Undo scenario passed.
+  The new node tests failed on the missing `PRISM_OPACITY_SCRUBBER` and
+  `PRISM_LAYERS_HEAD_HEIGHT` exports and the split-panel structure test.
+- `verify-prism-blend.mjs` after the change, headless Chromium 1243, Vite dev
+  host, nf-cli bridge: 5 of 5 scenarios pass. Multiply commits and Undo
+  restores Normal; two "−" presses read 99 % then 98 %; with six layers the
+  mode menu, "Straight alpha", the scrubber label, track, "−" and "+" pass a
+  browser hit test at their corners and centre with nothing scrolled, at
+  1280x1000 and 1024x768; under emulated forced colours the track has scale
+  marks with `forced-color-adjust: none` and an opaque background. At
+  1024x768 the editor is 972x320, so the panel body scrolls head first; the
+  script checks that Lower scrolls into the panel.
+- Captures: `release/evidence/2026-11-23-a5634ed/` (six layers, 1280x1000
+  and 1024x768; how they were made is in its README). The `80e5934` and
+  `61ce1b2` captures are marked superseded; `docs/release/v1-readiness.json`
+  cites only `release/evidence/2026-11-23-a5634ed/` since `cc07f05`.
+- F3 gate evidence at `bbc1863` (`release/evidence/2026-11-23-bbc1863/`):
+  all three rows re-run at one commit and signed by R2 on 2026-11-23. The new
+  `verify-f3-rows.mjs` had an op-ordering race (1 of 3 runs failed E-35 under
+  load); after the fix it passed 3 of 3, one under load.
+- Known limit (R2, 2026-11-23): at 1024x768 the head leaves the layer list at
+  its 56 px floor inside the scrolling panel body, so the rows sit in a nested
+  scroller one row tall. Follow-up: drop the list cap when the head does not
+  fit, so the body is the only scroller.
+- studio-workspace node tests 157 passed; studio-preview node tests 34
+  passed; `vitest run tests` (after `cargo build --locked -p nf-cli`) 2
+  files, 6 passed; `pnpm -r typecheck` 28 of 28 done; `check-radius.mjs` 0
+  violations; `node --test tooling/validate-v1.test.mjs tooling/tests/*.test.mjs
+  tooling/release/package-verify.test.mjs` 79 passed.
+- v1 scope: B-11's ledger row lists only `LayerBlendAndOpacity.tsx`, so the
+  model calls land under `unmapped` (with `MenuButton`) and B-11 dropped to
+  57 rows. A D7 ruling in `derive-v1-component-scope.mjs` keeps it, tied to
+  `validateLayerBlend` staying called; `--check` is current at 58 rows, none
+  added or removed.
+- NOT RUN: opacity drag in the browser (only "−" presses); a real Windows
+  High Contrast session (forced colours were emulated in Chromium); a screen
+  reader; 200 % text; light theme; native iOS and Android; `vite build` and
+  `verify-render.mjs`; `cargo test` (no Rust changed). No reviewer has
+  signed this row. Tron follow-ups are listed in `docs/NYC_TRON_UI_HANDOFF.md`
+  under "B-11 follow-ups for NYC-Tron".
+
+## F3 B-11 LayerBlendAndOpacity (2026-11-23, `f3-b11-r2`)
+
+Superseded by the split above (decision D7); kept as the dated record.
+
+Owner chose option A (decision D5): Tron `v1.0.0-rc.2`'s `alphaModes`
+catalog with one entry, Straight alpha. The control sits in the Prism
+editor's Layers panel (`packages/studio-workspace/src/prism-editor.tsx`) in
+place of the panel's opacity scrubber; the Objects-tab mount from `61ce1b2`
+is removed. Catalogs and commands: `packages/studio-workspace/src/prism-blend.ts`.
+Recorded at `80e5934`, run locally on Linux, node v22.23.5, pnpm 12.18.0.
+
+- studio-workspace node tests: 154 passed, 0 failed, including
+  `prism-blend.test.ts` (catalog checked by Tron's `validateLayerBlend`;
+  commands; refusal before any engine call) and the Layers panel structure test.
+- studio-preview node tests: 34 passed. `vitest run tests` (nf-cli built with
+  `cargo build --locked -p nf-cli`): 2 files, 7 passed. `prism-blend.e2e.test.ts`
+  renders the Tron component to markup through the className binding and runs
+  `setLayerBlend` and `setLayerOpacity` from the shared commands against the
+  real engine, with undo and redo.
+- `verify-prism-blend.mjs` in headless Chromium 1243 against the Vite dev host
+  and the nf-cli bridge: the Layers panel has one "Layer opacity" control, no
+  alpha menu, "Straight alpha" as text, the layer row inside the panel; choosing
+  Multiply in the panel's blend menu commits to the engine, and Undo restores
+  Normal. Capture: `release/evidence/2026-11-23-80e5934/f3-b11-layers-panel.png`.
+- `pnpm -r typecheck` passed; `node tooling/check-radius.mjs` 0 violations;
+  `derive-v1-component-scope.mjs --check` current at 58 rows; tooling tests
+  40 passed.
+- Failing first: the new node, structure and markup tests, and the browser
+  script, failed before the change they cover. The browser script's
+  row-inside-panel check was added after the first capture showed the rows
+  pushed out of the panel, then failed against the unscrolled layout.
+- NOT RUN: opacity drag in the browser (only the blend menu was driven);
+  native iOS and Android; `vite build` and `verify-render.mjs`; `cargo test`
+  (no Rust changed). No reviewer has signed this row.
+
+## Master merge and editor-controls radius migration (2026-11-28, `claude/blissful-faraday-5jovmd`)
+
+Master (#95 editor controls in `packages/editor-controls`, #96 strict TS)
+merged into this branch. Studio imports follow #95. The v1 scope derivation
+treats `@nitro-forge/editor-controls` as a component source mapped back to the
+Tron paths the ledger cites; the regenerated scope keeps 58 rows with the same
+hits. The editor controls' 151 radius violations were migrated (dated note in
+`design/radius-inventory-2026-11-23.md`).
+
+Local runs on Linux x64, node v22.23.5, pnpm 12.18.0, all exit 0:
+`pnpm install --frozen-lockfile` (lockfile unchanged);
+`pnpm --filter @nitro-forge/editor-controls build`;
+`node tooling/check-radius.mjs` 0 violations in 780 files, its tests 16 passed;
+`verify-nyc-tron-pin.mjs` (1281 source files) and its tests 9 passed;
+`validate-v1.test.mjs` 19 passed; `validate-v1.mjs --version 1.0.0-rc.1`;
+`v1-component-scope.test.mjs` 10 passed; `derive-v1-component-scope.mjs --check`;
+completion-plan checks; component-program tests 21 passed;
+`package-verify.test.mjs` 15 passed; `pnpm run check:packages` (8 tarballs);
+editor-controls typecheck and 628 tests; studio-workspace typecheck and 157
+tests; studio-preview typecheck, 34 node tests, `vitest run tests` 6 passed
+(nf-cli from `cargo build --locked -p nf-cli`) and `test:integration`;
+`pnpm run validate:v1:prerelease`. From the studio-layout workflow, also:
+`verify:released-ui`, `verify-nyc-tron.mjs`, `build:theme` (sheets unchanged),
+`verify-ui-boundary.mjs`, example typecheck, `test:ui-modules`, studio-preview
+`vite build`, and the Prism package's 39 tests.
+
+NOT RUN: the editor-controls browser suite and `verify-render.mjs` (Chromium
+could not be downloaded here), native iOS and Android, devices, `cargo test`
+(no Rust changed). Nothing was rendered or captured for the radius changes.
+No reviewer has signed this work.
+
 ## Dependency baseline F1 (2026-11-11, `deps/f1-baseline-20261111`)
 
 Bump list and holds: `docs/release/RELEASE_TRAIN.md`, "Dependency baseline, 2026-11-11".

@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useLayoutEffect,useRef} from "react";
 import {Platform,Text,View,type ViewProps} from "react-native";
 import {SelectionOutline} from "../selection/SelectionOutline.tsx";
@@ -145,7 +146,7 @@ export function TransformOriginHandle({
         <View {...{className:joinClasses(styled&&"bg-primary")}} style={{position:"absolute",width:22,height:2}}/>
         <View {...{className:joinClasses(styled&&"bg-primary")}} style={{position:"absolute",width:2,height:22}}/>
         <View {...{className:joinClasses(styled&&"border-2",styled&&(state.drag?"border-accent bg-surface-raised":"border-primary bg-surface-raised"))}}
-          style={{width:12,height:12,borderRadius:6}}/>
+          style={{width:12,height:12,borderRadius:forgeRadius.sm}}/>
       </View>
     </View>:null}
     {!transform&&unavailableReason?<View pointerEvents="none" style={{position:"absolute",left:Math.max(4,Math.min(center.x-110,viewport.width-224)),top:center.y-14,width:220,alignItems:"center"}}>

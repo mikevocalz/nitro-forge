@@ -1,0 +1,120 @@
+# v1 scope decisions, 2026-11-23
+
+Decider: the repository owner. Recorded by the integrator (A0) from the owner's
+written v1 brief dated 2026-11-23. Each decision changes gate text in
+`docs/release/v1-readiness.json` only through the reviewed change that adds this
+file; the gate owner and reviewer roles are unchanged.
+
+## D1. Desktop (F5) is out of v1
+
+Confirms the 2026-11-13 strike recorded in
+[`docs/proposals/F5-desktop-scope.md`](../proposals/F5-desktop-scope.md), which
+said owner confirmation was pending. The owner has now confirmed it.
+
+- F5 status becomes `descoped`. No desktop spike or desktop target runs for v1.
+- `tooling/validate-v1.mjs` accepts `descoped` only with a `decision` path under
+  `docs/completion/`, the gate's reviewer role (R1 for F5) as signer, and a
+  review date. A signed descoped gate does not block stable and is reported
+  separately from passed gates.
+- F5 item 4 (every studio's top toolbar clears the system window controls when
+  the app is windowed on iPad) moves to F8 as item 6. It is mobile work and stays
+  in v1.
+- Return condition: the ABI and runtime conditions in `F5-desktop-scope.md`.
+  Reopening F5 needs a new owner decision.
+
+## D2. F7 component acceptance for v1 is the rendered row set on iOS, Android and web
+
+The component program adopted from NYC-Tron UI (Forge PRs #92 and #93, open on
+GitHub and merged on this branch at `67f497a`) lists 341 baseline rows and five additions, each with eight platform columns. v1 requires
+accepted iOS, Android and web proof for every ledger row that a studio or lab
+renders. That set is derived from source imports by a committed script; its
+committed output is the list R1 inspects.
+
+Every other row, and the macOS, Windows, visionOS, Quest and PICO columns for
+all rows, stay in the ledgers. They are recorded NOT RUN with a post-v1 label.
+No row is deleted.
+
+This narrows the eight-platform text #93 added to F7. That text conflicted with
+D1: it required macOS and Windows evidence for a release that has no desktop
+target.
+
+## D3. The release candidate may ship on Tron rc.2
+
+`1.0.0-rc.1` may ship pinned to NYC-Tron UI `v1.0.0-rc.2`
+(`0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44`). Stable `1.0.0` ships only after
+the F2 repin to Tron `1.0.0` passes. If Tron `1.0.0` does not exist when every
+other gate has passed, that is reported as the single stable blocker. Forge does
+not change Tron to get there.
+
+F2 therefore passes twice. For `1.0.0-rc.1` it passes on the rc.2 repin, verified
+at the candidate commit. Before stable it returns to in-progress and passes
+again on the Tron `1.0.0` repin. The integrator publishes `1.0.0-rc.1` when every
+other in-scope gate has passed. Stable also needs the owner's written approval
+of the exact version and checksum hash.
+
+## Other corrections
+
+F1 said "all 22 workflows". `.github/workflows` holds 25 files at the commit
+that adds this record, so its text now says 25.
+
+## D4. "Rendered" in D2 means rendered or called
+
+Asked after R1 found that the first derivation depended on name casing: it
+counted non-rendered PascalCase values (N-21, A-20) and missed lab code that
+calls row source modules as functions (N-08, N-12, N-17, N-19). The owner chose
+"renders or calls": a row is in the v1 set when a studio or lab renders one of
+its components or calls into a Tron module listed as one of its sources.
+
+- N-21 stays in v1. Its web drag transport (`PanResponderDrag`) maps to no row,
+  so N-21 web is recorded NOT RUN.
+- A-20 stays in v1 because F8 item 5 requires native popovers in every studio,
+  not because of its component-table wiring.
+
+## D5. F3 Prism B-11: option A
+
+The owner chose option A from `docs/proposals/F3-deferred-rows.md`: the optional
+`alphaModes` catalog on Tron's `LayerBlendAndOpacity`. Tron `v1.0.0-rc.2`
+already ships it (`packages/ui/src/components/forge/layers/layer-blend-model.ts`
+at `0e09d3be`), so Forge wires it to the modes Prism supports and needs no Tron
+change.
+
+## D6. Radius exemption for document artwork
+
+The owner added one exemption to `design/DIRECTION.md`: shapes that are part of
+a document's content (artwork a user draws or a sample artboard) are not view
+chrome and may be any shape. The status dot in `apps/studio-preview` becomes a
+square with no radius (4 px on a 5 px dot still reads as a circle). The dial
+pointer gets square ends. Prism's fill swatches become circular colour wells,
+an exemption DIRECTION.md already lists, so the selection ring needs no third
+radius value. No other exemption is added.
+
+## D7. B-11: Forge keeps its opacity scrubber; Tron's model drives blend and alpha
+
+Tron `v1.0.0-rc.2`'s `LayerBlendAndOpacity` gives a host no way to configure
+its opacity scrubber. Mounted in the Prism Layers panel it dropped the
+forced-colours rendering recorded as fixed in `design/DIRECTION.md`, moved
+opacity 0.0001% per −/+, arrow key or screen-reader step instead of 1%, and
+pushed opacity below the panel fold. R2 reproduced all three in Chromium.
+
+The owner chose to split the controls. The Layers panel keeps Forge's
+configured scrubber for opacity (forced colours, 1% step, density target). Blend
+mode and the Straight-only alpha row come from Tron's layer blend model
+(`layer-blend-model.ts`: the mode and alpha catalogs and `validateLayerBlend`)
+rendered with Tron's menu control. If rc.2 does not export what that needs, the
+fallback is to keep the whole Tron component, add a Forge forced-colours
+workaround and the layout fix, and record the step size as a known regression
+until Tron changes it.
+
+Scope consequence, recorded by the integrator on 2026-11-23 and inspected by R1:
+B-11 stays in the v1 row set. Its only ledger source is `LayerBlendAndOpacity.tsx`,
+which Forge no longer renders, so the renders-or-calls rule alone would drop it;
+a `ROW_DECISIONS` entry in `tooling/derive-v1-component-scope.mjs` keeps it while
+Forge calls `validateLayerBlend`. B-11's v1 acceptance measures Forge's
+composition (Tron's blend model and `MenuButton` with Forge's opacity scrubber),
+not Tron's `LayerBlendAndOpacity` component.
+
+## D8. License: MIT
+
+The owner chose MIT for v1. The repository root and each of the eight release
+packages carry the MIT text as `LICENSE`, each package manifest says
+`"license": "MIT"`, and `check:packages` fails a tarball that lacks either.

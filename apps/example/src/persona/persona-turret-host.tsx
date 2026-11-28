@@ -4,7 +4,7 @@ import { useStore } from 'zustand';
 import { Button, IconButton, ScrollView, Text, View } from '@nitro-forge/studio-workspace/ui';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { PersonaTurret, type PersonaTurretHandle } from '@nitro-forge/studio-workspace/turret';
-import { prismThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
+import { forgeRadius, prismThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
 import { forgeDirections, forgeFeedbackMotion } from '@nitro-forge/studio-workspace/directions';
 import type { PersonaSession } from './persona-session';
 import { playTurretHaptic } from './turret-haptics-driver';
@@ -61,7 +61,7 @@ export function PersonaTurretHost({ session, presentation, onClose, onCompose }:
       contentContainerStyle={{ alignItems: 'center', gap: scale.space.element, paddingHorizontal: scale.space.group, paddingBottom: scale.space.group }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', minHeight: 48, borderBottomWidth: 1, borderBottomColor: material.panelEdge }}>
         <Text accessibilityRole="header" style={{ color: material.text, fontSize: scale.type.body, fontWeight: '600', flex: 1 }}>Persona</Text>
-        <IconButton aria-label="Close personas" onPress={onClose} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]"
+        <IconButton aria-label="Close personas" onPress={onClose} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm"
           icon={<ForgeIcon name="close" size={17} color={colors.muted} reducedMotion />} />
       </View>
       <PersonaTurret handle={turret} personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors} autoFocus
@@ -73,7 +73,7 @@ export function PersonaTurretHost({ session, presentation, onClose, onCompose }:
         onEffect={onEffect} />
       {persona.error && <Text accessibilityRole="alert" style={{ color: colors.error, fontSize: scale.type.label, alignSelf: 'stretch' }}>{persona.error}</Text>}
       {onCompose && <View style={{ alignSelf: 'stretch', alignItems: 'flex-start', borderTopWidth: 1, borderTopColor: material.panelEdge, paddingTop: scale.space.stack }}>
-        <Button title="Compose new persona" aria-label="Compose new persona" onPress={onCompose} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]"
+        <Button title="Compose new persona" aria-label="Compose new persona" onPress={onCompose} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm"
           icon={<ForgeIcon name="plus" size={17} color={colors.muted} reducedMotion />} />
       </View>}
     </ScrollView>

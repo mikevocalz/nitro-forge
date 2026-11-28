@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import type {ReactNode} from "react";
 import {Platform,Pressable,Text,View,type PressableProps} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
@@ -86,8 +87,8 @@ export function PlayGlyph({styled,size=14,flip=false}:GlyphProps&{flip?:boolean}
 export function PauseGlyph({styled,size=14}:GlyphProps){
   const bar=joinClasses(styled&&"bg-text");
   return <View pointerEvents="none" style={{flexDirection:"row",gap:size*0.28}}>
-    <View {...{className:bar}} style={{width:size*0.3,height:size,borderRadius:1}}/>
-    <View {...{className:bar}} style={{width:size*0.3,height:size,borderRadius:1}}/>
+    <View {...{className:bar}} style={{width:size*0.3,height:size,borderRadius:forgeHairlineRadius.tick}}/>
+    <View {...{className:bar}} style={{width:size*0.3,height:size,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
 }
 
@@ -96,7 +97,7 @@ export function PauseGlyph({styled,size=14}:GlyphProps){
  * next item, or with `back` to the previous one.
  */
 export function SkipGlyph({styled,size=12,back=false,double=false}:GlyphProps&{back?:boolean;double?:boolean}){
-  const bar=<View {...{className:joinClasses(styled&&"bg-text")}} style={{width:2,height:size,borderRadius:1}}/>;
+  const bar=<View {...{className:joinClasses(styled&&"bg-text")}} style={{width:2,height:size,borderRadius:forgeHairlineRadius.tick}}/>;
   const tri=<PlayGlyph styled={styled} size={size} flip={back}/>;
   return <View pointerEvents="none" style={{flexDirection:"row",alignItems:"center",gap:1}}>
     {back?bar:null}{tri}{double?tri:null}{back?null:bar}
@@ -107,8 +108,8 @@ export function SkipGlyph({styled,size=12,back=false,double=false}:GlyphProps&{b
 export function PlusGlyph({styled,size=14}:GlyphProps){
   const bar=joinClasses(styled&&"bg-text");
   return <View pointerEvents="none" style={{width:size,height:size,alignItems:"center",justifyContent:"center"}}>
-    <View {...{className:bar}} style={{position:"absolute",width:size,height:2,borderRadius:1}}/>
-    <View {...{className:bar}} style={{position:"absolute",width:2,height:size,borderRadius:1}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:size,height:2,borderRadius:forgeHairlineRadius.tick}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:2,height:size,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
 }
 
@@ -123,7 +124,7 @@ export function ChevronGlyph({styled,open=false,size=8}:GlyphProps&{open?:boolea
 export function CloseMark({styled,size=14}:GlyphProps){
   const bar=joinClasses(styled&&"bg-text-muted");
   return <View pointerEvents="none" style={{width:size,height:size,alignItems:"center",justifyContent:"center"}}>
-    <View {...{className:bar}} style={{position:"absolute",width:size+2,height:1.5,borderRadius:1,transform:[{rotate:"45deg"}]}}/>
-    <View {...{className:bar}} style={{position:"absolute",width:size+2,height:1.5,borderRadius:1,transform:[{rotate:"-45deg"}]}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:size+2,height:1.5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"45deg"}]}}/>
+    <View {...{className:bar}} style={{position:"absolute",width:size+2,height:1.5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"-45deg"}]}}/>
   </View>;
 }

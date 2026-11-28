@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useLayoutEffect, useRef, type ReactNode } from "react";
 import { I18nManager, View, type ViewProps } from "react-native";
@@ -119,7 +120,7 @@ function SplitSpreadsheetViewBody({boundary,disabledReason,
         // The visible bar is 12pt; hitSlop widens the grab area to 44pt.
         hitSlop={stacked ? { top: 16, bottom: 16 } : { left: 16, right: 16 }}>
         <View aria-hidden {...{ className: !unstyled ? "bg-text-muted" : undefined }}
-          style={{ borderRadius: 2, ...(stacked ? { width: 36, height: 4 } : { width: 4, height: 36 }) }} />
+          style={{ borderRadius: forgeHairlineRadius.tick, ...(stacked ? { width: 36, height: 4 } : { width: 4, height: 36 }) }} />
       </View>
     </Transport>
     <View style={size1}>{total > 0 ? renderPane(1, size1) : null}</View>

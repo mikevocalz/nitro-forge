@@ -1,5 +1,28 @@
 # NYC-Tron UI and Nitro Forge: package handoff
 
+## Independent library and application acceptance, 2026-11-22
+
+NYC-Tron UI is an independently released UI library. Forge consumes it through
+`tooling/nyc-tron.json`; Tron never imports, waits on or is gated by Forge.
+General components and professional controls remain public library APIs.
+Forge owns its application component program and per-platform acceptance in F7.
+
+The adopted [library progress ledger](completion/library-progress.json) and
+[validator](../tooling/verify-component-program.mjs) preserve the original
+canonical rows and the separately counted five window-control additions.
+[Source provenance](completion/library-progress-source.json) pins the original
+Tron records. The [completion ledger](completion/components.json) retains its
+own `completion`, gate and platform fields; those values are distinct from
+`acceptance` in the adopted record. No status changes during the handoff.
+
+Forge retains all eight required platforms for its program: iOS, Android, web,
+macOS, Windows, visionOS, Quest and PICO. Acceptance must identify the exact
+consumer release selected by the pin, currently `v1.0.0-rc.2`; the adoption's
+historical source revision is provenance, not new release acceptance. Tron's
+library stability or platform tiers do not waive Forge's application evidence.
+The pin remains unchanged until a separately reviewed release-pin PR.
+
+
 ## Current release pin, 2026-11-13
 
 `tooling/nyc-tron.json` now selects NYC-Tron
@@ -311,12 +334,31 @@ Wired:
 | E-14 | `VerticalFader` | `setTrackGain` | Cadence, track section of the effects and MIDI tabs | Linear gain 0..1 maps to track `volume` 0..1. |
 | I-15 | `PivotFieldList` | `listPivots`, `insertPivot`, `updatePivot`, `refreshPivot`, `getRange` | Tally, "Pivot" tab | F3 option B (`docs/proposals/F3-deferred-rows.md`). "Use selection as pivot source" sets the source; the host keeps a draft until the spec has a value slot, then calls `insertPivot` with the output one empty column right of the source. Later assignments are one `updatePivot` each. A filters assignment is `{field, values: []}`, which Tally reads as All; there is no value picker, so a filter does not narrow the pivot yet. Removing the last value slot is refused. Refresh is its own button and undo step. Fields are labelled by sheet column; text columns only count. Wiring in `tally-pivot-wiring.ts`, panel in `tally-pivot-panel.tsx`. |
 | E-35 | `BeatDetectionMarkerLane` | `detectBeats` (`sensitivity`), `addMarker`, `addMarkers`, `updateMarker`, `removeMarker`, `listMarkers` | Cadence, Analysis, "Beat markers" tab | F3 option B. Sensitivity is host state passed to `detectBeats` (0.5 is the original threshold). A run detects over the first 30 seconds of the master at 48 kHz and stores onsets not already marked with one `addMarkers` call, so each run is one undo step. Lane movement maps to marker ticks (`seconds * ppq * bpm / 60`) at 30 fps; name, note and length edits preserve sub-frame position ticks. Cancellation during analysis skips the marker write. Once the atomic `addMarkers` write starts, it completes and the UI reports the actual added count, even if cancellation arrives while it is in flight. There is no transport, so seek moves the lane's own playhead, where Add marker puts one. Wiring in `cadence-beats-wiring.ts`, lane in `cadence-beat-lane.tsx`. |
+| B-11 | Layer blend model (`layer-blend-model`) in `MenuButton`; opacity on Forge's `PrecisionScrubber` | `setLayerBlend`, `setLayerOpacity` | Prism editor, Layers panel, above the layer list (`packages/studio-workspace/src/prism-editor.tsx`), in every host of the editor | Decision D7, 2026-11-23 (`a5634ed`), replacing the whole-component mount from `80e5934`. The blend mode is Tron's `MenuButton` with items built from the B-11 model catalogs (`prismBlendMenuItems`); "Straight alpha" is text under the mode label, from the one-entry alpha catalog of decision D5, so Premultiplied is never offered. One compositing space, "Prism RGBA" (encoded), holds all 13 modes. Opacity is Forge's `PrecisionScrubber` with its pre-B-11 props: `forcedColors`, step 1, `targetSize` from the density scale, label "Layer opacity". `prismBlendCommand` takes a mode or percent change, checks it with Tron's `validateLayerBlend` or `layerOpacityFromPercent` before any engine call, and returns one `setLayerBlend` or one `setLayerOpacity` (one undo step) for the editor's layer-command path. LayerStack row opacity drags are unchanged. Catalogs and commands in `packages/studio-workspace/src/prism-blend.ts`. Captures: `docs/release/evidence/2026-11-23-a5634ed/`. Superseded: `2026-11-23-80e5934/` and `2026-11-23-61ce1b2/`. |
 
-Deferred, with the blocker named:
+None of the nine rows is deferred.
 
-| Row | Component | Engine ops | Blocker |
-| --- | --- | --- | --- |
-| B-11 | `LayerBlendAndOpacity` | `setLayerBlend`, `setLayerOpacity` | Mode and opacity map directly. The "Layer alpha representation" menu always offers Straight and Premultiplied, and Prism has no op that changes a layer's alpha mode, so choosing Premultiplied would fail every time. The compositing-space menu can be given one entry, but the alpha menu cannot be limited. Unblocks when NYC-Tron-UI accepts an alpha-mode capability list, or Prism adds an alpha-mode op. |
+### B-11 follow-ups for NYC-Tron (not Forge changes)
+
+To raise on NYC-Tron-UI against `v1.0.0-rc.2`. Forge works around the first
+three by not mounting `LayerBlendAndOpacity` (decision D7); it can go back to
+the whole component once a Tron release fixes them and the pin moves.
+
+1. `LayerBlendAndOpacity` does not forward `forcedColors` to its inner
+   `PrecisionScrubber`. Under forced colours (Windows High Contrast) the
+   opacity track renders blank. Reproduced in headless Chromium 1243 with
+   `emulateMedia({ forcedColors: 'active' })`: no tick in the track opts out
+   of forced-colour adjustment (`verify-prism-blend.mjs`, run before `a5634ed`).
+2. It hardcodes `step={.0001}` on the inner scrubber. Each "−"/"+" press,
+   arrow key or screen-reader increment moves opacity 0.0001 %: two presses
+   from 100 % read `99.9999%` in the same run. It should take a `step` (or an
+   opacity scrubber props object).
+3. It does not forward `targetSize`, so a comfortable-density host cannot
+   give the scrubber its 48 pt targets.
+4. `MenuButton` draws no chevron and no border (`min-h-11 min-w-11
+   items-center justify-center rounded-control` only), so the blend mode
+   menu reads as plain centred text. Forge passes `className="border
+   border-border px-3"`; there is still no chevron to say it opens a menu.
 
 `docs/COMPONENT_OWNERSHIP.md` on NYC-Tron-UI `main` does not list these nine
 components yet; its "Eyedropper / canvas sampling" row still reads "NOT

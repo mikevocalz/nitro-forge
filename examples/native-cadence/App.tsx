@@ -23,6 +23,9 @@ import { verifyNativeTelemetry } from "./verify-telemetry";
 import { verifyPickerCancellation, shareTestSnapshot, importTestSnapshot,
   retainTestBookmark, restoreTestBookmark, verifyMissingFixture } from "./verify-documents";
 import { surfaces } from "./src/brand";
+// The shared Forge radius tokens. This lab is its own pnpm workspace, so it
+// reads the token file directly; metro.config.js watches packages/studio-workspace.
+import { forgeRadius } from "../../packages/studio-workspace/src/theme.ts";
 
 type ScreenState = {
   phase: "loading" | "ready" | "error";
@@ -193,7 +196,7 @@ export default function App() {
       <SegmentedControl unstyled aria-label="Diagnostic consent" value={state.consent}
         options={[{value:"off",label:"Off"},{value:"local",label:"Local only"}]}
         labelStyle={{ color: colors.text }} style={{ gap: 8 }}
-        segmentStyle={({selected})=>({ paddingHorizontal: 16, borderWidth: 1, borderRadius: 4,
+        segmentStyle={({selected})=>({ paddingHorizontal: 16, borderWidth: 1, borderRadius: forgeRadius.sm,
           borderColor: selected ? colors.accent : colors.border, backgroundColor: colors.surface })}
         onChange={consent => {
           telemetry.setConsent(consent);
@@ -211,7 +214,7 @@ export default function App() {
       ? <ActivityIndicator accessibilityLabel="Connecting to Cadence" color={colors.accent}/>
       : null}
     {state.phase === "error"
-      ? <View style={{ padding: 16, borderRadius: 12, backgroundColor: colors.surface,
+      ? <View style={{ padding: 16, borderRadius: forgeRadius.md, backgroundColor: colors.surface,
           borderWidth: 1, borderColor: colors.danger, gap: 12 }}>
           <Text style={{ color: colors.danger, fontWeight: "700" }}>Native engine unavailable</Text>
           <Text selectable style={{ color: colors.text }}>{state.error}</Text>
@@ -245,17 +248,17 @@ export default function App() {
                   none, so it renders unstyled on a light surface where default text reads. */}
               <InstrumentKnob label="Gain" value={actual.gain} {...session.knobs.gain}
                 disabled={!enabled} size={size} unstyled accentColor={colors.accent}
-                style={{ backgroundColor: colors.paper, borderRadius: 12, padding: 12 }}
+                style={{ backgroundColor: colors.paper, borderRadius: forgeRadius.md, padding: 12 }}
                 onPreview={gainPreview => store.setState({ gainPreview })}
                 onCommit={value => execute(s => s.knobs.gain.onCommit(value)).catch(() => undefined)}/>
               <InstrumentKnob label="Pan" value={actual.pan} {...session.knobs.pan}
                 disabled={!enabled} size={size} unstyled accentColor={colors.accent}
-                style={{ backgroundColor: colors.paper, borderRadius: 12, padding: 12 }}
+                style={{ backgroundColor: colors.paper, borderRadius: forgeRadius.md, padding: 12 }}
                 onPreview={panPreview => store.setState({ panPreview })}
                 onCommit={value => execute(s => s.knobs.pan.onCommit(value)).catch(() => undefined)}/>
             </> : null}
             {session && state.renderer === "precision" ? <View style={{ flex: 1, minWidth: 240,
-              backgroundColor: colors.paper, borderRadius: 12, padding: 12 }}>
+              backgroundColor: colors.paper, borderRadius: forgeRadius.md, padding: 12 }}>
               <PrecisionScrubber label="Gain" value={actual.gain} {...session.knobs.gain}
                 unstyled scaleColor={colors.border} accentColor={colors.accent} disabled={!enabled}
                 onPreview={gainPreview => store.setState({ gainPreview })}
@@ -268,13 +271,13 @@ export default function App() {
             {session && state.renderer === "xy" ? <InstrumentXYPad
               label="Gain and pan" {...session.xyPad} disabled={!enabled} size={size}
               unstyled accentColor={colors.accent}
-              style={{ backgroundColor: colors.paper, borderRadius: 12, padding: 12 }}
+              style={{ backgroundColor: colors.paper, borderRadius: forgeRadius.md, padding: 12 }}
               onPreview={point => store.setState({ gainPreview: point.y, panPreview: point.x * 2 - 1 })}
               onCommit={point => execute(s => s.xyPad.onCommit(point)).catch(() => undefined)}/>
               : null}
           </View>
           <View style={{ backgroundColor: colors.surface, borderWidth: 1,
-            borderColor: colors.border, borderRadius: 12, padding: 14, gap: 4 }}>
+            borderColor: colors.border, borderRadius: forgeRadius.md, padding: 14, gap: 4 }}>
             <Text style={{ color: colors.text, fontWeight: "700" }}>{actual.trackName}</Text>
             <Text style={{ color: colors.muted }}>
               Gain {actual.gain.toFixed(2)} · Pan {actual.pan.toFixed(2)} · {actual.tempoBpm} BPM
@@ -293,7 +296,7 @@ export default function App() {
               { value: "xy", label: "Gain / Pan pad" },
             ]} labelStyle={{ color: colors.text }} style={{ gap: 10 }}
             segmentStyle={({ selected }) => ({ minHeight: 48, paddingHorizontal: 14,
-              borderWidth: 1, borderRadius: 9, borderColor: selected ? colors.accent : colors.border,
+              borderWidth: 1, borderRadius: forgeRadius.sm, borderColor: selected ? colors.accent : colors.border,
               backgroundColor: colors.surface })}
             onChange={renderer => store.setState({ renderer })}/>
 
@@ -371,7 +374,7 @@ function Action({ label, disabled = false, selected, onPress }: {
     disabled={disabled} onPress={onPress}
     style={({ pressed }) => ({
       minHeight: 48, minWidth: 94, paddingHorizontal: 14, borderWidth: 1,
-      borderColor: selected ? colors.accent : colors.border, borderRadius: 9,
+      borderColor: selected ? colors.accent : colors.border, borderRadius: forgeRadius.sm,
       backgroundColor: colors.surface,
       justifyContent: "center", alignItems: "center",
       opacity: disabled ? 0.5 : pressed ? 0.7 : 1,

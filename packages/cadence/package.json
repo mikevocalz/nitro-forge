@@ -1,6 +1,7 @@
 {
   "name": "@nitro-forge/cadence",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Nitro-Forge cadence document API.",
   "type": "module",
   "main": "./src/index.ts",
@@ -28,5 +29,8 @@
     "react": "19.3.1",
     "react-native": "0.88.1",
     "@nitro-forge/editor-controls": "workspace:*"
-  }
+  },
+  "files": [
+    "src"
+  ]
 }

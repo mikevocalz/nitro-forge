@@ -1,6 +1,6 @@
 import { ComposerGlyph, PersonaComposer } from '@nitro-forge/studio-workspace/composer';
 import { Button, ScrollView, View } from '@nitro-forge/studio-workspace/ui';
-import { prismThemes } from '@nitro-forge/studio-workspace/theme';
+import { forgeRadius, prismThemes } from '@nitro-forge/studio-workspace/theme';
 import { prismPersonaStore } from './persona-storage';
 
 /** Hash route for the Persona Composer. */
@@ -17,7 +17,7 @@ export function ComposerLab({ theme }: { theme: 'dark' | 'light' }) {
     <View style={{ paddingHorizontal: 8, paddingTop: 8, alignItems: 'flex-start' }}>
       {/* Kit buttons carry a 48 px min-height target at every size. */}
       <Button title="Back to Prism" icon={<span className="back-chevron"><ComposerGlyph name="chevron-left" color={prismThemes[theme].accent} /></span>}
-        onPress={() => { window.location.hash = '#/apps/prism'; }} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px] border border-transparent" />
+        onPress={() => { window.location.hash = '#/apps/prism'; }} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm border border-transparent" />
     </View>
     <PersonaComposer store={prismPersonaStore()} theme={theme}
       onExportPersona={async json => { await navigator.clipboard.writeText(json); return 'copied'; }} />

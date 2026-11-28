@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {assertMidiNotes} from './note-grid.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -371,7 +372,7 @@ function NoteBox({ interactionBoundary, index, note, grid, ppq, withChannel, sel
     <View {...end.current.panHandlers}
       hitSlop={{ left: 6, right: Math.max(8, HIT - grip - 6), top: slopY + 3, bottom: slopY + 3 }}
       {...{ className: joinClasses(styled && (selected || active ? "bg-on-primary" : "bg-surface-raised")) }}
-      style={{ position: "absolute", right: 0, top: 6, bottom: 6, width: grip, borderRadius: 2,
+      style={{ position: "absolute", right: 0, top: 6, bottom: 6, width: grip, borderRadius: forgeHairlineRadius.tick,
         ...(Platform.OS === "web" ? { cursor: "ew-resize" } as unknown as ViewStyle : null) }} />
   </View>;
 }

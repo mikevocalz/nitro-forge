@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {createAudioPreviewOwner,commitAudioPreview,audioResponderCurrent} from './audio-preview-owner.ts';
 import {audioTargetSize} from './audio-chrome.ts';
 import {NativeVerticalFader} from './LevelFader.vertical.tsx';
@@ -209,14 +210,14 @@ function LevelFaderBody({
     ? { width: HIT, height: length }
     : { width: length, height: HIT };
   const railStyle = vertical
-    ? { position: "absolute" as const, top: THUMB / 2, bottom: THUMB / 2, width: 6, left: (HIT - 6) / 2, borderRadius: 3 }
-    : { position: "absolute" as const, start: THUMB / 2, end: THUMB / 2, height: 6, top: (HIT - 6) / 2, borderRadius: 3 };
+    ? { position: "absolute" as const, top: THUMB / 2, bottom: THUMB / 2, width: 6, left: (HIT - 6) / 2, borderRadius: forgeHairlineRadius.tick }
+    : { position: "absolute" as const, start: THUMB / 2, end: THUMB / 2, height: 6, top: (HIT - 6) / 2, borderRadius: forgeHairlineRadius.tick };
   const fillStyle = vertical
-    ? { position: "absolute" as const, bottom: THUMB / 2, height: offset, width: 6, left: (HIT - 6) / 2, borderRadius: 3 }
-    : { position: "absolute" as const, start: THUMB / 2, width: offset, height: 6, top: (HIT - 6) / 2, borderRadius: 3 };
+    ? { position: "absolute" as const, bottom: THUMB / 2, height: offset, width: 6, left: (HIT - 6) / 2, borderRadius: forgeHairlineRadius.tick }
+    : { position: "absolute" as const, start: THUMB / 2, width: offset, height: 6, top: (HIT - 6) / 2, borderRadius: forgeHairlineRadius.tick };
   const thumbStyle = vertical
-    ? { position: "absolute" as const, bottom: offset, left: 4, width: HIT - 8, height: THUMB, borderRadius: 4, borderWidth: 2 }
-    : { position: "absolute" as const, start: offset, top: 4, width: THUMB, height: HIT - 8, borderRadius: 4, borderWidth: 2 };
+    ? { position: "absolute" as const, bottom: offset, left: 4, width: HIT - 8, height: THUMB, borderRadius: forgeRadius.sm, borderWidth: 2 }
+    : { position: "absolute" as const, start: offset, top: 4, width: THUMB, height: HIT - 8, borderRadius: forgeRadius.sm, borderWidth: 2 };
   const text = joinClasses(styled && "text-text");
   const stepButton = { minWidth: HIT, minHeight: HIT, justifyContent: "center" as const, alignItems: "center" as const, opacity: disabled ? 0.45 : 1 };
   const stepClass = joinClasses(styled && "rounded-control border border-border bg-surface-sunken active:opacity-80 focus-visible:ring-2 focus-visible:ring-focus");

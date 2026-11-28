@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {PropertyInspector} from '../inputs/PropertyInspector.tsx';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
@@ -50,7 +51,7 @@ function KindGlyph({ kind, unstyled }: { kind: SheetChartKind; unstyled: boolean
   const ink = !unstyled ? "bg-primary" : undefined;
   if (kind === "column") {
     return <View aria-hidden style={{ width: 36, height: 24, flexDirection: "row", alignItems: "flex-end", gap: 4 }}>
-      {[10, 20, 14, 24].map((h, i) => <View key={i} {...{ className: ink }} style={{ width: 6, height: h, borderRadius: 1 }} />)}
+      {[10, 20, 14, 24].map((h, i) => <View key={i} {...{ className: ink }} style={{ width: 6, height: h, borderRadius: forgeHairlineRadius.tick }} />)}
     </View>;
   }
   if (kind === "area") {
@@ -63,7 +64,7 @@ function KindGlyph({ kind, unstyled }: { kind: SheetChartKind; unstyled: boolean
   const strokes = [{ x: 0, y: 14, len: 14, deg: -30 }, { x: 12, y: 10, len: 13, deg: 25 }, { x: 23, y: 8, len: 15, deg: -45 }];
   return <View aria-hidden style={{ width: 36, height: 24 }}>
     {strokes.map((s, i) => <View key={i} {...{ className: ink }}
-      style={{ position: "absolute", left: s.x, top: s.y, width: s.len, height: 2, borderRadius: 1, transform: [{ rotate: `${s.deg}deg` }] }} />)}
+      style={{ position: "absolute", left: s.x, top: s.y, width: s.len, height: 2, borderRadius: forgeHairlineRadius.tick, transform: [{ rotate: `${s.deg}deg` }] }} />)}
   </View>;
 }
 

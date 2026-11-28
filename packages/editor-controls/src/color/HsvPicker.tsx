@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useEffect,useRef,type ComponentRef} from "react";
 import {LinearGradient} from "expo-linear-gradient";
 import {Host,Slider} from "@expo/ui";
@@ -198,10 +199,10 @@ export function HsvPicker({
       {/* Two token rings keep the thumb visible on light and dark field areas. */}
       <View pointerEvents="none" {...{className:joinClasses(styled&&"border-text")}}
         style={{position:"absolute",left:`${value.s*100}%`,top:`${(1-value.v)*100}%`,
-          width:28,height:28,borderRadius:14,borderWidth:2,
+          width:28,height:28,borderRadius:14, /* radius-exempt: colour-well */borderWidth:2,
           transform:[{translateX:-14},{translateY:-14}],alignItems:"center",justifyContent:"center"}}>
         <View {...{className:joinClasses(styled&&"border-surface-raised")}}
-          style={{width:24,height:24,borderRadius:12,borderWidth:2,backgroundColor:opaque}}/>
+          style={{width:24,height:24,borderRadius:12, /* radius-exempt: colour-well */borderWidth:2,backgroundColor:opaque}}/>
       </View>
     </View>
     {stepper("s","Saturation",sat)}
@@ -209,7 +210,7 @@ export function HsvPicker({
     <View style={{gap:6}}>
       <Text {...{className:muted}}>Hue {hue}°</Text>
       <LinearGradient pointerEvents="none" colors={SPECTRUM}
-        start={{x:0,y:0}} end={{x:1,y:0}} style={{height:12,borderRadius:6,opacity:disabled?0.45:1}}/>
+        start={{x:0,y:0}} end={{x:1,y:0}} style={{height:12,borderRadius:forgeRadius.sm,opacity:disabled?0.45:1}}/>
       <View ref={hueHost} {...(web?{}:{
           accessible:true,accessibilityRole:"adjustable" as const,accessibilityLabel:"Hue",
           accessibilityValue:{min:0,max:359,now:hue,text:hue+" degrees"},

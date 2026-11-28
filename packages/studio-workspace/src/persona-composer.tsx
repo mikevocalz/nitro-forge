@@ -19,7 +19,7 @@ import {
   moveAnnouncement, moveRailItem, nameCounter, personaSummary, railPosition, requestedImportLabel, saveBlocker, savedMessage,
   SURFACE_PROSE, toPersonaDraft, toggleGrid, toggleId, type ComposerDraft, type SurfaceMode,
 } from './persona-composer-model';
-import { prismThemes, workspaceScale as scale, type WorkspaceColors } from './theme';
+import { forgeRadius, prismThemes, workspaceScale as scale, type WorkspaceColors } from './theme';
 
 /** How the host delivered an exported persona, so the confirmation can say what happened. */
 export type PersonaExportOutcome = 'copied' | 'shared';
@@ -310,8 +310,8 @@ export function PersonaComposer(props: PersonaComposerProps) {
                   else if (a === 'top') move(index, -index); else if (a === 'bottom') move(index, draft.rail.length - 1 - index);
                   else if (a === 'remove') setDraft({ rail: draft.rail.filter(x => x !== id) });
                 }}>{rowMenu(`Move or remove ${name}`)}</Menu> : <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Button title="Up" aria-label={`Move ${name} up`} disabled={index === 0} onPress={() => move(index, -1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
-                <Button title="Down" aria-label={`Move ${name} down`} disabled={index === draft.rail.length - 1} onPress={() => move(index, 1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
+                <Button title="Up" aria-label={`Move ${name} up`} disabled={index === 0} onPress={() => move(index, -1)} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className={HC_EDGE} />
+                <Button title="Down" aria-label={`Move ${name} down`} disabled={index === draft.rail.length - 1} onPress={() => move(index, 1)} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className={HC_EDGE} />
                 <IconButton aria-label={`Remove ${name} from the rail`} icon={<ForgeIcon name="close" size={16} color={c.muted} reducedMotion />}
                   onPress={() => setDraft({ rail: draft.rail.filter(x => x !== id) })} variant="ghost" size="sm" tone="carolina" className={HC_EDGE} />
               </View>,
@@ -355,7 +355,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
 
   /** Dismiss's label lines up with the message text: the button's own inset is pulled out. */
   const dismiss = (onPress: () => void) => <View style={{ marginLeft: -GHOST_INSET }}>
-    <Button title="Dismiss" onPress={onPress} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
+    <Button title="Dismiss" onPress={onPress} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className={HC_EDGE} />
   </View>;
   const noticeBanner = (where: 'save' | 'list') => s.notice && (s.notice.at ?? 'save') === where && <Banner tone={s.notice.tone} live={s.notice.tone === 'danger' ? 'alert' : 'status'} title={s.notice.title}
     {...(s.notice.description ? { description: s.notice.description } : {})}
@@ -367,7 +367,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
     {noticeBanner('save')}
   </>;
 
-  const previewSection = <View testID="composer-preview" style={{ gap: scale.space.element, padding: scale.space.group, backgroundColor: c.raised, borderRadius: scale.radius.panel, borderWidth: 1, borderColor: c.line }}>
+  const previewSection = <View testID="composer-preview" style={{ gap: scale.space.element, padding: scale.space.group, backgroundColor: c.raised, borderRadius: scale.radius.control, borderWidth: 1, borderColor: c.line }}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: scale.space.element }}>
       {heading(`${draft.label.trim() || 'Untitled persona'} on ${surfaceWord}`)}
       <Text style={{ color: c.muted, fontSize: scale.type.label, fontVariant: ['tabular-nums'] }}>{`${draft.rail.length} on rail`}</Text>
@@ -386,7 +386,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
         <Text style={{ color: line.ready ? c.text : c.muted, fontSize: scale.type.label, flex: 1 }}>{line.ready ? `${line.label}: works here` : line.note}</Text>
       </View>)}
     <View style={{ gap: scale.space.stack, marginTop: scale.space.element }}>
-      <Button title="Save persona" onPress={save} disabled={!!blocker} variant="primary" size="md" tone="carolina" cornerRadius={4} className={HC_EDGE}
+      <Button title="Save persona" onPress={save} disabled={!!blocker} variant="primary" size="md" tone="carolina" cornerRadius={forgeRadius.sm} className={HC_EDGE}
         {...(blocker ? { accessibilityHint: blocker } : {})} />
       {blocker && <Text style={{ color: c.muted, fontSize: scale.type.label }}>{blocker}</Text>}
       {notices}
@@ -396,14 +396,14 @@ export function PersonaComposer(props: PersonaComposerProps) {
   const personaRows = <View style={{ gap: scale.space.element }}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: scale.space.element }}>
       {heading('Personas')}
-      <Button title={s.importOpen ? 'Close import' : 'Import'} onPress={() => ui.setState(st => ({ importOpen: !st.importOpen }))} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
+      <Button title={s.importOpen ? 'Close import' : 'Import'} onPress={() => ui.setState(st => ({ importOpen: !st.importOpen }))} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className={HC_EDGE} />
     </View>
     {s.importOpen && <View style={{ gap: scale.space.element }}>
       <TextInput testID="composer-import" accessibilityLabel="Persona JSON to import" multiline numberOfLines={4} value={s.importText}
         placeholder='Paste an exported persona, starting with {"format":1' autoCapitalize="none" autoCorrect={false}
         onChangeText={text => ui.setState({ importText: text })}
         style={{ minHeight: 96, borderWidth: 1, borderColor: c.line, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono, textAlignVertical: 'top' }} />
-      <Button title="Import persona" onPress={runImport} disabled={!s.importText.trim()} variant="primary" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
+      <Button title="Import persona" onPress={runImport} disabled={!s.importText.trim()} variant="primary" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className={HC_EDGE} />
     </View>}
     {noticeBanner('list')}
     {personas.some(p => p.builtIn) && label(BUILT_IN_CAPTION)}

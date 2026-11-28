@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {useMemo as useIdentityMemo} from 'react';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -209,7 +210,7 @@ function AutomationLaneBody({
     {automationSegments(shown, geometry).map((s, i) => <View key={i} pointerEvents="none" {...{ className: lineClass }}
       // One extra point each way closes the antialiasing gaps between pieces.
       style={{ position: "absolute", left: s.centerX - s.length / 2 - 1, top: s.centerY - 1, width: s.length + 2, height: 2,
-        borderRadius: 1, transform: [{ rotate: `${s.angleDeg}deg` }] }} />)}
+        borderRadius: forgeHairlineRadius.tick, transform: [{ rotate: `${s.angleDeg}deg` }] }} />)}
     {points.map((point, index) => <PointHandle key={index} index={index} points={points} shown={shown[index] ?? point}
       geometry={geometry} snapTicks={snapTicks} ppq={ppq} beatsPerBar={beatsPerBar} store={store}
       selected={index === selectedIndex} off={off} disabled={disabled} styled={styled}
@@ -369,6 +370,6 @@ function PointHandle({
     <View pointerEvents="none"
       {...{ className: joinClasses(styled && "border-2", styled && (lit ? "bg-primary border-primary"
         : off ? "bg-surface-raised border-text-muted" : "bg-surface-raised border-accent")) }}
-      style={{ width: size, height: size, borderRadius: size / 2 }} />
+      style={{ width: size, height: size, borderRadius: forgeRadius.sm }} />
   </View>;
 }

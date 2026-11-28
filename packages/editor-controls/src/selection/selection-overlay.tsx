@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {View} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 import {MAX_DRAWN_SEGMENTS,pathSegments,thinPoints,type DocPoint,type DocRect} from "./selection-model.ts";
@@ -27,7 +28,7 @@ export function MarchingAnts({rect,styled,testID}:{rect:DocRect;styled:boolean;t
 export function DraftBox({rect,ellipse,styled}:{rect:DocRect;ellipse:boolean;styled:boolean}){
   return <View {...HIDDEN} {...{className:joinClasses(styled&&"border-accent bg-accent/10")}}
     style={{position:"absolute",left:rect.x,top:rect.y,width:Math.max(1,rect.w),height:Math.max(1,rect.h),
-      borderWidth:2,borderRadius:ellipse?"50%" as never:0}}/>;
+      borderWidth:2,borderRadius:ellipse?"50%" as never:0 /* radius-exempt: artwork */}}/>;
 }
 
 /** An in-progress polygon or lasso path in view units, with optional vertex marks. */
@@ -46,7 +47,7 @@ export function DraftPath({points,closed,vertices,closable,styled}:{
       const first=i===0&&closable;
       const d=first?14:8;
       return <View key={"v"+i} {...{className:joinClasses(styled&&"bg-surface-raised border-accent")}}
-        style={{position:"absolute",left:x-d/2,top:y-d/2,width:d,height:d,borderWidth:2,borderRadius:first?d/2:1}}/>;
+        style={{position:"absolute",left:x-d/2,top:y-d/2,width:d,height:d,borderWidth:2,borderRadius:first?forgeRadius.sm:forgeHairlineRadius.tick}}/>;
     }):null}
   </View>;
 }
@@ -57,6 +58,6 @@ export function Crosshair({x,y,styled}:{x:number;y:number;styled:boolean}){
     <View {...{className:joinClasses(styled&&"bg-text")}} style={{position:"absolute",left:11,top:0,width:2,height:24}}/>
     <View {...{className:joinClasses(styled&&"bg-text")}} style={{position:"absolute",top:11,left:0,height:2,width:24}}/>
     <View {...{className:joinClasses(styled&&"border-surface-raised")}}
-      style={{position:"absolute",left:7,top:7,width:10,height:10,borderWidth:2,borderRadius:5}}/>
+      style={{position:"absolute",left:7,top:7,width:10,height:10,borderWidth:2,borderRadius:forgeRadius.sm}}/>
   </View>;
 }

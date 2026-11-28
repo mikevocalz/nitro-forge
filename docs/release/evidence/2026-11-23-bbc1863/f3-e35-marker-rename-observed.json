@@ -1,0 +1,18 @@
+{
+  "before": {
+    "id": 4,
+    "length_ticks": 0,
+    "name": "Beat 1",
+    "ticks": 348
+  },
+  "updateMarker": {
+    "id": 4,
+    "name": "Reviewed beat"
+  },
+  "after": {
+    "id": 4,
+    "length_ticks": 0,
+    "name": "Reviewed beat",
+    "ticks": 348
+  }
+}

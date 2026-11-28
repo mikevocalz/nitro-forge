@@ -1,0 +1,953 @@
+$ node --experimental-strip-types --test src/*.test.ts
+TAP version 13
+# Subtest: panel text passes 4.5:1 on the solid panel and on glass over every backdrop
+ok 1 - panel text passes 4.5:1 on the solid panel and on glass over every backdrop
+  ---
+  duration_ms: 1.308619
+  type: 'test'
+  ...
+# Subtest: the face readout passes 4.5:1 across the whole lit face
+ok 2 - the face readout passes 4.5:1 across the whole lit face
+  ---
+  duration_ms: 0.241941
+  type: 'test'
+  ...
+# Subtest: the accent reads as state (3:1) on the solid panel
+ok 3 - the accent reads as state (3:1) on the solid panel
+  ---
+  duration_ms: 0.129264
+  type: 'test'
+  ...
+# Subtest: glass is chrome-only and drops out under Reduce Transparency or Increase Contrast
+ok 4 - glass is chrome-only and drops out under Reduce Transparency or Increase Contrast
+  ---
+  duration_ms: 0.132543
+  type: 'test'
+  ...
+# Subtest: directions differ on motion and Reduce Motion makes every detent instant
+ok 5 - directions differ on motion and Reduce Motion makes every detent instant
+  ---
+  duration_ms: 0.167123
+  type: 'test'
+  ...
+# Subtest: the committed slot accent holds 3:1 on its halo in every direction and scheme
+ok 6 - the committed slot accent holds 3:1 on its halo in every direction and scheme
+  ---
+  duration_ms: 0.18342
+  type: 'test'
+  ...
+# Subtest: editor chrome: engraving reads at 4.5:1 and state marks at 3:1, in both materials
+ok 7 - editor chrome: engraving reads at 4.5:1 and state marks at 3:1, in both materials
+  ---
+  duration_ms: 0.468858
+  type: 'test'
+  ...
+# Subtest: forced-colour system colours survive React Native Web: var() with the keyword as fallback
+ok 8 - forced-colour system colours survive React Native Web: var() with the keyword as fallback
+  ---
+  duration_ms: 0.105855
+  type: 'test'
+  ...
+# Subtest: NYC-Tron layer rows read at 4.5:1 on the list ground and on the selected row
+ok 9 - NYC-Tron layer rows read at 4.5:1 on the list ground and on the selected row
+  ---
+  duration_ms: 0.457109
+  type: 'test'
+  ...
+# Subtest: every instrument has a unique identity and accountable release status
+ok 10 - every instrument has a unique identity and accountable release status
+  ---
+  duration_ms: 0.916763
+  type: 'test'
+  ...
+# Subtest: precision scrub normal/fine/coarse are absolute, deterministic and mode aware
+ok 11 - precision scrub normal/fine/coarse are absolute, deterministic and mode aware
+  ---
+  duration_ms: 0.342395
+  type: 'test'
+  ...
+# Subtest: precision scrub accepts semantic detents and validates broken controls
+ok 12 - precision scrub accepts semantic detents and validates broken controls
+  ---
+  duration_ms: 0.412205
+  type: 'test'
+  ...
+# Subtest: media timeline honors rational frame rate and musical beats
+ok 13 - media timeline honors rational frame rate and musical beats
+  ---
+  duration_ms: 0.206726
+  type: 'test'
+  ...
+# Subtest: temporal ruler renders bounded, ordered, zoom-adaptive true unit ticks
+ok 14 - temporal ruler renders bounded, ordered, zoom-adaptive true unit ticks
+  ---
+  duration_ms: 1.013359
+  type: 'test'
+  ...
+# Subtest: invalid time ruler inputs fail before generating anything
+ok 15 - invalid time ruler inputs fail before generating anything
+  ---
+  duration_ms: 0.181365
+  type: 'test'
+  ...
+# Subtest: switching scrub mode mid-drag continues from the current value
+ok 16 - switching scrub mode mid-drag continues from the current value
+  ---
+  duration_ms: 0.173776
+  type: 'test'
+  ...
+# Subtest: detents catch within a pixel window that rounding alone does not reach
+ok 17 - detents catch within a pixel window that rounding alone does not reach
+  ---
+  duration_ms: 0.170209
+  type: 'test'
+  ...
+# Subtest: typed entry snaps to the finest grid a drag can reach
+ok 18 - typed entry snaps to the finest grid a drag can reach
+  ---
+  duration_ms: 0.278337
+  type: 'test'
+  ...
+# Subtest: ruler majors fall on bar lines and on timecode seconds
+ok 19 - ruler majors fall on bar lines and on timecode seconds
+  ---
+  duration_ms: 1.286036
+  type: 'test'
+  ...
+# Subtest: all micro-interactions share a deliberate responsive contract
+ok 20 - all micro-interactions share a deliberate responsive contract
+  ---
+  duration_ms: 0.957296
+  type: 'test'
+  ...
+# Subtest: visual density never shrinks touch, pen or accessible hit targets
+ok 21 - visual density never shrinks touch, pen or accessible hit targets
+  ---
+  duration_ms: 0.152407
+  type: 'test'
+  ...
+# Subtest: anchored popover stays inside usable pane and flips above near bottom
+ok 22 - anchored popover stays inside usable pane and flips above near bottom
+  ---
+  duration_ms: 0.347011
+  type: 'test'
+  ...
+# Subtest: RTL anchoring stays within its measured usable pane
+ok 23 - RTL anchoring stays within its measured usable pane
+  ---
+  duration_ms: 0.18555
+  type: 'test'
+  ...
+# Subtest: compact palettes become source-owned sheets, not scaled desktop inspectors
+ok 24 - compact palettes become source-owned sheets, not scaled desktop inspectors
+  ---
+  duration_ms: 0.511756
+  type: 'test'
+  ...
+# Subtest: foldable and software-keyboard occlusions cannot host invisible popovers
+ok 25 - foldable and software-keyboard occlusions cannot host invisible popovers
+  ---
+  duration_ms: 0.246658
+  type: 'test'
+  ...
+# Subtest: large menus scroll within the available pane instead of falling offscreen
+ok 26 - large menus scroll within the available pane instead of falling offscreen
+  ---
+  duration_ms: 0.095164
+  type: 'test'
+  ...
+# Subtest: bad measured data cannot generate NaNs, negative surfaces or bogus coordinates
+ok 27 - bad measured data cannot generate NaNs, negative surfaces or bogus coordinates
+  ---
+  duration_ms: 0.341802
+  type: 'test'
+  ...
+# Subtest: a truncated file says where it ends and to paste all of it
+ok 28 - a truncated file says where it ends and to paste all of it
+  ---
+  duration_ms: 0.768154
+  type: 'test'
+  ...
+# Subtest: a stray character is named with its place
+ok 29 - a stray character is named with its place
+  ---
+  duration_ms: 0.376641
+  type: 'test'
+  ...
+# Subtest: the engine position wins; the scan covers engines that report none
+ok 30 - the engine position wins; the scan covers engines that report none
+  ---
+  duration_ms: 0.18453
+  type: 'test'
+  ...
+# Subtest: the scan agrees with JSON.parse on what is valid
+ok 31 - the scan agrees with JSON.parse on what is valid
+  ---
+  duration_ms: 0.34953
+  type: 'test'
+  ...
+# Subtest: Escape cancellation recognizes native and browser keyboard events
+ok 32 - Escape cancellation recognizes native and browser keyboard events
+  ---
+  duration_ms: 1.82206
+  type: 'test'
+  ...
+# Subtest: stores are independent and failed transitions preserve the active layout
+ok 33 - stores are independent and failed transitions preserve the active layout
+  ---
+  duration_ms: 6.52101
+  type: 'test'
+  ...
+# Subtest: drag previews and cancellation never mutate layout; commit applies once
+ok 34 - drag previews and cancellation never mutate layout; commit applies once
+  ---
+  duration_ms: 0.669835
+  type: 'test'
+  ...
+# Subtest: blocked and interior drops produce no target and cannot commit
+ok 35 - blocked and interior drops produce no target and cannot commit
+  ---
+  duration_ms: 0.189217
+  type: 'test'
+  ...
+# Subtest: responsive fallback preserves every panel and refuses expansions that consume stage space
+ok 36 - responsive fallback preserves every panel and refuses expansions that consume stage space
+  ---
+  duration_ms: 4.387925
+  type: 'test'
+  ...
+# Subtest: presets validate before restoring and reset respects measured geometry
+ok 37 - presets validate before restoring and reset respects measured geometry
+  ---
+  duration_ms: 0.8174
+  type: 'test'
+  ...
+# Subtest: resize validates fraction and geometry without partially changing sizes
+ok 38 - resize validates fraction and geometry without partially changing sizes
+  ---
+  duration_ms: 0.211562
+  type: 'test'
+  ...
+# Subtest: resizing cannot consume the minimum stage and a host resize invalidates drag previews
+ok 39 - resizing cannot consume the minimum stage and a host resize invalidates drag previews
+  ---
+  duration_ms: 0.234551
+  type: 'test'
+  ...
+# Subtest: compact reset and preset restore preserve placements with side panels collapsed
+ok 40 - compact reset and preset restore preserve placements with side panels collapsed
+  ---
+  duration_ms: 0.327616
+  type: 'test'
+  ...
+# Subtest: writing defaults reserve page space and keep optional history collapsed
+ok 41 - writing defaults reserve page space and keep optional history collapsed
+  ---
+  duration_ms: 0.438873
+  type: 'test'
+  ...
+# Subtest: Prism starts canvas-first and its collapsed preset round-trips
+ok 42 - Prism starts canvas-first and its collapsed preset round-trips
+  ---
+  duration_ms: 0.408616
+  type: 'test'
+  ...
+# Subtest: grouped picker keeps headings, unavailable options and supporting descriptions
+ok 43 - grouped picker keeps headings, unavailable options and supporting descriptions
+  ---
+  duration_ms: 3.171169
+  type: 'test'
+  ...
+# Subtest: a group without a caption still has a nonempty canonical heading
+ok 44 - a group without a caption still has a nonempty canonical heading
+  ---
+  duration_ms: 0.212603
+  type: 'test'
+  ...
+# Subtest: switching compact dock tabs keeps their authored order and active content
+ok 45 - switching compact dock tabs keeps their authored order and active content
+  ---
+  duration_ms: 1.979944
+  type: 'test'
+  ...
+# Subtest: a collapsed panel already at bottom expands to usable compact height without migration
+ok 46 - a collapsed panel already at bottom expands to usable compact height without migration
+  ---
+  duration_ms: 0.238083
+  type: 'test'
+  ...
+# Subtest: wide-panel activation retains its original dock
+ok 47 - wide-panel activation retains its original dock
+  ---
+  duration_ms: 1.209432
+  type: 'test'
+  ...
+# Subtest: design studio instruments are the prism and all-studio blueprints only
+ok 48 - design studio instruments are the prism and all-studio blueprints only
+  ---
+  duration_ms: 0.928421
+  type: 'test'
+  ...
+# Subtest: rail moves stay in bounds and keep every item
+ok 49 - rail moves stay in bounds and keep every item
+  ---
+  duration_ms: 0.660256
+  type: 'test'
+  ...
+# Subtest: drag target follows measured row heights in both directions
+ok 50 - drag target follows measured row heights in both directions
+  ---
+  duration_ms: 0.125742
+  type: 'test'
+  ...
+# Subtest: toggle adds then removes without reordering others
+ok 51 - toggle adds then removes without reordering others
+  ---
+  duration_ms: 0.138986
+  type: 'test'
+  ...
+# Subtest: save blocker names the first missing piece
+ok 52 - save blocker names the first missing piece
+  ---
+  duration_ms: 0.117346
+  type: 'test'
+  ...
+# Subtest: chosen surfaces serialize in manifest order; all stays all
+ok 53 - chosen surfaces serialize in manifest order; all stays all
+  ---
+  duration_ms: 0.095731
+  type: 'test'
+  ...
+# Subtest: draft manifest is honest about missing engine support and surfaces
+ok 54 - draft manifest is honest about missing engine support and surfaces
+  ---
+  duration_ms: 0.285836
+  type: 'test'
+  ...
+# Subtest: capability tags label unbuilt and surface-limited items
+ok 55 - capability tags label unbuilt and surface-limited items
+  ---
+  duration_ms: 0.127438
+  type: 'test'
+  ...
+# Subtest: saved message names the suffix when the store resolved a conflict
+ok 56 - saved message names the suffix when the store resolved a conflict
+  ---
+  duration_ms: 0.79851
+  type: 'test'
+  ...
+# Subtest: layout folds the grids below 600 and splits columns from 1000
+ok 57 - layout folds the grids below 600 and splits columns from 1000
+  ---
+  duration_ms: 0.251507
+  type: 'test'
+  ...
+# Subtest: toggle grid fits whole tiles and never exceeds the width
+ok 58 - toggle grid fits whole tiles and never exceeds the width
+  ---
+  duration_ms: 0.263138
+  type: 'test'
+  ...
+# Subtest: tile names contain the visible label and say the state
+ok 59 - tile names contain the visible label and say the state
+  ---
+  duration_ms: 0.196867
+  type: 'test'
+  ...
+# Subtest: persona summary marks built-ins once, in the row
+ok 60 - persona summary marks built-ins once, in the row
+  ---
+  duration_ms: 0.248606
+  type: 'test'
+  ...
+# Subtest: off the phone, toggle tiles are wide enough for a one-line name
+ok 61 - off the phone, toggle tiles are wide enough for a one-line name
+  ---
+  duration_ms: 0.073899
+  type: 'test'
+  ...
+# Subtest: unshipped instruments are tagged and say so when spoken
+ok 62 - unshipped instruments are tagged and say so when spoken
+  ---
+  duration_ms: 0.049841
+  type: 'test'
+  ...
+# Subtest: switching keeps continuity by reference and reports unreachable personas
+ok 63 - switching keeps continuity by reference and reports unreachable personas
+  ---
+  duration_ms: 1.755348
+  type: 'test'
+  ...
+# Subtest: composed personas persist, reload and keep conflict suffixes
+ok 64 - composed personas persist, reload and keep conflict suffixes
+  ---
+  duration_ms: 2.995748
+  type: 'test'
+  ...
+# Subtest: unreadable saved personas surface an error and keep the built-ins
+ok 65 - unreadable saved personas surface an error and keep the built-ins
+  ---
+  duration_ms: 0.166257
+  type: 'test'
+  ...
+# Subtest: import validates untrusted JSON and export round-trips
+ok 66 - import validates untrusted JSON and export round-trips
+  ---
+  duration_ms: 0.61673
+  type: 'test'
+  ...
+# Subtest: a surface change keeps a persona that runs there and falls back otherwise
+ok 67 - a surface change keeps a persona that runs there and falls back otherwise
+  ---
+  duration_ms: 0.187791
+  type: 'test'
+  ...
+# Subtest: built-in personas reference only real instruments and capabilities
+ok 68 - built-in personas reference only real instruments and capabilities
+  ---
+  duration_ms: 1.212077
+  type: 'test'
+  ...
+# Subtest: available capabilities name real engine ops; missing ones name none
+ok 69 - available capabilities name real engine ops; missing ones name none
+  ---
+  duration_ms: 0.123353
+  type: 'test'
+  ...
+# Subtest: continuity survives every persona pair on every surface it can reach
+ok 70 - continuity survives every persona pair on every surface it can reach
+  ---
+  duration_ms: 0.493073
+  type: 'test'
+  ...
+# Subtest: Sketch is a stop only on iPad and XR and says why elsewhere
+ok 71 - Sketch is a stop only on iPad and XR and says why elsewhere
+  ---
+  duration_ms: 1.274744
+  type: 'test'
+  ...
+# Subtest: switching to the active persona returns the same session
+ok 72 - switching to the active persona returns the same session
+  ---
+  duration_ms: 0.185407
+  type: 'test'
+  ...
+# Subtest: manifest gives a plain reason for every item that is not ready
+ok 73 - manifest gives a plain reason for every item that is not ready
+  ---
+  duration_ms: 0.277673
+  type: 'test'
+  ...
+# Subtest: composer suffixes name conflicts and never overwrites
+ok 74 - composer suffixes name conflicts and never overwrites
+  ---
+  duration_ms: 0.329484
+  type: 'test'
+  ...
+# Subtest: composer rejects invalid drafts with the reason
+ok 75 - composer rejects invalid drafts with the reason
+  ---
+  duration_ms: 0.161185
+  type: 'test'
+  ...
+# Subtest: export and import round-trip a user persona and resolve conflicts
+ok 76 - export and import round-trip a user persona and resolve conflicts
+  ---
+  duration_ms: 0.454136
+  type: 'test'
+  ...
+# Subtest: import treats the file as untrusted input
+ok 77 - import treats the file as untrusted input
+  ---
+  duration_ms: 0.432191
+  type: 'test'
+  ...
+# Subtest: B-11 the alpha catalog lists Straight only, and Tron rejects Premultiplied against it
+ok 78 - B-11 the alpha catalog lists Straight only, and Tron rejects Premultiplied against it
+  ---
+  duration_ms: 1.480346
+  type: 'test'
+  ...
+# Subtest: B-11 every Prism blend mode is offered in the one compositing space
+ok 79 - B-11 every Prism blend mode is offered in the one compositing space
+  ---
+  duration_ms: 0.204291
+  type: 'test'
+  ...
+# Subtest: B-11 the mode menu lists every Prism mode, enabled, with the catalog labels
+ok 80 - B-11 the mode menu lists every Prism mode, enabled, with the catalog labels
+  ---
+  duration_ms: 0.137447
+  type: 'test'
+  ...
+# Subtest: B-11 a layer without a blend field reads as normal; an unknown one has no value
+ok 81 - B-11 a layer without a blend field reads as normal; an unknown one has no value
+  ---
+  duration_ms: 0.120608
+  type: 'test'
+  ...
+# Subtest: B-11 the opacity scrubber steps 1 % over 0..100 with the old detents
+ok 82 - B-11 the opacity scrubber steps 1 % over 0..100 with the old detents
+  ---
+  duration_ms: 0.067968
+  type: 'test'
+  ...
+# Subtest: B-11 a mode commit is one setLayerBlend and an opacity commit is one setLayerOpacity
+ok 83 - B-11 a mode commit is one setLayerBlend and an opacity commit is one setLayerOpacity
+  ---
+  duration_ms: 0.209589
+  type: 'test'
+  ...
+# Subtest: B-11 unknown-mode, bad-opacity and stale-layer commits are refused before any engine call
+ok 84 - B-11 unknown-mode, bad-opacity and stale-layer commits are refused before any engine call
+  ---
+  duration_ms: 0.104964
+  type: 'test'
+  ...
+# Subtest: early release awaits measurement and commits the original release once
+ok 85 - early release awaits measurement and commits the original release once
+  ---
+  duration_ms: 1.72273
+  type: 'test'
+  ...
+# Subtest: tap or subthreshold movement selects without recording history
+ok 86 - tap or subthreshold movement selects without recording history
+  ---
+  duration_ms: 0.30209
+  type: 'test'
+  ...
+# Subtest: cancel, resize, document replacement, disable, multitouch and measurement failure prevent pending commits
+ok 87 - cancel, resize, document replacement, disable, multitouch and measurement failure prevent pending commits
+  ---
+  duration_ms: 0.565251
+  type: 'test'
+  ...
+# Subtest: selection change after measurement cancels and repeated gestures remain independent
+ok 88 - selection change after measurement cancels and repeated gestures remain independent
+  ---
+  duration_ms: 6.284944
+  type: 'test'
+  ...
+# Subtest: background taps clear selection and raster hits never transform raster geometry
+ok 89 - background taps clear selection and raster hits never transform raster geometry
+  ---
+  duration_ms: 0.400991
+  type: 'test'
+  ...
+# Subtest: release remeasurement rejects move-only relayout and native ancestor scrolling
+ok 90 - release remeasurement rejects move-only relayout and native ancestor scrolling
+  ---
+  duration_ms: 0.364657
+  type: 'test'
+  ...
+# Subtest: selection matches topmost rect/ellipse pixel coverage, visibility and transparency
+ok 91 - selection matches topmost rect/ellipse pixel coverage, visibility and transparency
+  ---
+  duration_ms: 1.255953
+  type: 'test'
+  ...
+# Subtest: raster alpha occludes shapes only at nontransparent pixels, across every base64 quartet offset
+ok 92 - raster alpha occludes shapes only at nontransparent pixels, across every base64 quartet offset
+  ---
+  duration_ms: 0.5685
+  type: 'test'
+  ...
+# Subtest: measured artboard offsets and scale convert movement, not the letterboxed host
+ok 93 - measured artboard offsets and scale convert movement, not the letterboxed host
+  ---
+  duration_ms: 4.780097
+  type: 'test'
+  ...
+# Subtest: selection outlines clip off-canvas geometry and never emit unbounded style coordinates
+ok 94 - selection outlines clip off-canvas geometry and never emit unbounded style coordinates
+  ---
+  duration_ms: 0.296947
+  type: 'test'
+  ...
+# Subtest: web scroll offsets align page events with measured viewport rectangles
+ok 95 - web scroll offsets align page events with measured viewport rectangles
+  ---
+  duration_ms: 0.225044
+  type: 'test'
+  ...
+# Subtest: persona surfaces render on the editor, not inside the toolbar
+ok 96 - persona surfaces render on the editor, not inside the toolbar
+  ---
+  duration_ms: 1.259892
+  type: 'test'
+  ...
+# Subtest: the fill bar carries its own accessibility label
+ok 97 - the fill bar carries its own accessibility label
+  ---
+  duration_ms: 0.324759
+  type: 'test'
+  ...
+# Subtest: every accessibilityRole is one Android accepts
+ok 98 - every accessibilityRole is one Android accepts
+  ---
+  duration_ms: 3.849567
+  type: 'test'
+  ...
+# Subtest: the Layers panel splits Tron blend mode from Forge opacity
+ok 99 - the Layers panel splits Tron blend mode from Forge opacity
+  ---
+  duration_ms: 0.40002
+  type: 'test'
+  ...
+# Subtest: layer rows name every kind in words, never the engine enum
+ok 100 - layer rows name every kind in words, never the engine enum
+  ---
+  duration_ms: 0.77449
+  type: 'test'
+  ...
+# Subtest: the shape enum the editor sends maps to the same names
+ok 101 - the shape enum the editor sends maps to the same names
+  ---
+  duration_ms: 0.091082
+  type: 'test'
+  ...
+# Subtest: an unknown shape kind reads as a rectangle and a missing content as raster
+ok 102 - an unknown shape kind reads as a rectangle and a missing content as raster
+  ---
+  duration_ms: 0.093218
+  type: 'test'
+  ...
+# Subtest: rows list the top engine layer first and pass LayerStack validation
+ok 103 - rows list the top engine layer first and pass LayerStack validation
+  ---
+  duration_ms: 1.706025
+  type: 'test'
+  ...
+# Subtest: a blank engine name reads as the kind and id, so LayerStack never throws on it
+ok 104 - a blank engine name reads as the kind and id, so LayerStack never throws on it
+  ---
+  duration_ms: 0.148556
+  type: 'test'
+  ...
+# Subtest: a row move becomes the engine index that puts the layer in the same place
+ok 105 - a row move becomes the engine index that puts the layer in the same place
+  ---
+  duration_ms: 0.645642
+  type: 'test'
+  ...
+# Subtest: moving to an index outside the list throws
+ok 106 - moving to an index outside the list throws
+  ---
+  duration_ms: 0.373353
+  type: 'test'
+  ...
+# Subtest: an opacity release is one setLayerOpacity, and an unchanged value is none
+ok 107 - an opacity release is one setLayerOpacity, and an unchanged value is none
+  ---
+  duration_ms: 0.254582
+  type: 'test'
+  ...
+# Subtest: visibility flips the engine value
+ok 108 - visibility flips the engine value
+  ---
+  duration_ms: 0.137426
+  type: 'test'
+  ...
+# Subtest: rename trims, and an unchanged name sends nothing
+ok 109 - rename trims, and an unchanged name sends nothing
+  ---
+  duration_ms: 0.176821
+  type: 'test'
+  ...
+# Subtest: a callback for a layer the document no longer has throws
+ok 110 - a callback for a layer the document no longer has throws
+  ---
+  duration_ms: 0.113815
+  type: 'test'
+  ...
+# Subtest: selection is the editor store id as a row id
+ok 111 - selection is the editor store id as a row id
+  ---
+  duration_ms: 0.256948
+  type: 'test'
+  ...
+# Subtest: rows name the Prism kind and show a shape fill; a raster row has no thumbnail
+ok 112 - rows name the Prism kind and show a shape fill; a raster row has no thumbnail
+  ---
+  duration_ms: 0.324462
+  type: 'test'
+  ...
+# Subtest: a fill outside 0..255 is clamped and a missing fill gives no colour
+ok 113 - a fill outside 0..255 is clamped and a missing fill gives no colour
+  ---
+  duration_ms: 0.172128
+  type: 'test'
+  ...
+# Subtest: remove is one removeLayer for the row, and a stale row throws
+ok 114 - remove is one removeLayer for the row, and a stale row throws
+  ---
+  duration_ms: 0.130801
+  type: 'test'
+  ...
+# Subtest: short landscape retains a useful artboard instead of the previous 26px result
+ok 115 - short landscape retains a useful artboard instead of the previous 26px result
+  ---
+  duration_ms: 1.407229
+  type: 'test'
+  ...
+# Subtest: portrait, landscape and extreme document ratios fit both available dimensions
+ok 116 - portrait, landscape and extreme document ratios fit both available dimensions
+  ---
+  duration_ms: 0.707853
+  type: 'test'
+  ...
+# Subtest: short narrow shape/raster fill palette stays beside tools and inside its viewport
+ok 117 - short narrow shape/raster fill palette stays beside tools and inside its viewport
+  ---
+  duration_ms: 0.172337
+  type: 'test'
+  ...
+# Subtest: invalid document aspect uses a finite square preview
+ok 118 - invalid document aspect uses a finite square preview
+  ---
+  duration_ms: 0.203437
+  type: 'test'
+  ...
+# Subtest: tablet Layers overlays preserve artboard size and placement while desktop reserves panel space
+ok 119 - tablet Layers overlays preserve artboard size and placement while desktop reserves panel space
+  ---
+  duration_ms: 0.347709
+  type: 'test'
+  ...
+# Subtest: phone artboard sits centred: equal margins on both sides of the screen
+ok 120 - phone artboard sits centred: equal margins on both sides of the screen
+  ---
+  duration_ms: 0.181773
+  type: 'test'
+  ...
+# Subtest: grown chrome at 200 % text moves the rail, panel and artboard below and beside what was measured
+ok 121 - grown chrome at 200 % text moves the rail, panel and artboard below and beside what was measured
+  ---
+  duration_ms: 0.23398
+  type: 'test'
+  ...
+# Subtest: the compact Layers panel fits without the alpha.2 row-width workaround
+ok 122 - the compact Layers panel fits without the alpha.2 row-width workaround
+  ---
+  duration_ms: 0.200465
+  type: 'test'
+  ...
+# Subtest: the layer list budget leaves the whole Layers panel head on screen
+ok 123 - the layer list budget leaves the whole Layers panel head on screen
+  ---
+  duration_ms: 0.395428
+  type: 'test'
+  ...
+# Subtest: shape actions issue independent relative commands, preserving engine-owned geometry
+ok 124 - shape actions issue independent relative commands, preserving engine-owned geometry
+  ---
+  duration_ms: 1.238976
+  type: 'test'
+  ...
+# Subtest: unknown actions and invalid selection IDs do not create transform commands
+ok 125 - unknown actions and invalid selection IDs do not create transform commands
+  ---
+  duration_ms: 0.151666
+  type: 'test'
+  ...
+# Subtest: PNG independently decodes exact color and alpha samples
+ok 126 - PNG independently decodes exact color and alpha samples
+  ---
+  duration_ms: 1.921362
+  type: 'test'
+  ...
+# Subtest: PNG stored blocks cross the 65535-byte boundary without losing scanlines
+ok 127 - PNG stored blocks cross the 65535-byte boundary without losing scanlines
+  ---
+  duration_ms: 33.098964
+  type: 'test'
+  ...
+# Subtest: preview rejects unsafe dimensions and inconsistent engine data before encoding
+ok 128 - preview rejects unsafe dimensions and inconsistent engine data before encoding
+  ---
+  duration_ms: 0.427449
+  type: 'test'
+  ...
+# Subtest: native transport uses RNGH with one pointer, JS callbacks and an unchanged child
+ok 129 - native transport uses RNGH with one pointer, JS callbacks and an unchanged child
+  ---
+  duration_ms: 63.732389
+  type: 'test'
+  ...
+# Subtest: failure and extra pointers cancel without committing
+ok 130 - failure and extra pointers cancel without committing
+  ---
+  duration_ms: 10.555091
+  type: 'test'
+  ...
+# Subtest: native app mounts its navigator inside the gesture root
+ok 131 - native app mounts its navigator inside the gesture root
+  ---
+  duration_ms: 0.585267
+  type: 'test'
+  ...
+# Subtest: web transport retains child identity props and delivers browser page coordinates
+ok 132 - web transport retains child identity props and delivers browser page coordinates
+  ---
+  duration_ms: 3.485087
+  type: 'test'
+  ...
+# Subtest: web transport rejects disabled/multitouch starts and cancels interruption
+ok 133 - web transport rejects disabled/multitouch starts and cancels interruption
+  ---
+  duration_ms: 3.17125
+  type: 'test'
+  ...
+# Subtest: web responder retains its lifecycle and reads current callbacks after rerender
+ok 134 - web responder retains its lifecycle and reads current callbacks after rerender
+  ---
+  duration_ms: 3.19018
+  type: 'test'
+  ...
+# Subtest: no-MOVE tap releases once and a losing pan finalize cannot cancel it
+ok 135 - no-MOVE tap releases once and a losing pan finalize cannot cancel it
+  ---
+  duration_ms: 8.869057
+  type: 'test'
+  ...
+# Subtest: multitouch or losing tap cannot start a second transaction
+ok 136 - multitouch or losing tap cannot start a second transaction
+  ---
+  duration_ms: 6.700081
+  type: 'test'
+  ...
+# Subtest: pan then tap resets ownership, regardless of losing-finalize order
+ok 137 - pan then tap resets ownership, regardless of losing-finalize order
+  ---
+  duration_ms: 8.639094
+  type: 'test'
+  ...
+# Subtest: simultaneous two-finger iOS touch-down stays rejected when begin follows touches
+ok 138 - simultaneous two-finger iOS touch-down stays rejected when begin follows touches
+  ---
+  duration_ms: 4.440724
+  type: 'test'
+  ...
+# Subtest: Unicode edits retain codepoint positions and unchanged prefix/suffix
+ok 139 - Unicode edits retain codepoint positions and unchanged prefix/suffix
+  ---
+  duration_ms: 2.131642
+  type: 'test'
+  ...
+# Subtest: newline boundaries map to block ends and following block starts
+ok 140 - newline boundaries map to block ends and following block starts
+  ---
+  duration_ms: 0.361891
+  type: 'test'
+  ...
+# Subtest: extracts rich runs without losing block boundaries
+ok 141 - extracts rich runs without losing block boundaries
+  ---
+  duration_ms: 0.251356
+  type: 'test'
+  ...
+# Subtest: stop angles span the arc symmetrically and map back to themselves
+ok 142 - stop angles span the arc symmetrically and map back to themselves
+  ---
+  duration_ms: 0.947624
+  type: 'test'
+  ...
+# Subtest: dragging peeks with one detent per stop and commits only on release
+ok 143 - dragging peeks with one detent per stop and commits only on release
+  ---
+  duration_ms: 0.723188
+  type: 'test'
+  ...
+# Subtest: cancel drops the peek and keeps the committed persona
+ok 144 - cancel drops the peek and keeps the committed persona
+  ---
+  duration_ms: 0.199061
+  type: 'test'
+  ...
+# Subtest: peeking back to the committed stop and releasing changes nothing
+ok 145 - peeking back to the committed stop and releasing changes nothing
+  ---
+  duration_ms: 0.150464
+  type: 'test'
+  ...
+# Subtest: keyboard moves the peek, signals end stops, and commits on Enter
+ok 146 - keyboard moves the peek, signals end stops, and commits on Enter
+  ---
+  duration_ms: 0.215014
+  type: 'test'
+  ...
+# Subtest: command-digit shortcuts commit directly and ignore digits past the stops
+ok 147 - command-digit shortcuts commit directly and ignore digits past the stops
+  ---
+  duration_ms: 0.094219
+  type: 'test'
+  ...
+# Subtest: non-finite drag angles are ignored and bad state throws
+ok 148 - non-finite drag angles are ignored and bad state throws
+  ---
+  duration_ms: 0.459374
+  type: 'test'
+  ...
+# Subtest: a phone with three stops still reaches every persona by drag and key
+ok 149 - a phone with three stops still reaches every persona by drag and key
+  ---
+  duration_ms: 0.113836
+  type: 'test'
+  ...
+# Subtest: right-to-left mirrors the stop order, the drag and the arrows
+ok 150 - right-to-left mirrors the stop order, the drag and the arrows
+  ---
+  duration_ms: 2.430052
+  type: 'test'
+  ...
+# Subtest: the shortcut is Command on Apple and Alt elsewhere, never Ctrl
+ok 151 - the shortcut is Command on Apple and Alt elsewhere, never Ctrl
+  ---
+  duration_ms: 0.881286
+  type: 'test'
+  ...
+# Subtest: announcements name the persona for each effect
+ok 152 - announcements name the persona for each effect
+  ---
+  duration_ms: 0.152568
+  type: 'test'
+  ...
+# Subtest: the dial scales down to fit the measured width and never grows
+ok 153 - the dial scales down to fit the measured width and never grows
+  ---
+  duration_ms: 0.156393
+  type: 'test'
+  ...
+# Subtest: at 100 % text the frame is the drawn 300 x 200 box
+ok 154 - at 100 % text the frame is the drawn 300 x 200 box
+  ---
+  duration_ms: 1.09795
+  type: 'test'
+  ...
+# Subtest: larger text grows the names and the box instead of capping them
+ok 155 - larger text grows the names and the box instead of capping them
+  ---
+  duration_ms: 0.148832
+  type: 'test'
+  ...
+# Subtest: when the grown ring cannot fit, names stack under the ring instead of shrinking
+ok 156 - when the grown ring cannot fit, names stack under the ring instead of shrinking
+  ---
+  duration_ms: 0.1765
+  type: 'test'
+  ...
+# Subtest: the dial grows with the text, so the face readout keeps pace with the stop names
+ok 157 - the dial grows with the text, so the face readout keeps pace with the stop names
+  ---
+  duration_ms: 0.153698
+  type: 'test'
+  ...
+1..157
+# tests 157
+# suites 0
+# pass 157
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 959.490233

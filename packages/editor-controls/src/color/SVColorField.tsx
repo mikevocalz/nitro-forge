@@ -35,7 +35,7 @@ export function SVColorField({value,onPreview,onCommit,height=180,disabled=false
     <View style={{position:'absolute',inset:0,backgroundColor:base}}/>
     {Array.from({length:48},(_,i)=><View key={`s${i}`} style={{position:'absolute',left:`${i/48*100}%`,top:0,bottom:0,width:`${100/48+.02}%`,backgroundColor:white,opacity:1-(i+.5)/48}}/>)}
     {Array.from({length:48},(_,i)=><View key={`v${i}`} style={{position:'absolute',top:`${i/48*100}%`,left:0,right:0,height:`${100/48+.02}%`,backgroundColor:black,opacity:(i+.5)/48}}/>)}
-    <View {...{className:joinClasses(!unstyled&&'border-text')}} style={{position:'absolute',left:`${shown.s*100}%`,top:`${(1-shown.v)*100}%`,width:24,height:24,marginLeft:-12,marginTop:-12,borderWidth:2,borderRadius:12,backgroundColor:rgbaToHex(hsvToRgb({...shown,alpha:1}),false)}}/>
+    <View {...{className:joinClasses(!unstyled&&'border-text')}} style={{position:'absolute',left:`${shown.s*100}%`,top:`${(1-shown.v)*100}%`,width:24,height:24,marginLeft:-12,marginTop:-12,borderWidth:2,borderRadius:12, /* radius-exempt: colour-well */backgroundColor:rgbaToHex(hsvToRgb({...shown,alpha:1}),false)}}/>
    </View>
   </View>
   <Text {...{className:joinClasses(!unstyled&&'text-text-muted')}}>Saturation {Math.round(shown.s*100)}%, brightness {Math.round(shown.v*100)}%</Text>

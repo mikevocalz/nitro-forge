@@ -129,10 +129,10 @@ export function ChannelTrack({
       </View>
     </View>
     {state.width>0?<View pointerEvents="none" {...{className:joinClasses(styled&&"border-text")}}
-      style={{position:"absolute",left:thumbLeft,width:THUMB,height:THUMB,borderRadius:THUMB/2,borderWidth:2,
+      style={{position:"absolute",left:thumbLeft,width:THUMB,height:THUMB,borderRadius:THUMB/2, /* radius-exempt: colour-well */borderWidth:2,
         alignItems:"center",justifyContent:"center"}}>
       <View {...{className:joinClasses(styled&&"border-surface-raised")}}
-        style={{width:THUMB-4,height:THUMB-4,borderRadius:(THUMB-4)/2,borderWidth:2,backgroundColor:thumbColor(shown)}}/>
+        style={{width:THUMB-4,height:THUMB-4,borderRadius:(THUMB-4)/2, /* radius-exempt: colour-well */borderWidth:2,backgroundColor:thumbColor(shown)}}/>
     </View>:null}
   </View>;
 }

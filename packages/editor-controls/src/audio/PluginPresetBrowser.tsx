@@ -146,9 +146,9 @@ function PluginPresetBrowserBody({actionError,disabledReason,
                 {...{ className: joinClasses(styled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus active:opacity-80",
                   styled && checked && "bg-surface-sunken") }}
                 style={{ minHeight: HIT, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 10, opacity: disabled ? 0.45 : 1 }}>
-                <View pointerEvents="none" style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: "center", justifyContent: "center" }}
+                <View pointerEvents="none" style={{ width: 20, height: 20, borderRadius: 10, /* radius-exempt: radio */ borderWidth: 2, alignItems: "center", justifyContent: "center" }}
                   {...{ className: joinClasses(styled && (checked ? "border-primary" : "border-text-muted")) }}>
-                  {checked ? <View style={{ width: 10, height: 10, borderRadius: 5 }} {...{ className: joinClasses(styled && "bg-primary") }} /> : null}
+                  {checked ? <View style={{ width: 10, height: 10, borderRadius: 5 /* radius-exempt: radio */ }} {...{ className: joinClasses(styled && "bg-primary") }} /> : null}
                 </View>
                 <Text numberOfLines={1} style={{ flex: 1 }} {...{ className: joinClasses(styled && "text-text", styled && checked && "font-semibold") }}>{preset.label}</Text>
                 {checked ? <Text {...{ className: muted }}>Current</Text> : null}

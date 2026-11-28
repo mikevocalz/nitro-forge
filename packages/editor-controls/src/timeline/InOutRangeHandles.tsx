@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {useLayoutEffect,useRef} from 'react';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -74,7 +75,7 @@ function MarkHandle({boundary,restorePreview,mark,frame,range,viewport,durationF
     }}
     style={{position:"absolute",left:shownX-HIT/2,top:0,width:HIT,height:HIT,alignItems:"center",justifyContent:"center",...NO_SELECT}}>
     <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-accent")}}
-      style={{width:4,height:30,borderRadius:2}}/>
+      style={{width:4,height:30,borderRadius:forgeHairlineRadius.tick}}/>
   </View>;
 }
 

@@ -1,4 +1,5 @@
 import { ScrollView, Text, View } from './ui';
+import { workspaceScale } from './theme';
 import type { Studio } from '@nitro-forge/studio-layout';
 
 type Data = Record<string, any>;
@@ -15,7 +16,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
   const doc = record(state);
   if (!state) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={caption}>Opening document…</Text></View>;
   const heading = (title: string, detail: string) => <View style={{ gap: 4, marginBottom: 20 }}><Text style={{ color: theme === 'light' ? '#202923' : '#eef0e9', fontSize: 22, fontWeight: '500' }}>{title}</Text><Text style={caption}>{detail}</Text></View>;
-  const paper = (children: React.ReactNode) => <View style={{ backgroundColor: '#f7f5ed', minHeight: 360, padding: 28, width: '100%', maxWidth: 680, alignSelf: 'center', borderRadius: 2 }}>{children}</View>;
+  const paper = (children: React.ReactNode) => <View style={{ backgroundColor: '#f7f5ed', minHeight: 360, padding: 28, width: '100%', maxWidth: 680, alignSelf: 'center', borderRadius: workspaceScale.radius.paper }}>{children}</View>;
   let content: React.ReactNode;
   if (studioId === 'quill') {
     content = <>{heading('The written page', 'Live text and paragraph styles from Quill')}{paper(array(doc.blocks).map((block, i) => <Text key={i} selectable style={{ color: '#283329', fontSize: block.kind === 'h1' ? 28 : block.kind === 'h2' ? 22 : 15, lineHeight: block.kind === 'h1' ? 38 : 25, marginBottom: 14, fontWeight: block.kind?.startsWith('h') ? '700' : '400', borderLeftWidth: block.kind === 'quote' ? 3 : 0, borderLeftColor: '#ad8551', paddingLeft: block.kind === 'quote' ? 12 : 0 }}>
@@ -26,7 +27,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
     const sheet = array(doc.sheets)[doc.active ?? 0];
     const cells = record(sheet?.cells);
     content = <>{heading(sheet?.name ?? 'Workbook', 'Raw values and formulas · select Commands to edit')}
-      <ScrollView horizontal><View style={{ backgroundColor: '#f7f5ed', borderRadius: 3 }}>
+      <ScrollView horizontal><View style={{ backgroundColor: '#f7f5ed', borderRadius: workspaceScale.radius.paper }}>
         <View style={{ flexDirection: 'row' }}>{['', 'A', 'B', 'C', 'D', 'E'].map((v, i) => <Text key={i} style={{ width: i === 0 ? 40 : 104, padding: 12, color: '#637161', backgroundColor: '#e5e9dd', fontSize: 12, textAlign: 'center' }}>{v}</Text>)}</View>
         {Array.from({ length: 12 }, (_, row) => <View key={row} style={{ flexDirection: 'row' }}><Text style={{ width: 40, padding: 12, color: '#637161', backgroundColor: '#e5e9dd', textAlign: 'center', fontSize: 12 }}>{row + 1}</Text>{['A', 'B', 'C', 'D', 'E'].map(col => <Text key={col} selectable numberOfLines={1} style={{ width: 104, minHeight: 40, borderTopWidth: 1, borderRightWidth: 1, borderColor: '#dce0d5', padding: 10, color: '#263b2b', fontSize: 12 }}>{cells[`${col}${row + 1}`]?.raw ?? ''}</Text>)}</View>)}
       </View></ScrollView></>;
@@ -45,7 +46,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
       <View style={{ alignSelf: 'center', width: '100%', maxWidth: 520, aspectRatio: (doc.width || 1) / (doc.height || 1), backgroundColor: '#f7f5ed', overflow: 'hidden' }}>
         {array(doc.layers).filter(layer => layer.visible).map(layer => {
           const shape = layer.content?.shape;
-          return shape ? <View key={layer.id} style={{ position: 'absolute', left: `${shape.x / doc.width * 100}%`, top: `${shape.y / doc.height * 100}%`, width: `${shape.w / doc.width * 100}%`, height: `${shape.h / doc.height * 100}%`, borderRadius: shape.kind === 'ellipse' ? 9999 : 0, backgroundColor: rgba(shape.fill), opacity: layer.opacity }} /> : null;
+          return shape ? <View key={layer.id} style={{ position: 'absolute', left: `${shape.x / doc.width * 100}%`, top: `${shape.y / doc.height * 100}%`, width: `${shape.w / doc.width * 100}%`, height: `${shape.h / doc.height * 100}%`, borderRadius: shape.kind === 'ellipse' ? 9999 : 0, /* radius-exempt: artwork */ backgroundColor: rgba(shape.fill), opacity: layer.opacity }} /> : null;
         })}
       </View>
       <Text style={[caption, { marginTop: 14 }]}>Shape projection. Raster compositing is supplied by the host canvas adapter.</Text>
@@ -60,7 +61,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>{Array.from({ length: 5 }, (_, i) => <Text key={i} style={caption}>{Math.round(end * i / 4)}{audio ? ' ticks' : 's'}</Text>)}</View>
         {tracks.map(track => <View key={track.id} style={{ backgroundColor: '#222829', borderWidth: 1, borderColor: '#39423f', minHeight: 96, paddingTop: 28, position: 'relative', overflow: 'hidden' }}>
           <Text style={{ position: 'absolute', top: 8, left: 10, color: '#b9c7ba', fontSize: 11 }}>{track.name ?? `${track.kind} ${track.id}`}{track.muted ? ' · muted' : ''}</Text>
-          {array(track.clips).map(clip => <View key={clip.id} style={{ position: 'absolute', top: 32, bottom: 8, left: `${(audio ? clip.start_ticks : clip.timeline_start_s) / end * 100}%`, width: `${(audio ? clip.length_ticks : (clip.out_s - clip.in_s) / clip.speed) / end * 100}%`, backgroundColor: audio ? '#637660' : '#725d7c', borderRadius: 4, padding: 7 }}><Text numberOfLines={1} style={{ color: '#ffffff', fontSize: 10 }}>Clip {clip.id}{audio ? ` · ${array(clip.notes).length} notes` : ''}</Text></View>)}
+          {array(track.clips).map(clip => <View key={clip.id} style={{ position: 'absolute', top: 32, bottom: 8, left: `${(audio ? clip.start_ticks : clip.timeline_start_s) / end * 100}%`, width: `${(audio ? clip.length_ticks : (clip.out_s - clip.in_s) / clip.speed) / end * 100}%`, backgroundColor: audio ? '#637660' : '#725d7c', borderRadius: workspaceScale.radius.control, padding: 7 }}><Text numberOfLines={1} style={{ color: '#ffffff', fontSize: 10 }}>Clip {clip.id}{audio ? ` · ${array(clip.notes).length} notes` : ''}</Text></View>)}
         </View>)}
         {!tracks.length && <Text style={[caption, { paddingVertical: 48 }]}>No tracks yet. Add a track in Commands.</Text>}
       </View>
@@ -82,7 +83,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
     const layers = array(doc.layers);
     const rate = record(doc.frame_rate);
     content = <>{heading(doc.title ?? 'Composition', `${doc.width ?? '?'} × ${doc.height ?? '?'} · ${doc.duration_s ?? '?'}s · ${rate.num ?? '?'}/${rate.den ?? '?'} fps · ${layers.length} layers`)}
-      {layers.map(layer => <View key={layer.id} style={{ marginBottom: 10, backgroundColor: '#222829', borderWidth: 1, borderColor: '#39423f', borderRadius: 4, padding: 10 }}>
+      {layers.map(layer => <View key={layer.id} style={{ marginBottom: 10, backgroundColor: '#222829', borderWidth: 1, borderColor: '#39423f', borderRadius: workspaceScale.radius.control, padding: 10 }}>
         <Text style={{ color: '#eef0e9', fontSize: 13 }}>{`${layer.name ?? `Layer ${layer.id}`} · ${layer.kind}`}</Text>
         <Text style={caption}>{`opacity ${layer.opacity ?? 1}${layer.visible === false ? ' · hidden' : ''} · ${array(layer.curves).length} animated properties`}</Text>
       </View>)}
@@ -93,7 +94,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
     const nodes = Object.values(record(doc.nodes)) as Data[];
     const root = record(record(doc.nodes)['1']);
     content = <>{heading(doc.title ?? 'Untitled design', `${nodes.length} nodes${root.width ? ` · ${root.width} × ${root.height}` : ''}`)}
-      {nodes.filter(node => node.id !== 1).slice(0, 24).map(node => <View key={String(node.id)} style={{ marginBottom: 8, backgroundColor: '#f7f5ed', borderRadius: 3, padding: 10 }}>
+      {nodes.filter(node => node.id !== 1).slice(0, 24).map(node => <View key={String(node.id)} style={{ marginBottom: 8, backgroundColor: '#f7f5ed', borderRadius: workspaceScale.radius.control, padding: 10 }}>
         <Text style={{ color: '#283329', fontSize: 13 }}>{`${node.name ?? `Node ${node.id}`} · ${node.kind}`}</Text>
         <Text style={{ color: '#66735f', fontSize: 12, marginTop: 2 }}>{`${Math.round(node.width ?? 0)} × ${Math.round(node.height ?? 0)}`}</Text>
       </View>)}
@@ -102,7 +103,7 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
   } else if (studioId === 'draft') {
     const count = (key: string) => Object.keys(record(doc[key])).length;
     content = <>{heading('CAD drawing', `${doc.units ?? 'mm'} units · ${count('points')} points · ${count('segments')} segments · ${count('circles')} circles · ${count('arcs')} arcs`)}
-      <View style={{ backgroundColor: '#f7f5ed', borderRadius: 3, padding: 18 }}>
+      <View style={{ backgroundColor: '#f7f5ed', borderRadius: workspaceScale.radius.paper, padding: 18 }}>
         <Text style={{ color: '#283329', fontSize: 14 }}>{`${count('hatches') ?? 0} hatches · ${count('dimensions') ?? 0} dimensions · ${count('constraints') ?? 0} constraints`}</Text>
         <Text style={{ color: '#66735f', fontSize: 12, marginTop: 8 }}>World-space geometry with a bounded linear/nonlinear solver and snap engine.</Text>
       </View>

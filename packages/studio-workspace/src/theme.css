@@ -28,9 +28,10 @@
   --color-focus: #B7A5FF;
   --spacing-forge-target: 44px;
   --radius-sm: 4px;
+  --radius-md: 6px;
   --radius-forge-control: 4px;
   --radius-control: 4px;
-  --radius-card: 4px;
+  --radius-card: 6px;
   --font-forge-editorial: Georgia, 'Times New Roman', serif;
 }
 [data-theme="light"] {

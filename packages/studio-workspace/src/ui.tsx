@@ -1,6 +1,7 @@
 import { createContext, forwardRef, useContext, type ForwardRefExoticComponent, type PropsWithoutRef, type ComponentRef, type ComponentType, type ReactNode } from 'react';
 import type { View as NativeViewComponent, ViewProps, TextProps, PressableProps, ScrollView as NativeScrollView, ScrollViewProps, TextInput as NativeTextInput, TextInputProps, ImageProps } from 'react-native';
 import type { RefAttributes } from 'react';
+import type { ForgeRadiusValue } from './theme';
 import { Platform } from 'react-native';
 
 export type StudioViewRef = ComponentRef<typeof NativeViewComponent>;
@@ -45,7 +46,7 @@ export type StudioButtonProps = {
   title: string; icon?: ReactNode; onPress?: () => void; disabled?: boolean; loading?: boolean;
   selected?: boolean; 'aria-label'?: string; accessibilityHint?: string;
   variant?: 'primary' | 'outline' | 'ghost'; size?: 'sm' | 'md'; tone?: 'royal' | 'carolina';
-  cornerRadius?: number; className?: string;
+  cornerRadius?: ForgeRadiusValue; className?: string;
 };
 export type StudioIconButtonProps = Omit<StudioButtonProps, 'title' | 'loading'> & { icon: ReactNode; 'aria-label': string };
 export type StudioBannerProps = { tone: 'info' | 'danger' | 'success' | 'neutral'; title: string; description?: string; action?: ReactNode; live?: 'status' | 'alert'; className?: string };

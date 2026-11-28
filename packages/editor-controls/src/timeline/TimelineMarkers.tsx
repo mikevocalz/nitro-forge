@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useContext,useMemo as useIdentityMemo} from 'react';
 import {EditorInteractionScope,useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -120,7 +121,7 @@ function Flag({m,color,snapFrames=[],snapThreshold=0,viewport,rate,durationFrame
       style={{position:"absolute",left:x-HIT/2,top:0,width:HIT,height:HIT,alignItems:"center",...NO_SELECT}}>
       {/* A pennant on a staff. */}
       <View pointerEvents="none" style={{position:"absolute",left:HIT/2-1,top:6,width:2,height:32,...(color?{backgroundColor:color}:{})}} {...{className:ink}}/>
-      <View pointerEvents="none" style={{position:"absolute",left:HIT/2+1,top:6,width:12,height:10,borderTopRightRadius:3,borderBottomRightRadius:3,...(color?{backgroundColor:color}:{})}} {...{className:ink}}/>
+      <View pointerEvents="none" style={{position:"absolute",left:HIT/2+1,top:6,width:12,height:10,borderTopRightRadius:forgeRadius.sm,borderBottomRightRadius:forgeRadius.sm,...(color?{backgroundColor:color}:{})}} {...{className:ink}}/>
     </View>
   </>;
 }

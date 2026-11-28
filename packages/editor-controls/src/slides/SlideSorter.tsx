@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {validateSlideSummary} from './slide-model.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
@@ -135,7 +136,7 @@ function SlideSorterBody({boundary,actionError,disabledReason,disabled=false,
             style={{padding:2,overflow:"hidden"}}>
             <SlideThumbnail slide={slide} width={cell-8} size={size} renderImage={renderImage} styled={styled}/>
             {on?<View {...{className:joinClasses(styled&&"bg-accent")}}
-              style={{position:"absolute",top:6,end:6,width:20,height:20,borderRadius:10,alignItems:"center",justifyContent:"center"}}>
+              style={{position:"absolute",top:6,end:6,width:20,height:20,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center"}}>
               <View {...{className:joinClasses(styled&&"border-surface-raised")}}
                 style={{width:9,height:5,borderStartWidth:2,borderBottomWidth:2,transform:[{rotate:"-45deg"}],marginTop:-2}}/>
             </View>:null}

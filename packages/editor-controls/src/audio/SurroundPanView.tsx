@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useLayoutEffect,useRef} from 'react';
 import {Text,View,type ViewProps} from 'react-native';
 import {GestureDetector,usePanGesture} from 'react-native-gesture-handler';
@@ -36,7 +37,7 @@ export function SurroundPanView({scope='surround-pan',revision=0,...props}:Surro
    onAccessibilityAction={e=>{const action=e.nativeEvent.actionName;key({key:action==='increment'?'ArrowRight':action==='decrement'?'ArrowLeft':action==='up'?'ArrowUp':action==='down'?'ArrowDown':''});}} {...{onKeyDown:key,focusable:!off,className:unstyled?undefined:'bg-surface-sunken border border-border rounded-control'}} style={{width,height,position:'relative',overflow:'hidden',direction:'ltr'}}>
    <View pointerEvents="none" {...{className:unstyled?undefined:'bg-border'}} style={{position:'absolute',left:width/2,top:0,bottom:0,width:1}}/><View pointerEvents="none" {...{className:unstyled?undefined:'bg-border'}} style={{position:'absolute',top:height/2,left:0,right:0,height:1}}/>
    {speakers.map(s=><Text key={s.id} pointerEvents="none" numberOfLines={1} {...{className:unstyled?undefined:'text-text-muted'}} style={{position:'absolute',left:Math.min(width-44,Math.max(0,(s.x+1)/2*width-22)),top:Math.min(height-24,Math.max(0,(1-s.y)/2*height-12)),width:44,textAlign:'center'}}>{s.label}</Text>)}
-   <View pointerEvents="none" {...{className:unstyled?undefined:'bg-accent border border-border'}} style={{position:'absolute',left:(shown.x+1)/2*width-8,top:(1-shown.y)/2*height-8,width:16,height:16,borderRadius:8}}/>
+   <View pointerEvents="none" {...{className:unstyled?undefined:'bg-accent border border-border'}} style={{position:'absolute',left:(shown.x+1)/2*width-8,top:(1-shown.y)/2*height-8,width:16,height:16,borderRadius:forgeRadius.sm}}/>
   </View></GestureDetector>
   <PrecisionScrubber scope={scope} revision={revision} label="Source height Z" value={value.z} min={-1} max={1} step={.01} disabled={off} unstyled={unstyled} onCommit={z=>commit({...value,z})}/>
   <PrecisionScrubber scope={scope} revision={revision} label="Surround spread" value={value.spread} min={0} max={1} step={.01} disabled={off} unstyled={unstyled} onCommit={spread=>commit({...value,spread})}/>

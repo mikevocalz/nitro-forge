@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import { useRef } from "react";
@@ -58,8 +59,8 @@ const toneName: Record<SheetTabTone, string> = {
 function LockMark({ unstyled }: { unstyled: boolean }) {
   const line = !unstyled ? "border-text-muted" : undefined;
   return <View aria-hidden style={{ width: 10, height: 12, alignItems: "center" }}>
-    <View {...{ className: line }} style={{ width: 6, height: 6, borderWidth: 1.5, borderBottomWidth: 0, borderTopLeftRadius: 3, borderTopRightRadius: 3 }} />
-    <View {...{ className: !unstyled ? "bg-text-muted" : undefined }} style={{ width: 10, height: 6, borderRadius: 1 }} />
+    <View {...{ className: line }} style={{ width: 6, height: 6, borderWidth: 1.5, borderBottomWidth: 0, borderTopLeftRadius: forgeHairlineRadius.tick, borderTopRightRadius: forgeHairlineRadius.tick }} />
+    <View {...{ className: !unstyled ? "bg-text-muted" : undefined }} style={{ width: 10, height: 6, borderRadius: forgeHairlineRadius.tick }} />
   </View>;
 }
 
@@ -246,7 +247,7 @@ function SheetTabsBody({actionError,disabledReason,disabled=false,
               !unstyled && checked && "border-2 border-focus") }}
             style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
             <View {...{ className: joinClasses(!unstyled && (tone ? swatch[tone] : "border border-border bg-surface-sunken")) }}
-              style={{ width: 20, height: 20, borderRadius: 10 }} />
+              style={{ width: 20, height: 20, borderRadius: 10 /* radius-exempt: colour-well */ }} />
           </Pressable>;
         })}
       </View> : null}

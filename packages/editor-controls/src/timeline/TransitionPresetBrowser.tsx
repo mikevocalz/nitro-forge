@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {useContext,useMemo as useIdentityMemo} from 'react';
 import {EditorInteractionScope,useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -59,7 +60,7 @@ function Diagram({kind,styled}:{kind:string;styled:boolean}){
   const a=joinClasses(styled&&"bg-surface-sunken border border-border");
   const b=joinClasses(styled&&"bg-primary/25 border border-primary");
   const tile=(cls:string,label:string,extra:object={})=><View {...{className:cls}}
-    style={{width:30,height:22,borderRadius:3,alignItems:"center",justifyContent:"center",...extra}}>
+    style={{width:30,height:22,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center",...extra}}>
     <Text {...{className:joinClasses(styled&&"text-text text-xs")}}>{label}</Text>
   </View>;
   // Drawn left to right in every layout direction: the diagram is a picture of time.
@@ -67,7 +68,7 @@ function Diagram({kind,styled}:{kind:string;styled:boolean}){
     {d.shape==="overlap"?<>{tile(a,"A")}{tile(b,"B",{marginLeft:-12,opacity:0.85})}</>
       :d.shape==="dip"?<>{tile(a,"A")}
         <View {...{className:joinClasses(styled&&(d.through==="black"?"bg-text":"bg-surface-raised border border-text"))}}
-          style={{width:10,height:22,marginHorizontal:3,borderRadius:2}}/>{tile(b,"B")}</>
+          style={{width:10,height:22,marginHorizontal:3,borderRadius:forgeHairlineRadius.tick}}/>{tile(b,"B")}</>
       :<>{tile(a,"A")}
         <View style={{width:12,alignItems:"center",justifyContent:"center"}}>
           <View {...{className:joinClasses(styled&&(d.direction==="left"?"border-r-text":"border-l-text"))}} style={{width:0,height:0,

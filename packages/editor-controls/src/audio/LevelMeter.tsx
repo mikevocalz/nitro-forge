@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {valueAccessibility} from "../value-a11y.ts";
 import { useEffect, useRef } from "react";
 import { View, type ViewProps } from "react-native";
@@ -67,8 +68,9 @@ export function LevelMeter({
   const clipping = band === "clipping";
   return <View
     {...props}
-    {...{ className: joinClasses("overflow-hidden", !unstyled && "rounded-full bg-surface-sunken", className) }}
-    style={[vertical ? { width: thickness, height: "100%" } : { height: thickness, width: "100%" }, style]}
+    {...{ className: joinClasses("overflow-hidden", !unstyled && "bg-surface-sunken", className) }}
+    style={[vertical ? { width: thickness, height: "100%" } : { height: thickness, width: "100%" },
+      !unstyled && { borderRadius: forgeHairlineRadius.tick }, style]}
     accessible
     accessibilityRole="progressbar"
     accessibilityLabel={props.accessibilityLabel ?? "Input level"}

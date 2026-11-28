@@ -7,6 +7,8 @@ on:
       - 'apps/**/package.json'
       - 'package.json'
       - 'tooling/release/**'
+      - 'packages/ignition/plugin/**'
+      - 'packages/ignition/app.plugin.*'
       - '.github/workflows/sdk-release-readiness.yml'
   workflow_dispatch:
   schedule:
@@ -27,6 +29,8 @@ jobs:
       - run: node --test tooling/release/audit.test.mjs
       - run: node tooling/release/audit.mjs --offline
       - run: node tooling/release/check-package-boundaries.mjs
+      - run: node --test tooling/release/package-verify.test.mjs
+      - run: node --test packages/ignition/plugin/withForge.node.cjs
       - run: node --test tooling/release/nitro-v1-latest.test.mjs
       - run: node tooling/release/nitro-v1-latest.mjs --offline
 

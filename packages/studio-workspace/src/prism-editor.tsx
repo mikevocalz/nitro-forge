@@ -7,14 +7,16 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { base64ToBytes, bytesToBase64 } from '@nitro-forge/ignition';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { encodeRgbaPng, validatePreviewSize } from './rgba-png';
-import { prismThemes, resolveWorkspaceScale, type WorkspaceDensity } from './theme';
+import { forgeHairlineRadius, forgeRadius, prismThemes, resolveWorkspaceScale, type WorkspaceDensity } from './theme';
 import { prismViewportLayout, PRISM_DOCKED_LAYERS_MIN_WIDTH, PRISM_TOOLBAR_TOP } from './prism-layout';
 import { prismLayerLabel } from './prism-layer-label';
 import { PrismCanvas } from './prism-canvas';
 import { PrecisionScrubber } from '@nyc-tron/ui/components/shell/PrecisionScrubber';
+import { MenuButton } from '@nyc-tron/ui/components/shell/MenuButton';
 import { LayerStack } from '@nitro-forge/editor-controls/layers/LayerStack';
 import { prismLayerRows, prismMoveCommand, prismOpacityCommand, prismRenameCommand, prismRemoveCommand, prismSelectedRowId, prismVisibilityCommand, type PrismLayer, type PrismLayerCommand } from './prism-layers';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
+import { PRISM_ALPHA_MODES, PRISM_BLEND_MODES, PRISM_OPACITY_SCRUBBER, prismBlendCommand, prismBlendMenuItems, prismLayerBlendValue } from './prism-blend';
 import { Platform } from 'react-native';
 import { PersonaTurret, documentRtl, turretBoxWidth, useForgeRenderPrefs, useStudioTextScale, useTurretShortcut, type PersonaTurretHandle } from './persona-turret';
 import { chromePalette, forgeDirections, forgeFeedbackMotion, nycTronTokens, nycTronTokensFor, directionPalette, systemColor, workbenchChrome, type ForgeDirectionId } from './forge-directions';
@@ -196,13 +198,15 @@ export function PrismEditor(props: PrismEditorProps) {
     return command ? run(command.op, command.payload, command.label) : undefined;
   };
   const selectedRow = prismSelectedRowId(selectedId);
+  const selectedBlend = selected ? prismLayerBlendValue(selected) : undefined;
+  const selectedModeLabel = PRISM_BLEND_MODES.find(mode => mode.id === selectedBlend?.mode)?.label ?? '';
   const control = (label: string, onPress: () => void, disabled = false, selected = false, glyph?: string, visibleLabel?: string, iconOnly = false, hint?: string) => {
     const unavailable = disabled || busy || !!props.busy;
     const icon = glyph ? <ForgeIcon name={glyph} size={17} color={unavailable ? chrome.disabledInk : selected ? colors.accent : colors.muted} reducedMotion /> : undefined;
     // `opacity-100` keeps a host's blanket disabled fade off the kit's own
     // disabled ink, which is drawn to be read at full strength.
     const shared = { onPress, disabled: unavailable, variant: 'ghost' as const, size: 'sm' as const, tone: 'carolina' as const,
-      cornerRadius: 4, className: `rounded-[4px] border border-transparent${props.density === 'comfortable' ? ' min-h-12 min-w-12' : ''}${selected ? ' bg-carolina-500/15' : ''}${unavailable ? ' opacity-100' : ''}`,
+      cornerRadius: forgeRadius.sm, className: `rounded-sm border border-transparent${props.density === 'comfortable' ? ' min-h-12 min-w-12' : ''}${selected ? ' bg-carolina-500/15' : ''}${unavailable ? ' opacity-100' : ''}`,
       ...(label === 'Layers' ? { selected } : {}), ...(hint ? { accessibilityHint: hint } : {}) };
     const button = iconOnly
       ? <IconButton key={label} {...shared} icon={icon} aria-label={label} />
@@ -221,38 +225,63 @@ export function PrismEditor(props: PrismEditorProps) {
   const chromeSurface = { backgroundColor: chrome.body, borderWidth: 1, borderColor: chrome.edge, borderRadius: scale.radius.panel, boxShadow: chrome.depth };
   const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: 60, top: panelTop, right: 12, ...chromeSurface, overflow: 'visible' }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: scale.space.group, paddingRight: scale.space.stack, minHeight: scale.size.target+4, borderBottomWidth: 1, borderBottomColor: chrome.rule }}>
-      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-[4px] overflow-hidden" />
+      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-sm overflow-hidden" />
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
     </View>
+    {/* The body fits the panel wherever the editor is tall enough for the
+        head and one layer row (prism-layout.ts). In a shorter editor (1024x768
+        in Studio Preview leaves it 320 px) the body scrolls, head first, so the
+        blend menu and the opacity scrubber stay on screen and the layer rows
+        start below them. */}
+    <ScrollView testID="prism-layers-body" style={{ flexShrink: 1 }}>
     {/* NYC-Tron parts read semantic variables; these are cut from the same Workbench chrome. */}
     <TokenScope variables={controlTokens}>
-    {/* Layer opacity uses the same precision instrument as every studio;
-        only its released value becomes a Rust document operation. */}
-    {selected && <View style={{ paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element, zIndex: 10 }}>
+    {/* B-11 (decision D7): blend mode and the Straight alpha line come from
+        Tron's layer blend model, the mode in Tron's MenuButton; opacity keeps
+        Forge's configured scrubber (forced colours, 1 % step, density target).
+        Each choice or released value is one command. The layer list below
+        gets the height that is left. */}
+    {selected && <View testID="prism-layer-blend" style={{ paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element, gap: scale.space.element, zIndex: 10 }}>
+      {/* The alpha line sits under the menu's label: Prism offers one alpha
+          representation, so it is a fact, not a choice. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.element }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>Blend mode</Text>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>{PRISM_ALPHA_MODES[0].label}</Text>
+        </View>
+        <MenuButton
+          label="Layer blend mode"
+          editScope={JSON.stringify(['prism-layers', selected.id, 'mode'])}
+          accessibilityValue={{ text: selectedBlend ? selectedModeLabel : 'Not listed' }}
+          items={prismBlendMenuItems()}
+          disabled={busy || !!props.busy}
+          className="border border-border px-3"
+          style={{ minHeight: scale.size.target, minWidth: 132 }}
+          onSelect={mode => runLayerCommand(rows => prismBlendCommand(rows, selected.id, { kind: 'mode', mode }))}
+        ><Text style={{ color: colors.text, fontSize: 13 }}>{selectedBlend ? selectedModeLabel : 'Not listed'}</Text></MenuButton>
+      </View>
+      {!selectedBlend && <Text style={{ color: colors.muted, fontSize: 12 }}>This layer uses a blend mode the editor does not list.</Text>}
+      {/* Layer opacity uses the same precision instrument as every studio;
+          only its released value becomes a Rust document operation. */}
       <PrecisionScrubber
-        {...{targetSize: scale.size.target}}
-        label="Layer opacity"
+        {...PRISM_OPACITY_SCRUBBER}
+        targetSize={scale.size.target}
         value={selected.opacity * 100}
-        min={0}
-        max={100}
-        step={1}
-        unit="%"
-        detents={[0, 25, 50, 75, 100]}
         disabled={busy || !!props.busy}
         forcedColors={forced}
-        onCommit={value => run('setLayerOpacity', { id: selected.id, opacity: value / 100 }, 'Layer opacity changed')}
+        onCommit={percent => runLayerCommand(rows => prismBlendCommand(rows, selected.id, { kind: 'opacity', percent }))}
       />
     </View>}
       {layers.length
         ? <LayerStack testID="prism-layer-stack" layers={prismLayerRows(layers)} {...(selectedRow === undefined ? {} : { selectedId: selectedRow })} accentColor={forced ? systemColor('Highlight') : chrome.accent}
-          style={{ maxHeight: layerListMaxHeight, flexShrink: 1, borderRadius: 0 }}
+          style={{ maxHeight: layerListMaxHeight, flexShrink: 0, borderRadius: 0 }}
           onSelect={id => selectPrimary(Number(id))}
           onToggleVisible={id => runLayerCommand(rows => prismVisibilityCommand(rows, id))}
           onOpacityCommit={(id, value) => runLayerCommand(rows => prismOpacityCommand(rows, id, value))}
           onMove={(id, toIndex) => runLayerCommand(rows => prismMoveCommand(rows, id, toIndex))}
           onRename={(id, name) => runLayerCommand(rows => prismRenameCommand(rows, id, name))}
           onRemove={id => runLayerCommand(rows => prismRemoveCommand(rows, id))} />
-        : <EmptyState title="No layers" description="Add a shape or raster layer to begin." className="p-3" tone="carolina" action={<Button title="Add rectangle" onPress={() => addShape('rect')} disabled={busy || !!props.busy || !doc} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />} />}
+        : <EmptyState title="No layers" description="Add a shape or raster layer to begin." className="p-3" tone="carolina" action={<Button title="Add rectangle" onPress={() => addShape('rect')} disabled={busy || !!props.busy || !doc} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm" />} />}
     </TokenScope>
       {/* Each row removes its own layer (button, screen-reader action, Delete).
           LayerStack reorders only by drag and screen-reader actions, so Raise
@@ -261,6 +290,7 @@ export function PrismEditor(props: PrismEditorProps) {
       {selected && <View style={{ paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{control('Raise', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex + 1 }, 'Layer raised'); }, selectedIndex === layers.length - 1)}{control('Lower', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex - 1 }, 'Layer lowered'); }, selectedIndex <= 0)}</View>
       </View>}
+    </ScrollView>
   </View>;
 
   // Persona: a mode control in the toolbar. Its panel follows it in reading
@@ -336,8 +366,9 @@ export function PrismEditor(props: PrismEditorProps) {
         transform: [{ scale: pressed ? forgeFeedbackMotion.press.scale : 1 }],
       }) as never}>
       {/* A small dial: the ring and a pointer set to the active stop. */}
+      {/* radius-exempt: knob */}
       <View aria-hidden style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: personaOpen ? colors.accent : colors.muted, transform: [{ rotate: `${personaStops.length ? turretDisplayAngle(activeStop, personaStops.length, documentRtl()) : 0}deg` }] }}>
-        <View style={{ position: 'absolute', left: 5.75, top: 1.5, width: 1.5, height: 5, borderRadius: 0.75, backgroundColor: colors.accent }} />
+        <View style={{ position: 'absolute', left: 5.75, top: 1.5, width: 1.5, height: 5, borderRadius: forgeHairlineRadius.needle, backgroundColor: colors.accent }} />
       </View>
       <Text numberOfLines={1} style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>{personaLabel}</Text>
       {shortcutKeys && activeStop < 9 && <Text style={{ color: colors.muted, fontSize: scale.type.micro + 1, fontVariant: ['tabular-nums'] }}>{shortcut.tag(activeStop + 1)}</Text>}
@@ -442,8 +473,11 @@ export function PrismEditor(props: PrismEditorProps) {
       {/* Each chip sits in a 44 pt target. The chosen one is ringed with a gap,
           in the engraving colour, or the system highlight under forced colours. */}
       {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${FILL_NAMES[index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: scale.size.target, height: scale.size.target, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent', borderRadius: scale.radius.control }}>
-        <View style={{ width: 33, height: 33, alignItems: 'center', justifyContent: 'center', borderRadius: scale.radius.control + 2, borderWidth: 2, borderColor: color === index ? (forced ? systemColor('Highlight') : chrome.chipRing) : 'transparent', ...keepColour }}>
-          <View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: 1, borderColor: forced ? systemColor('CanvasText') : chrome.chipEdge, ...keepColour }} />
+        {/* Fill chips are colour wells, circular by nature; the ring is a concentric circle round the well. */}
+        {/* radius-exempt: colour-well */}
+        <View className="rounded-full" style={{ width: 33, height: 33, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: color === index ? (forced ? systemColor('Highlight') : chrome.chipRing) : 'transparent', ...keepColour }}>
+          {/* radius-exempt: colour-well */}
+          <View className="rounded-full" style={{ width: 25, height: 25, backgroundColor: fill, borderWidth: 1, borderColor: forced ? systemColor('CanvasText') : chrome.chipEdge, ...keepColour }} />
         </View>
       </Pressable>)}
       {selected && <><View style={{ width: 1, height: 24, backgroundColor: chrome.rule, marginHorizontal: 5 }} />{control('Fill layer', () => { void run(selected.content.type === 'shape' ? 'setShapeFill' : 'fillLayer', { id: selected.id, color: FILLS[color] }, selected.content.type === 'shape' ? 'Shape fill changed' : 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
@@ -451,8 +485,8 @@ export function PrismEditor(props: PrismEditorProps) {
     </View>
     {!!feedback && <View onLayout={event => { const h = Math.round(event.nativeEvent.layout.height); if (h !== store.getState().feedbackHeight) store.setState({ feedbackHeight: h }); }}
       style={{ position: 'absolute', zIndex: 35, bottom: toastBottom, left: toastLeft, width: toastWidth }}>
-      <Banner tone={error || previewError ? 'danger' : 'info'} title={feedback} live={error || previewError ? 'alert' : 'status'} className="rounded-[4px]"
-        {...(previewError ? { action: <Button title="Retry preview" onPress={() => store.setState(s => ({ retry: s.retry + 1 }))} disabled={busy || !!props.busy} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /> } : {})} />
+      <Banner tone={error || previewError ? 'danger' : 'info'} title={feedback} live={error || previewError ? 'alert' : 'status'} className="rounded-sm"
+        {...(previewError ? { action: <Button title="Retry preview" onPress={() => store.setState(s => ({ retry: s.retry + 1 }))} disabled={busy || !!props.busy} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm" /> } : {})} />
     </View>}
     {/* The one live region for persona changes. It stays mounted, so the commit is read after the panel closes. */}
     <Text testID="persona-status" accessibilityLiveRegion="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}>{personaStatus}</Text>
