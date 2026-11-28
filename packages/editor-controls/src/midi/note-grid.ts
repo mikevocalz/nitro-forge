@@ -8,7 +8,6 @@
  */
 
 /** One MIDI note as the engine reports it. */
-import { tokens } from "../tokens.ts";
 export interface MidiNote {
   /** 0..127; 60 is middle C (C4). */
   readonly pitch: number;
@@ -86,7 +85,7 @@ export function visiblePitches(g: NoteGrid): number[] {
 /** Total drawn size of the grid. */
 export function gridSize(g: NoteGrid): { width: number; height: number } {
   assertGrid(g);
-  return { width: g.clipTicks * g.pixelsPerTick, height: (g.highestPitch - g.lowestPitch + tokens.borderWidth.hairline) * g.rowHeight };
+  return { width: g.clipTicks * g.pixelsPerTick, height: (g.highestPitch - g.lowestPitch + 1) * g.rowHeight };
 }
 
 /** Box for a note, or undefined when its pitch is outside the window. */

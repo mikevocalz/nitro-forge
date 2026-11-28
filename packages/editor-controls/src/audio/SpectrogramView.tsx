@@ -61,12 +61,12 @@ const STEP_CLASS: Record<Exclude<IntensityStep, 0>, string> = {
  * at or under 96 x 32.
  */
 export function SpectrogramView({scope='spectrogram',revision=0,...props}:SpectrogramViewProps){
- const range=props.visibleRange??{start:0,end:tokens.borderWidth.hairline};assertWaveformRange(range);
+ const range=props.visibleRange??{start:0,end:1};assertWaveformRange(range);
  if(props.frames.length>32768||props.bandsHz.length>512||props.frames.length*props.bandsHz.length>2097152||props.frames.some(f=>f.length!==props.bandsHz.length||f.some(n=>!Number.isFinite(n)))||props.bandsHz.some((n,i)=>!Number.isFinite(n)||n<=0||i>0&&n<=props.bandsHz[i-1]!)||!Number.isFinite(props.hopSeconds)||props.hopSeconds<=0||!Number.isFinite(props.frames.length*props.hopSeconds)||!Number.isFinite(props.height??160)||(props.height??160)<44||(props.height??160)>4096)throw new RangeError('Invalid spectrogram data');
  const owner=JSON.stringify([...controlIdentity(scope,revision),props.disabledReason]),guard=useScopedControl(owner,props,props.disabledReason!==undefined);
  return <SpectrogramViewBody {...props} actionError={guard.error} onVisibleRangeCommit={props.onVisibleRangeCommit?range=>guard.run('range',h=>h.onVisibleRangeCommit?.(range)):undefined}/>;
 }
-function SpectrogramViewBody({actionError,disabledReason,visibleRange={start:0,end:tokens.borderWidth.hairline},onVisibleRangeCommit,
+function SpectrogramViewBody({actionError,disabledReason,visibleRange={start:0,end:1},onVisibleRangeCommit,
 
   label, status, frames:sourceFrames, bandsHz, hopSeconds, height = 160, error, className, unstyled = false, style, ...props
 }: SpectrogramViewProps&{actionError?:string|null}) {
@@ -128,8 +128,8 @@ function SpectrogramViewBody({actionError,disabledReason,visibleRange={start:0,e
         {timeTicks(duration).map((t, i, all) => <Text key={t.label} {...{ className: muted }}
           style={{ position: "absolute", fontSize: tokens.text.off11, fontVariant: ["tabular-nums"],
             ...(i === 0 ? { left: 0 } : i === all.length - 1 && t.position > 0.92
-              ? { right: ((tokens.borderWidth.hairline - t.position) * tokens.spacing.off96) + "%" }
-              : { left: (t.position * tokens.spacing.off96) + "%", transform: [{ translateX: "-50%" }] }) }}>{t.label}</Text>)}
+              ? { right: ((1 - t.position) * 96) + "%" }
+              : { left: (t.position * 96) + "%", transform: [{ translateX: "-50%" }] }) }}>{t.label}</Text>)}
       </View>
       <View aria-hidden style={{ flexDirection: "row", alignItems: "center", gap: tokens.spacing.off6, marginLeft: AXIS, flexWrap: "wrap" }}>
         <Text {...{ className: muted }} style={{ fontSize: tokens.text.off11 }}>Quiet</Text>

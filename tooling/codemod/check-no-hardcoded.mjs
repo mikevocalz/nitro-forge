@@ -9,7 +9,9 @@
 //   - kind colour:    a string literal that contains a hex colour (#rgb, #rgba, #rrggbb, #rrggbbaa) or a literal `rgb(`/`rgba(`/`hsl(` call, or
 //   - kind number:    a non-zero numeric literal that is, or sits in a ternary or arithmetic branch of, the value of a style
 //                     property (width, padding, gap, fontSize, borderRadius, zIndex, opacity ...). `opacity: 1` is the identity
-//                     and is not a finding.
+//                     and is not a finding. Neither is the divisor in `x / 2`, nor a unit 1 added to or subtracted from
+//                     a factor of a product or quotient (`(1 - t) * length`, `(x + 1) / 2`, `(last - first + 1) * row`),
+//                     which is a fraction or a count, not a length.
 //   - kind prop:      a non-zero numeric literal given to a JSX numeric prop (size, width, height, strokeWidth, fontSize, r, rx, ry),
 //                     including both branches of a ternary.
 //   - kind tailwind:  a Tailwind arbitrary value with a length unit or a colour inside a class string (`rounded-[4px]`,

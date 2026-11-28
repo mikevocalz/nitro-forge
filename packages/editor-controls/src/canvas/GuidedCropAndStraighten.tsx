@@ -43,7 +43,7 @@ export function GuidedCropAndStraighten({scope='guided-crop',revision=0,...props
   <View style={{flexDirection:'row',flexWrap:'wrap',gap:tokens.spacing.fixedElement}}>
    <Button title="Rotate left" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>commit({...value,angle:angle(value.angle-90)})}/>
    <Button title="Rotate right" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>commit({...value,angle:angle(value.angle+90)})}/>
-   <Button title="Reset crop" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>commit({rect:{x:0,y:0,width:tokens.borderWidth.hairline,height:tokens.borderWidth.hairline},angle:0,ratio:'free'})}/>
+   <Button title="Reset crop" variant="secondary" disabled={off} unstyled={unstyled} onPress={()=>commit({rect:{x:0,y:0,width:1,height:1},angle:0,ratio:'free'})}/>
   </View>
   {onGridChange?<SegmentedControl aria-label="Crop guides" disabled={off} value={grid} options={[{value:'thirds',label:'Thirds'},{value:'center',label:'Centre'},{value:'none',label:'None'}]} unstyled={unstyled} onChange={next=>{if(guard.current())onGridChange(next);}}/>:null}
  </View>;

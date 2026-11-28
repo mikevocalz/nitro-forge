@@ -197,7 +197,7 @@ function AutomationLaneBody({
   const muted = joinClasses(styled && "text-text-muted");
   const lineClass = joinClasses(styled && (off ? "bg-text-muted" : "bg-accent"));
 
-  const content = <View style={{ width: width + LEAD * tokens.spacing.off2, height, direction: "ltr" }}>
+  const content = <View style={{ width: width + LEAD * 2, height, direction: "ltr" }}>
    <View style={{ position: "absolute", left: LEAD, top: 0, width, height }}>
     <Pressable accessible={false} focusable={false} disabled={disabled} onPressIn={()=>{pressBoundary.current=interactionBoundary;}} onPress={addAt}
       style={{ position: "absolute", left: 0, top: 0, width, height,

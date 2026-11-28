@@ -491,6 +491,70 @@
       "property": "height",
       "value": "540",
       "reason": "Default slide height of the slide document model (960 x 540): document data, not a view style."
+    },
+    {
+      "file": "packages/editor-controls/src/audio/AutomationLane.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "2",
+      "reason": "Factor, not a length: the lane is the visible width plus the lead-in on both sides (width + LEAD * 2)."
+    },
+    {
+      "file": "packages/editor-controls/src/audio/SpectrogramView.tsx",
+      "kind": "number",
+      "property": "right",
+      "value": "96",
+      "reason": "Percentage, not a length: the end marker sits at (1 - position) * 96 percent of the strip, a string ending in %."
+    },
+    {
+      "file": "packages/editor-controls/src/audio/SpectrogramView.tsx",
+      "kind": "number",
+      "property": "left",
+      "value": "96",
+      "reason": "Percentage, not a length: the marker sits at position * 96 percent of the strip, a string ending in %."
+    },
+    {
+      "file": "packages/editor-controls/src/audio/eq-graph.ts",
+      "kind": "number",
+      "property": "width",
+      "value": "1",
+      "count": 2,
+      "reason": "Data the gate reads as style: a 1-wide probe plot passed to assertPlot to validate height and range, not a view."
+    },
+    {
+      "file": "packages/editor-controls/src/canvas/GuidedCropAndStraighten.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "1",
+      "reason": "Data the gate reads as style: the reset crop rect is the full normalised image (0, 0, 1, 1), not a view size."
+    },
+    {
+      "file": "packages/editor-controls/src/canvas/GuidedCropAndStraighten.tsx",
+      "kind": "number",
+      "property": "height",
+      "value": "1",
+      "reason": "Data the gate reads as style: the reset crop rect is the full normalised image (0, 0, 1, 1), not a view size."
+    },
+    {
+      "file": "packages/editor-controls/src/color/ColorWheel.tsx",
+      "kind": "number",
+      "property": "width",
+      "value": "2",
+      "reason": "Factor, not a length: the inner disc is a circle of radius inner, so its width is inner * 2."
+    },
+    {
+      "file": "packages/editor-controls/src/color/ColorWheel.tsx",
+      "kind": "number",
+      "property": "height",
+      "value": "2",
+      "reason": "Factor, not a length: the inner disc is a circle of radius inner, so its height is inner * 2."
+    },
+    {
+      "file": "packages/editor-controls/src/vector/fill-stroke-model.ts",
+      "kind": "number",
+      "property": "width",
+      "value": "2",
+      "reason": "Data the gate reads as style: the default stroke width of a vector document stroke, not a view style."
     }
   ]
 }

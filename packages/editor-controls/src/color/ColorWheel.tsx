@@ -105,7 +105,7 @@ export function ColorWheel({
       style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: colour-well */opacity:disabled?tokens.opacity.disabled:1,...NO_SELECT}}>
       <HueRingLayer size={size} inner={inner}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised")}}
-        style={{position:"absolute",left:size/2-inner,top:size/2-inner,width:inner*tokens.spacing.off2,height:inner*tokens.spacing.off2,borderRadius:inner /* radius-exempt: colour-well */}}/>
+        style={{position:"absolute",left:size/2-inner,top:size/2-inner,width:inner*2,height:inner*2,borderRadius:inner /* radius-exempt: colour-well */}}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"border-border")}}
         style={{position:"absolute",left:size/2-center/2,top:size/2-center/2,width:center,height:center,borderRadius:center/2, /* radius-exempt: colour-well */
           borderWidth:tokens.borderWidth.hairline,backgroundColor:rgbaToHex(hsvToRgb({...value,h:hue,alpha:1}),false)}}/>

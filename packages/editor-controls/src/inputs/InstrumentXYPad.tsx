@@ -106,7 +106,7 @@ export function InstrumentXYPad({
       <View pointerEvents="none" {...{className:joinClasses(accentFillClass)}}
         style={{position:"absolute",left:"50%",top:0,bottom:0,width:tokens.borderWidth.hairline,...accentFill,opacity:controlTokens.opacity.faint}}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised",accentBorderClass)}}
-        style={{position:"absolute",left:position.x*width-(tokens.spacing.off18 / 2),top:(tokens.borderWidth.hairline-position.y)*height-(tokens.spacing.off18 / 2),
+        style={{position:"absolute",left:position.x*width-(tokens.spacing.off18 / 2),top:(1-position.y)*height-(tokens.spacing.off18 / 2),
         width:tokens.spacing.off18,height:tokens.spacing.off18,borderRadius:forgeRadius.sm,borderWidth:tokens.borderWidth.strong,...accentBorder}}/>
     </View>
     <View style={{flexDirection:"row",gap:tokens.spacing.fixedElement,alignItems:"center"}}>

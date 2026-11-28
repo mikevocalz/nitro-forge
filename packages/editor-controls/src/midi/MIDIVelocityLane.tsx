@@ -257,7 +257,7 @@ function MIDIVelocityLaneBody({actionError,disabledReason,retained,
 
   const content = <View style={{ width, height, direction: "ltr" }}>
     {notes.length === 0 ? null : [0.25, 0.5, 0.75].map(f => <View key={f} pointerEvents="none" {...{ className: joinClasses(styled && "bg-border") }}
-      style={{ position: "absolute", left: 0, right: 0, top: height * (tokens.borderWidth.hairline - f), height: tokens.borderWidth.hairline }} />)}
+      style={{ position: "absolute", left: 0, right: 0, top: height * (1 - f), height: tokens.borderWidth.hairline }} />)}
     {notes.map((note, index) => <VelocityBar key={index} index={index} note={note} x={note.startTicks * pixelsPerTick}
       laneHeight={height} step={step} selected={index === selectedIndex} disabled={disabled} styled={styled}
       locked={activeTool === "line"} preview={preview.get(index)}

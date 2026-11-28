@@ -77,6 +77,14 @@ export const DECORATIVE_OPACITY = {
 export const SKIP_SITES = {
   'photo/photo-export.ts:8': 'default export settings (watermark opacity and size are document data, not a style)',
   'slides/slide-model.ts:41': 'default slide size of the document model (960 x 540), not a style',
+  'audio/eq-graph.ts:134': 'probe plot passed to assertPlot, data not a style',
+  'audio/eq-graph.ts:141': 'probe plot passed to assertPlot, data not a style',
+  'canvas/GuidedCropAndStraighten.tsx:46': 'reset crop rect in normalised image units, data not a style',
+  'vector/fill-stroke-model.ts:87': 'default stroke width of the vector document model, data not a style',
+  'audio/AutomationLane.tsx:200': 'factor (lead-in on both sides), not a length',
+  'audio/SpectrogramView.tsx:131': 'percentage of the strip, not a length',
+  'audio/SpectrogramView.tsx:132': 'percentage of the strip, not a length',
+  'color/ColorWheel.tsx:108': 'factor (diameter = radius * 2), not a length',
 };
 /** Sites whose role is not what the property says. */
 export const OVERRIDES = {
@@ -187,7 +195,7 @@ for (const file of files) {
       // A border wider than the border scale draws a shape (a CSS triangle, a knob ring): it is sized like spacing.
       const scale = role === 'border' && Math.abs(value) > tokens.borderWidth.off3 ? 'spacing' : role;
       const best = nearest(scale, Math.abs(value));
-      const half = scale === 'spacing' && /^(left|right|top|bottom|start|end|margin\w*)$/.test(property) && best.distance > 1e-9 ? VOCAB.spacing.find(entry => entry.tier <= 2 && Math.abs(entry.value - Math.abs(value) * 2) < 1e-9) : null;
+      const half = scale === 'spacing' && /^(left|right|top|bottom|margin\w*)$/.test(property) && best.distance > 1e-9 ? VOCAB.spacing.find(entry => entry.tier <= 2 && Math.abs(entry.value - Math.abs(value) * 2) < 1e-9) : null;
       if (half) replacement = `${half.text} / 2`;
       else {
         replacement = best.entry.text;
