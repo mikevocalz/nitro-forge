@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { prismThemes, workspaceStatus, workspaceThemes, type WorkspaceColors } from './theme.ts';
 import { FORGE_DIRECTION_IDS, chromePalette, contrastRatio, directionPalette, forgeDirections, luminance, type ForgeScheme } from './forge-directions.ts';
 
@@ -13,6 +15,7 @@ const palettes: Record<string, { colors: WorkspaceColors; scheme: ForgeScheme }>
   'prism.dark': { colors: prismThemes.dark, scheme: 'dark' },
   'prism.light': { colors: prismThemes.light, scheme: 'light' },
 };
+const here = dirname(fileURLToPath(import.meta.url));
 const ratio = (fg: string, bg: string) => contrastRatio(luminance(fg), luminance(bg));
 const surfaces = ['base', 'raised', 'deep'] as const;
 
@@ -62,12 +65,12 @@ test('the divider stays a divider: line is not the control boundary', () => {
 });
 
 test('the workspace chrome draws no hard-coded ink on the accent fill', () => {
-  const source = readFileSync(new URL('./index.tsx', import.meta.url), 'utf8');
+  const source = readFileSync(join(here, 'index.tsx'), 'utf8');
   assert.equal(/#FFFFFF|#fff\b/i.test(source), false, 'use colors.ink on an accent fill');
 });
 
 test('the studio preview focus ring reads the theme focus token', () => {
-  const css = readFileSync(new URL('../../../apps/studio-preview/src/style.css', import.meta.url), 'utf8');
+  const css = readFileSync(join(here, '../../../apps/studio-preview/src/style.css'), 'utf8');
   assert.equal(css.includes('#e9c685'), false, 'stale gold focus colour');
   // Every focus ring takes --color-focus (3:1 or more, checked above), except
   // the forced-colors override, which takes the system Highlight.
