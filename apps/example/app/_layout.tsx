@@ -13,7 +13,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ title: surfaces.homeTitle }} />
           <Stack.Screen name="about" options={{ presentation: "modal", title: surfaces.about.title }} />
           <Stack.Screen name="editor/[product]" options={{ title: "Editor" }} />
-          <Stack.Screen name="personas" options={{ presentation: "formSheet", sheetAllowedDetents: "fitToContents", sheetGrabberVisible: true, sheetCornerRadius: 4, headerShown: false, title: "Persona" }} />
+          <Stack.Screen name="personas" options={{ presentation: "formSheet", sheetAllowedDetents: "fitToContents", sheetGrabberVisible: true, sheetCornerRadius: 4, /* radius-exempt: system-sheet */ headerShown: false, title: "Persona" }} />
           <Stack.Screen name="persona-composer" options={{ presentation: "modal", title: "New persona" }} />
         </Stack>
       </StudioUIProvider>

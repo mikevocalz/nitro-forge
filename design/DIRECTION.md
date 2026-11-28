@@ -36,6 +36,7 @@ Shared grammar to carry across all of them: one studio switcher pattern; the sam
 - `rounded-full` is allowed only for things that are circular by nature: knobs, colour wells, radio buttons, avatars, record buttons.
 - Values under 4 px are allowed only for hairline details such as meter segments and timeline ticks, through a named token.
 - Exempt: shapes the operating system owns (window corners, system sheets, the launcher's icon mask).
+- Exempt: shapes drawn on a document or sample artboard, such as artwork a user draws. They are document content, not view chrome, and may be any shape. The artboard or document frame itself is a view and stays `rounded-md`.
 - These values are Tailwind v4's `rounded-sm` and `rounded-md`. Forge sets them in its own theme; Tron stays palette- and radius-agnostic and takes them from the app.
 
 Other references, iPad builds only, never iPhone screens: Procreate (https://procreate.com), Logic Pro for iPad (https://www.apple.com/logic-pro-for-ipad/), DaVinci Resolve (https://www.blackmagicdesign.com/products/davinciresolve), Figma (https://www.figma.com), the Adobe iPad apps, and Microsoft Office for iPad for feature coverage of the office studios, not for their look.

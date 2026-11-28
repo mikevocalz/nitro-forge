@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {assertMidiNotes} from './note-grid.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -288,10 +289,10 @@ function MIDIVelocityLaneBody({actionError,disabledReason,retained,
               {segmentView ? <>
                 <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-primary") }}
                   style={{ position: "absolute", left: segmentView.centerX - segmentView.length / 2, top: segmentView.centerY - 1,
-                    width: segmentView.length, height: 2, borderRadius: 1, transform: [{ rotate: `${segmentView.angleDeg}deg` }] }} />
+                    width: segmentView.length, height: 2, borderRadius: forgeHairlineRadius.tick, transform: [{ rotate: `${segmentView.angleDeg}deg` }] }} />
                 {[line!.start, line!.end].map((p, i) => <View key={i} pointerEvents="none"
                   {...{ className: joinClasses(styled && "bg-primary border-2 border-surface-raised") }}
-                  style={{ position: "absolute", left: p.x - 5, top: p.y - 5, width: 10, height: 10, borderRadius: 5 }} />)}
+                  style={{ position: "absolute", left: p.x - 5, top: p.y - 5, width: 10, height: 10, borderRadius: forgeRadius.sm }} />)}
               </> : null}
             </View>
           : null}
@@ -395,9 +396,9 @@ function VelocityBar({ index, note, x, laneHeight, step, selected, disabled, sty
     style={{ position: "absolute", left: x - (HIT - BAR) / 2, top: 0, width: HIT, height: laneHeight,
       opacity: disabled ? 0.45 : 1, ...webStyle }}>
     <View pointerEvents="none" {...{ className: joinClasses(styled && (lit ? "bg-primary" : "bg-accent")) }}
-      style={{ position: "absolute", left: (HIT - BAR) / 2, width: BAR, bottom: 0, height: Math.max(2, h), borderRadius: 2 }} />
+      style={{ position: "absolute", left: (HIT - BAR) / 2, width: BAR, bottom: 0, height: Math.max(2, h), borderRadius: forgeHairlineRadius.tick }} />
     <View pointerEvents="none" {...{ className: joinClasses(styled && (lit ? "bg-primary" : "bg-accent")) }}
-      style={{ position: "absolute", left: (HIT - BAR) / 2 - 3, width: BAR + 6, height: 4, borderRadius: 2, bottom: Math.max(2, h) - 2 }} />
+      style={{ position: "absolute", left: (HIT - BAR) / 2 - 3, width: BAR + 6, height: 4, borderRadius: forgeHairlineRadius.tick, bottom: Math.max(2, h) - 2 }} />
   </View>;
 }
 

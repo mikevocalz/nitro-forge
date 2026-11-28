@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {Select} from '@nyc-tron/ui/components/Select';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -365,7 +366,7 @@ function SendControl({ source, bus, disabled, styled, onSendCommit, onSendRemove
       onKeyDown={onKeyDown}
       {...{ className: joinClasses(styled && "rounded-control focus-visible:ring-2 focus-visible:ring-focus") }}
       style={{ flex: 1, height: HIT, justifyContent: "center", opacity: disabled ? 0.45 : 1, ...webTrack }}>
-      <View pointerEvents="none" style={{ height: 8, borderRadius: 4, overflow: "hidden" }}
+      <View pointerEvents="none" style={{ height: 8, borderRadius: forgeHairlineRadius.tick, overflow: "hidden" }}
         {...{ className: joinClasses(styled && "bg-surface-sunken border border-border") }}>
         <View style={{ position: "absolute", top: 0, bottom: 0, start: 0, width: `${shown * 100}%` }}
           {...{ className: joinClasses(styled && "bg-accent") }} />
@@ -384,7 +385,7 @@ function SendControl({ source, bus, disabled, styled, onSendCommit, onSendRemove
 
 /** Remove mark drawn with two rotated bars; the app has no icon dependency here. */
 function CloseGlyph({ styled }: { styled: boolean }) {
-  const bar = { position: "absolute" as const, width: 14, height: 2, borderRadius: 1 };
+  const bar = { position: "absolute" as const, width: 14, height: 2, borderRadius: forgeHairlineRadius.tick };
   const cls = { className: joinClasses(styled && "bg-text-muted") };
   return <View pointerEvents="none" style={{ width: 14, height: 14, alignItems: "center", justifyContent: "center" }}>
     <View {...cls} style={[bar, { transform: [{ rotate: "45deg" }] }]} />

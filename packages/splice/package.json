@@ -1,6 +1,7 @@
 {
   "name": "@nitro-forge/splice",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Nitro-Forge splice document API.",
   "type": "module",
   "main": "./src/index.ts",
@@ -22,5 +23,8 @@
     "vitest": "5.1.0",
     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
     "@nitro-forge/editor-controls": "workspace:*"
-  }
+  },
+  "files": [
+    "src"
+  ]
 }

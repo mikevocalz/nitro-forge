@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {cancelPreview} from "../cancel-preview.ts";
 import {useRef} from "react";
 import {PanResponder,Pressable,Text,TextInput,View,type ViewProps} from "react-native";
@@ -91,10 +92,10 @@ export function InstrumentKnob({
       {...{className:joinClasses(styled&&!accentColor&&"border-accent")}}
       accessibilityActions={[{name:"increment"},{name:"decrement"}]}
       onAccessibilityAction={e=>{if(e.nativeEvent.actionName==="increment")nudge(1);if(e.nativeEvent.actionName==="decrement")nudge(-1);}}
-      style={{width:size,height:size,borderRadius:size/2,borderWidth:8,...accentBorder,alignItems:"center",justifyContent:"center",opacity:disabled?0.45:1}}>
+      style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: knob */borderWidth:8,...accentBorder,alignItems:"center",justifyContent:"center",opacity:disabled?0.45:1}}>
       <View pointerEvents="none" {...{className:joinClasses(styled&&!accentColor&&"bg-accent")}}
         style={{position:"absolute",width:3,height:size*0.28,...accentFill,
-        borderRadius:3,transform:[{translateY:-size*0.2},{rotate:gestureToAngle(current,min,max)+"deg"}]}} />
+        borderRadius:forgeHairlineRadius.tick,transform:[{translateY:-size*0.2},{rotate:gestureToAngle(current,min,max)+"deg"}]}} />
       <Text {...{className:joinClasses(!unstyled&&"text-text font-semibold")}}>{String(current)}</Text>
     </View>
     <View style={{flexDirection:"row",alignItems:"center",gap:6}}>

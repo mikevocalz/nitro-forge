@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {gradientTargetCurrent} from './gradient-target-owner.ts';
 import {createGradientPreviewOwner} from './gradient-preview-owner.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -279,7 +280,7 @@ function GradientOnCanvasHandlesBody({
     const round=handle==="radius"||handle==="focal";
     return <View pointerEvents="none"
       {...{className:joinClasses(styled&&"bg-surface-raised",styled&&!accentColor&&"border-accent")}}
-      style={{width:14,height:14,borderWidth:handle==="focal"?3:2,borderRadius:round?7:2,
+      style={{width:14,height:14,borderWidth:handle==="focal"?3:2,borderRadius:round?forgeRadius.sm:forgeHairlineRadius.tick,
         ...(accentColor?{borderColor:accentColor}:null)}}/>;
   };
   return <View {...rest} {...{onKeyDown:onRootKey,className:joinClasses("gap-2",className)}}
@@ -336,9 +337,9 @@ function GradientOnCanvasHandlesBody({
           onBegin={()=>begin(target)} onMove={dragTo} onRelease={release} onCancel={cancelDrag}>
           <View pointerEvents="none"
             {...{className:joinClasses(styled&&"border-surface-raised")}}
-            style={{width:isSel?20:16,height:isSel?20:16,borderRadius:4,borderWidth:2,backgroundColor:rgbaToCss(stop.color)}}>
+            style={{width:isSel?20:16,height:isSel?20:16,borderRadius:forgeRadius.sm,borderWidth:2,backgroundColor:rgbaToCss(stop.color)}}>
             <View {...{className:joinClasses(styled&&(isSel?"border-focus":"border-text-muted"))}}
-              style={{position:"absolute",left:-4,top:-4,right:-4,bottom:-4,borderRadius:6,borderWidth:isSel?2:1}}/>
+              style={{position:"absolute",left:-4,top:-4,right:-4,bottom:-4,borderRadius:forgeRadius.md,borderWidth:isSel?2:1}}/>
           </View>
         </CanvasKnob>;
       })}

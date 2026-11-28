@@ -3,7 +3,7 @@ import { ScrollView, Share, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Button, Text, View } from '@nitro-forge/studio-workspace/ui';
 import { PersonaComposer } from '@nitro-forge/studio-workspace/composer';
-import { prismThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
+import { forgeRadius, prismThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
 import { findPersonaSession } from '../src/persona/persona-session';
 
 /** Native Persona Composer for the open design document. Export goes through
@@ -18,7 +18,7 @@ export default function PersonaComposerScreen() {
   const close = () => { if (router.canGoBack()) router.back(); else router.replace('/'); };
   if (!session) return <View style={{ flex: 1, padding: scale.space.group, gap: scale.space.element, backgroundColor: colors.base }}>
     <Text accessibilityRole="alert" style={{ color: colors.text, fontSize: scale.type.body }}>No design document is open.</Text>
-    <Button title="Close" onPress={close} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />
+    <Button title="Close" onPress={close} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm" />
   </View>;
   return <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.base }}>
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled"

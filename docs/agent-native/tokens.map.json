@@ -650,7 +650,7 @@
   {
    "name": "--radius-card",
    "tier": "radius",
-   "value": "4px",
+   "value": "6px",
    "status": "existing-nyc-tron",
    "source": "workspaceScale.radius.panel"
   },
@@ -661,10 +661,11 @@
    "status": "existing-css-keep (AGENTS.md rounded-sm 4px)"
   },
   {
-   "name": "--radius-paper",
+   "name": "--radius-md",
    "tier": "radius",
-   "value": "2px",
-   "status": "existing-ts-new-css"
+   "value": "6px",
+   "status": "existing-css-keep (AGENTS.md rounded-sm 4px)",
+   "source": "forgeRadius.md"
   },
   {
    "name": "--text-micro",
@@ -2803,8 +2804,9 @@
    "property": "borderRadius",
    "value": "1",
    "count": 1,
-   "to": "--radius-off-1",
-   "cls": "off-scale-preserved"
+   "to": "forgeHairlineRadius.tick",
+   "cls": "radius-rule",
+   "why": "PR #94 radius rule (design/DIRECTION.md): radius values come only from theme.ts, so this row no longer mints a CSS token"
   },
   {
    "file": "packages/studio-workspace/src/persona-turret.tsx",
@@ -2830,8 +2832,9 @@
    "property": "borderRadius",
    "value": "1.5",
    "count": 1,
-   "to": "--radius-off-1-5",
-   "cls": "off-scale-preserved"
+   "to": null,
+   "cls": "radius-rule",
+   "why": "PR #94 radius rule (design/DIRECTION.md): radius values come only from theme.ts, so this row no longer mints a CSS token"
   },
   {
    "file": "packages/studio-workspace/src/persona-turret.tsx",
@@ -3051,8 +3054,9 @@
    "property": "borderRadius",
    "value": "8",
    "count": 1,
-   "to": "--radius-off-8",
-   "cls": "off-scale-preserved"
+   "to": "tokens.spacing.off16 / 2 (radius-exempt: knob)",
+   "cls": "radius-rule",
+   "why": "PR #94 radius rule (design/DIRECTION.md): radius values come only from theme.ts, so this row no longer mints a CSS token"
   },
   {
    "file": "packages/studio-workspace/src/prism-editor.tsx",
@@ -3105,8 +3109,9 @@
    "property": "borderRadius",
    "value": "0.75",
    "count": 1,
-   "to": "--radius-off-0-75",
-   "cls": "off-scale-preserved"
+   "to": "forgeHairlineRadius.needle",
+   "cls": "radius-rule",
+   "why": "PR #94 radius rule (design/DIRECTION.md): radius values come only from theme.ts, so this row no longer mints a CSS token"
   },
   {
    "file": "packages/studio-workspace/src/prism-editor.tsx",
@@ -3592,8 +3597,9 @@
    "property": "borderRadius",
    "value": "2",
    "count": 1,
-   "to": "--radius-paper",
-   "cls": "on-scale"
+   "to": "workspaceScale.radius.paper",
+   "cls": "radius-rule",
+   "why": "PR #94 radius rule (design/DIRECTION.md): radius values come only from theme.ts, so this row no longer mints a CSS token"
   },
   {
    "file": "packages/studio-workspace/src/stage.tsx",
@@ -3610,8 +3616,9 @@
    "property": "borderRadius",
    "value": "3",
    "count": 3,
-   "to": "--radius-off-3",
-   "cls": "off-scale-preserved"
+   "to": "workspaceScale.radius.paper (2), workspaceScale.radius.control (1)",
+   "cls": "radius-rule",
+   "why": "PR #94 radius rule (design/DIRECTION.md): radius values come only from theme.ts, so this row no longer mints a CSS token"
   },
   {
    "file": "packages/studio-workspace/src/stage.tsx",
@@ -3808,8 +3815,9 @@
    "property": "borderRadius",
    "value": "4",
    "count": 2,
-   "to": "--radius-control",
-   "cls": "on-scale"
+   "to": "workspaceScale.radius.control",
+   "cls": "radius-rule",
+   "why": "PR #94 radius rule (design/DIRECTION.md): radius values come only from theme.ts, so this row no longer mints a CSS token"
   },
   {
    "file": "packages/studio-workspace/src/stage.tsx",
@@ -4260,9 +4268,10 @@
    "file": "packages/studio-workspace/src/prism-editor.tsx",
    "kind": "derived-expression",
    "expression": "scale.radius.control + 2",
-   "to": "--radius-control-plus-2",
-   "cls": "derived-from-scale",
-   "count": 1
+   "to": null,
+   "cls": "radius-rule",
+   "count": 1,
+   "why": "PR #94 radius rule (design/DIRECTION.md): radius values come only from theme.ts, so this row no longer mints a CSS token (the fill chip is now rounded-full, radius-exempt: colour-well)"
   },
   {
    "file": "packages/studio-workspace/src/index.tsx",
@@ -4958,8 +4967,9 @@
   {
    "kind": "ts-key",
    "from": "workspaceScale.radius.paper",
-   "to": "--radius-paper",
-   "cls": "rename-keep-ts-key"
+   "to": null,
+   "cls": "rename-keep-ts-key",
+   "why": "PR #94 radius rule (design/DIRECTION.md): radius values come only from theme.ts, so this row no longer mints a CSS token (paper is forgeRadius.md, read in TS)"
   },
   {
    "kind": "ts-key",

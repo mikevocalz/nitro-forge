@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {validateSlideSummary} from './slide-model.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -205,7 +206,7 @@ function SlideCanvasBody({boundary,actionError,disabledReason,disabled=false,
           {on&&onResizeObject&&!editing?<View {...sizePan.current!.panHandlers} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
             style={{position:"absolute",left:(shown.x+shown.w)*scale-22,top:(shown.y+shown.h)*scale-22,width:44,height:44,
               alignItems:"center",justifyContent:"center"}}>
-            <View {...{className:joinClasses(styled&&"border-2 border-focus bg-surface-raised")}} style={{width:12,height:12,borderRadius:2}}/>
+            <View {...{className:joinClasses(styled&&"border-2 border-focus bg-surface-raised")}} style={{width:12,height:12,borderRadius:forgeRadius.sm}}/>
           </View>:null}
         </View>;
       })}

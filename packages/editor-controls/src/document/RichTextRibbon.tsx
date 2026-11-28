@@ -147,7 +147,7 @@ function Swatches({label,colors,value,onChange,clearLabel,disabled,styled}:{
   return <Group label={label} styled={styled}>
     <ToolButton quiet label={clearLabel} checked={value===undefined} disabled={disabled} styled={styled} onPress={()=>onChange(undefined)}>
       <View {...{className:joinClasses(styled&&"border-text-muted")}}
-        style={{width:20,height:20,borderRadius:10,borderWidth:1.5,alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+        style={{width:20,height:20,borderRadius:10, /* radius-exempt: colour-well */borderWidth:1.5,alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
         <View {...{className:joinClasses(styled&&"bg-text-muted")}} style={{width:24,height:1.5,transform:[{rotate:"-45deg"}]}}/>
       </View>
     </ToolButton>
@@ -159,7 +159,7 @@ function Swatches({label,colors,value,onChange,clearLabel,disabled,styled}:{
           styled&&(on?"border-focus":"border-transparent"))}}
         style={{width:OFFICE_TOUCH_TARGET,height:OFFICE_TOUCH_TARGET,alignItems:"center",justifyContent:"center",opacity:disabled?0.45:1}}>
         <View {...{className:joinClasses(styled&&"border border-border")}}
-          style={{width:24,height:24,borderRadius:12,backgroundColor:c.value}}/>
+          style={{width:24,height:24,borderRadius:12, /* radius-exempt: colour-well */backgroundColor:c.value}}/>
       </Pressable>;
     })}
   </Group>;

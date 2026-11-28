@@ -1,0 +1,7 @@
+@theme {
+  --radius-control: 8px;
+  --radius-card: 12px;
+}
+.card { border-radius: 12px; }
+.chip { border-radius: var(--radius-pill); }
+.calc { border-radius: calc(var(--radius-sm) + 2px); }

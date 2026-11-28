@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useScopedControl,controlIdentity,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {Platform,Text,View,type ViewProps} from "react-native";
@@ -91,7 +92,7 @@ function SeekBarBody({
         <View {...{className:joinClasses(styled&&"bg-accent")}} style={{position:"absolute",top:0,bottom:0,left:0,width:`${pos(scrub.shown)*100}%`}}/>
       </View>
       {layout.width>0?<View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised border-2 border-accent")}}
-        style={{position:"absolute",left:pos(scrub.shown)*usable,width:THUMB,height:THUMB,borderRadius:THUMB/2}}/>:null}
+        style={{position:"absolute",left:pos(scrub.shown)*usable,width:THUMB,height:THUMB,borderRadius:forgeRadius.sm}}/>:null}
     </View>
     <View style={{flexDirection:"row",justifyContent:"space-between",direction:"ltr"}}>
       <Text {...{className:joinClasses(styled&&(scrub.active?"text-text":"text-text-muted"),styled&&"text-xs")}} style={{fontVariant:["tabular-nums"]}}>{tc(scrub.shown)}</Text>

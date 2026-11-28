@@ -1,5 +1,20 @@
 # Completion status
 
+## Program ownership, 2026-11-22
+
+Forge consumes NYC-Tron as an independent UI library and owns this application
+acceptance program. [F7](../release/v1-readiness.json) retains the original
+canonical rows and all eight platform requirements; the five added window
+controls remain a separate list. The [adopted ledger](library-progress.json)
+and [existing completion record](components.json) retain their distinct
+`acceptance` and `completion` values without promotion. Acceptance is measured
+against the exact release in `tooling/nyc-tron.json`, still `v1.0.0-rc.2`.
+Tron's own library inventory and stable gate do not wait on this program.
+
+The following phase checkpoints remain historical evidence for their stated
+commits and do not imply new program or platform acceptance.
+
+
 The remaining P02–P20 program is sequenced in [MEGAPLAN.md](MEGAPLAN.md).
 It records ground truth, worktree/subagent waves, dependency order and the
 lifted native/runtime review gate; it promotes no phase or acceptance field.

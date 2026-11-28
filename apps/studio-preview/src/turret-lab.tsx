@@ -5,7 +5,7 @@ import { Button, NightScope, Pressable, SegmentedControl, Text, TokenScope, View
 
 import { BUILT_IN_PERSONAS, PersonaTurret, useForgeRenderPrefs, type PersonaSurface } from '@nitro-forge/studio-workspace/turret';
 import { PrecisionScrubber } from '@nyc-tron/ui/components/shell/PrecisionScrubber';
-import { workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
+import { forgeRadius, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
 import {
   FORGE_DIRECTION_IDS, directionPalette, forgeDirections, glassAllowed, isForgeDirection, labCanvas, nycTronTokensFor, prismFillSwatches,
   type ForgeDirectionId, type ForgeScheme,
@@ -72,16 +72,16 @@ export function TurretLab() {
   };
 
   const artboard = <View testID="lab-artboard" accessibilityLabel={`Artboard 800 × 600 px, ${fill.name} rectangle and ellipse at ${s.opacity} % opacity`}
-    style={style({ width: phone ? s.width - 32 : 560, aspectRatio: 4 / 3, maxHeight: phone ? 240 : undefined, alignSelf: 'center', backgroundColor: canvas.paper, borderRadius: scale.radius.paper, overflow: 'hidden', boxShadow: '0 1px 2px #0000002E' })}>
-    <View style={{ position: 'absolute', left: '14%', top: '20%', width: '42%', height: '44%', backgroundColor: fill.hex, opacity: s.opacity / 100, borderRadius: scale.radius.paper }} />
-    <View style={{ position: 'absolute', left: '44%', top: '36%', width: '38%', height: '46%', backgroundColor: fill.hex, opacity: s.opacity / 100, borderRadius: '50%' }} />
+    style={style({ width: phone ? s.width - 32 : 560, aspectRatio: 4 / 3, maxHeight: phone ? 240 : undefined, alignSelf: 'center', backgroundColor: canvas.paper, borderRadius: scale.radius.control, overflow: 'hidden', boxShadow: '0 1px 2px #0000002E' })}>
+    <View style={{ position: 'absolute', left: '14%', top: '20%', width: '42%', height: '44%', backgroundColor: fill.hex, opacity: s.opacity / 100, borderRadius: 0 }} />
+    <View style={{ position: 'absolute', left: '44%', top: '36%', width: '38%', height: '46%', backgroundColor: fill.hex, opacity: s.opacity / 100, borderRadius: '50%' /* radius-exempt: artwork */ }} />
     <Text style={{ position: 'absolute', right: 10, top: 8, color: canvas.paperInk, fontSize: scale.type.micro + 1, fontVariant: ['tabular-nums'] }}>800 × 600 px</Text>
   </View>;
 
   const turretPanel = <View testID="lab-turret-panel" style={style(chrome({ alignItems: 'center', width: phone ? s.width - 32 : 340 }))}>
     <View style={{ flexDirection: 'row', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'space-between' }}>
       <Text style={{ color: m.text, fontSize: scale.type.label + 1, fontWeight: '600' }}>Persona</Text>
-      <Button title="Close" aria-label="Close personas" variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px] border border-transparent" onPress={() => store.setState({ open: false })} />
+      <Button title="Close" aria-label="Close personas" variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm border border-transparent" onPress={() => store.setState({ open: false })} />
     </View>
     <PersonaTurret personas={BUILT_IN_PERSONAS} surface={s.surface} activeId={s.personaId} direction={s.direction} scheme={s.scheme}
       onSwitch={personaId => store.setState({ personaId })} />
@@ -104,7 +104,7 @@ export function TurretLab() {
   const trigger = <View style={style(chrome({ flexDirection: 'row', alignItems: 'center', gap: scale.space.element, paddingVertical: scale.space.stack, paddingHorizontal: scale.space.inset, alignSelf: 'flex-start' }))}>
     <Text style={{ color: m.muted, fontSize: scale.type.label }}>Persona</Text>
     <Button title={active?.label ?? 'Persona'} aria-label={`Persona: ${active?.label ?? 'none'}. Open the turret`} selected={s.open}
-      variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px] border border-transparent" onPress={() => store.setState({ open: !s.open })} />
+      variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} className="rounded-sm border border-transparent" onPress={() => store.setState({ open: !s.open })} />
   </View>;
 
   const page = <View testID="turret-lab" className={s.scheme === 'dark' ? 'scheme-dark' : 'scheme-light'} onLayout={e => store.setState({ width: e.nativeEvent.layout.width })}

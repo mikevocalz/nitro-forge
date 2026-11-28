@@ -1,0 +1,84 @@
+F2 final checks. The machine-specific source checkout path is redacted as <pinned-Tron-checkout>.
+
+$ node --test tooling/tests/component-program.test.mjs tooling/tests/component-program-handoff.test.mjs tooling/tests/component-program-ownership.test.mjs tooling/verify-completion-plan.test.mjs tooling/validate-v1.test.mjs
+✔ adoption preserves every row field while converting only source, evidence and decision locations (24.742625ms)
+✔ pinned URL resolution rejects mutable refs, other hosts, traversal, encoded paths and the wrong tree prefix (0.715833ms)
+✔ checkout provenance verifies revision, source checksums, clean tracked bytes and rejects untracked files (349.399375ms)
+✔ checkout provenance rejects a parent Git root and unsupported invocation has no default source checkout (260.793792ms)
+✔ CI checks the adopted program against the same immutable source revision (0.686958ms)
+✔ F7 owns the application program with unchanged platform requirements and an explicit consumer-release pin (10.681375ms)
+✔ local and pinned external implementations count separately from pending external work (34.566875ms)
+✔ external completion requires revision, actual source paths, public exports and an existing report (62.037584ms)
+✔ external repositories, paths and immutable revisions cannot be unsafe or mutable references (92.804041ms)
+✔ external ownership cannot masquerade as local implementation or source (12.490125ms)
+✔ local implementations need existing owned source, evidence and a public export (12.747708ms)
+✔ the exact 341 canonical IDs and names cannot be replaced while retaining the count (13.256875ms)
+✔ baseline contents and ledger baseline identity remain frozen (6.623125ms)
+✔ the required eight-platform scope cannot shrink, duplicate or substitute another platform (7.003667ms)
+✔ unknown implementation, acceptance and platform result statuses are rejected (12.990041ms)
+✔ accepted rows require completed implementation and eight passing, existing proofs (14.4245ms)
+✔ partial work must stay visible and cannot be labeled implemented (9.633584ms)
+✔ additions are counted apart from the frozen 341 and follow the same row rules (25.076833ms)
+✔ additions cannot replace, rename into or shadow canonical rows, and need a gate and decision record (35.746833ms)
+✔ recorded additions can grow but never be dropped, and the repository records the T2 rows (11.649916ms)
+✔ proof validation rejects untracked or altered blobs even when a local file exists (11.410583ms)
+✔ releaseChannel splits stable and prerelease like Tron (1.563ms)
+✔ evidenceExists rejects missing, absolute, escaping and directory paths (1.221458ms)
+✔ evidenceExists rejects a symlink that leaves the repository (5.127709ms)
+✔ stable mode is ready only when every gate passed with evidence, commit and reviewer (6.326875ms)
+✔ stable mode blocks on any gate that has not passed (2.817875ms)
+✔ prerelease mode reports without failing (0.154625ms)
+✔ the signing reviewer matches the gate's role after trimming and case folding (1.96725ms)
+✔ a passed gate without existing evidence, full commit or reviewer is invalid in every mode (51.770542ms)
+✔ gate file structure: missing, duplicate, unknown ids and bad status are errors (0.710084ms)
+✔ an unfinished gate may cite partial evidence, but the path must exist (0.54775ms)
+✔ compatibility claims need an existing receipt at a full commit (0.6725ms)
+✔ formatTable prints one row per gate (2.074666ms)
+✔ the committed gate file and compatibility record are well formed (7.727208ms)
+✔ CLI: stable exits 1 with a table, prerelease exits 0 (576.041ms)
+✔ all 341 IDs have one delivery phase and retain mandatory platform gates (23.513417ms)
+✔ dropping an absent component cannot silently shrink the scope (9.535083ms)
+✔ a component cannot be delivered in two phases (16.242584ms)
+✔ legacy DONE or passing builds cannot promote an unverified component (9.940875ms)
+✔ passing gates require matching component-specific evidence (16.241917ms)
+✔ required target scope and dependencies cannot be silently removed or cycled (54.40375ms)
+✔ unit/build records cannot masquerade as platform runtime and screen-reader evidence (8.989125ms)
+ℹ tests 42
+ℹ suites 0
+ℹ pass 42
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 892.635916
+Exit: 0
+
+$ node tooling/verify-component-program.mjs --tron-source <pinned-Tron-checkout>
+Forge component program: 341 canonical IDs; 332 Tron implementations, 0 partial, 9 pinned external implementations, 0 pending; 0 accepted with all eight platform proofs.
+Recorded additions: 5; 0 accepted. No acceptance or Forge completion status changed.
+Tron source and direct evidence files resolved at 0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44; nested report links and external-owner source contents are not checked by this validator.
+Exit: 0
+
+$ node tooling/verify-completion-plan.mjs
+Completion plan valid: 341 components, 21 phases, 8 required platforms; 0 fully verified; 329/329 library source reviews
+Exit: 0
+
+$ node tooling/validate-v1.mjs --version 1.0.0-rc.3
+Gate Status      Evidence                                              Commit    Reviewer  Title
+------------------------------------------------------------------------------------------------------------
+F1   in-progress docs/release/evidence/2026-11-13-b000c8a/README.md    -         -         Packages updated
+F2   in-progress docs/release/evidence/2026-11-13-6dd7e71/f2-rc2-repin…-         -         Tron pin
+F3   in-progress docs/release/evidence/2026-11-13-b000c8a/README.md    -         -         Deferred rows
+F4   in-progress design/F4-REFERENCE-DECISION-2026-11-13.md            -         -         App identity and rebranding
+F5   blocked     -                                                     -         -         Desktop target and window chrome
+F6   not-started -                                                     -         -         Expo consumer path
+F7   in-progress docs/release/evidence/2026-11-13-b000c8a/README.md    -         -         Platform evidence
+F8   in-progress docs/release/evidence/2026-11-13-b000c8a/README.md    -         -         Design pass
+F9   blocked     -                                                     -         -         Release
+
+v1 readiness: candidate (prerelease); 0/9 gates passed; no gate status changed.
+Exit: 0
+
+$ git diff --check
+Exit: 0
+

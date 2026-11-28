@@ -222,10 +222,10 @@ function ColorDropCanvasTargetBody({
      {name:"moveLeft",label:"Move left"},{name:"moveRight",label:"Move right"},{name:"moveUp",label:"Move up"},{name:"moveDown",label:"Move down"}]
      :[{name:"activate",label:"Aim at the canvas"}]}
     onAccessibilityAction={e=>a11y(e.nativeEvent.actionName)}
-    {...{className:joinClasses(styled&&"rounded-full border focus-visible:ring-2 focus-visible:ring-focus",styled&&(active?"border-accent":"border-border"))}}
-    style={{width:44,height:44,borderRadius:22,borderWidth:active?2:1,alignItems:"center",justifyContent:"center",
+    {...{className:joinClasses(styled&&"rounded-full border focus-visible:ring-2 focus-visible:ring-focus" /* radius-exempt: colour-well */,styled&&(active?"border-accent":"border-border"))}}
+    style={{width:44,height:44,borderRadius:22, /* radius-exempt: colour-well */borderWidth:active?2:1,alignItems:"center",justifyContent:"center",
      opacity:disabledReason!==undefined?0.5:1,...(Platform.OS==="web"?{cursor:disabledReason?"not-allowed":"grab",touchAction:"none",userSelect:"none"} as object:null)}}>
-    <View pointerEvents="none" style={{width:34,height:34,borderRadius:17,backgroundColor:color}}/>
+    <View pointerEvents="none" style={{width:34,height:34,borderRadius:17, /* radius-exempt: colour-well */backgroundColor:color}}/>
    </View>
    <View style={{flex:1,minWidth:0}}>
     <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}}>ColorDrop: {colorLabel}</Text>
@@ -245,6 +245,6 @@ function ColorDropCanvasTargetBody({
   </View>
   {drag?<View pointerEvents="none" testID="color-drop-dot" {...{className:joinClasses(styled&&"border-surface-raised")}}
    style={{position:"absolute",left:drag.pointer.x-DROP_DOT_SIZE/2,top:drag.pointer.y-DROP_DOT_SIZE/2,width:DROP_DOT_SIZE,
-    height:DROP_DOT_SIZE,borderRadius:DROP_DOT_SIZE/2,borderWidth:3,backgroundColor:color,zIndex:10}}/>:null}
+    height:DROP_DOT_SIZE,borderRadius:DROP_DOT_SIZE/2, /* radius-exempt: colour-well */borderWidth:3,backgroundColor:color,zIndex:10}}/>:null}
  </View>;
 }

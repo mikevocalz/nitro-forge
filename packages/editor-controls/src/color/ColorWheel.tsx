@@ -101,18 +101,18 @@ export function ColorWheel({
         if(e.nativeEvent.actionName==="increment")commitHue(value.h+step);
         if(e.nativeEvent.actionName==="decrement")commitHue(value.h-step);
       }}
-      style={{width:size,height:size,borderRadius:size/2,opacity:disabled?0.45:1,...NO_SELECT}}>
+      style={{width:size,height:size,borderRadius:size/2, /* radius-exempt: colour-well */opacity:disabled?0.45:1,...NO_SELECT}}>
       <HueRingLayer size={size} inner={inner}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised")}}
-        style={{position:"absolute",left:size/2-inner,top:size/2-inner,width:inner*2,height:inner*2,borderRadius:inner}}/>
+        style={{position:"absolute",left:size/2-inner,top:size/2-inner,width:inner*2,height:inner*2,borderRadius:inner /* radius-exempt: colour-well */}}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"border-border")}}
-        style={{position:"absolute",left:size/2-center/2,top:size/2-center/2,width:center,height:center,borderRadius:center/2,
+        style={{position:"absolute",left:size/2-center/2,top:size/2-center/2,width:center,height:center,borderRadius:center/2, /* radius-exempt: colour-well */
           borderWidth:1,backgroundColor:rgbaToHex(hsvToRgb({...value,h:hue,alpha:1}),false)}}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"border-text")}}
-        style={{position:"absolute",left:thumb.x-THUMB/2,top:thumb.y-THUMB/2,width:THUMB,height:THUMB,borderRadius:THUMB/2,
+        style={{position:"absolute",left:thumb.x-THUMB/2,top:thumb.y-THUMB/2,width:THUMB,height:THUMB,borderRadius:THUMB/2, /* radius-exempt: colour-well */
           borderWidth:2,alignItems:"center",justifyContent:"center"}}>
         <View {...{className:joinClasses(styled&&"border-surface-raised")}}
-          style={{width:THUMB-4,height:THUMB-4,borderRadius:(THUMB-4)/2,borderWidth:2,
+          style={{width:THUMB-4,height:THUMB-4,borderRadius:(THUMB-4)/2, /* radius-exempt: colour-well */borderWidth:2,
             backgroundColor:rgbaToHex(hsvToRgb({h:hue,s:1,v:1,alpha:1}),false)}}/>
       </View>
     </View>

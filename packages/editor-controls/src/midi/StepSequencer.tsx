@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {assertMidiNotes} from './note-grid.ts';
 import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
@@ -116,7 +117,7 @@ function StepSequencerBody({actionError,disabledReason,
                 style={{ width: HIT, height: HIT, opacity: disabled ? 0.45 : 1 }}>
                 {cell.on && cell.accent
                   ? <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-on-primary") }}
-                      style={{ width: 10, height: 10, borderRadius: 5 }} />
+                      style={{ width: 10, height: 10, borderRadius: forgeRadius.sm }} />
                   : null}
               </Pressable>;
             })}

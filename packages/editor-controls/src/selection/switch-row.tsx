@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {Pressable,Text,View} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
 
@@ -30,9 +31,9 @@ export function SwitchRow({label,detail,value,onValueChange,disabledReason,unsty
       {disabledReason??detail?<Text {...{className:joinClasses(styled&&"text-text-muted text-xs")}}>{disabledReason??detail}</Text>:null}
     </View>
     <View pointerEvents="none" {...{className:joinClasses(styled&&"border",styled&&(value?"bg-primary border-primary":"bg-surface-sunken border-border"))}}
-      style={{width:44,height:26,borderRadius:13,justifyContent:"center",paddingHorizontal:3,opacity:off?0.5:1}}>
+      style={{width:44,height:26,borderRadius:forgeRadius.sm,justifyContent:"center",paddingHorizontal:3,opacity:off?0.5:1}}>
       <View {...{className:joinClasses(styled&&(value?"bg-on-primary":"bg-text-muted"))}}
-        style={{width:18,height:18,borderRadius:9,alignSelf:value?"flex-end":"flex-start"}}/>
+        style={{width:18,height:18,borderRadius:forgeRadius.sm,alignSelf:value?"flex-end":"flex-start"}}/>
     </View>
   </Pressable>;
 }

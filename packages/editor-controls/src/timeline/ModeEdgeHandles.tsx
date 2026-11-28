@@ -1,3 +1,4 @@
+import {forgeHairlineRadius} from "../radius.ts";
 import {useEffect,useMemo,useRef} from "react";
 import {Platform,View} from "react-native";
 import {joinClasses} from "@nyc-tron/ui/components/styles";
@@ -96,8 +97,8 @@ function Edge({edge,...p}:ModeEdgeHandlesProps&{edge:"head"|"tail"}){
       ...(edge==="head"?{left:-HIT/2}:{right:-HIT/2}),alignItems:"center",justifyContent:"center",zIndex:2,...NO_SELECT}}>
     {/* Roll draws a bar on both sides of the cut; ripple a bracket that opens toward the clip. */}
     <View pointerEvents="none" style={{flexDirection:"row",gap:2,alignItems:"center",direction:"ltr"}}>
-      {p.mode==="roll"||edge==="tail"?<View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:4,height:Math.max(20,p.height-12),borderRadius:2}}/>:null}
-      {p.mode==="roll"||edge==="head"?<View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:4,height:Math.max(20,p.height-12),borderRadius:2}}/>:null}
+      {p.mode==="roll"||edge==="tail"?<View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:4,height:Math.max(20,p.height-12),borderRadius:forgeHairlineRadius.tick}}/>:null}
+      {p.mode==="roll"||edge==="head"?<View {...{className:joinClasses(styled&&"bg-accent")}} style={{width:4,height:Math.max(20,p.height-12),borderRadius:forgeHairlineRadius.tick}}/>:null}
     </View>
   </View>;
 }

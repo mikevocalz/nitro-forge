@@ -16,6 +16,7 @@
  * its base and stays visible with a reason when the layer cannot clip.
  * Modified for NYC-Tron UI on 2026-11-06: added document ownership and permission guards; original licenses retained.
  */
+import {forgeHairlineRadius} from "../radius.ts";
 import {useLayoutEffect,useRef} from 'react';
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useOwnedAction} from '@nyc-tron/ui/components/shell/useOwnedAction';
@@ -85,8 +86,8 @@ export function ClipIndicator({unstyled=false,style,...rest}:ClipIndicatorProps)
 function ClipGlyph({styled}:{styled:boolean}){
   const ink=joinClasses(styled&&"bg-text-muted");
   return <View pointerEvents="none" style={{width:12,height:16,alignItems:"center"}}>
-    <View {...{className:ink}} style={{position:"absolute",top:1,width:1.5,height:13,borderRadius:1}}/>
-    <View {...{className:ink}} style={{position:"absolute",top:10,left:1.6,width:6,height:1.5,borderRadius:1,transform:[{rotate:"45deg"}]}}/>
-    <View {...{className:ink}} style={{position:"absolute",top:10,right:1.6,width:6,height:1.5,borderRadius:1,transform:[{rotate:"-45deg"}]}}/>
+    <View {...{className:ink}} style={{position:"absolute",top:1,width:1.5,height:13,borderRadius:forgeHairlineRadius.tick}}/>
+    <View {...{className:ink}} style={{position:"absolute",top:10,left:1.6,width:6,height:1.5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"45deg"}]}}/>
+    <View {...{className:ink}} style={{position:"absolute",top:10,right:1.6,width:6,height:1.5,borderRadius:forgeHairlineRadius.tick,transform:[{rotate:"-45deg"}]}}/>
   </View>;
 }

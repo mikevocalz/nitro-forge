@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 import { Button as TronButton } from '@nyc-tron/ui/components/Button';
+import { forgeRadius } from './theme';
 import { Card as TronCard } from '@nyc-tron/ui/components/Card';
 import { SegmentedControl } from '@nyc-tron/ui/components/SegmentedControl';
 import { TabBar } from '@nyc-tron/ui/components/TabBar';
@@ -44,7 +45,7 @@ export type NycTronHostParts = Pick<StudioUIComponents, 'View' | 'Text' | 'Press
 function Button({ variant, tone: _tone, cornerRadius, selected, targetSize, ...props }: StudioButtonProps) {
   return <TronButton {...props} {...(targetSize === undefined ? {} : {targetSize})} {...(variant === undefined ? {} : { variant: variant === 'outline' ? 'secondary' as const : variant })}
     {...(selected === undefined ? {} : { accessibilityState: { selected } })}
-    style={{ ...(cornerRadius === undefined ? {} : { borderRadius: cornerRadius }), ...(targetSize === undefined ? {} : { minHeight: targetSize, minWidth: targetSize }) }} />;
+    style={{ ...(cornerRadius === undefined ? {} : { borderRadius: cornerRadius === forgeRadius.md ? forgeRadius.md : forgeRadius.sm }), ...(targetSize === undefined ? {} : { minHeight: targetSize, minWidth: targetSize }) }} />;
 }
 
 /** `surface="night"` keeps a dark card on a light page through NightScope. */

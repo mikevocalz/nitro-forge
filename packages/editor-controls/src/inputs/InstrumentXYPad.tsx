@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {cancelPreview} from "../cancel-preview.ts";
 import {useRef} from "react";
 import {PanResponder,Pressable,Text,View,type ViewProps} from "react-native";
@@ -105,7 +106,7 @@ export function InstrumentXYPad({
         style={{position:"absolute",left:"50%",top:0,bottom:0,width:1,...accentFill,opacity:0.35}}/>
       <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised",accentBorderClass)}}
         style={{position:"absolute",left:position.x*width-9,top:(1-position.y)*height-9,
-        width:18,height:18,borderRadius:9,borderWidth:2,...accentBorder}}/>
+        width:18,height:18,borderRadius:forgeRadius.sm,borderWidth:2,...accentBorder}}/>
     </View>
     <View style={{flexDirection:"row",gap:8,alignItems:"center"}}>
       <Pressable accessibilityRole="button" accessibilityLabel={"Decrease "+label+" X"} disabled={disabled} onPress={()=>nudge("x",-1)}

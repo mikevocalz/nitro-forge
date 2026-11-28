@@ -3,6 +3,17 @@ export const PRISM_DOCKED_LAYERS_MIN_WIDTH = 1100;
 /** Compact panel width; alpha.3 LayerStack collapses row opacity when space is tight. */
 export const PRISM_LAYERS_PANEL_WIDTH = 280;
 
+/**
+ * Everything in the Layers panel except the layer list, at 100 % text: the
+ * title row, the blend mode menu, the Straight alpha line, the two-row
+ * opacity scrubber and Raise/Lower. The list gets the rest of the panel, so
+ * none of these go under its fold. verify-prism-blend.mjs measures the drawn
+ * panel against this number in Chromium.
+ */
+export const PRISM_LAYERS_HEAD_HEIGHT = 320;
+/** One full LayerStack row: the list never shrinks below it, even where the head does not fit. */
+export const PRISM_LAYER_LIST_MIN_HEIGHT = 56;
+
 /** Geometry belongs to the editor viewport, never the native app window contract. */
 /** Measured chrome, in editor coordinates. Larger text (200 %) grows the
  * toolbar and the tool rail, so the artboard and panels start below and
@@ -29,8 +40,16 @@ export function prismViewportLayout(width: number, height: number, ratio: number
   const grown = toolbarBottom - PRISM_DEFAULT_TOOLBAR_BOTTOM;
   const railTop = toolbarBottom + (short ? CHROME_GAP : CHROME_GAP * 2);
   const panelTop = short ? 8 : narrow ? toolbarBottom + 16 : 12;
-  const panelMaxHeight = Math.max(1, height - panelTop - (short ? 8 : 108));
-  const layerListMaxHeight = Math.max(0, Math.min(245, panelMaxHeight - 184));
+  // In short narrow windows the palette stays to the right of the tool capsule.
+  // Its contents scroll horizontally when raster actions need more width.
+  const paletteSpace = Math.max(1, width - (short && narrow ? 88 : 24));
+  const fillWidth = Math.min(hasFillAction ? 384 : narrow ? 220 : 320, paletteSpace);
+  const fillLeft = short && narrow ? width - fillWidth - 12 : (width - fillWidth) / 2;
+  // The panel stops above the fill bar only where the bar reaches under it;
+  // beside the bar it may run to the editor's bottom gutter.
+  const fillClearsPanel = !short && fillLeft + fillWidth <= width - 12 - panelWidth;
+  const panelMaxHeight = Math.max(1, height - panelTop - (short ? 8 : fillClearsPanel ? 12 : 108));
+  const layerListMaxHeight = Math.max(PRISM_LAYER_LIST_MIN_HEIGHT, Math.min(245, panelMaxHeight - PRISM_LAYERS_HEAD_HEIGHT));
   const canvasLeft = railRight + (narrow ? 12 : 24);
   // On a phone the artboard is centred on the screen: the right margin
   // matches the rail side, so the margins balance instead of 76 against 20.
@@ -41,11 +60,6 @@ export function prismViewportLayout(width: number, height: number, ratio: number
   const availableHeight = Math.max(1, height - canvasTop - canvasBottom);
   const canvasWidth = Math.max(0, Math.min(900, availableWidth, availableHeight * aspect));
   const canvasHeight = canvasWidth / aspect;
-  // In short narrow windows the palette stays to the right of the tool capsule.
-  // Its contents scroll horizontally when raster actions need more width.
-  const paletteSpace = Math.max(1, width - (short && narrow ? 88 : 24));
-  const fillWidth = Math.min(hasFillAction ? 384 : narrow ? 220 : 320, paletteSpace);
-  const fillLeft = short && narrow ? width - fillWidth - 12 : (width - fillWidth) / 2;
   return { narrow, short, dockedLayers, panelWidth, panelTop, panelMaxHeight, layerListMaxHeight, railTop,
     canvasLeft, canvasRight, canvasTop, canvasBottom, canvasWidth, canvasHeight,
     availableWidth, availableHeight, fillWidth, fillLeft };

@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import {useScopedControl,controlIdentity,type ScopedControlProps} from '../inputs/useScopedControl.ts';
 import {useLayoutEffect,useMemo,useRef} from "react";
@@ -185,9 +186,9 @@ function CanvasCompareViewBody({
             <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised")}}
               style={{position:"absolute",top:0,bottom:0,width:2}}/>
             <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-surface-raised border border-border")}}
-              style={{width:28,height:44,borderRadius:14,alignItems:"center",justifyContent:"center",flexDirection:"row",gap:3,
+              style={{width:28,height:44,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center",flexDirection:"row",gap:3,
                 boxShadow:"0 1px 3px rgba(0,0,0,0.25)"}}>
-              {[0,1].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}} style={{width:1.5,height:14,borderRadius:1}}/>)}
+              {[0,1].map(i=><View key={i} {...{className:joinClasses(styled&&"bg-text-muted")}} style={{width:1.5,height:14,borderRadius:forgeHairlineRadius.tick}}/>)}
             </View>
           </View>
         </PanResponderDrag>

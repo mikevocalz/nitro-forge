@@ -1,3 +1,4 @@
+import {forgeRadius} from "../radius.ts";
 import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
 import {createAudioPreviewOwner,commitAudioPreview,audioResponderCurrent} from './audio-preview-owner.ts';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/shell/PrecisionScrubber';
@@ -376,11 +377,11 @@ function BandHandle({ index, band, plot, preview, selected, disabled, styled, ct
     }}
     onKeyDown={onKeyDown}
     onFocus={() => {if(mine.current.ctx.boundary===ctx.boundary)ctx.latest.current.onSelect?.(index);}}
-    {...{ className: joinClasses(styled && "rounded-full focus-visible:ring-2 focus-visible:ring-focus") }}
+    {...{ className: joinClasses(styled && "rounded-sm focus-visible:ring-2 focus-visible:ring-focus") }}
     style={{ position: "absolute", left: x - HIT / 2, top: y - HIT / 2, width: HIT, height: HIT,
       alignItems: "center", justifyContent: "center", zIndex: selected || active ? 2 : 1, ...webStyle }}>
     <View pointerEvents="none" {...{ className: joinClasses(styled && fill) }}
-      style={{ width: DOT, height: DOT, borderRadius: DOT / 2, borderWidth: 2, alignItems: "center", justifyContent: "center",
+      style={{ width: DOT, height: DOT, borderRadius: forgeRadius.sm, borderWidth: 2, alignItems: "center", justifyContent: "center",
         borderStyle: band.enabled ? "solid" : "dashed" }}>
       <Text {...{ className: joinClasses(styled && "font-semibold", styled && ink) }}
         style={{ fontSize: 12, lineHeight: 14, fontVariant: ["tabular-nums"] }}>{index + 1}</Text>

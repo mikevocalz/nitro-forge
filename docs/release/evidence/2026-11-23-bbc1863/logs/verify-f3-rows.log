@@ -1,0 +1,148 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "../../packages/ignition/src/host-cli" without a file extension (vite.config.ts:6:25). Add the file extension
+  - import "./types" without a file extension (../../packages/ignition/src/host-cli.ts:11:29). Add the file extension
+  - import "./base64" without a file extension (../../packages/ignition/src/host-cli.ts:12:46). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+  VITE v8.3.8  ready in 242 ms
+
+  ➜  Local:   http://127.0.0.1:4192/
+
+Unable to interop `export * from "react-native-web"` in /home/user/nitro-forge/.claude/worktrees/agent-a33a7dfac60d303e5/apps/studio-preview/src/react-native-classname.tsx, this may lose module exports. Please export "react-native-web" as ESM or use named exports instead, e.g. `export { A, B } from "react-native-web"`
+5:46:45 PM [vite] (client) [console.error] Received `false` for a non-boolean attribute `accessible`.
+
+If you want to write it to the DOM, pass a string instead: accessible="false" or accessible={value.toString()}.
+
+If you used to conditionally omit it with accessible={condition && value}, pass accessible={condition ? value : undefined} instead.
+5:46:46 PM [vite] (client) [console.warn] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:46 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:47 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:48 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:49 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+  insertPivot payload: {"pivot":{"source":{"sheet":"Sheet1","range":{"from":"A1","to":"A3"}},"rows":[],"columns":[],"values":[{"field":0,"agg":"sum"}],"filters":[{"field":0,"values":[]}],"output":"C1"},"sheet":"Sheet1"}
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:50 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+  after refresh: C1 "C1, sum:0", C2 "C2, 24"
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:51 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:52 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:52 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:52 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:52 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:52 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+5:46:52 PM [vite] (client) [console.error] Unexpected text node: . A text node cannot be a child of a <View>.
+PASS I-15 Tally: filters-only draft stays in the host; All filter refreshes to the unfiltered total; Undo/Redo
+5:46:52 PM [vite] (client) [console.error] Received `false` for a non-boolean attribute `accessible`.
+
+If you want to write it to the DOM, pass a string instead: accessible="false" or accessible={value.toString()}.
+
+If you used to conditionally omit it with accessible={condition && value}, pass accessible={condition ? value : undefined} instead.
+5:46:53 PM [vite] (client) [console.warn] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md
+  E4 note 2 velocity set to 28 through the velocity lane
+  sensitivity 0: 1 onsets, 1 added
+  sensitivity 1: 2 onsets, 1 added
+  updateMarker payload: {"id":4,"name":"Reviewed beat"}
+  before: {"id":4,"length_ticks":0,"name":"Beat 1","ticks":348}; after: {"id":4,"length_ticks":0,"name":"Reviewed beat","ticks":348}
+PASS E-35 Cadence: detectBeats at sensitivity 0 and 1, one undo step per run, marker rename keeps ticks
+F3 I-15 and E-35: pivot All filter and beat markers pass in Chromium

@@ -27,7 +27,7 @@ const errorMessage = (e: unknown) => e instanceof Error ? e.message : String(e);
 /** A local essay draft; only Apply text (or a host flush) writes to Quill. */
 export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditorProps>(function QuillTextEditor(props, ref) {
   const scale = resolveWorkspaceScale(props.density);
-  const controlClass = 'rounded-[4px]' + (props.density === 'comfortable' ? ' min-h-12 min-w-12' : '');
+  const controlClass = 'rounded-sm' + (props.density === 'comfortable' ? ' min-h-12 min-w-12' : '');
   const storeRef = useRef<StoreApi<Draft> | null>(null);
   if (!storeRef.current) {
     const initial = plainText(props.state);
@@ -153,7 +153,7 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
         style={{ minHeight: tokens.spacing.off480, padding: 0, backgroundColor: 'transparent', color: colors.paperInk, fontFamily: manuscriptFont,
           fontSize: compact ? 17 : 19, lineHeight: compact ? 29 : 34, borderWidth: 0 }} />
     </View>
-    {(error || conflict || dirty) && <View style={{ maxWidth: tokens.spacing.off792, width: '100%', alignSelf: 'center' }}><Banner tone={error || conflict ? 'danger' : 'info'} title={error ?? (conflict ? 'Your draft conflicts with the latest document.' : status)} live={error || conflict ? 'alert' : 'status'} className="rounded-[4px]" /></View>}
+    {(error || conflict || dirty) && <View style={{ maxWidth: tokens.spacing.off792, width: '100%', alignSelf: 'center' }}><Banner tone={error || conflict ? 'danger' : 'info'} title={error ?? (conflict ? 'Your draft conflicts with the latest document.' : status)} live={error || conflict ? 'alert' : 'status'} className="rounded-sm" /></View>}
     {conflict && <Button title="Discard draft and load latest document" aria-label="Discard draft and load latest document" disabled={busy} onPress={() => { void loadLatest(); }} variant="ghost" tone="carolina" size="sm" cornerRadius={scale.radius.control} targetSize={scale.size.target} className={controlClass} />}
   </ScrollView>;
 });

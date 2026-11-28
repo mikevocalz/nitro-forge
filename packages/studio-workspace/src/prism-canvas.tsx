@@ -6,6 +6,7 @@ import {createStore} from 'zustand/vanilla';
 import { Platform } from 'react-native';
 import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 import { View, Text, Button } from './ui';
+import { forgeRadius } from './theme';
 import { StudioGesture } from './studio-gesture';
 import { shapeOutline, windowToPageRect, type CanvasDocument, type CanvasRect } from './prism-canvas-model';
 import { createCanvasGesture, type CanvasPreview } from './prism-canvas-model';
@@ -95,7 +96,7 @@ export function PrismCanvas(props: {
     {!props.overlay && outline && <View pointerEvents="none" testID="prism-selection-bounds" style={{ position: 'absolute', left: outline.x, top: outline.y, width: outline.width, height: outline.height, borderWidth: tokens.borderWidth.strong, borderColor: props.color, borderStyle: preview ? 'dashed' : 'solid' }} />}
     {preview && <View style={{ position: 'absolute', bottom: tokens.spacing.fixedStack, left: tokens.spacing.fixedStack, backgroundColor: tokens.color.overlayChip, padding: tokens.spacing.fixedStack }}>
       <Text style={{ color: tokens.color.onOverlayChip, fontSize: tokens.text.off11 }}>Move preview · release to apply</Text>
-      <Button title="Cancel move" aria-label="Cancel shape move" onPress={() => gesture.cancel()} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
+      <Button title="Cancel move" aria-label="Cancel shape move" onPress={() => gesture.cancel()} variant="ghost" size="sm" tone="carolina" cornerRadius={forgeRadius.sm} />
     </View>}
   </View></StudioGesture>;
 }

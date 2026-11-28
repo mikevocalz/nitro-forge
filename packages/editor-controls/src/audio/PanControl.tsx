@@ -1,3 +1,4 @@
+import {forgeRadius,forgeHairlineRadius} from "../radius.ts";
 import {audioTargetSize} from './audio-chrome.ts';
 import {valueAccessibility} from "../value-a11y.ts";
 import { useRef } from "react";
@@ -184,13 +185,13 @@ export function PanControl({
       // Physical stereo field: never mirrored by an RTL ancestor.
       style={{ width, height: HIT, direction: "ltr", opacity: disabled ? 0.45 : 1, ...webTrack }}>
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-surface-sunken border border-border") }}
-        style={{ position: "absolute", left: THUMB / 2, right: THUMB / 2, top: (HIT - 6) / 2, height: 6, borderRadius: 3 }} />
+        style={{ position: "absolute", left: THUMB / 2, right: THUMB / 2, top: (HIT - 6) / 2, height: 6, borderRadius: forgeHairlineRadius.tick }} />
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-accent") }}
         style={{ position: "absolute", left: fillLeft, width: fillWidth, top: (HIT - 6) / 2, height: 6 }} />
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-text-muted") }}
         style={{ position: "absolute", left: centreX - 1, width: 2, top: (HIT - 16) / 2, height: 16 }} />
       <View pointerEvents="none" {...{ className: joinClasses(styled && "bg-surface-raised border-accent") }}
-        style={{ position: "absolute", left: x, width: THUMB, top: (HIT - 24) / 2, height: 24, borderRadius: 4, borderWidth: 2 }} />
+        style={{ position: "absolute", left: x, width: THUMB, top: (HIT - 24) / 2, height: 24, borderRadius: forgeRadius.sm, borderWidth: 2 }} />
     </View>
     <Pressable accessibilityRole="button" accessibilityLabel={labels?.centreName?.(name)??"Centre " + name}
       accessibilityHint={labels?.currentHint?.(spoken)??"Currently " + spoken} disabled={disabled || current === 0}

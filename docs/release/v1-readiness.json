@@ -2,12 +2,14 @@
   "schemaVersion": 1,
   "product": "nitro-forge",
   "gateSet": "v1",
-  "updatedAt": "2026-11-13",
+  "updatedAt": "2026-11-23",
   "baseCommit": "b000c8ab9f8201bcba3c67163f6c8f700acf6453",
-  "source": "Track F gates F1 to F9 of the owner's NYC-Tron UI 1.0.0 and Nitro Forge v1 program (revision 3, 2026-11-11). Acceptance text is copied from it unchanged. References to §2.5, §3.3, §4 and §5 point at that program; F1 carries its §5 Forge rows below, and F8.1 moves §2.5 into design/DIRECTION.md.",
+  "source": "Track F gates F1 to F9 of the owner's NYC-Tron UI 1.0.0 and Nitro Forge v1 program (revision 3, 2026-11-11). Historical acceptance text is retained; F7 adds the owner’s 2026-11-22 application-program ownership direction, and the owner decisions of 2026-11-23 (D1 to D3, docs/completion/DECISIONS-2026-11-23-v1-scope.md) descope F5, narrow F7 to the rendered row set on ios, android and web, and let the rc.1 prerelease ship on Tron rc.2. References to §2.5, §3.3, §4 and §5 point at that program; F1 carries its §5 Forge rows below, and F8.1 moves §2.5 into design/DIRECTION.md.",
   "evidenceRule": "Evidence rule for every gate: implement, capture evidence with date and commit in its path, have the reviewer inspect the actual result, and only then change status. A file existing does not prove the claim inside it.",
-  "statusValues": ["not-started", "in-progress", "blocked", "not-run", "passed"],
+  "statusValues": ["not-started", "in-progress", "blocked", "not-run", "passed", "descoped"],
   "passedRequires": "status passed needs an evidence path that exists in this repository, the full 40-character commit the evidence was captured at, the signing reviewer and the review date. tooling/validate-v1.mjs enforces this.",
+  "descopedRequires": "status descoped needs a decision path under docs/completion/ that exists in this repository, the gate's reviewerRole as signer (not its owner) and the review date. A signed descoped gate does not block stable and is reported separately from passed gates. tooling/validate-v1.mjs enforces this.",
+  "ownerDecisions": "docs/completion/DECISIONS-2026-11-23-v1-scope.md",
   "gates": [
     {
       "id": "F1",
@@ -15,7 +17,7 @@
       "owner": "F1",
       "reviewerRole": "R2",
       "acceptance": [
-        "§5 table done; build, typecheck, `cargo test --locked --workspace`, package suites and all 22 workflows pass on the new graph."
+        "§5 table done; build, typecheck, `cargo test --locked --workspace`, package suites and all 25 workflows pass on the new graph. (Corrected from 22 on 2026-11-23: `.github/workflows` holds 25 files; see docs/completion/DECISIONS-2026-11-23-v1-scope.md.)"
       ],
       "versionBaseline": {
         "checked": "2026-11-11 against npm",
@@ -48,10 +50,11 @@
       "owner": "F1",
       "reviewerRole": "R2",
       "acceptance": [
-        "Repin to Tron `rc.2` when it exists and to `1.0.0` when it exists. Each repin updates `tooling/nyc-tron.json` and every `@nyc-tron` reference, regenerates lockfiles, runs `verify-nyc-tron-pin.mjs --download`, typechecks the wired rows and runs their tests. Forge v1 does not ship pinned to a prerelease."
+        "Repin to Tron `rc.2` when it exists and to `1.0.0` when it exists. Each repin updates `tooling/nyc-tron.json` and every `@nyc-tron` reference, regenerates lockfiles, runs `verify-nyc-tron-pin.mjs --download`, typechecks the wired rows and runs their tests. Forge v1 does not ship pinned to a prerelease.",
+        "Owner decision D3 (2026-11-23, docs/completion/DECISIONS-2026-11-23-v1-scope.md) amends the last sentence above, which now applies to stable `1.0.0` only. For the `1.0.0-rc.1` prerelease, F2 passes on the Tron `v1.0.0-rc.2` repin once it has run the steps above at the candidate commit. Before stable `1.0.0`, F2 returns to in-progress and passes again only after the repin to Tron `1.0.0` runs the same steps."
       ],
       "status": "in-progress",
-      "statusReason": "The published Tron v1.0.0-rc.2 cohort at 0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44 is pinned in tooling/nyc-tron.json and all consumer manifests; both locks were regenerated with pnpm 12.18.0. The repin is under independent R2 review and needs candidate-bound installed consumer/type/runtime CI. The later stable Tron 1.0.0 repin is still pending; Forge v1 cannot ship pinned to this prerelease.",
+      "statusReason": "The published Tron v1.0.0-rc.2 cohort at 0e09d3be8263b3dbb2eab1a78e5dd66b83b68e44 is pinned in tooling/nyc-tron.json and all consumer manifests; both locks were regenerated with pnpm 12.18.0. The repin is under independent R2 review and needs candidate-bound installed consumer/type/runtime CI. The later stable Tron 1.0.0 repin is still pending. Under D3 the rc.1 prerelease may ship on rc.2; stable 1.0.0 cannot.",
       "evidence": "docs/release/evidence/2026-11-13-6dd7e71/f2-rc2-repin.md",
       "commit": null,
       "reviewer": null,
@@ -69,12 +72,12 @@
         "- Blend and opacity: no engine op for its premultiplied-alpha option.",
         "Each needs a component change in Tron or a new engine op in Forge. That is a design decision. For each, write a one-page proposal with both options, the API change, and the test, then stop and report. Implement after the owner chooses. A component change goes into Tron before `rc.2`."
       ],
-      "status": "in-progress",
-      "statusReason": "docs/proposals/F3-deferred-rows.md exists. PR #81 implemented the recorded option-B Tally pivot and Cadence sensitivity/marker operations and merged as a58994d4802de2db9067ae3cbe824912c4a50b9c. Source-bound browser receipts at tested merge 0c8ba55452fb7dd952d6c933dd56071862f350c3 cover All-filter refresh, undo/redo, beat detection and marker rename/tick preservation. The Prism B11 alphaModes Forge catalog wiring and its row tests/render review remain incomplete; the three-row gate has no full acceptance signature. Proposal and historical source identities are preserved.",
-      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
-      "commit": null,
-      "reviewer": null,
-      "reviewedAt": null
+      "status": "passed",
+      "statusReason": "Passed 2026-11-23. I-15 and E-35 (option B, PR #81) and B-11 (option A, D5, then the D7 split) were re-run at one commit and signed by R2: cargo tally 231, cadence 78, nf-sys 29, prism 177; studio-preview vitest 6 and node 34; studio-workspace node 157; verify-prism-blend.mjs 5/5; verify-f3-rows.mjs drives I-15 and E-35 through the real UI. NOT RUN: native iOS/Android, screen reader, real Windows High Contrast, Node 24.3+. Known limits and follow-ups are in the evidence README and docs/ROSTER.md.",
+      "evidence": "docs/release/evidence/2026-11-23-bbc1863/README.md",
+      "commit": "bbc18637e59244bdc3c94634ca8d927280f22ec2",
+      "reviewer": "R2",
+      "reviewedAt": "2026-11-23"
     },
     {
       "id": "F4",
@@ -105,12 +108,13 @@
         "4. On iPad, verify every studio's top toolbar clears the system window controls when the app is windowed.",
         "5. Note the runtime mismatch: Forge is on React Native 0.88.1 and Nitro v1 alpha, while the Spark lane is on 0.83.10 with Nitro 0.37. State what that means for loading the Rust engines on desktop before promising a desktop studio, and stop to report if it blocks."
       ],
-      "status": "blocked",
-      "statusReason": "F5 desktop scope was struck from Forge v1 on 2026-11-13 by the integrator (A0) on the owner's instruction to drop the spike; owner confirmation is pending. See docs/proposals/F5-desktop-scope.md for the ABI/runtime return condition. No desktop spike or desktop native target ran for this record, and every studio still needs iPad windowed-mode toolbar-clearance verification. The acceptance text and validator remain unchanged; this strike does not pass F5.",
+      "status": "descoped",
+      "statusReason": "Descoped from v1 by owner decision D1 (2026-11-23), which confirms the 2026-11-13 strike. No desktop spike or desktop target ran. Item 4 (iPad windowed-mode toolbar clearance) moved to F8 item 6 and stays in v1. docs/proposals/F5-desktop-scope.md holds the return condition. The acceptance text above is kept as the scope a future desktop release would take on.",
       "evidence": null,
+      "decision": "docs/completion/DECISIONS-2026-11-23-v1-scope.md",
       "commit": null,
-      "reviewer": null,
-      "reviewedAt": null
+      "reviewer": "R1",
+      "reviewedAt": "2026-11-23"
     },
     {
       "id": "F6",
@@ -133,14 +137,41 @@
       "owner": "F0",
       "reviewerRole": "R1",
       "acceptance": [
-        "Fresh receipts at the candidate commit for the Rust engines, the C ABI, iOS and Android native apps, and web. `ROSTER.md` and `compatibility.v1.json` agree with each other and with the receipts. Anything not run says NOT RUN."
+        "Fresh receipts at the candidate commit for the Rust engines, the C ABI, iOS and Android native apps, and web. `ROSTER.md` and `compatibility.v1.json` agree with each other and with the receipts. Anything not run says NOT RUN.",
+        "Forge owns the 341-row application acceptance program (plus five separately counted window-control additions). docs/completion/components.json retains Forge completion gates; docs/completion/library-progress.json retains the adopted UI/source acceptance record. Verify both ledgers with the completion-plan CI jobs. Acceptance must be measured against the exact Tron release selected by tooling/nyc-tron.json; source adoption or a Tron library release does not satisfy Forge platform acceptance.",
+        "Owner decision D2 (2026-11-23, docs/completion/DECISIONS-2026-11-23-v1-scope.md): v1 requires accepted ios, android and web evidence for every ledger row a studio or lab renders. tooling/derive-v1-component-scope.mjs derives that row set from source imports and commits it to docs/completion/v1-component-scope.json; R1 inspects the derivation and its output. Every other row, and the macos, windows, visionos, quest and pico columns for all rows, stay in both ledgers recorded NOT RUN with the post-v1 label. No row is deleted."
       ],
       "status": "in-progress",
-      "statusReason": "Source-bound browser receipts now exist: PR #82 launcher/Prism shell at tested merge 370e10b6b2c95ddeeeb2ae0ad89815e5305c884f, and PR #81 Tally/Cadence real-engine interactions at 0c8ba55452fb7dd952d6c933dd56071862f350c3. compatibility.v1.json and ROSTER.md mark web partial. Active F2 PR #85 head f6b6e17e0600fcb1f8e14023a1692026738daaa7 has separate partial CI at tested merge 2463139896b61e8bfe49a2ad6dd2da50fb02043a; its two native workflows were still running at the captured snapshot. Fresh complete Rust/C ABI/native runtime/web receipts at one final candidate remain outstanding. Older simulator/emulator receipts are not relabeled; physical-device and wider platform work remain NOT RUN.",
+      "statusReason": "Source-bound browser receipts now exist: PR #82 launcher/Prism shell at tested merge 370e10b6b2c95ddeeeb2ae0ad89815e5305c884f, and PR #81 Tally/Cadence real-engine interactions at 0c8ba55452fb7dd952d6c933dd56071862f350c3. compatibility.v1.json and ROSTER.md mark web partial. Active F2 PR #85 head f6b6e17e0600fcb1f8e14023a1692026738daaa7 has separate partial CI at tested merge 2463139896b61e8bfe49a2ad6dd2da50fb02043a; its two native workflows were still running at the captured snapshot. Fresh complete Rust/C ABI/native runtime/web receipts at one final candidate remain outstanding. Older simulator/emulator receipts are not relabeled; physical-device and wider platform work remain NOT RUN. The application component program is now owned in Forge: the adopted ledger retains all original acceptance values and five additions, and the existing completion ledger retains its distinct values. The pin is still v1.0.0-rc.2. This ownership clarification supplies no new platform acceptance or reviewer signature. Owner decision D2 (2026-11-23) narrows the v1 requirement to the studio- and lab-rendered rows on ios, android and web; the remaining rows and platforms stay recorded as post-v1 NOT RUN. Under the renders-or-calls rule (D4) the derivation (tooling/derive-v1-component-scope.mjs) put 57 rows in v1 and 289 in post-v1 when R1 inspected and signed it on 2026-11-23 at the commit in v1Scope.inspectedCommit. Wiring B-11 (D5) later added that row, giving 58 v1 and 288 post-v1; R1 inspected and signed the 58-row set the same day, and again after the D7 split kept B-11 in through a recorded ruling. This is the scope F7 must prove, not F7 evidence: no row has accepted ios, android or web receipts yet.",
       "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
       "commit": null,
       "reviewer": null,
-      "reviewedAt": null
+      "reviewedAt": null,
+      "componentProgram": {
+        "owner": "Nitro Forge",
+        "baselineRows": 341,
+        "additionalRows": 5,
+        "ledgerPlatforms": ["ios", "android", "web", "macos", "windows", "visionos", "quest", "pico"],
+        "v1Scope": {
+          "decision": "docs/completion/DECISIONS-2026-11-23-v1-scope.md",
+          "platforms": ["ios", "android", "web"],
+          "postV1Platforms": ["macos", "windows", "visionos", "quest", "pico"],
+          "rows": "docs/completion/v1-component-scope.json",
+          "derivation": "tooling/derive-v1-component-scope.mjs",
+          "outOfScopeLabel": "post-v1",
+          "status": "inspected",
+          "inspectedBy": "R1",
+          "inspectedAt": "2026-11-23",
+          "inspectedCommit": "cc07f054df0f6f0084da8473f4168745b29ae9e9"
+        },
+        "completionLedger": "docs/completion/components.json",
+        "adoptedLedger": "docs/completion/library-progress.json",
+        "validator": "tooling/verify-component-program.mjs",
+        "workflow": ".github/workflows/completion-plan.yml",
+        "consumerReleasePin": "tooling/nyc-tron.json",
+        "adoptionSource": "docs/completion/library-progress-source.json",
+        "meaning": "The adoption source records historical provenance. New application acceptance must identify the pinned consumer release; neither source presence nor library stability changes a completion or acceptance status."
+      }
     },
     {
       "id": "F8",
@@ -154,10 +185,11 @@
         "3. Run the full §3.3 sequence on every studio. The design-critique step answers the §2.5 question for that studio in writing, with captures beside the reference.",
         "4. The cross-studio consistency table from the design-system step has no unexplained differences: same switcher, toolbar, context toolbar, panel, inspector and popover construction in all seven studios and both labs.",
         "5. Micro-interactions, responsive behaviour and native popovers and menus are present in every studio, not only the ones reviewed first.",
+        "6. Moved from F5 item 4 by owner decision D1 (2026-11-23): on iPad, verify every studio's top toolbar clears the system window controls when the app is windowed.",
         "Acceptance: the radius check passing with zero exemptions beyond those listed in §2.5; a view-by-view radius inventory per studio showing outer views at `rounded-md` and inner views at `rounded-sm`; side-by-side captures of all studios at iPad size showing one grammar; the critique record for each studio."
       ],
       "status": "in-progress",
-      "statusReason": "PR #86 merged the owner’s §2.5 suite brief and two-token radius direction into design/DIRECTION.md at b000c8ab9f8201bcba3c67163f6c8f700acf6453. This completes the direction-document piece only. Shared token migration, the radius validator wired into validate:v1, view-by-view inventory, full §3.3 per-studio critique, cross-studio consistency and iPad-size captures, interactions and native accessibility evidence remain incomplete. No full design acceptance or gate signature is claimed.",
+      "statusReason": "PR #86 merged the owner’s §2.5 suite brief and two-token radius direction into design/DIRECTION.md at b000c8ab9f8201bcba3c67163f6c8f700acf6453. This completes the direction-document piece only. On 2026-11-23 the radius tokens (forgeRadius sm 4, md 6 in packages/studio-workspace/src/theme.ts) and tooling/check-radius.mjs landed, wired into validate:v1 and the v1-readiness workflow; the check reports 0 violations over packages/, apps/ and examples/ and R2 signed that slice of item 2 on 2026-11-23 (call-site inventory: design/radius-inventory-2026-11-23.md; nothing rendered). On 2026-11-28, after master's #95 moved the editor controls into packages/editor-controls, the check found 151 violations there (64 files); they were migrated to the tokens or marked with listed exemptions, and the check reports 0 violations in 780 files (dated note in the same inventory). R2 has not reviewed that migration. Still incomplete: the view-by-view inventory, full §3.3 per-studio critique, cross-studio consistency and iPad-size captures, interactions and native accessibility evidence remain incomplete. No full design acceptance or gate signature is claimed.",
       "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
       "commit": null,
       "reviewer": null,
@@ -169,10 +201,11 @@
       "owner": "F9",
       "reviewerRole": "R2",
       "acceptance": [
-        "Follow `RELEASE_TRAIN.md`: one tarball per package plus `SHA256SUMS`, attached to a GitHub Release. First a `1.0.0-rc.1` prerelease, then v1 after the owner approves the exact version and checksum hash, the same way Tron's stable gate works. Set real versions; the root is still `0.0.0`."
+        "Follow `RELEASE_TRAIN.md`: one tarball per package plus `SHA256SUMS`, attached to a GitHub Release. First a `1.0.0-rc.1` prerelease, then v1 after the owner approves the exact version and checksum hash, the same way Tron's stable gate works. Set real versions; the root is still `0.0.0`.",
+        "Owner decision D3 (2026-11-23): the `1.0.0-rc.1` prerelease may ship pinned to Tron `v1.0.0-rc.2`. The integrator publishes it when every other in-scope gate has passed, with F2 passed on its rc.2 repin. Stable `1.0.0` additionally needs F2 passed again on the Tron `1.0.0` repin and the owner's written approval of the exact version and checksum hash."
       ],
       "status": "blocked",
-      "statusReason": "Depends on F1 to F8 and on Tron 1.0.0 (F2). The root version is 0.0.0, no tag or GitHub Release exists, and there is no owner approval to bind to a checksum.",
+      "statusReason": "Depends on F1 to F4 and F6 to F8; F5 is descoped under D1, signed by R1 on 2026-11-23. Under D3 the rc.1 prerelease may ship on Tron rc.2; stable also depends on the Tron 1.0.0 repin (F2). The root version is 0.0.0, no tag or GitHub Release exists, and there is no owner approval to bind to a checksum.",
       "evidence": null,
       "commit": null,
       "reviewer": null,
