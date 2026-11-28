@@ -36,9 +36,6 @@
       "gestures/drag-transport": [
         "gestures/PanResponderDrag",
         "gestures/GestureHandlerDrag"
-      ],
-      "forge/layers/layer-model": [
-        "forge/layers/LayerStack"
       ]
     }
   },
@@ -61,7 +58,12 @@
     "@nitro-forge/studio-layout": {
       "step": 3,
       "reason": "Private workspace package with no tarball. Distribution waits on the versioning scheme (decision 3).",
-      "doc": "docs/agent-native/install-order.md#step-3-nitro-forgestudio-layout"
+      "doc": "docs/agent-native/install-order.md#step-3-nitro-forgestudio-layout-and-nitro-forgeeditor-controls"
+    },
+    "@nitro-forge/editor-controls": {
+      "step": 3,
+      "reason": "Private workspace package (packages/editor-controls) with no tarball. The editor controls moved there from NYC-Tron UI in #95. Do not take them from @nyc-tron/forge/*.",
+      "doc": "docs/agent-native/install-order.md#step-3-nitro-forgestudio-layout-and-nitro-forgeeditor-controls"
     }
   },
   "provider": "studio-ui-provider",

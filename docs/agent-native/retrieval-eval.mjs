@@ -85,7 +85,7 @@ if (bad.length) { console.log("\nOVER 140:", bad.map((b) => `${b.id} ${b.descrip
 // Prerequisite check: an agent must learn the prerequisite from the description. Source: "Requires" lines in 03-design-handoff.md.
 const NEEDS = {
   "forge-workspace": ["StudioUIProvider", "studio-layout"], "forge-document-stage": ["StudioUIProvider", "studio-layout"],
-  "quill-text-editor": ["StudioUIProvider"], "prism-editor": ["StudioUIProvider", "ignition"], "prism-canvas": ["StudioUIProvider"],
+  "quill-text-editor": ["StudioUIProvider"], "prism-editor": ["StudioUIProvider", "ignition", "editor-controls"], "prism-canvas": ["StudioUIProvider"],
   "persona-turret": ["StudioUIProvider"], "persona-composer": ["StudioUIProvider"], "workspace-utilities": ["studio-layout"],
   "nyc-tron-host": ["@nyc-tron"], "forge-icon": ["react-native-svg"], "forge-icon-button": ["forge-icon"],
 };

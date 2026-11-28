@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/mikevocalz/nitro-forge/master/tooling/registry/theme/brand.theme.schema.json",
+  "$id": "urn:nitro-forge:brand-theme:schema",
   "title": "Nitro Forge brand theme",
   "description": "Rebrand contract. A brand sets accent, ink and soft for the dark and light schemes and nothing else. The six neutral keys are deferred until a contrast check exists (decision 23). Radius, status colours, paper and every scale are locked. Separate from tooling/brand/brand.schema.json (decision 24).",
   "type": "object",

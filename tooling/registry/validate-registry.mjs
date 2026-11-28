@@ -46,6 +46,8 @@ for (const [name, item] of built) {
   for (const dep of item.registryDependencies ?? []) {
     if (dep.startsWith('@nitro-forge/')) {
       if (!built.has(dep.slice('@nitro-forge/'.length))) bad(`${name}: registryDependency ${dep} does not exist`);
+    } else if (dep.startsWith('@nyc-tron/forge/')) {
+      bad(`${name}: registryDependency ${dep} is an editor control; Forge takes those from @nitro-forge/editor-controls, never from @nyc-tron/forge/*`);
     } else if (dep.startsWith('@nyc-tron/')) nycDeps.add(dep);
     else bad(`${name}: registryDependency ${dep} is in no known namespace`);
     if (dep === `@nitro-forge/${name}`) bad(`${name}: depends on itself`);

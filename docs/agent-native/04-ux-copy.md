@@ -15,7 +15,7 @@ Rules used: 140 characters at most, facts only, no adjectives that cannot be che
 | forge-workspace | Forge Workspace | Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout. | 140 |
 | forge-document-stage | Forge Document Stage | Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout. | 135 |
 | quill-text-editor | Quill Text Editor | Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload. | 138 |
-| prism-editor | Prism Editor | Vector canvas editor: shape tools, layers panel, transforms, personas. Needs @nitro-forge/ignition first, StudioUIProvider, @nyc-tron. | 134 |
+| prism-editor | Prism Editor | Vector canvas editor: shape tools, layers, transforms, personas. Needs ignition and editor-controls first, StudioUIProvider, @nyc-tron. | 135 |
 | prism-canvas | Prism Canvas | Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture. | 125 |
 | studio-gesture | Studio Gesture | Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed. | 113 |
 | persona-turret | Persona Turret | Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions. | 133 |

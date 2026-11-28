@@ -237,8 +237,7 @@
     "@nitro-forge/prism-canvas",
     "@nitro-forge/studio-theme",
     "@nitro-forge/studio-ui-provider",
-    "@nyc-tron/forge/inputs/PrecisionScrubber",
-    "@nyc-tron/forge/layers/LayerStack"
+    "@nyc-tron/shell/PrecisionScrubber"
    ],
    "files": [
     {

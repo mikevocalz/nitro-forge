@@ -2,7 +2,7 @@
  {"id": "forge-workspace", "title": "Forge Workspace", "description": "Workspace chrome: header, undo/redo toolbar, docks, floating panels, status line. Needs StudioUIProvider, @nyc-tron controls, studio-layout."},
  {"id": "forge-document-stage", "title": "Forge Document Stage", "description": "Workspace chrome: read-only stage of live engine state (text, cells, slides, tracks, shapes). Needs StudioUIProvider and studio-layout."},
  {"id": "quill-text-editor", "title": "Quill Text Editor", "description": "Writing surface: draft applied as one edit, conflict on outside change. Needs StudioUIProvider and a Quill document with apply and reload."},
- {"id": "prism-editor", "title": "Prism Editor", "description": "Vector canvas editor: shape tools, layers panel, transforms, personas. Needs @nitro-forge/ignition first, StudioUIProvider, @nyc-tron."},
+ {"id": "prism-editor", "title": "Prism Editor", "description": "Vector canvas editor: shape tools, layers, transforms, personas. Needs ignition and editor-controls first, StudioUIProvider, @nyc-tron."},
  {"id": "prism-canvas", "title": "Prism Canvas", "description": "Artboard: transparency checker, selection outline, one-finger drag to move bounds. Needs StudioUIProvider and studio-gesture."},
  {"id": "studio-gesture", "title": "Studio Gesture", "description": "Gesture primitive: one-finger pan recognizer, PanResponder on web, Gesture Handler on native. No provider needed."},
  {"id": "persona-turret", "title": "Persona Turret", "description": "Persona switcher dial with four stops. Drag or arrows preview, Enter commits. Needs StudioUIProvider, studio-theme, forge-directions."},

@@ -7,6 +7,9 @@ on:
     paths:
       - 'packages/studio-workspace/**'
       - 'packages/icons/**'
+      - 'packages/editor-controls/**'
+      # build.mjs reads each engine's version for registry-excluded.json.
+      - 'packages/*/package.json'
       - 'tooling/registry/**'
       - 'tooling/codemod/**'
       - 'docs/agent-native/tokens.map.json'
@@ -22,6 +25,8 @@ on:
     paths:
       - 'packages/studio-workspace/**'
       - 'packages/icons/**'
+      - 'packages/editor-controls/**'
+      - 'packages/*/package.json'
       - 'tooling/registry/**'
       - 'tooling/codemod/**'
       - 'r/**'
