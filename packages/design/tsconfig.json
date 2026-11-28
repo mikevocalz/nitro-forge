@@ -1,1 +1,1 @@
-{"extends":"../../tsconfig.base.json","compilerOptions":{"types":["node"],"paths":{"@nitro-forge/ignition":["../ignition/src/index.ts"]}},"include":["src"]}
+{"extends":"../../tsconfig.base.json","compilerOptions":{"types":["node"],"paths":{"@nitro-forge/ignition":["../ignition/src/index.ts"]}},"include":["src","tests/readme-example.ts","tests/readme-example.e2e.test.ts"]}

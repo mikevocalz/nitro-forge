@@ -1,9 +1,79 @@
-# Design fixed-frame backend
+# @nitro-forge/design
 
-Design9 persists an ordered frame/rectangle/ellipse/text/component/instance hierarchy and evaluates actual absolute or row/column layout with bounded per-axis fixed/hug/fill sizing, including real fixed-size wrapping. Components expand deterministically at read/render time only; variables, modes, bindings and stored (unsolved) constraints are durable state. The prototype catalog stores screens, hotspots, interactions and bounded transition presets; `prototypeGraph`/`resolvePrototypeEvent` are pure deterministic reads and the engine owns no playback clock. Real RGBA rendering reuses Prism. The root canvas is distinct from the application's window size.
+Interface design documents: frames, shapes and text in a node tree with
+fixed, hug and fill sizing, row and column layout, components, variables and
+prototype links, evaluated by a Rust engine and rendered through Prism.
 
-See [ENGINE_OPS](../../docs/ENGINE_OPS.md) for operations, limits, overflow semantics and locking. Frames have visible overflow; hidden children keep layout space. Lock prevents authored edits through locked ancestry, not changes to derived position caused by an unlocked ancestor. There is no clipping, images, groups or layers; text nodes are layout boxes only (no glyphs); constraints are storage-only; prototype playback status/progress is host-owned.
+**Status:** deferred. Not in the v1 release set:
+[RELEASE_TRAIN.md](../../docs/release/RELEASE_TRAIN.md) names Ignition and the
+seven engines only, so v1 releases attach no tarball for this package. The
+source, the Rust engine and the tests stay in this repository. The engine is
+registered in `nf-cli` and the native factory; no studio app opens it yet, and
+native binaries need a rebuild to include it.
 
-Registration appends ordinal9 without changing0..8. Native binaries require rebuilding for the new kind; the default app does not activate it. Fixed layout/rendering does not complete P16 acceptance.
+## Install
 
-Sizing capability reads validate actual proposed modes and report dependency/unsupported-combination reasons. Fixed transitions freeze the current evaluated size; authored fallback is retained while hugging/filling. Wrapped main hug and fill children inside wrapped flow remain explicitly unavailable. See ENGINE_OPS for empty/negative-extent and stretch semantics. No old-pinned inspector is activated.
+There is no release tarball. Inside this repository, add it as a workspace
+dependency:
+
+```json
+{ "dependencies": { "@nitro-forge/design": "workspace:*" } }
+```
+
+It depends on [`@nitro-forge/ignition`](../ignition/README.md), whose peer
+dependencies are `react-native-nitro-modules` and `nitro-core` at
+`1.0.0-alpha.nightly.136.gdb81de61bd32`. Design declares no peer dependencies of
+its own.
+
+## Usage
+
+<!-- readme-example -->
+```ts
+import { createNitroHost } from "@nitro-forge/ignition";
+import { DesignDocument } from "@nitro-forge/design";
+
+const ROOT = 1; // the root canvas frame
+
+const host = createNitroHost();
+const design = await DesignDocument.open(host, { title: "Card", width: 400, height: 300 });
+const card = (await design.addFrame(ROOT, { name: "Card", width: 240, height: 120 })).data.node_id;
+await design.addShape(card, "rect", { name: "Badge", width: 40, height: 40, fill: [255, 0, 0, 255] });
+
+const bytes = await design.save(); // NFD1 snapshot
+await design.close();
+
+const reopened = await DesignDocument.openSnapshot(host, bytes);
+const count = async () => Object.keys((await reopened.describe()).data.nodes).length;
+console.log(await count()); // 3
+await reopened.addShape(card, "ellipse", { width: 20, height: 20 });
+await reopened.undo();
+console.log(await count()); // 3
+await reopened.redo();
+console.log(await count()); // 4
+
+const frame = await reopened.renderFrame(); // RGBA of the root canvas
+console.log(frame.data.width, frame.data.height); // 400 300
+await reopened.close();
+await host.dispose();
+```
+
+Every method maps to one engine op and resolves to `{ data, events }`. A
+rejected call throws `EngineError` and leaves the document unchanged.
+
+What it does not do: no clipping, image fills, groups or layers; text nodes are
+layout boxes without glyphs; prototype playback is owned by the host. The full
+list of limits and overflow and locking rules is in ENGINE_OPS.md.
+
+This example runs in CI: `tests/readme-example.e2e.test.ts` runs it against the
+Rust engine through `nf-cli`, with `createNitroHost()` replaced by `CliHost`.
+
+## Entry points
+
+| Import | Use it for |
+| --- | --- |
+| `@nitro-forge/design` | `DesignDocument`, the `OPS` name table and the node, layout, variable and prototype types. |
+
+## Reference
+
+- Ops, payloads and limits: [ENGINE_OPS.md, design-engine](../../docs/ENGINE_OPS.md#design-engine--designenginenew-fixed-frame-layout-slice)
+- Threading, undo, snapshot envelope and error codes: [ARCHITECTURE.md](../../docs/ARCHITECTURE.md)
