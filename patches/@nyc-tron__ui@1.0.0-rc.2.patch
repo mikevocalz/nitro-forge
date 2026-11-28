@@ -1,0 +1,111 @@
+diff --git a/package.json b/package.json
+index 47bcbf4acf5a118aa867919efc19c74fa3e06e33..2de39365d3816a82053d5d528ac26d8d365d44ab 100644
+--- a/package.json
++++ b/package.json
+@@ -2799,6 +2799,106 @@
+       "types": "./dist/components/window/WindowTitleBar.d.ts",
+       "react-native": "./dist/components/window/WindowTitleBar.js",
+       "default": "./dist/components/window/WindowTitleBar.js"
++    },
++    "./components/feedback/announce": {
++      "types": "./dist/components/forge/announce.d.ts",
++      "react-native": "./dist/components/forge/announce.js",
++      "default": "./dist/components/forge/announce.js"
++    },
++    "./components/forms/toggle-a11y": {
++      "types": "./dist/components/forge/toggle-a11y.d.ts",
++      "react-native": "./dist/components/forge/toggle-a11y.js",
++      "default": "./dist/components/forge/toggle-a11y.js"
++    },
++    "./components/forms/SettingSwitch": {
++      "types": "./dist/components/forge/canvas/SettingSwitch.d.ts",
++      "react-native": "./dist/components/forge/canvas/SettingSwitch.js",
++      "default": "./dist/components/forge/canvas/SettingSwitch.js"
++    },
++    "./components/gestures/canvas-gesture-relations": {
++      "types": "./dist/components/forge/canvas/canvas-gesture-relations.d.ts",
++      "react-native": "./dist/components/forge/canvas/canvas-gesture-relations.js",
++      "default": "./dist/components/forge/canvas/canvas-gesture-relations.js"
++    },
++    "./components/shell/precision": {
++      "types": "./dist/components/forge/inputs/precision.d.ts",
++      "react-native": "./dist/components/forge/inputs/precision.js",
++      "default": "./dist/components/forge/inputs/precision.js"
++    },
++    "./components/shell/precision-scrubber-model": {
++      "types": "./dist/components/forge/inputs/precision-scrubber-model.d.ts",
++      "react-native": "./dist/components/forge/inputs/precision-scrubber-model.js",
++      "default": "./dist/components/forge/inputs/precision-scrubber-model.js"
++    },
++    "./components/shell/PrecisionScrubber": {
++      "types": "./dist/components/forge/inputs/PrecisionScrubber.d.ts",
++      "react-native": "./dist/components/forge/inputs/PrecisionScrubber.js",
++      "default": "./dist/components/forge/inputs/PrecisionScrubber.js"
++    },
++    "./components/gestures/adjust-keys": {
++      "types": "./dist/components/gestures/adjust-keys.d.ts",
++      "react-native": "./dist/components/gestures/adjust-keys.js",
++      "default": "./dist/components/gestures/adjust-keys.js"
++    },
++    "./components/gestures/canvas-responder": {
++      "types": "./dist/components/gestures/canvas-responder.d.ts",
++      "react-native": "./dist/components/gestures/canvas-responder.js",
++      "default": "./dist/components/gestures/canvas-responder.js"
++    },
++    "./components/gestures/coordinate-admission": {
++      "types": "./dist/components/gestures/coordinate-admission.d.ts",
++      "react-native": "./dist/components/gestures/coordinate-admission.js",
++      "default": "./dist/components/gestures/coordinate-admission.js"
++    },
++    "./components/gestures/editor-interaction-scope": {
++      "types": "./dist/components/gestures/editor-interaction-scope.d.ts",
++      "react-native": "./dist/components/gestures/editor-interaction-scope.js",
++      "default": "./dist/components/gestures/editor-interaction-scope.js"
++    },
++    "./components/gestures/local-pointer": {
++      "types": "./dist/components/gestures/local-pointer.d.ts",
++      "react-native": "./dist/components/gestures/local-pointer.js",
++      "default": "./dist/components/gestures/local-pointer.js"
++    },
++    "./components/gestures/measured-drop-owner": {
++      "types": "./dist/components/gestures/measured-drop-owner.d.ts",
++      "react-native": "./dist/components/gestures/measured-drop-owner.js",
++      "default": "./dist/components/gestures/measured-drop-owner.js"
++    },
++    "./components/gestures/useEditorPan": {
++      "types": "./dist/components/gestures/useEditorPan.d.ts",
++      "react-native": "./dist/components/gestures/useEditorPan.js",
++      "default": "./dist/components/gestures/useEditorPan.js"
++    },
++    "./components/gestures/useLocalPointer": {
++      "types": "./dist/components/gestures/useLocalPointer.d.ts",
++      "react-native": "./dist/components/gestures/useLocalPointer.js",
++      "default": "./dist/components/gestures/useLocalPointer.js"
++    },
++    "./components/gestures/value-gesture": {
++      "types": "./dist/components/gestures/value-gesture.d.ts",
++      "react-native": "./dist/components/gestures/value-gesture.js",
++      "default": "./dist/components/gestures/value-gesture.js"
++    },
++    "./components/local-store": {
++      "types": "./dist/components/local-store.d.ts",
++      "react-native": "./dist/components/local-store.js",
++      "default": "./dist/components/local-store.js"
++    },
++    "./components/shell/useOwnedAction": {
++      "types": "./dist/components/shell/useOwnedAction.d.ts",
++      "react-native": "./dist/components/shell/useOwnedAction.js",
++      "default": "./dist/components/shell/useOwnedAction.js"
++    },
++    "./components/styles": {
++      "types": "./dist/components/styles.d.ts",
++      "react-native": "./dist/components/styles.js",
++      "default": "./dist/components/styles.js"
++    },
++    "./components/useLocalStore": {
++      "types": "./dist/components/useLocalStore.d.ts",
++      "react-native": "./dist/components/useLocalStore.js",
++      "default": "./dist/components/useLocalStore.js"
+     }
+   },
+   "peerDependencies": {

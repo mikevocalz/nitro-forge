@@ -1,0 +1,45 @@
+import { View, type ViewProps } from "react-native";
+import { joinClasses } from "@nyc-tron/ui/components/styles";
+import { sparklineGeometry, type SparklineAxisMin, type SparklineKind, type SparklineMarkTone } from "./sparkline-model.ts";
+
+/**
+ * An in-cell chart drawn with plain views, so it renders inside any grid cell
+ * on every platform without a canvas. Fits `width` × `height` points.
+ */
+export interface SparklineProps extends Omit<ViewProps, "children"> {
+  readonly values: readonly (number | undefined)[];
+  readonly kind: SparklineKind;
+  readonly width: number;
+  readonly height: number;
+  readonly axisMin?: SparklineAxisMin;
+  readonly showHigh?: boolean;
+  readonly showLow?: boolean;
+  readonly showNegative?: boolean;
+  /** Screen-reader summary. Defaults to a count with the low and high values. */
+  readonly accessibilityLabel?: string;
+  readonly unstyled?: boolean;
+}
+
+const fill: Record<SparklineMarkTone, string> = {
+  normal: "bg-primary", negative: "bg-text-muted", high: "bg-success", low: "bg-accent",
+};
+
+export function Sparkline({
+  values, kind, width, height, axisMin, showHigh, showLow, showNegative, accessibilityLabel, unstyled = false, style, ...props
+}: SparklineProps) {
+  const g = sparklineGeometry(values, { kind, width, height, axisMin, showHigh, showLow, showNegative });
+  const label = accessibilityLabel ?? (g.valueCount === 0 ? "Sparkline, no values"
+    : `Sparkline, ${g.valueCount} values, low ${values[g.lowIndex!]}, high ${values[g.highIndex!]}`);
+  const cls = (tone: SparklineMarkTone) => (!unstyled ? fill[tone] : undefined);
+  return <View {...props} role="img" accessibilityLabel={label} style={[{ width, height, overflow: "hidden" }, style]}>
+    {kind === "winloss" ? <View aria-hidden {...{ className: !unstyled ? "bg-border" : undefined }}
+      style={{ position: "absolute", left: 0, right: 0, top: height / 2, height: 1 }} /> : null}
+    {g.bars.map(bar => <View key={bar.index} aria-hidden {...{ className: cls(bar.tone) }}
+      style={{ position: "absolute", left: bar.left, top: bar.top, width: bar.width, height: bar.height, borderRadius: 1 }} />)}
+    {g.segments.map((s, i) => <View key={i} aria-hidden {...{ className: cls("normal") }}
+      style={{ position: "absolute", left: s.centerX - s.length / 2, top: s.centerY - 1, width: s.length, height: 2,
+        borderRadius: 1, transform: [{ rotate: `${s.angleDeg}deg` }] }} />)}
+    {g.markers.map(m => <View key={"m" + m.index} aria-hidden {...{ className: joinClasses(cls(m.tone)) }}
+      style={{ position: "absolute", left: m.x - 3, top: m.y - 3, width: 6, height: 6, borderRadius: 3 }} />)}
+  </View>;
+}

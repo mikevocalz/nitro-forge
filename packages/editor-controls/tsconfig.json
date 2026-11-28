@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2022", "DOM"],
+    "types": ["react"],
+    // These sources moved unchanged from @nyc-tron/ui/components/forge, which
+    // compiles them without these two Forge-wide flags. Keep the contract they
+    // were written and reviewed under; tighten in a separate change.
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

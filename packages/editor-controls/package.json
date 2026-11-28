@@ -1,0 +1,2295 @@
+{
+  "name": "@nitro-forge/editor-controls",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "description": "Nitro Forge editor controls (audio, timeline, spreadsheet, canvas, color, photo, motion, office and more) built on NYC-Tron UI primitives. Moved here from @nyc-tron/ui/components/forge.",
+  "exports": {
+    "./WaveformLane": {
+      "types": "./src/WaveformLane.tsx",
+      "react-native": "./src/WaveformLane.tsx",
+      "default": "./src/WaveformLane.tsx"
+    },
+    "./NativeSeekBar": {
+      "types": "./src/NativeSeekBar.web.tsx",
+      "browser": "./src/NativeSeekBar.web.tsx",
+      "react-native": "./src/NativeSeekBar.native.tsx",
+      "default": "./src/NativeSeekBar.web.tsx"
+    },
+    "./ColorChannels": {
+      "types": "./src/ColorChannels.tsx",
+      "react-native": "./src/ColorChannels.tsx",
+      "default": "./src/ColorChannels.tsx"
+    },
+    "./waveform": {
+      "types": "./src/waveform.ts",
+      "react-native": "./src/waveform.ts",
+      "default": "./src/waveform.ts"
+    },
+    "./timebase": {
+      "types": "./src/timebase.ts",
+      "react-native": "./src/timebase.ts",
+      "default": "./src/timebase.ts"
+    },
+    "./audio/level": {
+      "types": "./src/audio/level.ts",
+      "react-native": "./src/audio/level.ts",
+      "default": "./src/audio/level.ts"
+    },
+    "./audio/LevelFader": {
+      "types": "./src/audio/LevelFader.tsx",
+      "react-native": "./src/audio/LevelFader.tsx",
+      "default": "./src/audio/LevelFader.tsx"
+    },
+    "./color": {
+      "types": "./src/color.ts",
+      "react-native": "./src/color.ts",
+      "default": "./src/color.ts"
+    },
+    "./color/HsvPicker": {
+      "types": "./src/color/HsvPicker.tsx",
+      "react-native": "./src/color/HsvPicker.tsx",
+      "default": "./src/color/HsvPicker.tsx"
+    },
+    "./color/fieldGeometry": {
+      "types": "./src/color/fieldGeometry.ts",
+      "react-native": "./src/color/fieldGeometry.ts",
+      "default": "./src/color/fieldGeometry.ts"
+    },
+    "./color/fieldGesture": {
+      "types": "./src/color/fieldGesture.ts",
+      "react-native": "./src/color/fieldGesture.ts",
+      "default": "./src/color/fieldGesture.ts"
+    },
+    "./color/AlphaSlider": {
+      "types": "./src/color/AlphaSlider.tsx",
+      "react-native": "./src/color/AlphaSlider.tsx",
+      "default": "./src/color/AlphaSlider.tsx"
+    },
+    "./color/ColorWheel": {
+      "types": "./src/color/ColorWheel.tsx",
+      "react-native": "./src/color/ColorWheel.tsx",
+      "default": "./src/color/ColorWheel.tsx"
+    },
+    "./color/ColorDiscPicker": {
+      "types": "./src/color/ColorDiscPicker.tsx",
+      "react-native": "./src/color/ColorDiscPicker.tsx",
+      "default": "./src/color/ColorDiscPicker.tsx"
+    },
+    "./color/ColorChannelFields": {
+      "types": "./src/color/ColorChannelFields.tsx",
+      "react-native": "./src/color/ColorChannelFields.tsx",
+      "default": "./src/color/ColorChannelFields.tsx"
+    },
+    "./color/ForegroundBackgroundChips": {
+      "types": "./src/color/ForegroundBackgroundChips.tsx",
+      "react-native": "./src/color/ForegroundBackgroundChips.tsx",
+      "default": "./src/color/ForegroundBackgroundChips.tsx"
+    },
+    "./color/SwatchGrid": {
+      "types": "./src/color/SwatchGrid.tsx",
+      "react-native": "./src/color/SwatchGrid.tsx",
+      "default": "./src/color/SwatchGrid.tsx"
+    },
+    "./color/ColorHarmonyAssistant": {
+      "types": "./src/color/ColorHarmonyAssistant.tsx",
+      "react-native": "./src/color/ColorHarmonyAssistant.tsx",
+      "default": "./src/color/ColorHarmonyAssistant.tsx"
+    },
+    "./color/FloatingColorPalette": {
+      "types": "./src/color/FloatingColorPalette.tsx",
+      "react-native": "./src/color/FloatingColorPalette.tsx",
+      "default": "./src/color/FloatingColorPalette.tsx"
+    },
+    "./color/FloatingPaletteUndockHandle": {
+      "types": "./src/color/FloatingPaletteUndockHandle.tsx",
+      "react-native": "./src/color/FloatingPaletteUndockHandle.tsx",
+      "default": "./src/color/FloatingPaletteUndockHandle.tsx"
+    },
+    "./color/hsl": {
+      "types": "./src/color/hsl.ts",
+      "react-native": "./src/color/hsl.ts",
+      "default": "./src/color/hsl.ts"
+    },
+    "./color/contrast": {
+      "types": "./src/color/contrast.ts",
+      "react-native": "./src/color/contrast.ts",
+      "default": "./src/color/contrast.ts"
+    },
+    "./color/harmony": {
+      "types": "./src/color/harmony.ts",
+      "react-native": "./src/color/harmony.ts",
+      "default": "./src/color/harmony.ts"
+    },
+    "./color/wheel-geometry": {
+      "types": "./src/color/wheel-geometry.ts",
+      "react-native": "./src/color/wheel-geometry.ts",
+      "default": "./src/color/wheel-geometry.ts"
+    },
+    "./color/floating-palette": {
+      "types": "./src/color/floating-palette.ts",
+      "react-native": "./src/color/floating-palette.ts",
+      "default": "./src/color/floating-palette.ts"
+    },
+    "./color/swatches": {
+      "types": "./src/color/swatches.ts",
+      "react-native": "./src/color/swatches.ts",
+      "default": "./src/color/swatches.ts"
+    },
+    "./color/color-pair": {
+      "types": "./src/color/color-pair.ts",
+      "react-native": "./src/color/color-pair.ts",
+      "default": "./src/color/color-pair.ts"
+    },
+    "./color/channel-fields": {
+      "types": "./src/color/channel-fields.ts",
+      "react-native": "./src/color/channel-fields.ts",
+      "default": "./src/color/channel-fields.ts"
+    },
+    "./SpreadsheetGrid": {
+      "types": "./src/SpreadsheetGrid.tsx",
+      "react-native": "./src/SpreadsheetGrid.tsx",
+      "default": "./src/SpreadsheetGrid.tsx"
+    },
+    "./sheet-window": {
+      "types": "./src/sheet-window.ts",
+      "react-native": "./src/sheet-window.ts",
+      "default": "./src/sheet-window.ts"
+    },
+    "./range-tsv": {
+      "types": "./src/range-tsv.ts",
+      "react-native": "./src/range-tsv.ts",
+      "default": "./src/range-tsv.ts"
+    },
+    "./range-paste": {
+      "types": "./src/range-paste.ts",
+      "react-native": "./src/range-paste.ts",
+      "default": "./src/range-paste.ts"
+    },
+    "./formula-refs": {
+      "types": "./src/formula-refs.ts",
+      "react-native": "./src/formula-refs.ts",
+      "default": "./src/formula-refs.ts"
+    },
+    "./inputs/InstrumentKnob": {
+      "types": "./src/inputs/InstrumentKnob.tsx",
+      "react-native": "./src/inputs/InstrumentKnob.tsx",
+      "default": "./src/inputs/InstrumentKnob.tsx"
+    },
+    "./inputs/InstrumentXYPad": {
+      "types": "./src/inputs/InstrumentXYPad.tsx",
+      "react-native": "./src/inputs/InstrumentXYPad.tsx",
+      "default": "./src/inputs/InstrumentXYPad.tsx"
+    },
+    "./graph/model": {
+      "types": "./src/graph/model.ts",
+      "react-native": "./src/graph/model.ts",
+      "default": "./src/graph/model.ts"
+    },
+    "./graph/PatchGraph": {
+      "types": "./src/graph/PatchGraph.tsx",
+      "react-native": "./src/graph/PatchGraph.tsx",
+      "default": "./src/graph/PatchGraph.tsx"
+    },
+    "./graphics/crop": {
+      "types": "./src/graphics/crop.ts",
+      "react-native": "./src/graphics/crop.ts",
+      "default": "./src/graphics/crop.ts"
+    },
+    "./graphics/ImageCropOverlay": {
+      "types": "./src/graphics/ImageCropOverlay.tsx",
+      "react-native": "./src/graphics/ImageCropOverlay.tsx",
+      "default": "./src/graphics/ImageCropOverlay.tsx"
+    },
+    "./layers/layer-model": {
+      "types": "./src/layers/layer-model.ts",
+      "react-native": "./src/layers/layer-model.ts",
+      "default": "./src/layers/layer-model.ts"
+    },
+    "./layers/LayerStack": {
+      "types": "./src/layers/LayerStack.tsx",
+      "react-native": "./src/layers/LayerStack.tsx",
+      "default": "./src/layers/LayerStack.tsx"
+    },
+    "./ink/ink-model": {
+      "types": "./src/ink/ink-model.ts",
+      "react-native": "./src/ink/ink-model.ts",
+      "default": "./src/ink/ink-model.ts"
+    },
+    "./ink/InkToolbar": {
+      "types": "./src/ink/InkToolbar.tsx",
+      "react-native": "./src/ink/InkToolbar.tsx",
+      "default": "./src/ink/InkToolbar.tsx"
+    },
+    "./timeline/TimecodeDisplay": {
+      "types": "./src/timeline/TimecodeDisplay.tsx",
+      "react-native": "./src/timeline/TimecodeDisplay.tsx",
+      "default": "./src/timeline/TimecodeDisplay.tsx"
+    },
+    "./timeline/TransportControls": {
+      "types": "./src/timeline/TransportControls.tsx",
+      "react-native": "./src/timeline/TransportControls.tsx",
+      "default": "./src/timeline/TransportControls.tsx"
+    },
+    "./timeline/PlaybackRateMenu": {
+      "types": "./src/timeline/PlaybackRateMenu.tsx",
+      "react-native": "./src/timeline/PlaybackRateMenu.tsx",
+      "default": "./src/timeline/PlaybackRateMenu.tsx"
+    },
+    "./timeline/SeekBar": {
+      "types": "./src/timeline/SeekBar.tsx",
+      "react-native": "./src/timeline/SeekBar.tsx",
+      "default": "./src/timeline/SeekBar.tsx"
+    },
+    "./timeline/TimelineRuler": {
+      "types": "./src/timeline/TimelineRuler.tsx",
+      "react-native": "./src/timeline/TimelineRuler.tsx",
+      "default": "./src/timeline/TimelineRuler.tsx"
+    },
+    "./timeline/TimelinePlayhead": {
+      "types": "./src/timeline/TimelinePlayhead.tsx",
+      "react-native": "./src/timeline/TimelinePlayhead.tsx",
+      "default": "./src/timeline/TimelinePlayhead.tsx"
+    },
+    "./timeline/InOutRangeHandles": {
+      "types": "./src/timeline/InOutRangeHandles.tsx",
+      "react-native": "./src/timeline/InOutRangeHandles.tsx",
+      "default": "./src/timeline/InOutRangeHandles.tsx"
+    },
+    "./timeline/TimelineZoomAndScroll": {
+      "types": "./src/timeline/TimelineZoomAndScroll.tsx",
+      "react-native": "./src/timeline/TimelineZoomAndScroll.tsx",
+      "default": "./src/timeline/TimelineZoomAndScroll.tsx"
+    },
+    "./timeline/TimelineClipLane": {
+      "types": "./src/timeline/TimelineClipLane.tsx",
+      "react-native": "./src/timeline/TimelineClipLane.tsx",
+      "default": "./src/timeline/TimelineClipLane.tsx"
+    },
+    "./timeline/ClipTrimHandles": {
+      "types": "./src/timeline/ClipTrimHandles.tsx",
+      "react-native": "./src/timeline/ClipTrimHandles.tsx",
+      "default": "./src/timeline/ClipTrimHandles.tsx"
+    },
+    "./timeline/RazorSplitTool": {
+      "types": "./src/timeline/RazorSplitTool.tsx",
+      "react-native": "./src/timeline/RazorSplitTool.tsx",
+      "default": "./src/timeline/RazorSplitTool.tsx"
+    },
+    "./timeline/SafeAreaOverlay": {
+      "types": "./src/timeline/SafeAreaOverlay.tsx",
+      "react-native": "./src/timeline/SafeAreaOverlay.tsx",
+      "default": "./src/timeline/SafeAreaOverlay.tsx"
+    },
+    "./timeline/time": {
+      "types": "./src/timeline/time.ts",
+      "react-native": "./src/timeline/time.ts",
+      "default": "./src/timeline/time.ts"
+    },
+    "./timeline/ruler": {
+      "types": "./src/timeline/ruler.ts",
+      "react-native": "./src/timeline/ruler.ts",
+      "default": "./src/timeline/ruler.ts"
+    },
+    "./timeline/viewport": {
+      "types": "./src/timeline/viewport.ts",
+      "react-native": "./src/timeline/viewport.ts",
+      "default": "./src/timeline/viewport.ts"
+    },
+    "./timeline/edits": {
+      "types": "./src/timeline/edits.ts",
+      "react-native": "./src/timeline/edits.ts",
+      "default": "./src/timeline/edits.ts"
+    },
+    "./timeline/safe-area": {
+      "types": "./src/timeline/safe-area.ts",
+      "react-native": "./src/timeline/safe-area.ts",
+      "default": "./src/timeline/safe-area.ts"
+    },
+    "./spreadsheet/SheetTabs": {
+      "types": "./src/spreadsheet/SheetTabs.tsx",
+      "react-native": "./src/spreadsheet/SheetTabs.tsx",
+      "default": "./src/spreadsheet/SheetTabs.tsx"
+    },
+    "./spreadsheet/sheet-tabs-model": {
+      "types": "./src/spreadsheet/sheet-tabs-model.ts",
+      "react-native": "./src/spreadsheet/sheet-tabs-model.ts",
+      "default": "./src/spreadsheet/sheet-tabs-model.ts"
+    },
+    "./spreadsheet/ChartBuilder": {
+      "types": "./src/spreadsheet/ChartBuilder.tsx",
+      "react-native": "./src/spreadsheet/ChartBuilder.tsx",
+      "default": "./src/spreadsheet/ChartBuilder.tsx"
+    },
+    "./spreadsheet/chart-model": {
+      "types": "./src/spreadsheet/chart-model.ts",
+      "react-native": "./src/spreadsheet/chart-model.ts",
+      "default": "./src/spreadsheet/chart-model.ts"
+    },
+    "./spreadsheet/Sparkline": {
+      "types": "./src/spreadsheet/Sparkline.tsx",
+      "react-native": "./src/spreadsheet/Sparkline.tsx",
+      "default": "./src/spreadsheet/Sparkline.tsx"
+    },
+    "./spreadsheet/SparklineEditor": {
+      "types": "./src/spreadsheet/SparklineEditor.tsx",
+      "react-native": "./src/spreadsheet/SparklineEditor.tsx",
+      "default": "./src/spreadsheet/SparklineEditor.tsx"
+    },
+    "./spreadsheet/sparkline-model": {
+      "types": "./src/spreadsheet/sparkline-model.ts",
+      "react-native": "./src/spreadsheet/sparkline-model.ts",
+      "default": "./src/spreadsheet/sparkline-model.ts"
+    },
+    "./spreadsheet/FreezeSplitControls": {
+      "types": "./src/spreadsheet/FreezeSplitControls.tsx",
+      "react-native": "./src/spreadsheet/FreezeSplitControls.tsx",
+      "default": "./src/spreadsheet/FreezeSplitControls.tsx"
+    },
+    "./spreadsheet/SplitSpreadsheetView": {
+      "types": "./src/spreadsheet/SplitSpreadsheetView.tsx",
+      "react-native": "./src/spreadsheet/SplitSpreadsheetView.tsx",
+      "default": "./src/spreadsheet/SplitSpreadsheetView.tsx"
+    },
+    "./spreadsheet/freeze-split-model": {
+      "types": "./src/spreadsheet/freeze-split-model.ts",
+      "react-native": "./src/spreadsheet/freeze-split-model.ts",
+      "default": "./src/spreadsheet/freeze-split-model.ts"
+    },
+    "./spreadsheet/SpreadsheetCardsView": {
+      "types": "./src/spreadsheet/SpreadsheetCardsView.tsx",
+      "react-native": "./src/spreadsheet/SpreadsheetCardsView.tsx",
+      "default": "./src/spreadsheet/SpreadsheetCardsView.tsx"
+    },
+    "./spreadsheet/cards-model": {
+      "types": "./src/spreadsheet/cards-model.ts",
+      "react-native": "./src/spreadsheet/cards-model.ts",
+      "default": "./src/spreadsheet/cards-model.ts"
+    },
+    "./spreadsheet/FormulaReferenceText": {
+      "types": "./src/spreadsheet/FormulaReferenceText.tsx",
+      "react-native": "./src/spreadsheet/FormulaReferenceText.tsx",
+      "default": "./src/spreadsheet/FormulaReferenceText.tsx"
+    },
+    "./spreadsheet/reference-colors": {
+      "types": "./src/spreadsheet/reference-colors.ts",
+      "react-native": "./src/spreadsheet/reference-colors.ts",
+      "default": "./src/spreadsheet/reference-colors.ts"
+    },
+    "./spreadsheet/fill-handle": {
+      "types": "./src/spreadsheet/fill-handle.ts",
+      "react-native": "./src/spreadsheet/fill-handle.ts",
+      "default": "./src/spreadsheet/fill-handle.ts"
+    },
+    "./audio/pan": {
+      "types": "./src/audio/pan.ts",
+      "react-native": "./src/audio/pan.ts",
+      "default": "./src/audio/pan.ts"
+    },
+    "./audio/PanControl": {
+      "types": "./src/audio/PanControl.tsx",
+      "react-native": "./src/audio/PanControl.tsx",
+      "default": "./src/audio/PanControl.tsx"
+    },
+    "./audio/SoloMuteButtons": {
+      "types": "./src/audio/SoloMuteButtons.tsx",
+      "react-native": "./src/audio/SoloMuteButtons.tsx",
+      "default": "./src/audio/SoloMuteButtons.tsx"
+    },
+    "./audio/mixer": {
+      "types": "./src/audio/mixer.ts",
+      "react-native": "./src/audio/mixer.ts",
+      "default": "./src/audio/mixer.ts"
+    },
+    "./audio/ChannelStrip": {
+      "types": "./src/audio/ChannelStrip.tsx",
+      "react-native": "./src/audio/ChannelStrip.tsx",
+      "default": "./src/audio/ChannelStrip.tsx"
+    },
+    "./audio/MixingConsole": {
+      "types": "./src/audio/MixingConsole.tsx",
+      "react-native": "./src/audio/MixingConsole.tsx",
+      "default": "./src/audio/MixingConsole.tsx"
+    },
+    "./audio/tempo": {
+      "types": "./src/audio/tempo.ts",
+      "react-native": "./src/audio/tempo.ts",
+      "default": "./src/audio/tempo.ts"
+    },
+    "./audio/TempoAndMetronome": {
+      "types": "./src/audio/TempoAndMetronome.tsx",
+      "react-native": "./src/audio/TempoAndMetronome.tsx",
+      "default": "./src/audio/TempoAndMetronome.tsx"
+    },
+    "./midi/note-grid": {
+      "types": "./src/midi/note-grid.ts",
+      "react-native": "./src/midi/note-grid.ts",
+      "default": "./src/midi/note-grid.ts"
+    },
+    "./midi/MIDIPianoRoll": {
+      "types": "./src/midi/MIDIPianoRoll.tsx",
+      "react-native": "./src/midi/MIDIPianoRoll.tsx",
+      "default": "./src/midi/MIDIPianoRoll.tsx"
+    },
+    "./midi/MIDIVelocityLane": {
+      "types": "./src/midi/MIDIVelocityLane.tsx",
+      "react-native": "./src/midi/MIDIVelocityLane.tsx",
+      "default": "./src/midi/MIDIVelocityLane.tsx"
+    },
+    "./midi/StepSequencer": {
+      "types": "./src/midi/StepSequencer.tsx",
+      "react-native": "./src/midi/StepSequencer.tsx",
+      "default": "./src/midi/StepSequencer.tsx"
+    },
+    "./office/ReadAloudTransport": {
+      "types": "./src/office/ReadAloudTransport.tsx",
+      "react-native": "./src/office/ReadAloudTransport.tsx",
+      "default": "./src/office/ReadAloudTransport.tsx"
+    },
+    "./office/office-controls": {
+      "types": "./src/office/office-controls.tsx",
+      "react-native": "./src/office/office-controls.tsx",
+      "default": "./src/office/office-controls.tsx"
+    },
+    "./office/read-aloud-model": {
+      "types": "./src/office/read-aloud-model.ts",
+      "react-native": "./src/office/read-aloud-model.ts",
+      "default": "./src/office/read-aloud-model.ts"
+    },
+    "./slides/SlideAnimationPane": {
+      "types": "./src/slides/SlideAnimationPane.tsx",
+      "react-native": "./src/slides/SlideAnimationPane.tsx",
+      "default": "./src/slides/SlideAnimationPane.tsx"
+    },
+    "./slides/SlideCanvas": {
+      "types": "./src/slides/SlideCanvas.tsx",
+      "react-native": "./src/slides/SlideCanvas.tsx",
+      "default": "./src/slides/SlideCanvas.tsx"
+    },
+    "./slides/SlideFilmstrip": {
+      "types": "./src/slides/SlideFilmstrip.tsx",
+      "react-native": "./src/slides/SlideFilmstrip.tsx",
+      "default": "./src/slides/SlideFilmstrip.tsx"
+    },
+    "./slides/SlideSorter": {
+      "types": "./src/slides/SlideSorter.tsx",
+      "react-native": "./src/slides/SlideSorter.tsx",
+      "default": "./src/slides/SlideSorter.tsx"
+    },
+    "./slides/SlideThumbnail": {
+      "types": "./src/slides/SlideThumbnail.tsx",
+      "react-native": "./src/slides/SlideThumbnail.tsx",
+      "default": "./src/slides/SlideThumbnail.tsx"
+    },
+    "./slides/animation-model": {
+      "types": "./src/slides/animation-model.ts",
+      "react-native": "./src/slides/animation-model.ts",
+      "default": "./src/slides/animation-model.ts"
+    },
+    "./slides/canvas-model": {
+      "types": "./src/slides/canvas-model.ts",
+      "react-native": "./src/slides/canvas-model.ts",
+      "default": "./src/slides/canvas-model.ts"
+    },
+    "./slides/slide-model": {
+      "types": "./src/slides/slide-model.ts",
+      "react-native": "./src/slides/slide-model.ts",
+      "default": "./src/slides/slide-model.ts"
+    },
+    "./document/BulletsNumberingEditor": {
+      "types": "./src/document/BulletsNumberingEditor.tsx",
+      "react-native": "./src/document/BulletsNumberingEditor.tsx",
+      "default": "./src/document/BulletsNumberingEditor.tsx"
+    },
+    "./document/DocumentReadAloudTransport": {
+      "types": "./src/document/DocumentReadAloudTransport.tsx",
+      "react-native": "./src/document/DocumentReadAloudTransport.tsx",
+      "default": "./src/document/DocumentReadAloudTransport.tsx"
+    },
+    "./document/NavigationOutline": {
+      "types": "./src/document/NavigationOutline.tsx",
+      "react-native": "./src/document/NavigationOutline.tsx",
+      "default": "./src/document/NavigationOutline.tsx"
+    },
+    "./document/RichTextRibbon": {
+      "types": "./src/document/RichTextRibbon.tsx",
+      "react-native": "./src/document/RichTextRibbon.tsx",
+      "default": "./src/document/RichTextRibbon.tsx"
+    },
+    "./document/list-model": {
+      "types": "./src/document/list-model.ts",
+      "react-native": "./src/document/list-model.ts",
+      "default": "./src/document/list-model.ts"
+    },
+    "./document/outline-model": {
+      "types": "./src/document/outline-model.ts",
+      "react-native": "./src/document/outline-model.ts",
+      "default": "./src/document/outline-model.ts"
+    },
+    "./document/ribbon-model": {
+      "types": "./src/document/ribbon-model.ts",
+      "react-native": "./src/document/ribbon-model.ts",
+      "default": "./src/document/ribbon-model.ts"
+    },
+    "./pdf/AnnotationToolbar": {
+      "types": "./src/pdf/AnnotationToolbar.tsx",
+      "react-native": "./src/pdf/AnnotationToolbar.tsx",
+      "default": "./src/pdf/AnnotationToolbar.tsx"
+    },
+    "./pdf/CommentsThreadPanel": {
+      "types": "./src/pdf/CommentsThreadPanel.tsx",
+      "react-native": "./src/pdf/CommentsThreadPanel.tsx",
+      "default": "./src/pdf/CommentsThreadPanel.tsx"
+    },
+    "./pdf/PDFReadAloudTransport": {
+      "types": "./src/pdf/PDFReadAloudTransport.tsx",
+      "react-native": "./src/pdf/PDFReadAloudTransport.tsx",
+      "default": "./src/pdf/PDFReadAloudTransport.tsx"
+    },
+    "./pdf/TextSearchResults": {
+      "types": "./src/pdf/TextSearchResults.tsx",
+      "react-native": "./src/pdf/TextSearchResults.tsx",
+      "default": "./src/pdf/TextSearchResults.tsx"
+    },
+    "./pdf/annotation-model": {
+      "types": "./src/pdf/annotation-model.ts",
+      "react-native": "./src/pdf/annotation-model.ts",
+      "default": "./src/pdf/annotation-model.ts"
+    },
+    "./pdf/comments-model": {
+      "types": "./src/pdf/comments-model.ts",
+      "react-native": "./src/pdf/comments-model.ts",
+      "default": "./src/pdf/comments-model.ts"
+    },
+    "./pdf/search-model": {
+      "types": "./src/pdf/search-model.ts",
+      "react-native": "./src/pdf/search-model.ts",
+      "default": "./src/pdf/search-model.ts"
+    },
+    "./audio/RecordingTrack": {
+      "types": "./src/audio/RecordingTrack.tsx",
+      "react-native": "./src/audio/RecordingTrack.tsx",
+      "default": "./src/audio/RecordingTrack.tsx"
+    },
+    "./audio/LevelMeter": {
+      "types": "./src/audio/LevelMeter.tsx",
+      "react-native": "./src/audio/LevelMeter.tsx",
+      "default": "./src/audio/LevelMeter.tsx"
+    },
+    "./audio/AudioPreview": {
+      "types": "./src/audio/AudioPreview.tsx",
+      "react-native": "./src/audio/AudioPreview.tsx",
+      "default": "./src/audio/AudioPreview.tsx"
+    },
+    "./audio/level-meter": {
+      "types": "./src/audio/level-meter.ts",
+      "react-native": "./src/audio/level-meter.ts",
+      "default": "./src/audio/level-meter.ts"
+    },
+    "./audio/recording-model": {
+      "types": "./src/audio/recording-model.ts",
+      "react-native": "./src/audio/recording-model.ts",
+      "default": "./src/audio/recording-model.ts"
+    },
+    "./audio/preview-model": {
+      "types": "./src/audio/preview-model.ts",
+      "react-native": "./src/audio/preview-model.ts",
+      "default": "./src/audio/preview-model.ts"
+    },
+    "./devices/DevicePairingDialog": {
+      "types": "./src/devices/DevicePairingDialog.tsx",
+      "react-native": "./src/devices/DevicePairingDialog.tsx",
+      "default": "./src/devices/DevicePairingDialog.tsx"
+    },
+    "./devices/pairing-model": {
+      "types": "./src/devices/pairing-model.ts",
+      "react-native": "./src/devices/pairing-model.ts",
+      "default": "./src/devices/pairing-model.ts"
+    },
+    "./timeline/JKLShuttleController": {
+      "types": "./src/timeline/JKLShuttleController.tsx",
+      "react-native": "./src/timeline/JKLShuttleController.tsx",
+      "default": "./src/timeline/JKLShuttleController.tsx"
+    },
+    "./timeline/LoopRangeBar": {
+      "types": "./src/timeline/LoopRangeBar.tsx",
+      "react-native": "./src/timeline/LoopRangeBar.tsx",
+      "default": "./src/timeline/LoopRangeBar.tsx"
+    },
+    "./timeline/TrackHeaders": {
+      "types": "./src/timeline/TrackHeaders.tsx",
+      "react-native": "./src/timeline/TrackHeaders.tsx",
+      "default": "./src/timeline/TrackHeaders.tsx"
+    },
+    "./timeline/RollSlipSlideControls": {
+      "types": "./src/timeline/RollSlipSlideControls.tsx",
+      "react-native": "./src/timeline/RollSlipSlideControls.tsx",
+      "default": "./src/timeline/RollSlipSlideControls.tsx"
+    },
+    "./timeline/DragReorderAndRipple": {
+      "types": "./src/timeline/DragReorderAndRipple.tsx",
+      "react-native": "./src/timeline/DragReorderAndRipple.tsx",
+      "default": "./src/timeline/DragReorderAndRipple.tsx"
+    },
+    "./timeline/TransitionHandles": {
+      "types": "./src/timeline/TransitionHandles.tsx",
+      "react-native": "./src/timeline/TransitionHandles.tsx",
+      "default": "./src/timeline/TransitionHandles.tsx"
+    },
+    "./timeline/TimelineMarkers": {
+      "types": "./src/timeline/TimelineMarkers.tsx",
+      "react-native": "./src/timeline/TimelineMarkers.tsx",
+      "default": "./src/timeline/TimelineMarkers.tsx"
+    },
+    "./timeline/OverlayAndEffectsTrackStack": {
+      "types": "./src/timeline/OverlayAndEffectsTrackStack.tsx",
+      "react-native": "./src/timeline/OverlayAndEffectsTrackStack.tsx",
+      "default": "./src/timeline/OverlayAndEffectsTrackStack.tsx"
+    },
+    "./timeline/TransitionPresetBrowser": {
+      "types": "./src/timeline/TransitionPresetBrowser.tsx",
+      "react-native": "./src/timeline/TransitionPresetBrowser.tsx",
+      "default": "./src/timeline/TransitionPresetBrowser.tsx"
+    },
+    "./timeline/BatchEditPanel": {
+      "types": "./src/timeline/BatchEditPanel.tsx",
+      "react-native": "./src/timeline/BatchEditPanel.tsx",
+      "default": "./src/timeline/BatchEditPanel.tsx"
+    },
+    "./timeline/ModeEdgeHandles": {
+      "types": "./src/timeline/ModeEdgeHandles.tsx",
+      "react-native": "./src/timeline/ModeEdgeHandles.tsx",
+      "default": "./src/timeline/ModeEdgeHandles.tsx"
+    },
+    "./timeline/trim-modes": {
+      "types": "./src/timeline/trim-modes.ts",
+      "react-native": "./src/timeline/trim-modes.ts",
+      "default": "./src/timeline/trim-modes.ts"
+    },
+    "./timeline/placement": {
+      "types": "./src/timeline/placement.ts",
+      "react-native": "./src/timeline/placement.ts",
+      "default": "./src/timeline/placement.ts"
+    },
+    "./timeline/transitions": {
+      "types": "./src/timeline/transitions.ts",
+      "react-native": "./src/timeline/transitions.ts",
+      "default": "./src/timeline/transitions.ts"
+    },
+    "./timeline/markers": {
+      "types": "./src/timeline/markers.ts",
+      "react-native": "./src/timeline/markers.ts",
+      "default": "./src/timeline/markers.ts"
+    },
+    "./timeline/loop-range": {
+      "types": "./src/timeline/loop-range.ts",
+      "react-native": "./src/timeline/loop-range.ts",
+      "default": "./src/timeline/loop-range.ts"
+    },
+    "./timeline/shuttle": {
+      "types": "./src/timeline/shuttle.ts",
+      "react-native": "./src/timeline/shuttle.ts",
+      "default": "./src/timeline/shuttle.ts"
+    },
+    "./timeline/batch": {
+      "types": "./src/timeline/batch.ts",
+      "react-native": "./src/timeline/batch.ts",
+      "default": "./src/timeline/batch.ts"
+    },
+    "./timeline/transition-presets": {
+      "types": "./src/timeline/transition-presets.ts",
+      "react-native": "./src/timeline/transition-presets.ts",
+      "default": "./src/timeline/transition-presets.ts"
+    },
+    "./timeline/track-stack": {
+      "types": "./src/timeline/track-stack.ts",
+      "react-native": "./src/timeline/track-stack.ts",
+      "default": "./src/timeline/track-stack.ts"
+    },
+    "./canvas-tools/ColorDropCanvasTarget": {
+      "types": "./src/canvas-tools/ColorDropCanvasTarget.tsx",
+      "react-native": "./src/canvas-tools/ColorDropCanvasTarget.tsx",
+      "default": "./src/canvas-tools/ColorDropCanvasTarget.tsx"
+    },
+    "./canvas-tools/GestureCustomizationPanel": {
+      "types": "./src/canvas-tools/GestureCustomizationPanel.tsx",
+      "react-native": "./src/canvas-tools/GestureCustomizationPanel.tsx",
+      "default": "./src/canvas-tools/GestureCustomizationPanel.tsx"
+    },
+    "./canvas-tools/ReferenceImageBoard": {
+      "types": "./src/canvas-tools/ReferenceImageBoard.tsx",
+      "react-native": "./src/canvas-tools/ReferenceImageBoard.tsx",
+      "default": "./src/canvas-tools/ReferenceImageBoard.tsx"
+    },
+    "./canvas-tools/color-drop-model": {
+      "types": "./src/canvas-tools/color-drop-model.ts",
+      "react-native": "./src/canvas-tools/color-drop-model.ts",
+      "default": "./src/canvas-tools/color-drop-model.ts"
+    },
+    "./canvas-tools/gesture-map-model": {
+      "types": "./src/canvas-tools/gesture-map-model.ts",
+      "react-native": "./src/canvas-tools/gesture-map-model.ts",
+      "default": "./src/canvas-tools/gesture-map-model.ts"
+    },
+    "./canvas-tools/reference-board-model": {
+      "types": "./src/canvas-tools/reference-board-model.ts",
+      "react-native": "./src/canvas-tools/reference-board-model.ts",
+      "default": "./src/canvas-tools/reference-board-model.ts"
+    },
+    "./canvas/AlignDistributePanel": {
+      "types": "./src/canvas/AlignDistributePanel.tsx",
+      "react-native": "./src/canvas/AlignDistributePanel.tsx",
+      "default": "./src/canvas/AlignDistributePanel.tsx"
+    },
+    "./canvas/CanvasRuler": {
+      "types": "./src/canvas/CanvasRuler.tsx",
+      "react-native": "./src/canvas/CanvasRuler.tsx",
+      "default": "./src/canvas/CanvasRuler.tsx"
+    },
+    "./canvas/SmartGuides": {
+      "types": "./src/canvas/SmartGuides.tsx",
+      "react-native": "./src/canvas/SmartGuides.tsx",
+      "default": "./src/canvas/SmartGuides.tsx"
+    },
+    "./canvas/SnapGridOverlay": {
+      "types": "./src/canvas/SnapGridOverlay.tsx",
+      "react-native": "./src/canvas/SnapGridOverlay.tsx",
+      "default": "./src/canvas/SnapGridOverlay.tsx"
+    },
+    "./canvas/SnapGridSettings": {
+      "types": "./src/canvas/SnapGridSettings.tsx",
+      "react-native": "./src/canvas/SnapGridSettings.tsx",
+      "default": "./src/canvas/SnapGridSettings.tsx"
+    },
+    "./canvas/TransformOriginHandle": {
+      "types": "./src/canvas/TransformOriginHandle.tsx",
+      "react-native": "./src/canvas/TransformOriginHandle.tsx",
+      "default": "./src/canvas/TransformOriginHandle.tsx"
+    },
+    "./canvas/align-distribute-model": {
+      "types": "./src/canvas/align-distribute-model.ts",
+      "react-native": "./src/canvas/align-distribute-model.ts",
+      "default": "./src/canvas/align-distribute-model.ts"
+    },
+    "./canvas/canvas-viewport": {
+      "types": "./src/canvas/canvas-viewport.ts",
+      "react-native": "./src/canvas/canvas-viewport.ts",
+      "default": "./src/canvas/canvas-viewport.ts"
+    },
+    "./canvas/ruler-model": {
+      "types": "./src/canvas/ruler-model.ts",
+      "react-native": "./src/canvas/ruler-model.ts",
+      "default": "./src/canvas/ruler-model.ts"
+    },
+    "./canvas/smart-guides-model": {
+      "types": "./src/canvas/smart-guides-model.ts",
+      "react-native": "./src/canvas/smart-guides-model.ts",
+      "default": "./src/canvas/smart-guides-model.ts"
+    },
+    "./canvas/snap-grid-model": {
+      "types": "./src/canvas/snap-grid-model.ts",
+      "react-native": "./src/canvas/snap-grid-model.ts",
+      "default": "./src/canvas/snap-grid-model.ts"
+    },
+    "./canvas/transform-origin-model": {
+      "types": "./src/canvas/transform-origin-model.ts",
+      "react-native": "./src/canvas/transform-origin-model.ts",
+      "default": "./src/canvas/transform-origin-model.ts"
+    },
+    "./layers/ArtboardNavigator": {
+      "types": "./src/layers/ArtboardNavigator.tsx",
+      "react-native": "./src/layers/ArtboardNavigator.tsx",
+      "default": "./src/layers/ArtboardNavigator.tsx"
+    },
+    "./layers/CanvasCompareView": {
+      "types": "./src/layers/CanvasCompareView.tsx",
+      "react-native": "./src/layers/CanvasCompareView.tsx",
+      "default": "./src/layers/CanvasCompareView.tsx"
+    },
+    "./layers/ClippingMaskControls": {
+      "types": "./src/layers/ClippingMaskControls.tsx",
+      "react-native": "./src/layers/ClippingMaskControls.tsx",
+      "default": "./src/layers/ClippingMaskControls.tsx"
+    },
+    "./layers/LayerThumbnail": {
+      "types": "./src/layers/LayerThumbnail.tsx",
+      "react-native": "./src/layers/LayerThumbnail.tsx",
+      "default": "./src/layers/LayerThumbnail.tsx"
+    },
+    "./layers/MaskThumbnailAndEditor": {
+      "types": "./src/layers/MaskThumbnailAndEditor.tsx",
+      "react-native": "./src/layers/MaskThumbnailAndEditor.tsx",
+      "default": "./src/layers/MaskThumbnailAndEditor.tsx"
+    },
+    "./layers/artboard-model": {
+      "types": "./src/layers/artboard-model.ts",
+      "react-native": "./src/layers/artboard-model.ts",
+      "default": "./src/layers/artboard-model.ts"
+    },
+    "./layers/clipping-model": {
+      "types": "./src/layers/clipping-model.ts",
+      "react-native": "./src/layers/clipping-model.ts",
+      "default": "./src/layers/clipping-model.ts"
+    },
+    "./layers/compare-model": {
+      "types": "./src/layers/compare-model.ts",
+      "react-native": "./src/layers/compare-model.ts",
+      "default": "./src/layers/compare-model.ts"
+    },
+    "./layers/layer-thumbnail-model": {
+      "types": "./src/layers/layer-thumbnail-model.ts",
+      "react-native": "./src/layers/layer-thumbnail-model.ts",
+      "default": "./src/layers/layer-thumbnail-model.ts"
+    },
+    "./layers/mask-model": {
+      "types": "./src/layers/mask-model.ts",
+      "react-native": "./src/layers/mask-model.ts",
+      "default": "./src/layers/mask-model.ts"
+    },
+    "./selection/MagicSelectionControls": {
+      "types": "./src/selection/MagicSelectionControls.tsx",
+      "react-native": "./src/selection/MagicSelectionControls.tsx",
+      "default": "./src/selection/MagicSelectionControls.tsx"
+    },
+    "./selection/SelectionMarquee": {
+      "types": "./src/selection/SelectionMarquee.tsx",
+      "react-native": "./src/selection/SelectionMarquee.tsx",
+      "default": "./src/selection/SelectionMarquee.tsx"
+    },
+    "./selection/magic-selection-model": {
+      "types": "./src/selection/magic-selection-model.ts",
+      "react-native": "./src/selection/magic-selection-model.ts",
+      "default": "./src/selection/magic-selection-model.ts"
+    },
+    "./selection/selection-model": {
+      "types": "./src/selection/selection-model.ts",
+      "react-native": "./src/selection/selection-model.ts",
+      "default": "./src/selection/selection-model.ts"
+    },
+    "./vector/FillStrokeInspector": {
+      "types": "./src/vector/FillStrokeInspector.tsx",
+      "react-native": "./src/vector/FillStrokeInspector.tsx",
+      "default": "./src/vector/FillStrokeInspector.tsx"
+    },
+    "./vector/GradientOnCanvasHandles": {
+      "types": "./src/vector/GradientOnCanvasHandles.tsx",
+      "react-native": "./src/vector/GradientOnCanvasHandles.tsx",
+      "default": "./src/vector/GradientOnCanvasHandles.tsx"
+    },
+    "./vector/PenNodeEditor": {
+      "types": "./src/vector/PenNodeEditor.tsx",
+      "react-native": "./src/vector/PenNodeEditor.tsx",
+      "default": "./src/vector/PenNodeEditor.tsx"
+    },
+    "./vector/ShapeBuilder": {
+      "types": "./src/vector/ShapeBuilder.tsx",
+      "react-native": "./src/vector/ShapeBuilder.tsx",
+      "default": "./src/vector/ShapeBuilder.tsx"
+    },
+    "./vector/fill-stroke-model": {
+      "types": "./src/vector/fill-stroke-model.ts",
+      "react-native": "./src/vector/fill-stroke-model.ts",
+      "default": "./src/vector/fill-stroke-model.ts"
+    },
+    "./vector/gradient-handles-model": {
+      "types": "./src/vector/gradient-handles-model.ts",
+      "react-native": "./src/vector/gradient-handles-model.ts",
+      "default": "./src/vector/gradient-handles-model.ts"
+    },
+    "./vector/pen-node-model": {
+      "types": "./src/vector/pen-node-model.ts",
+      "react-native": "./src/vector/pen-node-model.ts",
+      "default": "./src/vector/pen-node-model.ts"
+    },
+    "./vector/shape-builder-model": {
+      "types": "./src/vector/shape-builder-model.ts",
+      "react-native": "./src/vector/shape-builder-model.ts",
+      "default": "./src/vector/shape-builder-model.ts"
+    },
+    "./vector/vector-types": {
+      "types": "./src/vector/vector-types.ts",
+      "react-native": "./src/vector/vector-types.ts",
+      "default": "./src/vector/vector-types.ts"
+    },
+    "./audio/AutomationLane": {
+      "types": "./src/audio/AutomationLane.tsx",
+      "react-native": "./src/audio/AutomationLane.tsx",
+      "default": "./src/audio/AutomationLane.tsx"
+    },
+    "./audio/AutomationModePicker": {
+      "types": "./src/audio/AutomationModePicker.tsx",
+      "react-native": "./src/audio/AutomationModePicker.tsx",
+      "default": "./src/audio/AutomationModePicker.tsx"
+    },
+    "./audio/BusAndRoutingMatrix": {
+      "types": "./src/audio/BusAndRoutingMatrix.tsx",
+      "react-native": "./src/audio/BusAndRoutingMatrix.tsx",
+      "default": "./src/audio/BusAndRoutingMatrix.tsx"
+    },
+    "./audio/DynamicsTransferGraph": {
+      "types": "./src/audio/DynamicsTransferGraph.tsx",
+      "react-native": "./src/audio/DynamicsTransferGraph.tsx",
+      "default": "./src/audio/DynamicsTransferGraph.tsx"
+    },
+    "./audio/EQFrequencyGraph": {
+      "types": "./src/audio/EQFrequencyGraph.tsx",
+      "react-native": "./src/audio/EQFrequencyGraph.tsx",
+      "default": "./src/audio/EQFrequencyGraph.tsx"
+    },
+    "./audio/InsertEffectRack": {
+      "types": "./src/audio/InsertEffectRack.tsx",
+      "react-native": "./src/audio/InsertEffectRack.tsx",
+      "default": "./src/audio/InsertEffectRack.tsx"
+    },
+    "./audio/LoudnessMeter": {
+      "types": "./src/audio/LoudnessMeter.tsx",
+      "react-native": "./src/audio/LoudnessMeter.tsx",
+      "default": "./src/audio/LoudnessMeter.tsx"
+    },
+    "./audio/MixGroupBar": {
+      "types": "./src/audio/MixGroupBar.tsx",
+      "react-native": "./src/audio/MixGroupBar.tsx",
+      "default": "./src/audio/MixGroupBar.tsx"
+    },
+    "./audio/PluginPresetBrowser": {
+      "types": "./src/audio/PluginPresetBrowser.tsx",
+      "react-native": "./src/audio/PluginPresetBrowser.tsx",
+      "default": "./src/audio/PluginPresetBrowser.tsx"
+    },
+    "./audio/SpectrogramView": {
+      "types": "./src/audio/SpectrogramView.tsx",
+      "react-native": "./src/audio/SpectrogramView.tsx",
+      "default": "./src/audio/SpectrogramView.tsx"
+    },
+    "./audio/automation": {
+      "types": "./src/audio/automation.ts",
+      "react-native": "./src/audio/automation.ts",
+      "default": "./src/audio/automation.ts"
+    },
+    "./audio/dynamics-graph": {
+      "types": "./src/audio/dynamics-graph.ts",
+      "react-native": "./src/audio/dynamics-graph.ts",
+      "default": "./src/audio/dynamics-graph.ts"
+    },
+    "./audio/eq-graph": {
+      "types": "./src/audio/eq-graph.ts",
+      "react-native": "./src/audio/eq-graph.ts",
+      "default": "./src/audio/eq-graph.ts"
+    },
+    "./audio/inserts": {
+      "types": "./src/audio/inserts.ts",
+      "react-native": "./src/audio/inserts.ts",
+      "default": "./src/audio/inserts.ts"
+    },
+    "./audio/loudness": {
+      "types": "./src/audio/loudness.ts",
+      "react-native": "./src/audio/loudness.ts",
+      "default": "./src/audio/loudness.ts"
+    },
+    "./audio/meter-ballistics": {
+      "types": "./src/audio/meter-ballistics.ts",
+      "react-native": "./src/audio/meter-ballistics.ts",
+      "default": "./src/audio/meter-ballistics.ts"
+    },
+    "./audio/mix-groups": {
+      "types": "./src/audio/mix-groups.ts",
+      "react-native": "./src/audio/mix-groups.ts",
+      "default": "./src/audio/mix-groups.ts"
+    },
+    "./audio/routing": {
+      "types": "./src/audio/routing.ts",
+      "react-native": "./src/audio/routing.ts",
+      "default": "./src/audio/routing.ts"
+    },
+    "./audio/spectrogram": {
+      "types": "./src/audio/spectrogram.ts",
+      "react-native": "./src/audio/spectrogram.ts",
+      "default": "./src/audio/spectrogram.ts"
+    },
+    "./midi/MidiChannelPicker": {
+      "types": "./src/midi/MidiChannelPicker.tsx",
+      "react-native": "./src/midi/MidiChannelPicker.tsx",
+      "default": "./src/midi/MidiChannelPicker.tsx"
+    },
+    "./midi/velocity-line": {
+      "types": "./src/midi/velocity-line.ts",
+      "react-native": "./src/midi/velocity-line.ts",
+      "default": "./src/midi/velocity-line.ts"
+    },
+    "./color/ColorPickerDialog": {
+      "types": "./src/color/ColorPickerDialog.tsx",
+      "react-native": "./src/color/ColorPickerDialog.tsx",
+      "default": "./src/color/ColorPickerDialog.tsx"
+    },
+    "./color/color-picker-dialog-model": {
+      "types": "./src/color/color-picker-dialog-model.ts",
+      "react-native": "./src/color/color-picker-dialog-model.ts",
+      "default": "./src/color/color-picker-dialog-model.ts"
+    },
+    "./frame-throttle": {
+      "types": "./src/frame-throttle.ts",
+      "react-native": "./src/frame-throttle.ts",
+      "default": "./src/frame-throttle.ts"
+    },
+    "./slides/PresenterInkOverlay": {
+      "types": "./src/slides/PresenterInkOverlay.tsx",
+      "react-native": "./src/slides/PresenterInkOverlay.tsx",
+      "default": "./src/slides/PresenterInkOverlay.tsx"
+    },
+    "./slides/PresenterInkStrip": {
+      "types": "./src/slides/PresenterInkStrip.tsx",
+      "react-native": "./src/slides/PresenterInkStrip.tsx",
+      "default": "./src/slides/PresenterInkStrip.tsx"
+    },
+    "./slides/presenter-ink-model": {
+      "types": "./src/slides/presenter-ink-model.ts",
+      "react-native": "./src/slides/presenter-ink-model.ts",
+      "default": "./src/slides/presenter-ink-model.ts"
+    },
+    "./audio/AudioInterruptionRecoveryDialog": {
+      "types": "./src/audio/AudioInterruptionRecoveryDialog.tsx",
+      "react-native": "./src/audio/AudioInterruptionRecoveryDialog.tsx",
+      "default": "./src/audio/AudioInterruptionRecoveryDialog.tsx"
+    },
+    "./audio/audio-recovery-model": {
+      "types": "./src/audio/audio-recovery-model.ts",
+      "react-native": "./src/audio/audio-recovery-model.ts",
+      "default": "./src/audio/audio-recovery-model.ts"
+    },
+    "./color/PrintColorChannels": {
+      "types": "./src/color/PrintColorChannels.tsx",
+      "react-native": "./src/color/PrintColorChannels.tsx",
+      "default": "./src/color/PrintColorChannels.tsx"
+    },
+    "./color/WideGamutChannels": {
+      "types": "./src/color/WideGamutChannels.tsx",
+      "react-native": "./src/color/WideGamutChannels.tsx",
+      "default": "./src/color/WideGamutChannels.tsx"
+    },
+    "./color/ColorSpaceChooser": {
+      "types": "./src/color/ColorSpaceChooser.tsx",
+      "react-native": "./src/color/ColorSpaceChooser.tsx",
+      "default": "./src/color/ColorSpaceChooser.tsx"
+    },
+    "./color/GamutWarning": {
+      "types": "./src/color/GamutWarning.tsx",
+      "react-native": "./src/color/GamutWarning.tsx",
+      "default": "./src/color/GamutWarning.tsx"
+    },
+    "./color/ThemeColorReferences": {
+      "types": "./src/color/ThemeColorReferences.tsx",
+      "react-native": "./src/color/ThemeColorReferences.tsx",
+      "default": "./src/color/ThemeColorReferences.tsx"
+    },
+    "./color/SpotAndGlobalColorEditor": {
+      "types": "./src/color/SpotAndGlobalColorEditor.tsx",
+      "react-native": "./src/color/SpotAndGlobalColorEditor.tsx",
+      "default": "./src/color/SpotAndGlobalColorEditor.tsx"
+    },
+    "./color/SoftProofControls": {
+      "types": "./src/color/SoftProofControls.tsx",
+      "react-native": "./src/color/SoftProofControls.tsx",
+      "default": "./src/color/SoftProofControls.tsx"
+    },
+    "./color/color-management": {
+      "types": "./src/color/color-management.ts",
+      "react-native": "./src/color/color-management.ts",
+      "default": "./src/color/color-management.ts"
+    },
+    "./color/LevelsEditor": {
+      "types": "./src/color/LevelsEditor.tsx",
+      "react-native": "./src/color/LevelsEditor.tsx",
+      "default": "./src/color/LevelsEditor.tsx"
+    },
+    "./color/LiveHistogram": {
+      "types": "./src/color/LiveHistogram.tsx",
+      "react-native": "./src/color/LiveHistogram.tsx",
+      "default": "./src/color/LiveHistogram.tsx"
+    },
+    "./color/ColorGradingWheels": {
+      "types": "./src/color/ColorGradingWheels.tsx",
+      "react-native": "./src/color/ColorGradingWheels.tsx",
+      "default": "./src/color/ColorGradingWheels.tsx"
+    },
+    "./color/HSLSecondaryEditor": {
+      "types": "./src/color/HSLSecondaryEditor.tsx",
+      "react-native": "./src/color/HSLSecondaryEditor.tsx",
+      "default": "./src/color/HSLSecondaryEditor.tsx"
+    },
+    "./color/color-adjustments": {
+      "types": "./src/color/color-adjustments.ts",
+      "react-native": "./src/color/color-adjustments.ts",
+      "default": "./src/color/color-adjustments.ts"
+    },
+    "./color/GradientStopEditor": {
+      "types": "./src/color/GradientStopEditor.tsx",
+      "react-native": "./src/color/GradientStopEditor.tsx",
+      "default": "./src/color/GradientStopEditor.tsx"
+    },
+    "./color/CurvesEditor": {
+      "types": "./src/color/CurvesEditor.tsx",
+      "react-native": "./src/color/CurvesEditor.tsx",
+      "default": "./src/color/CurvesEditor.tsx"
+    },
+    "./color/VideoScopesPanel": {
+      "types": "./src/color/VideoScopesPanel.tsx",
+      "react-native": "./src/color/VideoScopesPanel.tsx",
+      "default": "./src/color/VideoScopesPanel.tsx"
+    },
+    "./color/SVColorField": {
+      "types": "./src/color/SVColorField.tsx",
+      "react-native": "./src/color/SVColorField.tsx",
+      "default": "./src/color/SVColorField.tsx"
+    },
+    "./color/HueSlider": {
+      "types": "./src/color/HueSlider.tsx",
+      "react-native": "./src/color/HueSlider.tsx",
+      "default": "./src/color/HueSlider.tsx"
+    },
+    "./color/GradientMeshEditor": {
+      "types": "./src/color/GradientMeshEditor.tsx",
+      "react-native": "./src/color/GradientMeshEditor.tsx",
+      "default": "./src/color/GradientMeshEditor.tsx"
+    },
+    "./color/gradient-mesh": {
+      "types": "./src/color/gradient-mesh.ts",
+      "react-native": "./src/color/gradient-mesh.ts",
+      "default": "./src/color/gradient-mesh.ts"
+    },
+    "./color/EyedropperTool": {
+      "types": "./src/color/EyedropperTool.tsx",
+      "react-native": "./src/color/EyedropperTool.tsx",
+      "default": "./src/color/EyedropperTool.tsx"
+    },
+    "./color/gradient-options": {
+      "types": "./src/color/gradient-options.ts",
+      "react-native": "./src/color/gradient-options.ts",
+      "default": "./src/color/gradient-options.ts"
+    },
+    "./photo/ExposureAndWhiteBalance": {
+      "types": "./src/photo/ExposureAndWhiteBalance.tsx",
+      "react-native": "./src/photo/ExposureAndWhiteBalance.tsx",
+      "default": "./src/photo/ExposureAndWhiteBalance.tsx"
+    },
+    "./photo/ToneAndPresence": {
+      "types": "./src/photo/ToneAndPresence.tsx",
+      "react-native": "./src/photo/ToneAndPresence.tsx",
+      "default": "./src/photo/ToneAndPresence.tsx"
+    },
+    "./photo/EightBandColorMixer": {
+      "types": "./src/photo/EightBandColorMixer.tsx",
+      "react-native": "./src/photo/EightBandColorMixer.tsx",
+      "default": "./src/photo/EightBandColorMixer.tsx"
+    },
+    "./photo/LensCorrectionPanel": {
+      "types": "./src/photo/LensCorrectionPanel.tsx",
+      "react-native": "./src/photo/LensCorrectionPanel.tsx",
+      "default": "./src/photo/LensCorrectionPanel.tsx"
+    },
+    "./photo/RatingAndFlagControl": {
+      "types": "./src/photo/RatingAndFlagControl.tsx",
+      "react-native": "./src/photo/RatingAndFlagControl.tsx",
+      "default": "./src/photo/RatingAndFlagControl.tsx"
+    },
+    "./photo/photo-adjustments": {
+      "types": "./src/photo/photo-adjustments.ts",
+      "react-native": "./src/photo/photo-adjustments.ts",
+      "default": "./src/photo/photo-adjustments.ts"
+    },
+    "./photo/RAWDevelopPanel": {
+      "types": "./src/photo/RAWDevelopPanel.tsx",
+      "react-native": "./src/photo/RAWDevelopPanel.tsx",
+      "default": "./src/photo/RAWDevelopPanel.tsx"
+    },
+    "./photo/PhotoLibraryGrid": {
+      "types": "./src/photo/PhotoLibraryGrid.tsx",
+      "react-native": "./src/photo/PhotoLibraryGrid.tsx",
+      "default": "./src/photo/PhotoLibraryGrid.tsx"
+    },
+    "./photo/CatalogFilterBar": {
+      "types": "./src/photo/CatalogFilterBar.tsx",
+      "react-native": "./src/photo/CatalogFilterBar.tsx",
+      "default": "./src/photo/CatalogFilterBar.tsx"
+    },
+    "./photo/BeforeAfterCompare": {
+      "types": "./src/photo/BeforeAfterCompare.tsx",
+      "react-native": "./src/photo/BeforeAfterCompare.tsx",
+      "default": "./src/photo/BeforeAfterCompare.tsx"
+    },
+    "./photo/photo-catalog": {
+      "types": "./src/photo/photo-catalog.ts",
+      "react-native": "./src/photo/photo-catalog.ts",
+      "default": "./src/photo/photo-catalog.ts"
+    },
+    "./photo/PhotoMetadataInspector": {
+      "types": "./src/photo/PhotoMetadataInspector.tsx",
+      "react-native": "./src/photo/PhotoMetadataInspector.tsx",
+      "default": "./src/photo/PhotoMetadataInspector.tsx"
+    },
+    "./photo/photo-metadata": {
+      "types": "./src/photo/photo-metadata.ts",
+      "react-native": "./src/photo/photo-metadata.ts",
+      "default": "./src/photo/photo-metadata.ts"
+    },
+    "./photo/PresetFilmstrip": {
+      "types": "./src/photo/PresetFilmstrip.tsx",
+      "react-native": "./src/photo/PresetFilmstrip.tsx",
+      "default": "./src/photo/PresetFilmstrip.tsx"
+    },
+    "./photo/PresetManager": {
+      "types": "./src/photo/PresetManager.tsx",
+      "react-native": "./src/photo/PresetManager.tsx",
+      "default": "./src/photo/PresetManager.tsx"
+    },
+    "./photo/photo-presets": {
+      "types": "./src/photo/photo-presets.ts",
+      "react-native": "./src/photo/photo-presets.ts",
+      "default": "./src/photo/photo-presets.ts"
+    },
+    "./photo/PhotoVersionHistoryBrowser": {
+      "types": "./src/photo/PhotoVersionHistoryBrowser.tsx",
+      "react-native": "./src/photo/PhotoVersionHistoryBrowser.tsx",
+      "default": "./src/photo/PhotoVersionHistoryBrowser.tsx"
+    },
+    "./photo/BatchExportPanel": {
+      "types": "./src/photo/BatchExportPanel.tsx",
+      "react-native": "./src/photo/BatchExportPanel.tsx",
+      "default": "./src/photo/BatchExportPanel.tsx"
+    },
+    "./photo/photo-export": {
+      "types": "./src/photo/photo-export.ts",
+      "react-native": "./src/photo/photo-export.ts",
+      "default": "./src/photo/photo-export.ts"
+    },
+    "./photo/LocalMaskBrush": {
+      "types": "./src/photo/LocalMaskBrush.tsx",
+      "react-native": "./src/photo/LocalMaskBrush.tsx",
+      "default": "./src/photo/LocalMaskBrush.tsx"
+    },
+    "./photo/CleanupAndRetouchPanel": {
+      "types": "./src/photo/CleanupAndRetouchPanel.tsx",
+      "react-native": "./src/photo/CleanupAndRetouchPanel.tsx",
+      "default": "./src/photo/CleanupAndRetouchPanel.tsx"
+    },
+    "./photo/LinearRadialGradientMask": {
+      "types": "./src/photo/LinearRadialGradientMask.tsx",
+      "react-native": "./src/photo/LinearRadialGradientMask.tsx",
+      "default": "./src/photo/LinearRadialGradientMask.tsx"
+    },
+    "./photo/LuminanceColorRangeMask": {
+      "types": "./src/photo/LuminanceColorRangeMask.tsx",
+      "react-native": "./src/photo/LuminanceColorRangeMask.tsx",
+      "default": "./src/photo/LuminanceColorRangeMask.tsx"
+    },
+    "./photo/photo-masks": {
+      "types": "./src/photo/photo-masks.ts",
+      "react-native": "./src/photo/photo-masks.ts",
+      "default": "./src/photo/photo-masks.ts"
+    },
+    "./motion/Transform3DInspector": {
+      "types": "./src/motion/Transform3DInspector.tsx",
+      "react-native": "./src/motion/Transform3DInspector.tsx",
+      "default": "./src/motion/Transform3DInspector.tsx"
+    },
+    "./motion/CameraAndLightControls": {
+      "types": "./src/motion/CameraAndLightControls.tsx",
+      "react-native": "./src/motion/CameraAndLightControls.tsx",
+      "default": "./src/motion/CameraAndLightControls.tsx"
+    },
+    "./motion/MatteAndMaskPanel": {
+      "types": "./src/motion/MatteAndMaskPanel.tsx",
+      "react-native": "./src/motion/MatteAndMaskPanel.tsx",
+      "default": "./src/motion/MatteAndMaskPanel.tsx"
+    },
+    "./motion/ParticleEmitterControls": {
+      "types": "./src/motion/ParticleEmitterControls.tsx",
+      "react-native": "./src/motion/ParticleEmitterControls.tsx",
+      "default": "./src/motion/ParticleEmitterControls.tsx"
+    },
+    "./motion/motion-settings": {
+      "types": "./src/motion/motion-settings.ts",
+      "react-native": "./src/motion/motion-settings.ts",
+      "default": "./src/motion/motion-settings.ts"
+    },
+    "./motion/EasingPresetGallery": {
+      "types": "./src/motion/EasingPresetGallery.tsx",
+      "react-native": "./src/motion/EasingPresetGallery.tsx",
+      "default": "./src/motion/EasingPresetGallery.tsx"
+    },
+    "./motion/RenderQueuePanel": {
+      "types": "./src/motion/RenderQueuePanel.tsx",
+      "react-native": "./src/motion/RenderQueuePanel.tsx",
+      "default": "./src/motion/RenderQueuePanel.tsx"
+    },
+    "./motion/motion-easing": {
+      "types": "./src/motion/motion-easing.ts",
+      "react-native": "./src/motion/motion-easing.ts",
+      "default": "./src/motion/motion-easing.ts"
+    },
+    "./motion/motion-render": {
+      "types": "./src/motion/motion-render.ts",
+      "react-native": "./src/motion/motion-render.ts",
+      "default": "./src/motion/motion-render.ts"
+    },
+    "./motion/KeyframeValueGraph": {
+      "types": "./src/motion/KeyframeValueGraph.tsx",
+      "react-native": "./src/motion/KeyframeValueGraph.tsx",
+      "default": "./src/motion/KeyframeValueGraph.tsx"
+    },
+    "./motion/KeyframeSpeedGraph": {
+      "types": "./src/motion/KeyframeSpeedGraph.tsx",
+      "react-native": "./src/motion/KeyframeSpeedGraph.tsx",
+      "default": "./src/motion/KeyframeSpeedGraph.tsx"
+    },
+    "./motion/TimeRemapCurve": {
+      "types": "./src/motion/TimeRemapCurve.tsx",
+      "react-native": "./src/motion/TimeRemapCurve.tsx",
+      "default": "./src/motion/TimeRemapCurve.tsx"
+    },
+    "./motion/motion-curves": {
+      "types": "./src/motion/motion-curves.ts",
+      "react-native": "./src/motion/motion-curves.ts",
+      "default": "./src/motion/motion-curves.ts"
+    },
+    "./motion/MotionKeyframeTimeline": {
+      "types": "./src/motion/MotionKeyframeTimeline.tsx",
+      "react-native": "./src/motion/MotionKeyframeTimeline.tsx",
+      "default": "./src/motion/MotionKeyframeTimeline.tsx"
+    },
+    "./motion/motion-timeline": {
+      "types": "./src/motion/motion-timeline.ts",
+      "react-native": "./src/motion/motion-timeline.ts",
+      "default": "./src/motion/motion-timeline.ts"
+    },
+    "./motion/CompositionLayerTree": {
+      "types": "./src/motion/CompositionLayerTree.tsx",
+      "react-native": "./src/motion/CompositionLayerTree.tsx",
+      "default": "./src/motion/CompositionLayerTree.tsx"
+    },
+    "./motion/composition-tree": {
+      "types": "./src/motion/composition-tree.ts",
+      "react-native": "./src/motion/composition-tree.ts",
+      "default": "./src/motion/composition-tree.ts"
+    },
+    "./motion/MotionPathEditor": {
+      "types": "./src/motion/MotionPathEditor.tsx",
+      "react-native": "./src/motion/MotionPathEditor.tsx",
+      "default": "./src/motion/MotionPathEditor.tsx"
+    },
+    "./motion/motion-path": {
+      "types": "./src/motion/motion-path.ts",
+      "react-native": "./src/motion/motion-path.ts",
+      "default": "./src/motion/motion-path.ts"
+    },
+    "./motion/EffectStackAndInspector": {
+      "types": "./src/motion/EffectStackAndInspector.tsx",
+      "react-native": "./src/motion/EffectStackAndInspector.tsx",
+      "default": "./src/motion/EffectStackAndInspector.tsx"
+    },
+    "./motion/motion-effects": {
+      "types": "./src/motion/motion-effects.ts",
+      "react-native": "./src/motion/motion-effects.ts",
+      "default": "./src/motion/motion-effects.ts"
+    },
+    "./motion/ExpressionEditor": {
+      "types": "./src/motion/ExpressionEditor.tsx",
+      "react-native": "./src/motion/ExpressionEditor.tsx",
+      "default": "./src/motion/ExpressionEditor.tsx"
+    },
+    "./motion/motion-expression": {
+      "types": "./src/motion/motion-expression.ts",
+      "react-native": "./src/motion/motion-expression.ts",
+      "default": "./src/motion/motion-expression.ts"
+    },
+    "./motion/NodeGraphEditor": {
+      "types": "./src/motion/NodeGraphEditor.tsx",
+      "react-native": "./src/motion/NodeGraphEditor.tsx",
+      "default": "./src/motion/NodeGraphEditor.tsx"
+    },
+    "./motion/motion-node-graph": {
+      "types": "./src/motion/motion-node-graph.ts",
+      "react-native": "./src/motion/motion-node-graph.ts",
+      "default": "./src/motion/motion-node-graph.ts"
+    },
+    "./canvas/CanvasPanZoom": {
+      "types": "./src/canvas/CanvasPanZoom.tsx",
+      "react-native": "./src/canvas/CanvasPanZoom.tsx",
+      "default": "./src/canvas/CanvasPanZoom.tsx"
+    },
+    "./canvas/canvas-pan-zoom-model": {
+      "types": "./src/canvas/canvas-pan-zoom-model.ts",
+      "react-native": "./src/canvas/canvas-pan-zoom-model.ts",
+      "default": "./src/canvas/canvas-pan-zoom-model.ts"
+    },
+    "./canvas/GPUCanvasViewport": {
+      "types": "./src/canvas/GPUCanvasViewport.tsx",
+      "react-native": "./src/canvas/GPUCanvasViewport.tsx",
+      "default": "./src/canvas/GPUCanvasViewport.tsx"
+    },
+    "./canvas/graphite-frame": {
+      "types": "./src/canvas/graphite-frame.ts",
+      "react-native": "./src/canvas/graphite-frame.ts",
+      "default": "./src/canvas/graphite-frame.ts"
+    },
+    "./selection/SelectionBounds": {
+      "types": "./src/selection/SelectionBounds.tsx",
+      "react-native": "./src/selection/SelectionBounds.tsx",
+      "default": "./src/selection/SelectionBounds.tsx"
+    },
+    "./selection/selection-bounds-model": {
+      "types": "./src/selection/selection-bounds-model.ts",
+      "react-native": "./src/selection/selection-bounds-model.ts",
+      "default": "./src/selection/selection-bounds-model.ts"
+    },
+    "./selection/MultiSelectionControls": {
+      "types": "./src/selection/MultiSelectionControls.tsx",
+      "react-native": "./src/selection/MultiSelectionControls.tsx",
+      "default": "./src/selection/MultiSelectionControls.tsx"
+    },
+    "./selection/multi-selection-model": {
+      "types": "./src/selection/multi-selection-model.ts",
+      "react-native": "./src/selection/multi-selection-model.ts",
+      "default": "./src/selection/multi-selection-model.ts"
+    },
+    "./layers/layer-tree-model": {
+      "types": "./src/layers/layer-tree-model.ts",
+      "react-native": "./src/layers/layer-tree-model.ts",
+      "default": "./src/layers/layer-tree-model.ts"
+    },
+    "./layers/LayerBlendAndOpacity": {
+      "types": "./src/layers/LayerBlendAndOpacity.tsx",
+      "react-native": "./src/layers/LayerBlendAndOpacity.tsx",
+      "default": "./src/layers/LayerBlendAndOpacity.tsx"
+    },
+    "./layers/layer-blend-model": {
+      "types": "./src/layers/layer-blend-model.ts",
+      "react-native": "./src/layers/layer-blend-model.ts",
+      "default": "./src/layers/layer-blend-model.ts"
+    },
+    "./canvas/GuidedCropAndStraighten": {
+      "types": "./src/canvas/GuidedCropAndStraighten.tsx",
+      "react-native": "./src/canvas/GuidedCropAndStraighten.tsx",
+      "default": "./src/canvas/GuidedCropAndStraighten.tsx"
+    },
+    "./ink/BrushPresetBrowser": {
+      "types": "./src/ink/BrushPresetBrowser.tsx",
+      "react-native": "./src/ink/BrushPresetBrowser.tsx",
+      "default": "./src/ink/BrushPresetBrowser.tsx"
+    },
+    "./ink/BrushDynamicsInspector": {
+      "types": "./src/ink/BrushDynamicsInspector.tsx",
+      "react-native": "./src/ink/BrushDynamicsInspector.tsx",
+      "default": "./src/ink/BrushDynamicsInspector.tsx"
+    },
+    "./ink/InkStrokePreview": {
+      "types": "./src/ink/InkStrokePreview.tsx",
+      "react-native": "./src/ink/InkStrokePreview.tsx",
+      "default": "./src/ink/InkStrokePreview.tsx"
+    },
+    "./ink/EraserModePicker": {
+      "types": "./src/ink/EraserModePicker.tsx",
+      "react-native": "./src/ink/EraserModePicker.tsx",
+      "default": "./src/ink/EraserModePicker.tsx"
+    },
+    "./ink/BrushTaperControl": {
+      "types": "./src/ink/BrushTaperControl.tsx",
+      "react-native": "./src/ink/BrushTaperControl.tsx",
+      "default": "./src/ink/BrushTaperControl.tsx"
+    },
+    "./ink/TimelapsePlaybackExporter": {
+      "types": "./src/ink/TimelapsePlaybackExporter.tsx",
+      "react-native": "./src/ink/TimelapsePlaybackExporter.tsx",
+      "default": "./src/ink/TimelapsePlaybackExporter.tsx"
+    },
+    "./ink/BrushStabilizationPreview": {
+      "types": "./src/ink/BrushStabilizationPreview.tsx",
+      "react-native": "./src/ink/BrushStabilizationPreview.tsx",
+      "default": "./src/ink/BrushStabilizationPreview.tsx"
+    },
+    "./ink/brush-model": {
+      "types": "./src/ink/brush-model.ts",
+      "react-native": "./src/ink/brush-model.ts",
+      "default": "./src/ink/brush-model.ts"
+    },
+    "./devices/PenPairingDialog": {
+      "types": "./src/devices/PenPairingDialog.tsx",
+      "react-native": "./src/devices/PenPairingDialog.tsx",
+      "default": "./src/devices/PenPairingDialog.tsx"
+    },
+    "./timeline/MediaMonitor": {
+      "types": "./src/timeline/MediaMonitor.tsx",
+      "react-native": "./src/timeline/MediaMonitor.tsx",
+      "default": "./src/timeline/MediaMonitor.tsx"
+    },
+    "./timeline/SourceMonitor": {
+      "types": "./src/timeline/SourceMonitor.tsx",
+      "react-native": "./src/timeline/SourceMonitor.tsx",
+      "default": "./src/timeline/SourceMonitor.tsx"
+    },
+    "./timeline/ProgramMonitor": {
+      "types": "./src/timeline/ProgramMonitor.tsx",
+      "react-native": "./src/timeline/ProgramMonitor.tsx",
+      "default": "./src/timeline/ProgramMonitor.tsx"
+    },
+    "./timeline/VideoFilmstrip": {
+      "types": "./src/timeline/VideoFilmstrip.tsx",
+      "react-native": "./src/timeline/VideoFilmstrip.tsx",
+      "default": "./src/timeline/VideoFilmstrip.tsx"
+    },
+    "./timeline/AudioClipWaveform": {
+      "types": "./src/timeline/AudioClipWaveform.tsx",
+      "react-native": "./src/timeline/AudioClipWaveform.tsx",
+      "default": "./src/timeline/AudioClipWaveform.tsx"
+    },
+    "./timeline/ScopesDock": {
+      "types": "./src/timeline/ScopesDock.tsx",
+      "react-native": "./src/timeline/ScopesDock.tsx",
+      "default": "./src/timeline/ScopesDock.tsx"
+    },
+    "./timeline/MulticamAngleViewer": {
+      "types": "./src/timeline/MulticamAngleViewer.tsx",
+      "react-native": "./src/timeline/MulticamAngleViewer.tsx",
+      "default": "./src/timeline/MulticamAngleViewer.tsx"
+    },
+    "./timeline/RenderCacheIndicator": {
+      "types": "./src/timeline/RenderCacheIndicator.tsx",
+      "react-native": "./src/timeline/RenderCacheIndicator.tsx",
+      "default": "./src/timeline/RenderCacheIndicator.tsx"
+    },
+    "./timeline/PictureInPictureControls": {
+      "types": "./src/timeline/PictureInPictureControls.tsx",
+      "react-native": "./src/timeline/PictureInPictureControls.tsx",
+      "default": "./src/timeline/PictureInPictureControls.tsx"
+    },
+    "./timeline/waveform-cache": {
+      "types": "./src/timeline/waveform-cache.ts",
+      "react-native": "./src/timeline/waveform-cache.ts",
+      "default": "./src/timeline/waveform-cache.ts"
+    },
+    "./timeline/ExportMonitor": {
+      "types": "./src/timeline/ExportMonitor.tsx",
+      "react-native": "./src/timeline/ExportMonitor.tsx",
+      "default": "./src/timeline/ExportMonitor.tsx"
+    },
+    "./timeline/VideoSpeedRampCurve": {
+      "types": "./src/timeline/VideoSpeedRampCurve.tsx",
+      "react-native": "./src/timeline/VideoSpeedRampCurve.tsx",
+      "default": "./src/timeline/VideoSpeedRampCurve.tsx"
+    },
+    "./timeline/VideoQualityInspector": {
+      "types": "./src/timeline/VideoQualityInspector.tsx",
+      "react-native": "./src/timeline/VideoQualityInspector.tsx",
+      "default": "./src/timeline/VideoQualityInspector.tsx"
+    },
+    "./timeline/VideoStabilizationInspector": {
+      "types": "./src/timeline/VideoStabilizationInspector.tsx",
+      "react-native": "./src/timeline/VideoStabilizationInspector.tsx",
+      "default": "./src/timeline/VideoStabilizationInspector.tsx"
+    },
+    "./timeline/AutoReframeGuides": {
+      "types": "./src/timeline/AutoReframeGuides.tsx",
+      "react-native": "./src/timeline/AutoReframeGuides.tsx",
+      "default": "./src/timeline/AutoReframeGuides.tsx"
+    },
+    "./timeline/CoverFramePicker": {
+      "types": "./src/timeline/CoverFramePicker.tsx",
+      "react-native": "./src/timeline/CoverFramePicker.tsx",
+      "default": "./src/timeline/CoverFramePicker.tsx"
+    },
+    "./timeline/VideoEffectsBrowser": {
+      "types": "./src/timeline/VideoEffectsBrowser.tsx",
+      "react-native": "./src/timeline/VideoEffectsBrowser.tsx",
+      "default": "./src/timeline/VideoEffectsBrowser.tsx"
+    },
+    "./timeline/MotionTrackingOverlay": {
+      "types": "./src/timeline/MotionTrackingOverlay.tsx",
+      "react-native": "./src/timeline/MotionTrackingOverlay.tsx",
+      "default": "./src/timeline/MotionTrackingOverlay.tsx"
+    },
+    "./timeline/CaptionWordTimingHandles": {
+      "types": "./src/timeline/CaptionWordTimingHandles.tsx",
+      "react-native": "./src/timeline/CaptionWordTimingHandles.tsx",
+      "default": "./src/timeline/CaptionWordTimingHandles.tsx"
+    },
+    "./timeline/AutoCaptionTranscriptTimeline": {
+      "types": "./src/timeline/AutoCaptionTranscriptTimeline.tsx",
+      "react-native": "./src/timeline/AutoCaptionTranscriptTimeline.tsx",
+      "default": "./src/timeline/AutoCaptionTranscriptTimeline.tsx"
+    },
+    "./timeline/StickerMotionLane": {
+      "types": "./src/timeline/StickerMotionLane.tsx",
+      "react-native": "./src/timeline/StickerMotionLane.tsx",
+      "default": "./src/timeline/StickerMotionLane.tsx"
+    },
+    "./audio/VerticalFader": {
+      "types": "./src/audio/VerticalFader.tsx",
+      "react-native": "./src/audio/VerticalFader.tsx",
+      "default": "./src/audio/VerticalFader.tsx"
+    },
+    "./audio/NativeAudioTransport": {
+      "types": "./src/audio/NativeAudioTransport.tsx",
+      "react-native": "./src/audio/NativeAudioTransport.tsx",
+      "default": "./src/audio/NativeAudioTransport.tsx"
+    },
+    "./audio/RecordingArmButton": {
+      "types": "./src/audio/RecordingArmButton.tsx",
+      "react-native": "./src/audio/RecordingArmButton.tsx",
+      "default": "./src/audio/RecordingArmButton.tsx"
+    },
+    "./audio/InputMonitorToggle": {
+      "types": "./src/audio/InputMonitorToggle.tsx",
+      "react-native": "./src/audio/InputMonitorToggle.tsx",
+      "default": "./src/audio/InputMonitorToggle.tsx"
+    },
+    "./audio/DeviceAndChannelPicker": {
+      "types": "./src/audio/DeviceAndChannelPicker.tsx",
+      "react-native": "./src/audio/DeviceAndChannelPicker.tsx",
+      "default": "./src/audio/DeviceAndChannelPicker.tsx"
+    },
+    "./audio/StereoMultichannelWaveform": {
+      "types": "./src/audio/StereoMultichannelWaveform.tsx",
+      "react-native": "./src/audio/StereoMultichannelWaveform.tsx",
+      "default": "./src/audio/StereoMultichannelWaveform.tsx"
+    },
+    "./audio/LiveRecordingWaveform": {
+      "types": "./src/audio/LiveRecordingWaveform.tsx",
+      "react-native": "./src/audio/LiveRecordingWaveform.tsx",
+      "default": "./src/audio/LiveRecordingWaveform.tsx"
+    },
+    "./audio/RealtimePeakMeter": {
+      "types": "./src/audio/RealtimePeakMeter.tsx",
+      "react-native": "./src/audio/RealtimePeakMeter.tsx",
+      "default": "./src/audio/RealtimePeakMeter.tsx"
+    },
+    "./audio/SurroundPanView": {
+      "types": "./src/audio/SurroundPanView.tsx",
+      "react-native": "./src/audio/SurroundPanView.tsx",
+      "default": "./src/audio/SurroundPanView.tsx"
+    },
+    "./audio/PanAndBalanceControl": {
+      "types": "./src/audio/PanAndBalanceControl.tsx",
+      "react-native": "./src/audio/PanAndBalanceControl.tsx",
+      "default": "./src/audio/PanAndBalanceControl.tsx"
+    },
+    "./audio/ClipGainEnvelope": {
+      "types": "./src/audio/ClipGainEnvelope.tsx",
+      "react-native": "./src/audio/ClipGainEnvelope.tsx",
+      "default": "./src/audio/ClipGainEnvelope.tsx"
+    },
+    "./audio/AudioClipTrimAndFade": {
+      "types": "./src/audio/AudioClipTrimAndFade.tsx",
+      "react-native": "./src/audio/AudioClipTrimAndFade.tsx",
+      "default": "./src/audio/AudioClipTrimAndFade.tsx"
+    },
+    "./audio/LoopPunchRecording": {
+      "types": "./src/audio/LoopPunchRecording.tsx",
+      "react-native": "./src/audio/LoopPunchRecording.tsx",
+      "default": "./src/audio/LoopPunchRecording.tsx"
+    },
+    "./audio/SampleEditor": {
+      "types": "./src/audio/SampleEditor.tsx",
+      "react-native": "./src/audio/SampleEditor.tsx",
+      "default": "./src/audio/SampleEditor.tsx"
+    },
+    "./audio/LatencyCalibrationPanel": {
+      "types": "./src/audio/LatencyCalibrationPanel.tsx",
+      "react-native": "./src/audio/LatencyCalibrationPanel.tsx",
+      "default": "./src/audio/LatencyCalibrationPanel.tsx"
+    },
+    "./audio/TakePlaylistAndComping": {
+      "types": "./src/audio/TakePlaylistAndComping.tsx",
+      "react-native": "./src/audio/TakePlaylistAndComping.tsx",
+      "default": "./src/audio/TakePlaylistAndComping.tsx"
+    },
+    "./audio/AudioVideoSync": {
+      "types": "./src/audio/AudioVideoSync.tsx",
+      "react-native": "./src/audio/AudioVideoSync.tsx",
+      "default": "./src/audio/AudioVideoSync.tsx"
+    },
+    "./audio/AudioProcessingPanel": {
+      "types": "./src/audio/AudioProcessingPanel.tsx",
+      "react-native": "./src/audio/AudioProcessingPanel.tsx",
+      "default": "./src/audio/AudioProcessingPanel.tsx"
+    },
+    "./audio/VoiceIsolationPanel": {
+      "types": "./src/audio/VoiceIsolationPanel.tsx",
+      "react-native": "./src/audio/VoiceIsolationPanel.tsx",
+      "default": "./src/audio/VoiceIsolationPanel.tsx"
+    },
+    "./audio/NoiseReductionMonitor": {
+      "types": "./src/audio/NoiseReductionMonitor.tsx",
+      "react-native": "./src/audio/NoiseReductionMonitor.tsx",
+      "default": "./src/audio/NoiseReductionMonitor.tsx"
+    },
+    "./audio/AutoDuckEnvelopePanel": {
+      "types": "./src/audio/AutoDuckEnvelopePanel.tsx",
+      "react-native": "./src/audio/AutoDuckEnvelopePanel.tsx",
+      "default": "./src/audio/AutoDuckEnvelopePanel.tsx"
+    },
+    "./audio/AudioEffectsPresetPanel": {
+      "types": "./src/audio/AudioEffectsPresetPanel.tsx",
+      "react-native": "./src/audio/AudioEffectsPresetPanel.tsx",
+      "default": "./src/audio/AudioEffectsPresetPanel.tsx"
+    },
+    "./audio/BeatDetectionMarkerLane": {
+      "types": "./src/audio/BeatDetectionMarkerLane.tsx",
+      "react-native": "./src/audio/BeatDetectionMarkerLane.tsx",
+      "default": "./src/audio/BeatDetectionMarkerLane.tsx"
+    },
+    "./audio/SoundEffectsLibrary": {
+      "types": "./src/audio/SoundEffectsLibrary.tsx",
+      "react-native": "./src/audio/SoundEffectsLibrary.tsx",
+      "default": "./src/audio/SoundEffectsLibrary.tsx"
+    },
+    "./audio/SpeechTranscriptTakeReview": {
+      "types": "./src/audio/SpeechTranscriptTakeReview.tsx",
+      "react-native": "./src/audio/SpeechTranscriptTakeReview.tsx",
+      "default": "./src/audio/SpeechTranscriptTakeReview.tsx"
+    },
+    "./audio/VoiceoverCountdownAndTakeBin": {
+      "types": "./src/audio/VoiceoverCountdownAndTakeBin.tsx",
+      "react-native": "./src/audio/VoiceoverCountdownAndTakeBin.tsx",
+      "default": "./src/audio/VoiceoverCountdownAndTakeBin.tsx"
+    },
+    "./inputs/PropertyInspector": {
+      "types": "./src/inputs/PropertyInspector.tsx",
+      "react-native": "./src/inputs/PropertyInspector.tsx",
+      "default": "./src/inputs/PropertyInspector.tsx"
+    },
+    "./document/TypographyInspector": {
+      "types": "./src/document/TypographyInspector.tsx",
+      "react-native": "./src/document/TypographyInspector.tsx",
+      "default": "./src/document/TypographyInspector.tsx"
+    },
+    "./document/PageSetupPanel": {
+      "types": "./src/document/PageSetupPanel.tsx",
+      "react-native": "./src/document/PageSetupPanel.tsx",
+      "default": "./src/document/PageSetupPanel.tsx"
+    },
+    "./document/HeadersFootersEditor": {
+      "types": "./src/document/HeadersFootersEditor.tsx",
+      "react-native": "./src/document/HeadersFootersEditor.tsx",
+      "default": "./src/document/HeadersFootersEditor.tsx"
+    },
+    "./document/ParagraphStylesGallery": {
+      "types": "./src/document/ParagraphStylesGallery.tsx",
+      "react-native": "./src/document/ParagraphStylesGallery.tsx",
+      "default": "./src/document/ParagraphStylesGallery.tsx"
+    },
+    "./document/TableLayoutInspector": {
+      "types": "./src/document/TableLayoutInspector.tsx",
+      "react-native": "./src/document/TableLayoutInspector.tsx",
+      "default": "./src/document/TableLayoutInspector.tsx"
+    },
+    "./document/InsertTableGrid": {
+      "types": "./src/document/InsertTableGrid.tsx",
+      "react-native": "./src/document/InsertTableGrid.tsx",
+      "default": "./src/document/InsertTableGrid.tsx"
+    },
+    "./document/ParagraphRuler": {
+      "types": "./src/document/ParagraphRuler.tsx",
+      "react-native": "./src/document/ParagraphRuler.tsx",
+      "default": "./src/document/ParagraphRuler.tsx"
+    },
+    "./document/CommentsAndReviewRail": {
+      "types": "./src/document/CommentsAndReviewRail.tsx",
+      "react-native": "./src/document/CommentsAndReviewRail.tsx",
+      "default": "./src/document/CommentsAndReviewRail.tsx"
+    },
+    "./document/TrackChangesView": {
+      "types": "./src/document/TrackChangesView.tsx",
+      "react-native": "./src/document/TrackChangesView.tsx",
+      "default": "./src/document/TrackChangesView.tsx"
+    },
+    "./document/TableOfContentsEditor": {
+      "types": "./src/document/TableOfContentsEditor.tsx",
+      "react-native": "./src/document/TableOfContentsEditor.tsx",
+      "default": "./src/document/TableOfContentsEditor.tsx"
+    },
+    "./document/DictationSessionPanel": {
+      "types": "./src/document/DictationSessionPanel.tsx",
+      "react-native": "./src/document/DictationSessionPanel.tsx",
+      "default": "./src/document/DictationSessionPanel.tsx"
+    },
+    "./document/TextWrapAndFrames": {
+      "types": "./src/document/TextWrapAndFrames.tsx",
+      "react-native": "./src/document/TextWrapAndFrames.tsx",
+      "default": "./src/document/TextWrapAndFrames.tsx"
+    },
+    "./document/LayoutSpreadNavigator": {
+      "types": "./src/document/LayoutSpreadNavigator.tsx",
+      "react-native": "./src/document/LayoutSpreadNavigator.tsx",
+      "default": "./src/document/LayoutSpreadNavigator.tsx"
+    },
+    "./document/MailMergeFieldPicker": {
+      "types": "./src/document/MailMergeFieldPicker.tsx",
+      "react-native": "./src/document/MailMergeFieldPicker.tsx",
+      "default": "./src/document/MailMergeFieldPicker.tsx"
+    },
+    "./document/SpellGrammarPopover": {
+      "types": "./src/document/SpellGrammarPopover.tsx",
+      "react-native": "./src/document/SpellGrammarPopover.tsx",
+      "default": "./src/document/SpellGrammarPopover.tsx"
+    },
+    "./document/FootnoteCitationEditor": {
+      "types": "./src/document/FootnoteCitationEditor.tsx",
+      "react-native": "./src/document/FootnoteCitationEditor.tsx",
+      "default": "./src/document/FootnoteCitationEditor.tsx"
+    },
+    "./document/TextSelectionAndCaret": {
+      "types": "./src/document/TextSelectionAndCaret.tsx",
+      "react-native": "./src/document/TextSelectionAndCaret.tsx",
+      "default": "./src/document/TextSelectionAndCaret.tsx"
+    },
+    "./document/PaginatedTextCanvas": {
+      "types": "./src/document/PaginatedTextCanvas.tsx",
+      "react-native": "./src/document/PaginatedTextCanvas.tsx",
+      "default": "./src/document/PaginatedTextCanvas.tsx"
+    },
+    "./spreadsheet/VirtualSpreadsheetGrid": {
+      "types": "./src/spreadsheet/VirtualSpreadsheetGrid.tsx",
+      "react-native": "./src/spreadsheet/VirtualSpreadsheetGrid.tsx",
+      "default": "./src/spreadsheet/VirtualSpreadsheetGrid.tsx"
+    },
+    "./spreadsheet/FormulaBar": {
+      "types": "./src/spreadsheet/FormulaBar.tsx",
+      "react-native": "./src/spreadsheet/FormulaBar.tsx",
+      "default": "./src/spreadsheet/FormulaBar.tsx"
+    },
+    "./spreadsheet/NameBox": {
+      "types": "./src/spreadsheet/NameBox.tsx",
+      "react-native": "./src/spreadsheet/NameBox.tsx",
+      "default": "./src/spreadsheet/NameBox.tsx"
+    },
+    "./spreadsheet/FormulaAutocomplete": {
+      "types": "./src/spreadsheet/FormulaAutocomplete.tsx",
+      "react-native": "./src/spreadsheet/FormulaAutocomplete.tsx",
+      "default": "./src/spreadsheet/FormulaAutocomplete.tsx"
+    },
+    "./spreadsheet/ReferenceColorizer": {
+      "types": "./src/spreadsheet/ReferenceColorizer.tsx",
+      "react-native": "./src/spreadsheet/ReferenceColorizer.tsx",
+      "default": "./src/spreadsheet/ReferenceColorizer.tsx"
+    },
+    "./spreadsheet/CellSelectionOverlay": {
+      "types": "./src/spreadsheet/CellSelectionOverlay.tsx",
+      "react-native": "./src/spreadsheet/CellSelectionOverlay.tsx",
+      "default": "./src/spreadsheet/CellSelectionOverlay.tsx"
+    },
+    "./spreadsheet/FillHandleAndAutoFill": {
+      "types": "./src/spreadsheet/FillHandleAndAutoFill.tsx",
+      "react-native": "./src/spreadsheet/FillHandleAndAutoFill.tsx",
+      "default": "./src/spreadsheet/FillHandleAndAutoFill.tsx"
+    },
+    "./spreadsheet/CellFormatInspector": {
+      "types": "./src/spreadsheet/CellFormatInspector.tsx",
+      "react-native": "./src/spreadsheet/CellFormatInspector.tsx",
+      "default": "./src/spreadsheet/CellFormatInspector.tsx"
+    },
+    "./spreadsheet/ValidationDropdown": {
+      "types": "./src/spreadsheet/ValidationDropdown.tsx",
+      "react-native": "./src/spreadsheet/ValidationDropdown.tsx",
+      "default": "./src/spreadsheet/ValidationDropdown.tsx"
+    },
+    "./spreadsheet/TableStyleGallery": {
+      "types": "./src/spreadsheet/TableStyleGallery.tsx",
+      "react-native": "./src/spreadsheet/TableStyleGallery.tsx",
+      "default": "./src/spreadsheet/TableStyleGallery.tsx"
+    },
+    "./spreadsheet/ConditionalFormatRules": {
+      "types": "./src/spreadsheet/ConditionalFormatRules.tsx",
+      "react-native": "./src/spreadsheet/ConditionalFormatRules.tsx",
+      "default": "./src/spreadsheet/ConditionalFormatRules.tsx"
+    },
+    "./spreadsheet/SortFilterHeader": {
+      "types": "./src/spreadsheet/SortFilterHeader.tsx",
+      "react-native": "./src/spreadsheet/SortFilterHeader.tsx",
+      "default": "./src/spreadsheet/SortFilterHeader.tsx"
+    },
+    "./spreadsheet/DataImportWizard": {
+      "types": "./src/spreadsheet/DataImportWizard.tsx",
+      "react-native": "./src/spreadsheet/DataImportWizard.tsx",
+      "default": "./src/spreadsheet/DataImportWizard.tsx"
+    },
+    "./spreadsheet/SavedSheetViewManager": {
+      "types": "./src/spreadsheet/SavedSheetViewManager.tsx",
+      "react-native": "./src/spreadsheet/SavedSheetViewManager.tsx",
+      "default": "./src/spreadsheet/SavedSheetViewManager.tsx"
+    },
+    "./spreadsheet/PivotFieldList": {
+      "types": "./src/spreadsheet/PivotFieldList.tsx",
+      "react-native": "./src/spreadsheet/PivotFieldList.tsx",
+      "default": "./src/spreadsheet/PivotFieldList.tsx"
+    },
+    "./spreadsheet/RangeComments": {
+      "types": "./src/spreadsheet/RangeComments.tsx",
+      "react-native": "./src/spreadsheet/RangeComments.tsx",
+      "default": "./src/spreadsheet/RangeComments.tsx"
+    },
+    "./inputs/AssetPresetGallery": {
+      "types": "./src/inputs/AssetPresetGallery.tsx",
+      "react-native": "./src/inputs/AssetPresetGallery.tsx",
+      "default": "./src/inputs/AssetPresetGallery.tsx"
+    },
+    "./slides/ThemeAndTemplateGallery": {
+      "types": "./src/slides/ThemeAndTemplateGallery.tsx",
+      "react-native": "./src/slides/ThemeAndTemplateGallery.tsx",
+      "default": "./src/slides/ThemeAndTemplateGallery.tsx"
+    },
+    "./slides/MasterLayoutEditor": {
+      "types": "./src/slides/MasterLayoutEditor.tsx",
+      "react-native": "./src/slides/MasterLayoutEditor.tsx",
+      "default": "./src/slides/MasterLayoutEditor.tsx"
+    },
+    "./slides/ShapePresetGallery": {
+      "types": "./src/slides/ShapePresetGallery.tsx",
+      "react-native": "./src/slides/ShapePresetGallery.tsx",
+      "default": "./src/slides/ShapePresetGallery.tsx"
+    },
+    "./slides/TransitionPicker": {
+      "types": "./src/slides/TransitionPicker.tsx",
+      "react-native": "./src/slides/TransitionPicker.tsx",
+      "default": "./src/slides/TransitionPicker.tsx"
+    },
+    "./slides/SlideNotesEditor": {
+      "types": "./src/slides/SlideNotesEditor.tsx",
+      "react-native": "./src/slides/SlideNotesEditor.tsx",
+      "default": "./src/slides/SlideNotesEditor.tsx"
+    },
+    "./slides/PresenterView": {
+      "types": "./src/slides/PresenterView.tsx",
+      "react-native": "./src/slides/PresenterView.tsx",
+      "default": "./src/slides/PresenterView.tsx"
+    },
+    "./slides/RehearsalTimers": {
+      "types": "./src/slides/RehearsalTimers.tsx",
+      "react-native": "./src/slides/RehearsalTimers.tsx",
+      "default": "./src/slides/RehearsalTimers.tsx"
+    },
+    "./slides/MorphPreview": {
+      "types": "./src/slides/MorphPreview.tsx",
+      "react-native": "./src/slides/MorphPreview.tsx",
+      "default": "./src/slides/MorphPreview.tsx"
+    },
+    "./slides/MediaInsertInspector": {
+      "types": "./src/slides/MediaInsertInspector.tsx",
+      "react-native": "./src/slides/MediaInsertInspector.tsx",
+      "default": "./src/slides/MediaInsertInspector.tsx"
+    },
+    "./slides/ChartAndTableEditor": {
+      "types": "./src/slides/ChartAndTableEditor.tsx",
+      "react-native": "./src/slides/ChartAndTableEditor.tsx",
+      "default": "./src/slides/ChartAndTableEditor.tsx"
+    },
+    "./slides/ConnectorAndDiagramTools": {
+      "types": "./src/slides/ConnectorAndDiagramTools.tsx",
+      "react-native": "./src/slides/ConnectorAndDiagramTools.tsx",
+      "default": "./src/slides/ConnectorAndDiagramTools.tsx"
+    },
+    "./slides/InkAndLaserPointer": {
+      "types": "./src/slides/InkAndLaserPointer.tsx",
+      "react-native": "./src/slides/InkAndLaserPointer.tsx",
+      "default": "./src/slides/InkAndLaserPointer.tsx"
+    },
+    "./pdf/PDFPageLayoutSelector": {
+      "types": "./src/pdf/PDFPageLayoutSelector.tsx",
+      "react-native": "./src/pdf/PDFPageLayoutSelector.tsx",
+      "default": "./src/pdf/PDFPageLayoutSelector.tsx"
+    },
+    "./pdf/VirtualPDFPageViewer": {
+      "types": "./src/pdf/VirtualPDFPageViewer.tsx",
+      "react-native": "./src/pdf/VirtualPDFPageViewer.tsx",
+      "default": "./src/pdf/VirtualPDFPageViewer.tsx"
+    },
+    "./pdf/PDFTextSelection": {
+      "types": "./src/pdf/PDFTextSelection.tsx",
+      "react-native": "./src/pdf/PDFTextSelection.tsx",
+      "default": "./src/pdf/PDFTextSelection.tsx"
+    },
+    "./pdf/PDFInlineTextEdit": {
+      "types": "./src/pdf/PDFInlineTextEdit.tsx",
+      "react-native": "./src/pdf/PDFInlineTextEdit.tsx",
+      "default": "./src/pdf/PDFInlineTextEdit.tsx"
+    },
+    "./inputs/OutlineTree": {
+      "types": "./src/inputs/OutlineTree.tsx",
+      "react-native": "./src/inputs/OutlineTree.tsx",
+      "default": "./src/inputs/OutlineTree.tsx"
+    },
+    "./pdf/BookmarkOutline": {
+      "types": "./src/pdf/BookmarkOutline.tsx",
+      "react-native": "./src/pdf/BookmarkOutline.tsx",
+      "default": "./src/pdf/BookmarkOutline.tsx"
+    },
+    "./pdf/PDFThumbnailSidebar": {
+      "types": "./src/pdf/PDFThumbnailSidebar.tsx",
+      "react-native": "./src/pdf/PDFThumbnailSidebar.tsx",
+      "default": "./src/pdf/PDFThumbnailSidebar.tsx"
+    },
+    "./pdf/PageReorderOrganizer": {
+      "types": "./src/pdf/PageReorderOrganizer.tsx",
+      "react-native": "./src/pdf/PageReorderOrganizer.tsx",
+      "default": "./src/pdf/PageReorderOrganizer.tsx"
+    },
+    "./pdf/ExtractMergeSplitDialog": {
+      "types": "./src/pdf/ExtractMergeSplitDialog.tsx",
+      "react-native": "./src/pdf/ExtractMergeSplitDialog.tsx",
+      "default": "./src/pdf/ExtractMergeSplitDialog.tsx"
+    },
+    "./pdf/HyperlinkInspector": {
+      "types": "./src/pdf/HyperlinkInspector.tsx",
+      "react-native": "./src/pdf/HyperlinkInspector.tsx",
+      "default": "./src/pdf/HyperlinkInspector.tsx"
+    },
+    "./pdf/PDFCompareOverlay": {
+      "types": "./src/pdf/PDFCompareOverlay.tsx",
+      "react-native": "./src/pdf/PDFCompareOverlay.tsx",
+      "default": "./src/pdf/PDFCompareOverlay.tsx"
+    },
+    "./pdf/PrintAndExportPreview": {
+      "types": "./src/pdf/PrintAndExportPreview.tsx",
+      "react-native": "./src/pdf/PrintAndExportPreview.tsx",
+      "default": "./src/pdf/PrintAndExportPreview.tsx"
+    },
+    "./pdf/EncryptPermissionsPanel": {
+      "types": "./src/pdf/EncryptPermissionsPanel.tsx",
+      "react-native": "./src/pdf/EncryptPermissionsPanel.tsx",
+      "default": "./src/pdf/EncryptPermissionsPanel.tsx"
+    },
+    "./pdf/RedactionReviewTool": {
+      "types": "./src/pdf/RedactionReviewTool.tsx",
+      "react-native": "./src/pdf/RedactionReviewTool.tsx",
+      "default": "./src/pdf/RedactionReviewTool.tsx"
+    },
+    "./pdf/SignatureStampTool": {
+      "types": "./src/pdf/SignatureStampTool.tsx",
+      "react-native": "./src/pdf/SignatureStampTool.tsx",
+      "default": "./src/pdf/SignatureStampTool.tsx"
+    },
+    "./pdf/PDFFormFieldEditor": {
+      "types": "./src/pdf/PDFFormFieldEditor.tsx",
+      "react-native": "./src/pdf/PDFFormFieldEditor.tsx",
+      "default": "./src/pdf/PDFFormFieldEditor.tsx"
+    },
+    "./pdf/PDFVoiceNoteAttachment": {
+      "types": "./src/pdf/PDFVoiceNoteAttachment.tsx",
+      "react-native": "./src/pdf/PDFVoiceNoteAttachment.tsx",
+      "default": "./src/pdf/PDFVoiceNoteAttachment.tsx"
+    },
+    "./pdf/PDFScanSession": {
+      "types": "./src/pdf/PDFScanSession.tsx",
+      "react-native": "./src/pdf/PDFScanSession.tsx",
+      "default": "./src/pdf/PDFScanSession.tsx"
+    },
+    "./inputs/PointEditor2D": {
+      "types": "./src/inputs/PointEditor2D.tsx",
+      "react-native": "./src/inputs/PointEditor2D.tsx",
+      "default": "./src/inputs/PointEditor2D.tsx"
+    },
+    "./design/FrameAndComponentTree": {
+      "types": "./src/design/FrameAndComponentTree.tsx",
+      "react-native": "./src/design/FrameAndComponentTree.tsx",
+      "default": "./src/design/FrameAndComponentTree.tsx"
+    },
+    "./design/AutoLayoutInspector": {
+      "types": "./src/design/AutoLayoutInspector.tsx",
+      "react-native": "./src/design/AutoLayoutInspector.tsx",
+      "default": "./src/design/AutoLayoutInspector.tsx"
+    },
+    "./design/HugFillFixedSizeControls": {
+      "types": "./src/design/HugFillFixedSizeControls.tsx",
+      "react-native": "./src/design/HugFillFixedSizeControls.tsx",
+      "default": "./src/design/HugFillFixedSizeControls.tsx"
+    },
+    "./design/ConstraintsPanel": {
+      "types": "./src/design/ConstraintsPanel.tsx",
+      "react-native": "./src/design/ConstraintsPanel.tsx",
+      "default": "./src/design/ConstraintsPanel.tsx"
+    },
+    "./design/ComponentVariantPicker": {
+      "types": "./src/design/ComponentVariantPicker.tsx",
+      "react-native": "./src/design/ComponentVariantPicker.tsx",
+      "default": "./src/design/ComponentVariantPicker.tsx"
+    },
+    "./design/ReusableStylesPanel": {
+      "types": "./src/design/ReusableStylesPanel.tsx",
+      "react-native": "./src/design/ReusableStylesPanel.tsx",
+      "default": "./src/design/ReusableStylesPanel.tsx"
+    },
+    "./design/VariablesAndModes": {
+      "types": "./src/design/VariablesAndModes.tsx",
+      "react-native": "./src/design/VariablesAndModes.tsx",
+      "default": "./src/design/VariablesAndModes.tsx"
+    },
+    "./design/PrototypeConnectionTool": {
+      "types": "./src/design/PrototypeConnectionTool.tsx",
+      "react-native": "./src/design/PrototypeConnectionTool.tsx",
+      "default": "./src/design/PrototypeConnectionTool.tsx"
+    },
+    "./design/InteractionTriggerEditor": {
+      "types": "./src/design/InteractionTriggerEditor.tsx",
+      "react-native": "./src/design/InteractionTriggerEditor.tsx",
+      "default": "./src/design/InteractionTriggerEditor.tsx"
+    },
+    "./design/PrototypePreviewPlayer": {
+      "types": "./src/design/PrototypePreviewPlayer.tsx",
+      "react-native": "./src/design/PrototypePreviewPlayer.tsx",
+      "default": "./src/design/PrototypePreviewPlayer.tsx"
+    },
+    "./design/FlowOverview": {
+      "types": "./src/design/FlowOverview.tsx",
+      "react-native": "./src/design/FlowOverview.tsx",
+      "default": "./src/design/FlowOverview.tsx"
+    },
+    "./design/DevHandoffInspector": {
+      "types": "./src/design/DevHandoffInspector.tsx",
+      "react-native": "./src/design/DevHandoffInspector.tsx",
+      "default": "./src/design/DevHandoffInspector.tsx"
+    },
+    "./design/CollaborationPresence": {
+      "types": "./src/design/CollaborationPresence.tsx",
+      "react-native": "./src/design/CollaborationPresence.tsx",
+      "default": "./src/design/CollaborationPresence.tsx"
+    },
+    "./design/CommentPins": {
+      "types": "./src/design/CommentPins.tsx",
+      "react-native": "./src/design/CommentPins.tsx",
+      "default": "./src/design/CommentPins.tsx"
+    },
+    "./design/MultiExportSlices": {
+      "types": "./src/design/MultiExportSlices.tsx",
+      "react-native": "./src/design/MultiExportSlices.tsx",
+      "default": "./src/design/MultiExportSlices.tsx"
+    },
+    "./cad/Native3DViewport": {
+      "types": "./src/cad/Native3DViewport.tsx",
+      "react-native": "./src/cad/Native3DViewport.tsx",
+      "default": "./src/cad/Native3DViewport.tsx"
+    },
+    "./cad/ViewCubeAndAxisGizmo": {
+      "types": "./src/cad/ViewCubeAndAxisGizmo.tsx",
+      "react-native": "./src/cad/ViewCubeAndAxisGizmo.tsx",
+      "default": "./src/cad/ViewCubeAndAxisGizmo.tsx"
+    },
+    "./cad/TransformGizmo3D": {
+      "types": "./src/cad/TransformGizmo3D.tsx",
+      "react-native": "./src/cad/TransformGizmo3D.tsx",
+      "default": "./src/cad/TransformGizmo3D.tsx"
+    },
+    "./cad/UVEditor": {
+      "types": "./src/cad/UVEditor.tsx",
+      "react-native": "./src/cad/UVEditor.tsx",
+      "default": "./src/cad/UVEditor.tsx"
+    },
+    "./cad/TextureSetPanel": {
+      "types": "./src/cad/TextureSetPanel.tsx",
+      "react-native": "./src/cad/TextureSetPanel.tsx",
+      "default": "./src/cad/TextureSetPanel.tsx"
+    },
+    "./cad/PBRMaterialInspector": {
+      "types": "./src/cad/PBRMaterialInspector.tsx",
+      "react-native": "./src/cad/PBRMaterialInspector.tsx",
+      "default": "./src/cad/PBRMaterialInspector.tsx"
+    },
+    "./cad/TextureBrush3D": {
+      "types": "./src/cad/TextureBrush3D.tsx",
+      "react-native": "./src/cad/TextureBrush3D.tsx",
+      "default": "./src/cad/TextureBrush3D.tsx"
+    },
+    "./cad/TextureMaskAndGenerator": {
+      "types": "./src/cad/TextureMaskAndGenerator.tsx",
+      "react-native": "./src/cad/TextureMaskAndGenerator.tsx",
+      "default": "./src/cad/TextureMaskAndGenerator.tsx"
+    },
+    "./cad/BakingMapPanel": {
+      "types": "./src/cad/BakingMapPanel.tsx",
+      "react-native": "./src/cad/BakingMapPanel.tsx",
+      "default": "./src/cad/BakingMapPanel.tsx"
+    },
+    "./cad/NodeGraphCanvas": {
+      "types": "./src/cad/NodeGraphCanvas.tsx",
+      "react-native": "./src/cad/NodeGraphCanvas.tsx",
+      "default": "./src/cad/NodeGraphCanvas.tsx"
+    },
+    "./cad/NodeLibrarySearch": {
+      "types": "./src/cad/NodeLibrarySearch.tsx",
+      "react-native": "./src/cad/NodeLibrarySearch.tsx",
+      "default": "./src/cad/NodeLibrarySearch.tsx"
+    },
+    "./cad/LiveNodeThumbnail": {
+      "types": "./src/cad/LiveNodeThumbnail.tsx",
+      "react-native": "./src/cad/LiveNodeThumbnail.tsx",
+      "default": "./src/cad/LiveNodeThumbnail.tsx"
+    },
+    "./cad/DraftingCommandLine": {
+      "types": "./src/cad/DraftingCommandLine.tsx",
+      "react-native": "./src/cad/DraftingCommandLine.tsx",
+      "default": "./src/cad/DraftingCommandLine.tsx"
+    },
+    "./cad/ObjectSnapsAndOrtho": {
+      "types": "./src/cad/ObjectSnapsAndOrtho.tsx",
+      "react-native": "./src/cad/ObjectSnapsAndOrtho.tsx",
+      "default": "./src/cad/ObjectSnapsAndOrtho.tsx"
+    },
+    "./cad/DimensionsAndHatching": {
+      "types": "./src/cad/DimensionsAndHatching.tsx",
+      "react-native": "./src/cad/DimensionsAndHatching.tsx",
+      "default": "./src/cad/DimensionsAndHatching.tsx"
+    },
+    "./cad/PaperSpaceLayout": {
+      "types": "./src/cad/PaperSpaceLayout.tsx",
+      "react-native": "./src/cad/PaperSpaceLayout.tsx",
+      "default": "./src/cad/PaperSpaceLayout.tsx"
+    },
+    "./cad/ParametricConstraintEditor": {
+      "types": "./src/cad/ParametricConstraintEditor.tsx",
+      "react-native": "./src/cad/ParametricConstraintEditor.tsx",
+      "default": "./src/cad/ParametricConstraintEditor.tsx"
+    },
+    "./platform/AccessiblePrecisionScrubControl": {
+      "types": "./src/platform/AccessiblePrecisionScrubControl.tsx",
+      "react-native": "./src/platform/AccessiblePrecisionScrubControl.tsx",
+      "default": "./src/platform/AccessiblePrecisionScrubControl.tsx"
+    },
+    "./timeline/FrameAccurateScrubber": {
+      "types": "./src/timeline/FrameAccurateScrubber.tsx",
+      "react-native": "./src/timeline/FrameAccurateScrubber.native.tsx",
+      "default": "./src/timeline/FrameAccurateScrubber.tsx"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+    "zustand": "^5.1.0"
+  },
+  "peerDependencies": {
+    "@expo/ui": "^58.0.0",
+    "expo-linear-gradient": "^58.0.0",
+    "react": ">=19.0.0",
+    "react-native": ">=0.88.0",
+    "react-native-gesture-handler": ">=3.3.0 <4",
+    "react-native-skia": ">=3.9.1 <4"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@expo/ui": {
+      "optional": true
+    },
+    "expo-linear-gradient": {
+      "optional": true
+    },
+    "react-native-gesture-handler": {
+      "optional": true
+    },
+    "react-native-skia": {
+      "optional": true
+    }
+  }
+}
