@@ -1,26 +1,20 @@
 # cargo-audit configuration for the Forge Cargo.lock.
 #
 # The CI job `cargo audit --deny warnings` (.github/workflows/cargo-audit.yml)
-# reads this file. Only the two advisories below are ignored. Each one is a
-# held dependency recorded in docs/release/RELEASE_TRAIN.md, "Held". Any other
+# reads this file. Only the advisory below is ignored. It is a held
+# dependency recorded in docs/release/RELEASE_TRAIN.md, "Held". Any other
 # advisory, warning or yanked crate fails the job.
 #
 # Removing an entry is part of the PR named in its return condition.
 
 [advisories]
 ignore = [
-  # lopdf 0.36.0: stack overflow on deeply nested objects.
-  # Reason: lopdf 0.47 compiles after 3 call-site fixes but fails 8 of 149
-  # folio-engine tests, including all three encrypted round-trip tests.
-  # Return when: an engine PR moves folio to lopdf 0.47 with those tests green.
-  "RUSTSEC-2026-0187",
-
   # chrono 0.4.45: unmaintained (warning). No fixed version exists.
   # Reason: pdfium-render (folio-render, host-side) depends on chrono with no
-  # feature to turn it off, in 0.9.5 and in the latest 0.9.6. lopdf 0.36
-  # (folio-engine) also pulls it through its default `chrono` feature, so
-  # dropping that feature alone would not take chrono out of Cargo.lock.
-  # Return when: neither pdfium-render nor lopdf pulls chrono, or a maintained
-  # chrono release clears the advisory.
+  # feature to turn it off, in 0.9.5 and in the latest 0.9.6. folio-engine's
+  # lopdf 0.47 no longer pulls it (default features off), so pdfium-render is
+  # the only path left.
+  # Return when: pdfium-render stops pulling chrono, or a maintained chrono
+  # release clears the advisory.
   "RUSTSEC-2026-0543",
 ]

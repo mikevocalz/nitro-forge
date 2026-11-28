@@ -283,10 +283,27 @@ fn apply_page_order(doc: &mut Document, order: &[ObjectId]) -> Result<(), Engine
     // exactly the pages `order` was built from (minus pages an insert or
     // duplicate is about to add, which are not in the tree yet either).
     let walked = count_tree_leaves(doc, root);
-    let visited = doc.get_pages().len();
+    let pages = doc.get_pages();
+    let visited = pages.len();
     if walked != visited {
         return Err(EngineError::validation(format!(
             "malformed page tree: /Kids walk finds {walked} terminal entries but the page iterator yields {visited}; refusing to rewrite"
+        )));
+    }
+    // lopdf >= 0.47 yields a kid it cannot read as a typed dictionary (an
+    // untyped intermediate node, a missing or non-dictionary object) as a
+    // stand-in page, so the counts above can agree while the iterator names
+    // a node that is not a page. Rewriting /Kids from such an `order` would
+    // reparent that node and orphan the pages under it: fail closed.
+    if let Some(stand_in) = pages.values().find(|&&id| {
+        !matches!(
+            doc.get_dictionary(id).and_then(lopdf::Dictionary::get_type),
+            Ok(b"Page")
+        )
+    }) {
+        return Err(EngineError::validation(format!(
+            "malformed page tree: /Kids entry {} {} R is not a /Type /Page dictionary; refusing to rewrite",
+            stand_in.0, stand_in.1
         )));
     }
     for &page_id in order {
@@ -588,11 +605,7 @@ impl FolioEngine {
                 "has_contents": if self.doc.is_encrypted() {
                     Value::Null
                 } else {
-                    json!(!self
-                        .doc
-                        .get_page_content(page_id)
-                        .map_err(ser_err)?
-                        .is_empty())
+                    json!(crate::page_has_contents(&self.doc, page_id)?)
                 },
             }));
         }
@@ -1210,10 +1223,10 @@ mod tests {
 
     #[test]
     fn page_tree_guard_rejects_malformed_kids() {
-        // An intermediate node without /Type is invisible to lopdf's
-        // PageTreeIter (it only descends into /Pages), so page 0 would be
-        // silently dropped by a flat rewrite. The /Kids walk counts it and
-        // the op must reject instead.
+        // An intermediate node without /Type is not descended into by
+        // lopdf's PageTreeIter (it only descends into /Pages); since 0.47 it
+        // yields the node itself as a stand-in page. Either way a flat
+        // rewrite would orphan page 0 under it, so the op must reject.
         let mut e = engine(2);
         let pages = ordered_pages(&e.doc);
         let root = pages_root(&e.doc).unwrap();
@@ -1237,8 +1250,10 @@ mod tests {
                 ]),
             );
         }
-        // get_pages sees only page 1; the walk sees 2 terminal entries.
-        assert_eq!(e.doc.get_pages().len(), 1);
+        // get_pages yields the untyped node in page 0's slot; the walk
+        // sees the 2 real pages.
+        let visited: Vec<ObjectId> = e.doc.get_pages().into_values().collect();
+        assert_eq!(visited, vec![mid, pages[1]]);
         assert_eq!(count_tree_leaves(&e.doc, root), 2);
 
         let before = e.snapshot().unwrap();

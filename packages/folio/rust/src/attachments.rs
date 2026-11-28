@@ -25,13 +25,9 @@
 //!   decodes it (`get_plain_content`, so `/Filter` streams decompress)
 //!   and returns the bytes (base64 `bytes_b64`, or binary output when
 //!   requested) with `size` = the actual decoded length. The 64 MiB
-//!   cap is checked on the decoded result, but lopdf 0.36 has no
-//!   bounded-decompression API: it materializes the decompressed
-//!   stream unboundedly before the cap rejects it, so a small
-//!   compressed stream can still expand past the cap in memory. This
-//!   is a pre-existing lopdf limitation shared with `pageText` and
-//!   other content reads — hosts should bound input PDF sizes rather
-//!   than rely on the cap to prevent materialization.
+//!   cap bounds the decode itself (`get_plain_content_with_limit`), so a
+//!   small compressed stream cannot expand past the cap in memory; page
+//!   content and redaction reads use the same bounded decode.
 //! - `addFileAttachment {name, data_b64|binary, description?, page?,
 //!   rect?}` appends an `/EmbeddedFile` stream (`/Type /EmbeddedFile`,
 //!   `/Params << /Size /CheckSum(MD5) >>`), a `/Filespec` dictionary,
@@ -307,11 +303,22 @@ impl FolioEngine {
             .ok_or_else(|| EngineError::not_found("attachment not found"))?;
         let stream = filespec_stream(&self.doc, &pair.value)
             .ok_or_else(|| EngineError::not_found("attachment has no embedded file stream"))?;
-        let bytes = stream.get_plain_content().map_err(ser_err)?;
-        if bytes.len() > MAX_EXTRACT_BYTES {
-            return Err(EngineError::validation(format!(
+        let too_big = || {
+            EngineError::validation(format!(
                 "attachment exceeds the {MAX_EXTRACT_BYTES} byte extraction limit"
-            )));
+            ))
+        };
+        // Bounded decode: a Flate bomb stops at the cap instead of
+        // materializing the inflated stream first.
+        let bytes = match stream.get_plain_content_with_limit(MAX_EXTRACT_BYTES) {
+            Ok(bytes) => bytes,
+            Err(lopdf::Error::Decompress(lopdf::DecompressError::MemoryLimitExceeded { .. })) => {
+                return Err(too_big());
+            }
+            Err(e) => return Err(ser_err(e)),
+        };
+        if bytes.len() > MAX_EXTRACT_BYTES {
+            return Err(too_big());
         }
         Ok(ro(json!({
             "name": name,

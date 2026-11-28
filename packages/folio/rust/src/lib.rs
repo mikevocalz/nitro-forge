@@ -74,6 +74,7 @@ mod attachments;
 mod compare;
 mod forms;
 mod ink_link;
+mod load;
 mod markup;
 mod comments;
 mod outlines;
@@ -170,6 +171,12 @@ struct SnapshotState {
 /// model.
 fn build_blank_doc(n: u64) -> Document {
     let mut doc = Document::with_version("1.5");
+    // A classic cross-reference table: lopdf >= 0.47 defaults a new document
+    // to an xref stream and raises the header of any document saved that way
+    // to 1.5. Folio owns its header version (`markup::shape_version` raises
+    // it to exactly what a feature needs), so its own documents use the table
+    // form, which every PDF version accepts.
+    doc.reference_table.cross_reference_type = lopdf::xref::XrefType::CrossReferenceTable;
     let pages_id = doc.new_object_id();
     let mut kids = Vec::with_capacity(n as usize);
     for _ in 0..n {
@@ -301,10 +308,33 @@ fn annot_ids(doc: &Document, page_id: ObjectId) -> Result<Vec<ObjectId>, EngineE
     }
 }
 
+/// Upper bound on the bytes one decoded stream (or one page's concatenated
+/// content streams) may inflate to. Every decode of a stream that came from
+/// an opened file goes through this bound, so a small Flate bomb is a typed
+/// `Serialization` error, never an allocation of the inflated size.
+pub(crate) const MAX_DECODED_STREAM_BYTES: usize = lopdf::DEFAULT_MAX_DECOMPRESSED_SIZE;
+
+/// A page's concatenated content streams, decoded under
+/// [`MAX_DECODED_STREAM_BYTES`].
+pub(crate) fn page_content(doc: &Document, page_id: ObjectId) -> Result<Vec<u8>, EngineError> {
+    doc.get_page_content_with_limit(page_id, MAX_DECODED_STREAM_BYTES)
+        .map_err(ser_err)
+}
+
+/// Whether a page draws anything: its decoded content holds a byte other
+/// than PDF white space (ISO 32000-1, 7.2.2). lopdf >= 0.47 ends every
+/// content stream it concatenates with a newline, so a page whose only
+/// stream is empty still decodes to `b"\n"`.
+pub(crate) fn page_has_contents(doc: &Document, page_id: ObjectId) -> Result<bool, EngineError> {
+    Ok(page_content(doc, page_id)?
+        .iter()
+        .any(|b| !matches!(b, b'\0' | b'\t' | b'\n' | b'\x0c' | b'\r' | b' ')))
+}
+
 /// Extract literal strings from `Tj` / `TJ` / `'` / `"` operators in the
 /// page's decompressed content stream. Lossy — see module docs.
 fn extract_page_text(doc: &Document, page_id: ObjectId) -> Result<String, EngineError> {
-    let data = doc.get_page_content(page_id).map_err(ser_err)?;
+    let data = page_content(doc, page_id)?;
     let content = Content::decode(&data).map_err(ser_err)?;
     let mut out = String::new();
     for op in &content.operations {
@@ -712,7 +742,7 @@ impl Engine for FolioEngine {
                 // lopdf auto-decrypts documents whose user or owner password is
                 // empty; anything still flagged here genuinely needs `decrypt`
                 // (or the `password` field, which runs the same path).
-                let mut doc = Document::load_mem(&bytes).map_err(lopdf_err)?;
+                let mut doc = load::load_pdf(&bytes)?;
                 if doc.is_encrypted() {
                     if let Some(pw) = &password {
                         // Failure leaves `self` untouched — `doc` is local.
@@ -1050,7 +1080,7 @@ impl Engine for FolioEngine {
         let (_, payload) = decode_envelope(data)?;
         let state: SnapshotState = serde_json::from_slice(payload)?;
         let bytes = b64_decode(&state.pdf_b64)?;
-        let doc = Document::load_mem(&bytes).map_err(lopdf_err)?;
+        let doc = load::load_pdf(&bytes)?;
         // Only commit after every decode step succeeded.
         self.doc = doc;
         // A replacement document cannot reuse the previous document history.

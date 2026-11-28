@@ -1,0 +1,71 @@
+name: Importer fuzzing
+
+# Runs every cargo-fuzz target in fuzz/ for a bounded time on nightly.
+# docs/security/fuzzing.md lists the targets and what each one covers.
+on:
+  pull_request:
+    paths:
+      - 'fuzz/**'
+      - 'rust/ignition-core/**'
+      - 'rust/nf-color/**'
+      - 'packages/*/rust/**'
+      - 'Cargo.lock'
+      - '.github/workflows/fuzz.yml'
+  schedule:
+    - cron: '41 5 * * 2' # Weekly, Tuesday 05:41 UTC
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: 'Seconds per target'
+        required: false
+        default: '60'
+
+permissions:
+  contents: read
+
+env:
+  # Dated so a nightly regression cannot fail the job on its own; move it
+  # forward on purpose (docs/security/fuzzing.md, "Toolchain").
+  NIGHTLY: nightly-2026-11-28
+  CARGO_FUZZ_VERSION: 0.13.2
+  SECONDS_PER_TARGET: ${{ github.event.inputs.seconds || '60' }}
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install the nightly toolchain
+        run: |
+          rustup toolchain install "$NIGHTLY" --profile minimal
+          rustup default "$NIGHTLY"
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked --version "$CARGO_FUZZ_VERSION"
+      - name: Build every target
+        working-directory: fuzz
+        run: cargo fuzz build
+      - name: Run every target
+        working-directory: fuzz
+        run: |
+          failed=0
+          for target in $(cargo fuzz list); do
+            echo "::group::$target (${SECONDS_PER_TARGET}s)"
+            mkdir -p "corpus/$target"
+            if ! cargo fuzz run "$target" "corpus/$target" "seeds/$target" -- \
+                -max_total_time="$SECONDS_PER_TARGET" \
+                -rss_limit_mb=2048 -timeout=10 -max_len=262144; then
+              echo "::error::fuzz target $target found a crash, timeout or OOM"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$failed"
+      - name: Upload crashing inputs
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts/
+          if-no-files-found: ignore
+          retention-days: 30

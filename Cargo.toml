@@ -13,6 +13,9 @@ members = [
     "rust/wasm-probe",
     "packages/*/rust",
 ]
+# cargo-fuzz targets need nightly and libFuzzer; they build as their own
+# workspace (fuzz/Cargo.toml). See docs/security/fuzzing.md.
+exclude = ["fuzz"]
 
 [workspace.package]
 version = "0.1.0"

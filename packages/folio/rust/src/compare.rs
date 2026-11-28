@@ -128,7 +128,7 @@ fn page_signature(doc: &Document, num: u32, pid: ObjectId) -> Result<PageSig, En
         annots_count: annots.len(),
         // Same ciphertext caveat as listPageInfo: callers only reach here
         // on unencrypted documents, so presence is decidable.
-        has_contents: !doc.get_page_content(pid).map_err(ser_err)?.is_empty(),
+        has_contents: crate::page_has_contents(doc, pid)?,
         annots,
         text,
     })
