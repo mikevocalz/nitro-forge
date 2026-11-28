@@ -9,6 +9,8 @@ on:
       - "tooling/nyc-tron-metro.cjs"
       - "tooling/verify-nyc-tron-pin.mjs"
       - "tooling/native/**"
+      - "packages/editor-controls/**"
+      - "patches/**"
       - ".github/workflows/cadence-native-consumer.yml"
   workflow_dispatch:
 concurrency:
@@ -39,6 +41,9 @@ jobs:
       - name: Frozen install from release tarballs
         working-directory: examples/native-cadence
         run: corepack pnpm install --frozen-lockfile
+      - name: Build editor-controls declarations (consumers typecheck against its dist)
+        working-directory: examples/native-cadence
+        run: corepack pnpm --filter @nitro-forge/editor-controls build
       - name: Typecheck
         working-directory: examples/native-cadence
         run: corepack pnpm typecheck

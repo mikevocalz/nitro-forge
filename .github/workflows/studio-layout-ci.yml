@@ -29,6 +29,11 @@ on:
       - 'tsconfig.base.json'
       - 'tooling/nyc-tron.json'
       - 'tooling/verify-nyc-tron.mjs'
+      - 'packages/editor-controls/**'
+      - 'tooling/verify-nyc-tron-pin.mjs'
+      - 'tooling/verify-nyc-tron-pin.test.mjs'
+      - 'tooling/editor-controls-contract.mjs'
+      - 'tooling/verify-released-ui.mjs'
       - '.github/workflows/studio-layout-ci.yml'
   workflow_dispatch:
 
@@ -53,6 +58,10 @@ jobs:
       # NYC-Tron UI comes from release tarballs pinned in tooling/nyc-tron.json.
       - name: Install for new workspace package
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build editor-controls declarations (consumers typecheck against its dist)
+        run: pnpm --filter @nitro-forge/editor-controls build
+      - name: NYC-Tron pin verifier tests
+        run: node --test tooling/verify-nyc-tron-pin.test.mjs
       - name: Check recovered adapters against the published NYC-Tron declarations
         run: pnpm verify:released-ui
       - name: NYC-Tron release pins match their sha256

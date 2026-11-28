@@ -5,13 +5,13 @@ registry metadata and the published package source on November 4, 2026.
 There is no Expo Audio runtime, import, dependency or config plugin here.
 Expo SDK 58 remains the app/build system, not the audio engine.
 
-The view is NYC-Tron UI's `RecordingTrack`
-(`@nyc-tron/ui/components/forge/audio/RecordingTrack`, pinned in
-`tooling/nyc-tron.json`). Forge keeps the recorder: `NativeRecordingTrack` and
+The view is the editor control `RecordingTrack`
+(`@nitro-forge/editor-controls/audio/RecordingTrack`; built in NYC-Tron UI and
+moved to `packages/editor-controls` on 2026-11-28). Forge keeps the recorder: `NativeRecordingTrack` and
 `NativeSourceRecordingTrack` map the controller's phase onto the view with
 `toRecordingViewState` and feed the newest measured peak to its `LevelMeter`.
-The host app must compile NYC-Tron's class names with Uniwind; see
-`apps/forge-audio-lab/global.css` for the tokens.
+The host app must compile the controls' class names with Uniwind; see
+`apps/forge-audio-lab/global.css` for the tokens and `@source` entries.
 
 ## Actual implementation
 
@@ -21,13 +21,13 @@ The host app must compile NYC-Tron's class names with Uniwind; see
 - Web: Audio API has **no AudioRecorder export**. Browser `getUserMedia` and
   `MediaRecorder` capture compressed audio; Audio API decodes it for peaks and
   playback. Requires HTTPS and browser permission. No pretend WAV fallback.
-- Shared `NativeAudioPreview`, drawn with NYC-Tron's `AudioPreview`: Audio API
+- Shared `NativeAudioPreview`, drawn with the editor control `AudioPreview`: Audio API
   `AudioContext.decodeAudioData`, fresh
   one-shot `AudioBufferSourceNode`, native graph scheduling, stop/ended cleanup
   and stale-decode rejection. Audition is limited to recordings <=60 seconds
   and <=32 MiB decoded PCM, not unbounded DAW streaming. The playhead reads
   the graph clock every 100 ms.
-- NYC-Tron views over Forge controllers and a Zustand lifecycle. No duplicate
+- Editor-control views over Forge controllers and a Zustand lifecycle. No duplicate
   Rust document or undo journal, no simulated audio, no JS audio render loop.
 
 ```tsx

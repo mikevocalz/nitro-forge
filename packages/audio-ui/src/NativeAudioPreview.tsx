@@ -3,7 +3,7 @@ import { AppState } from "react-native";
 import { AudioContext, type AudioBuffer } from "react-native-audio-api";
 import { createStore } from "zustand/vanilla";
 import { useStore } from "zustand";
-import { AudioPreview } from "@nyc-tron/ui/components/forge/audio/AudioPreview";
+import { AudioPreview } from "@nitro-forge/editor-controls/audio/AudioPreview";
 import type { WaveformPeak } from "@nitro-forge/media-ui";
 import { ForgeAudioPlayback, type PlaybackContext, type PlaybackSnapshot } from "./audioPlayback";
 import { createPlatformPlaybackSession } from "@nyc-tron/platform-services/playback";

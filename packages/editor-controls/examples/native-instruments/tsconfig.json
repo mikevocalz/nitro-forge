@@ -1,0 +1,12 @@
+{
+  // Typechecks these demos against this package's sources (self-reference
+  // through package.json "exports") and the installed @nyc-tron/ui. Not part
+  // of the package's own typecheck script.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["*.ts", "*.tsx"],
+  // Imports @nyc-tron/native-controls, which this package does not depend on.
+  "exclude": ["P3DiscDemo.tsx"]
+}

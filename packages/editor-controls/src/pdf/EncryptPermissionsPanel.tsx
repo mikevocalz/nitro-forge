@@ -1,0 +1,29 @@
+import {useLayoutEffect,useRef} from 'react';
+import {Text,TextInput,View,type ViewProps} from 'react-native';
+import {createStore} from 'zustand/vanilla';
+import {useStore} from 'zustand';
+import {Select} from '@nyc-tron/ui/components/Select';
+import {Button} from '@nyc-tron/ui/components/Button';
+import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+export interface PDFEncryptionRequest {userPassword:string;ownerPassword:string;algorithmId:string;permissions:Readonly<Record<string,boolean>>}
+export interface EncryptPermissionsPanelProps extends Omit<ViewProps,'children'>,ScopedControlProps {
+ algorithms:readonly {id:string;label:string;readerCompatibility:string;unavailableReason?:string}[];algorithmId:string;
+ permissions:readonly {id:string;label:string;enabled:boolean;supported:boolean}[];requireOwnerPassword:boolean;passwordMaxLength:number;
+ status:'idle'|'applying'|'complete'|'error';onAlgorithmChange:(id:string)=>void;onPermissionChange:(id:string,enabled:boolean)=>void;
+ onApply:(request:PDFEncryptionRequest,signal?:AbortSignal)=>unknown;onClose:()=>void;unstyled?:boolean;
+}
+/** Passwords live only in this ephemeral, nonpersisted store and the host operation; never in identity, logs or presets. */
+export function EncryptPermissionsPanel({scope='pdf-encryption',revision=0,...props}:EncryptPermissionsPanelProps){
+ const {algorithms,algorithmId,permissions,requireOwnerPassword,passwordMaxLength,status,onAlgorithmChange:_algorithm,onPermissionChange:_permission,onApply:_apply,onClose,unstyled=false,disabledReason,style,...rest}=props;
+ if(algorithms.length>64||permissions.length>64||new Set(algorithms.map(a=>a.id)).size!==algorithms.length||new Set(permissions.map(p=>p.id)).size!==permissions.length||!Number.isInteger(passwordMaxLength)||passwordMaxLength<1||passwordMaxLength>1024||!['idle','applying','complete','error'].includes(status))throw new RangeError('Invalid PDF encryption capabilities');
+ const owner=JSON.stringify([...controlIdentity(scope,revision),disabledReason]),guard=useScopedControl(owner,props,disabledReason!==undefined||status==='applying'),off=guard.pending||disabledReason!==undefined||status==='applying';
+ const local=useRef<ReturnType<typeof makeStore>|null>(null);local.current??=makeStore();const store=local.current,s=useStore(store,v=>v),algorithm=algorithms.find(a=>a.id===algorithmId),clear=()=>store.setState({user:'',owner:'',confirm:''});
+ useLayoutEffect(()=>{clear();return clear;},[owner]);
+ const apply=async()=>{try{return await guard.run('encryption',async(h,signal)=>{const secret=store.getState();if(secret.owner!==secret.confirm||h.requireOwnerPassword&&!secret.owner||secret.user&&secret.owner===secret.user||!h.algorithms.some(a=>a.id===h.algorithmId&&a.unavailableReason===undefined))return;try{await h.onApply({userPassword:secret.user,ownerPassword:secret.owner,algorithmId:h.algorithmId,permissions:Object.fromEntries(h.permissions.filter(p=>p.supported).map(p=>[p.id,p.enabled]))},signal);}catch{throw new Error('PDF encryption failed');}});}finally{clear();}};
+ return <View {...rest} style={[{gap:8},style]} accessibilityLabel="PDF encryption and permissions"><Select label="Encryption algorithm" value={algorithmId} options={algorithms.map(a=>({value:a.id,label:a.label,disabled:a.unavailableReason!==undefined}))} disabled={off} unstyled={unstyled} onValueChange={id=>guard.current()?.onAlgorithmChange(id)}/><Text {...{className:unstyled?undefined:'text-text'}}>Reader compatibility: {algorithm?.readerCompatibility??'Select a supported algorithm'}</Text>
+ {([{key:'user',label:'Password to open PDF'},{key:'owner',label:'Owner permission password'},{key:'confirm',label:'Confirm owner password'}] as const).map(field=><View key={field.key} style={{gap:4}}><Text {...{className:unstyled?undefined:'text-text'}}>{field.label}</Text><TextInput accessibilityLabel={field.label} secureTextEntry autoCorrect={false} autoCapitalize="none" autoComplete="new-password" value={s[field.key]} maxLength={passwordMaxLength} editable={!off} onChangeText={value=>store.setState({[field.key]:value})} style={{minHeight:44,padding:8}} {...{className:unstyled?undefined:'text-text border border-border rounded-control'}}/></View>)}
+ {permissions.map(permission=><Button key={permission.id} title={permission.label+': '+(permission.enabled?'allowed':'restricted')} accessibilityState={{checked:permission.enabled}} disabled={off||!permission.supported} variant="secondary" unstyled={unstyled} onPress={()=>{const h=guard.current(),p=h?.permissions.find(p=>p.id===permission.id);if(h&&p?.supported)h.onPermissionChange(p.id,!p.enabled);}}/>)}
+ <Text accessibilityLiveRegion="polite" {...{className:unstyled?undefined:'text-text'}}>{status==='complete'?'Host encryption output acknowledged':status==='applying'?'Applying PDF encryption':status==='error'?'PDF encryption could not be completed':s.owner!==s.confirm?'Owner passwords do not match':requireOwnerPassword&&!s.owner?'Owner password is required':s.user&&s.user===s.owner?'Use different open and owner passwords':''}</Text>
+ <Button title="Apply PDF encryption and permissions" disabled={off||!algorithm||algorithm.unavailableReason!==undefined||s.owner!==s.confirm||requireOwnerPassword&&!s.owner||!!s.user&&s.user===s.owner} unstyled={unstyled} onPress={apply}/><Button title="Close encryption settings" variant="secondary" unstyled={unstyled} onPress={()=>{if(guard.cancel()){clear();onClose();}}}/>{guard.error?<Text accessibilityRole="alert" {...{className:unstyled?undefined:'text-danger'}}>PDF encryption failed. Review the selected settings and try again.</Text>:null}{disabledReason||algorithm?.unavailableReason?<Text {...{className:unstyled?undefined:'text-text-muted'}}>{disabledReason??algorithm?.unavailableReason}</Text>:null}</View>;
+}
+function makeStore(){return createStore(()=>({user:'',owner:'',confirm:''}));}

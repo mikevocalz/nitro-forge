@@ -1,0 +1,14 @@
+import type {ReactNode} from 'react';
+import {Text,View,type ViewProps} from 'react-native';
+import {Button} from '@nyc-tron/ui/components/Button';
+import {Select} from '@nyc-tron/ui/components/Select';
+import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
+import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+export interface PrototypePreviewPlayerProps extends Omit<ViewProps,'children'>,ScopedControlProps {surface:ReactNode;screens:readonly {id:string;label:string}[];currentScreenId:string;entryId:string;status:'stopped'|'playing'|'paused'|'transitioning'|'error';transitionProgress:number;canBack:boolean;onAction:(action:'play'|'pause'|'restart'|'back'|'stop',signal?:AbortSignal)=>unknown;onNavigate:(id:string,signal?:AbortSignal)=>unknown;error?:string;unstyled?:boolean}
+/** Surface and transition clock come from the actual prototype runtime; no UI timer simulates execution. */
+export function PrototypePreviewPlayer({scope='prototype-preview',revision=0,...props}:PrototypePreviewPlayerProps){
+ const {surface,screens,currentScreenId,entryId,status,transitionProgress,canBack,onAction:_action,onNavigate:_navigate,error,unstyled=false,disabledReason,style,...rest}=props;
+ if(screens.length>10000||new Set(screens.map(s=>s.id)).size!==screens.length||!Number.isFinite(transitionProgress)||transitionProgress<0||transitionProgress>1)throw new RangeError('Invalid prototype runtime');
+ const owner=JSON.stringify([...controlIdentity(scope,revision),disabledReason]),guard=useScopedControl(owner,props,disabledReason!==undefined),stop=useScopedControl(JSON.stringify(controlIdentity(scope,revision)),props),off=guard.pending||disabledReason!==undefined;
+ return <View {...rest} style={[{gap:8},style]}><View style={{height:400,overflow:'hidden'}}>{surface}</View><Select label="Preview screen" value={currentScreenId} options={screens.map(s=>({value:s.id,label:s.label}))} disabled={off||status==='transitioning'} unstyled={unstyled} onValueChange={id=>guard.run('navigate',(h,s)=>h.screens.some(f=>f.id===id)?h.onNavigate(id,s):undefined)}/><View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{(['play','pause','restart','back'] as const).map(a=><Button key={a} title={a} disabled={off||(a==='back'&&!canBack)||(a==='restart'&&!screens.some(s=>s.id===entryId))||(a==='pause'&&status!=='playing')||(a==='play'&&status==='playing')} unstyled={unstyled} onPress={()=>guard.run(a,(h,s)=>h.onAction(a,s))}/>)}<Button title="Stop prototype" disabled={stop.pending||status==='stopped'} unstyled={unstyled} onPress={()=>{guard.cancel();return stop.run('stop',(h,s)=>h.onAction('stop',s));}}/></View><Text accessibilityLiveRegion="polite" {...{className:unstyled?undefined:'text-text'}}>{status+(status==='transitioning'?' · '+Math.round(transitionProgress*100)+'%':'')}</Text><ErrorMessage message={guard.error??stop.error??error??disabledReason} unstyled={unstyled}/></View>;
+}

@@ -21,6 +21,11 @@ pnpm -r typecheck               # tsc --noEmit per package
 pnpm --filter @nitro-forge/console demo   # all-engines workflow demo
 ```
 
+Packages that import `@nitro-forge/editor-controls` typecheck against its
+declaration build (`packages/editor-controls/dist`, not committed). `turbo run
+typecheck` builds it first. Before typechecking one package on its own, run
+`pnpm --filter @nitro-forge/editor-controls build`.
+
 ## Rules for contributors (human or agent)
 - Engines are synchronous, single-threaded, I/O-free, `Send`-only state machines.
 - `apply` must be atomic: validate fully before mutating; errors leave state intact.
@@ -35,18 +40,42 @@ pnpm --filter @nitro-forge/console demo   # all-engines workflow demo
 ## Existing UI controls first
 
 User requirement (2026-11-03), moved to NYC-Tron UI by rule #38 (2026-11-05:
-Forge imports NYC-Tron): use the NYC-Tron UI inventory (release pinned in
-`tooling/nyc-tron.json`, bound in `packages/studio-workspace/src/nyc-tron-host.tsx`)
-before assembling custom controls. Use its TabBar for tab panels and its
-SegmentedControl for mutually exclusive choices, alongside the existing native
-Menu/Select, semantic ui/html and input components. Extend the strict Studio UI
+Forge imports NYC-Tron), revised by the owner on 2026-11-28: Forge consumes
+NYC-Tron UI's general app UI from the release pinned in `tooling/nyc-tron.json`
+(bound in `packages/studio-workspace/src/nyc-tron-host.tsx`), and NYC-Tron UI
+never depends on Forge. Use that inventory before assembling custom controls.
+Use its TabBar for tab panels and its SegmentedControl for mutually exclusive
+choices, alongside the existing native Menu/Select, semantic ui/html and input
+components. Do not recreate NYC-Tron's general controls inside Forge; if one is
+missing, add it to NYC-Tron UI and move the pin. Extend the strict Studio UI
 provider when a canonical component is missing from that boundary. Preserve
 rounded-sm (4px) Studio chrome. Do not substitute action buttons or fake modes
 for existing controls; keep app navigation, tabs and radio choices distinct.
 
 ## Advanced native UI extraction
 
-NYC-Tron UI is the single owner of reusable native controls. The release pinned in `tooling/nyc-tron.json` is [NYC-Tron `v1.0.0-rc.2`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v1.0.0-rc.2) (GitHub Release tarballs, not npm; the controls came in via NYC-Tron PR #2). Forge adds only Rust/native engine behavior and typed adapters. Inspect [the source-port roster](docs/ADVANCED_NATIVE_PORT_ROSTER.md) before introducing an upstream port; file-level license review is mandatory. Never recreate the knob, graph, crop overlay, or generic native popup inside Forge.
+Owner decision (2026-11-28): the editor controls (audio, timeline, spreadsheet,
+canvas, color, layers, photo, motion, office and the rest) live in Forge, in
+`packages/editor-controls` (`@nitro-forge/editor-controls`). They moved there
+unchanged from NYC-Tron UI's `packages/ui/src/components/forge/` at commit
+`5a1ea4db`; see `packages/editor-controls/README.md` for the import mapping.
+Import them as `@nitro-forge/editor-controls/<path>`. Nothing in Forge may
+import `@nyc-tron/ui/components/forge/*`; `node tooling/verify-nyc-tron-pin.mjs`
+fails if anything does.
+
+The editor controls build on NYC-Tron's general primitives (gestures, stores,
+styles, shell inputs) from the pinned release
+[NYC-Tron `v1.0.0-rc.2`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v1.0.0-rc.2)
+(GitHub Release tarballs, not npm). rc.2 lacks 20 of the subpaths they import,
+so `patches/@nyc-tron__ui@1.0.0-rc.2.patch` adds those export-map entries;
+delete it when the pin moves to the next release. Forge packages add Rust and
+native engine behavior and typed adapters. Keep one implementation of each
+control: extend the knob, graph, crop overlay and the other controls in
+`packages/editor-controls` rather than writing new ones in another package, and
+take generic native popups from NYC-Tron UI. Inspect
+[the source-port roster](docs/ADVANCED_NATIVE_PORT_ROSTER.md) before introducing
+an upstream port; file-level license review is mandatory, and ported files are
+listed in `packages/editor-controls/THIRD_PARTY_NOTICES.md`.
 
 ## Writing and native skills
 

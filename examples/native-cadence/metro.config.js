@@ -1,5 +1,5 @@
 // Expo 58 default Metro config, plus two pins:
-// 1. The Forge source packages (Ignition, Cadence) live outside this app, so
+// 1. The Forge source packages (Ignition, Cadence, editor controls) live outside this app, so
 //    their requires of the native runtime resolve from the app. That keeps one
 //    React, one React Native and the single Nitro v1 copy the native build links.
 // 2. NYC_TRON_ROOT, when set, bundles a local NYC-Tron-UI checkout instead of
@@ -17,6 +17,7 @@ config.watchFolders = [
   path.join(forgeRoot, "packages/cadence"),
   path.join(forgeRoot, "packages/telemetry"),
   path.join(forgeRoot, "packages/media-ui"),
+  path.join(forgeRoot, "packages/editor-controls"),
 ];
 
 // Explicit lab mode serves a separate acceptance entry. Normal consumers keep
