@@ -26,19 +26,19 @@
     "codegen": "nitrogen"
   },
   "devDependencies": {
-    "react-native-nitro-modules": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.138.g43e09c161101",
     "typescript": "7.0.2",
     "vitest": "5.1.0",
-    "nitrogen": "1.0.0-alpha.nightly.136.gdb81de61bd32",
-    "nitro-core": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+    "nitrogen": "1.0.0-alpha.nightly.138.g43e09c161101",
+    "nitro-core": "1.0.0-alpha.nightly.138.g43e09c161101",
     "@nitro-forge/editor-controls": "workspace:*"
   },
   "imports": {
     "#nitro/*": "./nitrogen/generated/shared/javascript/*.cjs"
   },
   "peerDependencies": {
-    "react-native-nitro-modules": "1.0.0-alpha.nightly.136.gdb81de61bd32",
-    "nitro-core": "1.0.0-alpha.nightly.136.gdb81de61bd32"
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.138.g43e09c161101",
+    "nitro-core": "1.0.0-alpha.nightly.138.g43e09c161101"
   },
   "swiftpmConfig": {
     "name": "NitroForgeV1",
