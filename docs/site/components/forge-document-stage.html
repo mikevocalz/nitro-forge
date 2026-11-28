@@ -38,7 +38,7 @@
 <button type="button" class="btn copypage" id="copypage" hidden>Copy page</button><h2 id="purpose">Purpose</h2>
 <p>Default read-only stage. It projects live engine state per studio: quill text and styles, tally cells, pitch slide objects, prism shape layers, cadence and splice tracks and clips, photo originals and versions, motion layers, design nodes, draft counts, and a PDF page overview as the fallback. It does not paint, composite or play.</p>
 <h2 id="install">Install</h2>
-<ul><li>Package: <code>@nitro-forge/forge-document-stage</code> (registry item)</li><li>Import: <code>import { ForgeDocumentStage } from '@/components/forge/index';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</li><li>Requires: <code>@nitro-forge/studio-ui-provider</code>; <code>@nitro-forge/forge-directions</code>; <code>@nitro-forge/studio-layout</code> (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)</li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/forge-document-stage</code></li><li>Installs: none (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/stage.tsx</code></li></ul>
+<ul><li>Package: <code>@nitro-forge/forge-document-stage</code> (registry item)</li><li>Import: <code>import { ForgeDocumentStage } from '@/components/forge/index';</code></li><li>Peers: <code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</li><li>Requires: <code>@nitro-forge/studio-ui-provider</code>; <code>@nitro-forge/studio-theme</code>; <code>@nitro-forge/forge-directions</code>; <code>@nitro-forge/studio-layout</code> (step 3 of docs/agent-native/install-order.md; shadcn cannot install it)</li><li>Command: <code>npx shadcn@4.23.0 add @nitro-forge/forge-document-stage</code></li><li>Installs: none (the CLI adds them when they are absent)</li><li>Files: <code>components/forge/stage.tsx</code></li></ul>
 <h2 id="props">Props</h2>
 <table><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Description</th></tr></thead><tbody><tr><td data-l="Name">studioId</td><td data-l="Type"><code>Studio</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Picks the projection branch.</td></tr><tr><td data-l="Name">state</td><td data-l="Type"><code>unknown</code></td><td data-l="Default">none</td><td data-l="Required">yes</td><td data-l="Description">Engine <code>describe</code> output; falsy shows &quot;Opening document…&quot;.</td></tr><tr><td data-l="Name">theme</td><td data-l="Type"><code>&quot;dark&quot; | &quot;light&quot;</code></td><td data-l="Default"><code>&quot;dark&quot;</code></td><td data-l="Required">no</td><td data-l="Description">Caption and heading colour.</td></tr></tbody></table>
 <h2 id="variants">Variants</h2>
@@ -69,7 +69,7 @@ npx shadcn@4.23.0 add @nitro-forge/forge-document-stage</pre></div>
 <dt>Peers</dt><dd><code>react</code> &gt;=19, <code>react-native</code> &gt;=0.81</dd>
 <dt>Installs</dt><dd>none</dd>
 <dt>Source files</dt><dd class="mono">studio-workspace/src/stage.tsx</dd>
-<dt>Generated from</dt><dd class="mono">09b855b1</dd>
+<dt>Generated from</dt><dd class="mono">145526d6</dd>
 </dl></aside>
 </div>
 </main>
@@ -77,7 +77,7 @@ npx shadcn@4.23.0 add @nitro-forge/forge-document-stage</pre></div>
 <footer class="status" role="contentinfo">
 <span>Registry: r/ built, 18 items, ref <code>master</code> (moving branch)</span>
 <span>Packages 0.1.0, no tag or tarball cut, npm not-used, distribution status NOT RUN</span>
-<span>Generated from inputs <code>09b855b1</code></span>
+<span>Generated from inputs <code>145526d6</code></span>
 <span><a href="../../../llms.txt">llms.txt</a> <a href="../../../AGENTS.md">AGENTS.md</a></span>
 </footer>
 <script src="../site.js"></script>

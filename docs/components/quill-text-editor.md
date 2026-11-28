@@ -6,7 +6,7 @@ tier: 1
 docs: "handwritten"
 platforms: []
 category: "input"
-tokens: ["--color-accent", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-text-muted", "--font-editorial", "--radius-control", "--radius-paper", "--shadow-page", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-page", "--spacing-group", "--spacing-target"]
+tokens: ["--color-accent", "--color-paper", "--color-paper-text", "--color-paper-text-muted", "--color-text-muted", "--font-editorial", "--radius-control", "--radius-md", "--shadow-page", "--spacing-fixed-element", "--spacing-fixed-inset", "--spacing-fixed-page", "--spacing-group", "--spacing-target"]
 registryDependencies: ["@nitro-forge/forge-directions", "@nitro-forge/forge-icon", "@nitro-forge/studio-theme", "@nitro-forge/studio-ui-provider"]
 a11yStatus: "reviewed-fail"
 ---
