@@ -257,7 +257,7 @@ export function PrismEditor(props: PrismEditorProps) {
           items={prismBlendMenuItems()}
           disabled={busy || !!props.busy}
           className="border border-border px-3"
-          style={{ minHeight: scale.size.target, minWidth: tokens.spacing.off104 }}
+          style={{ minHeight: scale.size.target, minWidth: tokens.spacing.off132 }}
           onSelect={mode => runLayerCommand(rows => prismBlendCommand(rows, selected.id, { kind: 'mode', mode }))}
         ><Text style={{ color: colors.text, fontSize: tokens.text.off13 }}>{selectedBlend ? selectedModeLabel : 'Not listed'}</Text></MenuButton>
       </View>

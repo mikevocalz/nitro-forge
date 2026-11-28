@@ -69,9 +69,10 @@ export async function loadTokenIndex() {
 }
 
 /** Token modules by package: what a reference expression resolves to when read at run time. */
-export async function loadTokenModules() {
-  const ws = await import(pathToFileURL(join(repoRoot, 'packages/studio-workspace/src/tokens.ts')).href);
-  const icons = await import(pathToFileURL(join(repoRoot, 'packages/icons/src/tokens.js')).href);
+/** Load the token modules under `root` (the checkout, or a tree extracted from another ref). */
+export async function loadTokenModules(root = repoRoot) {
+  const ws = await import(pathToFileURL(join(root, 'packages/studio-workspace/src/tokens.ts')).href);
+  const icons = await import(pathToFileURL(join(root, 'packages/icons/src/tokens.js')).href);
   return { 'packages/studio-workspace/src': { tokens: ws.tokens }, 'packages/icons/src': icons };
 }
 

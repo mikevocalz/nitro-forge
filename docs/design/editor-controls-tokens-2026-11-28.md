@@ -136,13 +136,13 @@ Rewrite totals from the codemod (`tooling/codemod/tokenize-editor-controls.mjs -
 - By role, before the review: spacing 1965, opacity 98, border 93, type 70, leading 18, layer 18, radius 18, weight 17, icon 3, override 2.
 
 Hand fixes covered the 4 colours, the 1 Tailwind arbitrary value and 2 opacity sites that were
-arithmetic. They also snapped one studio-workspace value, listed below.
+arithmetic. They also gave one studio-workspace value an exact off-scale step, listed below.
 
 ## Mapping table
 
 Each token, its value and how many references the rewrite added. "Of which snapped" counts the
 references whose old literal differed from the value. Studio-workspace references count too (one
-`tokens.spacing.off104`).
+`tokens.spacing.off132`).
 
 ### Spacing and sizes: padding, margin, gap, position, width, height, min/max, flexBasis
 
@@ -178,7 +178,8 @@ references whose old literal differed from the value. Studio-workspace reference
 | `tokens.spacing.fixedRail` | 72 | 5 | 0 |
 | `tokens.spacing.off76` | 76 | 9 | 7 |
 | `tokens.spacing.off96` | 96 | 14 | 7 |
-| `tokens.spacing.off104` | 104 | 2 | 1 |
+| `tokens.spacing.off104` | 104 | 1 | 1 |
+| `tokens.spacing.off132` | 132 | 1 | 0 |
 | `tokens.spacing.off360` | 360 | 8 | 2 |
 | `tokens.spacing.off480` | 480 | 4 | 2 |
 | `tokens.spacing.off600` | 600 | 2 | 1 |
@@ -284,19 +285,23 @@ role, so each is named by role and used only in editor-controls.
 
 ## Snapped values
 
-198 snaps from the codemod and 5 from hand fixes, for owner review.
+198 snaps from the codemod and 4 from hand fixes, for owner review.
 
 ### Hand fixes
 
 | Site | Old | New | Notes |
 |---|---|---|---|
-| `packages/studio-workspace/src/prism-editor.tsx:260`, minWidth of the blend-mode menu button | 132 | `tokens.spacing.off104` (104) | studio-workspace has no step between 104 and 360. It is a minimum width, so a longer label still widens the button. |
 | `devices/DevicePairingDialog.tsx`, backdrop | `rgba(0,0,0,0.5)` | absolutely placed `bg-black` view at `tokens.opacity.scrim` (0.45) | The workspace scrim opacity, behind the dialog content. |
 | `layers/CanvasCompareView.tsx`, divider handle | `boxShadow: "0 1px 3px rgba(0,0,0,0.25)"` | `shadow-sm` class (styled only) | The Tailwind default theme's `--shadow-sm`: `0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)` ([Tailwind box-shadow](https://tailwindcss.com/docs/box-shadow)). NYC-Tron already uses `shadow-md` and `shadow-lg`, and every host that imports `tailwindcss` has these. The forge `shadow-float-*` tokens were not used, because the lab hosts do not import the forge theme. |
 | `layers/CanvasCompareView.tsx`, label chip | `boxShadow: "0 4px 12px rgba(0,0,0,0.18)"` | `shadow-md` class (styled only) | `--shadow-md`: `0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)`. |
 | `photo/PhotoBrushSurface.tsx`, brush stroke preview | `rgba(80,180,255,0.5)` | `bg-accent` at `controlTokens.opacity.muted` (0.6) | Colour changes from a fixed light blue to the theme accent, which exists in light and dark. |
 
 These hand fixes keep their exact value and are not snaps:
+
+- `packages/studio-workspace/src/prism-editor.tsx:260`, the blend-mode menu button's `minWidth: 132`,
+  becomes `tokens.spacing.off132`. studio-workspace had no step between 104 and 360, so `off132` is
+  added to the off-scale spacing of both token modules. An earlier pass snapped it to 104;
+  `prove-equivalence` flagged that, and the exact step keeps the button as it was.
 
 - `spreadsheet/SheetTabs.tsx` changes `border-b-[3px]` to `border-b-3`. With Tailwind 4.3.5, both
   compile to `border-bottom-width: 3px` ([Tailwind border-width](https://tailwindcss.com/docs/border-width)).

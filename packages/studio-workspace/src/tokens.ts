@@ -29,7 +29,7 @@ const offScale = {
   spacing: {
     off1_5: 1.5, off2: 2, off3: 3, off5: 5, off5_75: 5.75, off6: 6, off7: 7, off10: 10, off14: 14,
     off16: 16, off18: 18, off20: 20, off22: 22, off24: 24, off25: 25, off26: 26, off28: 28, off33: 33,
-    off40: 40, off48: 48, off50: 50, off76: 76, off84: 84, off96: 96, off104: 104, off360: 360,
+    off40: 40, off48: 48, off50: 50, off76: 76, off84: 84, off96: 96, off104: 104, off132: 132, off360: 360,
     off480: 480, off520: 520, off600: 600, off680: 680, off760: 760, off792: 792, off800: 800, off1200: 1200,
   },
   text: { off9: 9, off11: 11, off13: 13, off15: 15, off22: 22, off28: 28 },

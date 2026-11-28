@@ -3657,6 +3657,15 @@
    "cls": "off-scale-preserved"
   },
   {
+   "file": "packages/studio-workspace/src/prism-editor.tsx",
+   "kind": "literal",
+   "property": "minWidth",
+   "value": "132",
+   "count": 1,
+   "to": "--spacing-off-132",
+   "cls": "off-scale-preserved"
+  },
+  {
    "file": "packages/studio-workspace/src/stage.tsx",
    "kind": "literal",
    "property": "minHeight",

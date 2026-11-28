@@ -235,6 +235,7 @@ Size (width, height, min and max). Values 540 and 960 in `office-cluster.ts` are
 | `--spacing-fixed-rail` | 72 | 1 | minHeight | persona-composer.tsx 1 |
 | `--spacing-off-96` | 96 | 2 | minHeight | persona-composer.tsx 1, stage.tsx 1 |
 | `--spacing-off-104` | 104 | 1 | width | stage.tsx 1 |
+| `--spacing-off-132` | 132 | 1 | minWidth | prism-editor.tsx 1 |
 | `--spacing-off-360` | 360 | 1 | minHeight | stage.tsx 1 |
 | `--spacing-off-480` | 480 | 1 | minHeight | text-editor.tsx 1 |
 | `--spacing-off-520` | 520 | 1 | maxWidth | stage.tsx 1 |
