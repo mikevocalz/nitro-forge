@@ -25,6 +25,10 @@
     "./package.json": "./package.json"
   },
   "sideEffects": false,
+  "files": [
+    "lib",
+    "src"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",

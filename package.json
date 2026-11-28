@@ -26,7 +26,9 @@
     "test:completion": "node --test tooling/verify-completion-plan.test.mjs",
     "validate:v1": "node tooling/validate-v1.mjs",
     "validate:v1:prerelease": "node tooling/validate-v1.mjs --version 1.0.0-rc.1",
-    "test:validate-v1": "node --test tooling/validate-v1.test.mjs"
+    "test:validate-v1": "node --test tooling/validate-v1.test.mjs",
+    "pack:tarballs": "node tooling/release/pack-tarballs.mjs",
+    "test:tarball-deps": "node --test tooling/release/tarball-deps.test.mjs"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

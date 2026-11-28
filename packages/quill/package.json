@@ -32,6 +32,11 @@
     "./package.json": "./package.json"
   },
   "sideEffects": false,
+  "files": [
+    "lib",
+    "src",
+    "THIRD_PARTY_NOTICES.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
