@@ -7,6 +7,7 @@
 
 mod b64;
 mod geom;
+mod memory;
 mod colors;
 mod model;
 mod ops;
@@ -1173,6 +1174,25 @@ impl Engine for PrismEngine {
 
     fn binary_input_ops(&self) -> &'static [&'static str] {
         &["drawPixels"]
+    }
+
+    /// Live layers, selection and undo history, each shared pixel buffer
+    /// counted once (see `memory.rs`).
+    fn resident_bytes(&self) -> Option<usize> {
+        let mut tally = memory::Tally::default();
+        tally.layers(&self.layers);
+        tally.selection(&self.selection);
+        for entry in self.journal.entries() {
+            match entry {
+                UndoEntry::Doc(state) => {
+                    tally.layers(&state.layers);
+                    tally.selection(&state.selection);
+                }
+                UndoEntry::Pixels { prev, .. } => tally.owned(prev),
+                UndoEntry::Colors(_) => {}
+            }
+        }
+        Some(tally.total().saturating_add(std::mem::size_of::<Self>()))
     }
 
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {

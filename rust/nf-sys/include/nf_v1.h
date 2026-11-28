@@ -75,6 +75,21 @@ char* nf_v1_restore(int64_t handle, const uint8_t* bytes, size_t len);
 /* Returns 1 once for a live document; 0 for invalid/previously closed. */
 int32_t nf_v1_close(int64_t handle);
 
+/* Engine selection. nf-sys links each studio engine behind a Cargo feature
+ * (rust/nf-sys/Cargo.toml; default: all). Returns 1 when kind is linked in
+ * this build, 0 for a known engine this build left out, -1 for an unknown or
+ * invalid name. Opening a left-out engine fails with an "unsupported" error
+ * that says "engine '<kind>' not linked in this build". Takes no lock. */
+int32_t nf_v1_engine_linked(const uint8_t* kind, size_t kind_len);
+
+/* Approximate heap bytes held by one open document, undo history included,
+ * for Nitro's getExternalMemorySize. Engines with their own accounting
+ * (Prism) report it; the rest report the last NFD1 envelope size this session
+ * wrote or restored (0 before any). Returns 0 for an invalid/closed handle.
+ * Waits for in-flight work on the same document: call it from that
+ * document's worker queue, never the JS thread. */
+uint64_t nf_v1_resident_bytes(int64_t handle);
+
 /* Every returned Rust allocation must be freed by its matching function. */
 void nf_free_string(char* string);
 void nf_free_bytes(NfBytes bytes);

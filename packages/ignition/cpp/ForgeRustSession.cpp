@@ -121,6 +121,14 @@ bool ForgeRustSession::isOpen() const noexcept {
   return _handle.load(std::memory_order_acquire) > 0;
 }
 
+size_t ForgeRustSession::residentBytes() const noexcept {
+  const auto handle = _handle.load(std::memory_order_acquire);
+  if (handle <= 0) {
+    return 0;
+  }
+  return static_cast<size_t>(nf_v1_resident_bytes(handle));
+}
+
 int64_t ForgeRustSession::checkedHandle() const {
   const auto handle = _handle.load(std::memory_order_acquire);
   if (handle <= 0) {

@@ -12,37 +12,38 @@
 
 // New v1 transport is separate: legacy nf_* entrypoints remain available.
 mod dispatch;
+mod engines;
 mod ffi_binary;
 mod ffi_v1;
 mod ffi_v1_parts;
 mod session_registry;
-#[cfg(test)]
+// Drives every engine, so it needs the full set.
+#[cfg(all(
+    test,
+    feature = "prism",
+    feature = "cadence",
+    feature = "splice",
+    feature = "folio",
+    feature = "pitch",
+    feature = "tally",
+    feature = "quill",
+    feature = "photo",
+    feature = "motion",
+    feature = "design",
+    feature = "draft",
+    feature = "scene"
+))]
 mod batch_tests;
+#[cfg(test)]
+mod feature_matrix_tests;
 
-use ignition_core::{
-    base64_decode,
-    Command, Engine, EngineError, EngineKind, ErrorCode, SessionRegistry,
-};
+#[cfg(test)]
+pub(crate) use engines::factory;
+
+use ignition_core::{base64_decode, Command, EngineError, EngineKind, ErrorCode, SessionRegistry};
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Mutex, OnceLock};
-
-fn factory(kind: EngineKind) -> Option<Box<dyn Engine>> {
-    match kind {
-        EngineKind::Prism => Some(Box::new(prism_engine::PrismEngine::new(0, 0))),
-        EngineKind::Cadence => Some(Box::new(cadence_engine::CadenceEngine::new())),
-        EngineKind::Splice => Some(Box::new(splice_engine::SpliceEngine::new())),
-        EngineKind::Folio => Some(Box::new(folio_engine::FolioEngine::new())),
-        EngineKind::Pitch => Some(Box::new(pitch_engine::PitchEngine::new())),
-        EngineKind::Tally => Some(Box::new(tally_engine::TallyEngine::new())),
-        EngineKind::Quill => Some(Box::new(quill_engine::QuillEngine::new())),
-        EngineKind::Photo => Some(Box::new(photo_engine::PhotoEngine::new())),
-        EngineKind::Motion => Some(Box::new(motion_engine::MotionEngine::new())),
-        EngineKind::Design => Some(Box::new(design_engine::DesignEngine::new())),
-        EngineKind::Draft => Some(Box::new(draft_engine::DraftEngine::new())),
-        EngineKind::Scene => Some(Box::new(scene_engine::SceneEngine::new())),
-    }
-}
 
 fn registry() -> &'static Mutex<SessionRegistry> {
     static REG: OnceLock<Mutex<SessionRegistry>> = OnceLock::new();
@@ -97,13 +98,10 @@ pub unsafe extern "C" fn nf_open(kind: *const c_char, out_err: *mut *mut c_char)
         set_err(out_err, EngineError::invalid(format!("unknown engine '{kind}'")));
         return 0;
     };
-    match factory(k) {
-        Some(e) => reg_lock().open(e) as i64,
-        None => {
-            set_err(
-                out_err,
-                EngineError::unsupported(format!("engine '{kind}' not linked")),
-            );
+    match engines::open_kind(k) {
+        Ok(e) => reg_lock().open(e) as i64,
+        Err(e) => {
+            set_err(out_err, e);
             0
         }
     }
@@ -300,9 +298,13 @@ pub unsafe extern "C" fn nf_alloc_copy(ptr: *const c_void, len: usize) -> *mut u
 
 #[cfg(test)]
 mod tests {
+    // Helpers and imports go unused in builds that leave out the engines
+    // these tests drive (see feature_matrix_tests.rs).
+    #![allow(unused_imports, dead_code)]
     use super::*;
     use std::ffi::CString;
 
+    #[cfg(feature = "tally")]
     #[test]
     fn ffi_open_apply_snapshot_restore_close() {
         unsafe {

@@ -62,6 +62,41 @@ int main() {
   try { cache.put("a", std::vector<uint8_t>(5)); } catch (const std::invalid_argument&) { bounded = true; }
   assert(bounded && (*cache.get("a"))[0] == 1);
   cache.clear(); assert(cache.size() == 0 && !cache.get("a"));
+  // getExternalMemorySize source: payload plus key and node overhead, and it
+  // returns to zero exactly when the cache empties.
+  assert(cache.footprint() == 0);
+  nitroforge::native::ByteCache sized(1024);
+  sized.put("first", std::vector<uint8_t>(100));
+  const auto one = sized.footprint();
+  assert(one > 100 && one >= sized.size());
+  sized.put("second", std::vector<uint8_t>(200));
+  assert(sized.footprint() > one + 200);
+  sized.put("first", std::vector<uint8_t>(10)); // replace shrinks payload
+  assert(sized.size() == 210 && sized.footprint() < one + 300);
+  assert(sized.remove("second") && sized.remove("first") && sized.footprint() == 0);
+  sized.put("evicted", std::vector<uint8_t>(1000));
+  sized.put("survivor", std::vector<uint8_t>(500)); // evicts "evicted"
+  assert(sized.size() == 500 && !sized.get("evicted"));
+  const auto survivorOnly = sized.footprint();
+  sized.clear(); sized.put("survivor", std::vector<uint8_t>(500));
+  assert(sized.footprint() == survivorOnly);
+
+  // Engine selection ABI. This smoke links the default (all-engine) build.
+  assert(nf_v1_engine_linked(reinterpret_cast<const uint8_t*>("tally"), 5) == 1);
+  assert(nf_v1_engine_linked(reinterpret_cast<const uint8_t*>("prism"), 5) == 1);
+  assert(nf_v1_engine_linked(reinterpret_cast<const uint8_t*>("nope"), 4) == -1);
+  assert(nf_v1_engine_linked(nullptr, 5) == -1);
+
+  // Resident bytes: the tally session above wrote and restored an envelope,
+  // so it reports at least that envelope's size.
+  assert(document->residentBytes() >= source.size());
+  auto prism = ForgeRustSession::open("prism");
+  prism->apply("new", std::string_view("{\"width\":128,\"height\":128}"));
+  const auto blank = prism->residentBytes();
+  prism->apply("addRasterLayer", std::string_view("{}"));
+  assert(prism->residentBytes() >= blank + 128u * 128u * 4u);
+  prism->close();
+  assert(prism->residentBytes() == 0);
 
   document->close();
   document->close();

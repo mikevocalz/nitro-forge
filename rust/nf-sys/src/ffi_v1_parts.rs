@@ -164,6 +164,9 @@ pub unsafe extern "C" fn nf_v1_free_command_result(value: NfV1CommandResult) {
 
 #[cfg(test)]
 mod tests {
+    // Helpers and imports go unused in builds that leave out the engines
+    // these tests drive (see feature_matrix_tests.rs).
+    #![allow(unused_imports, dead_code)]
     use super::super::ffi_v1::{nf_v1_close, nf_v1_open};
     use super::*;
     use ignition_core::Event;
@@ -202,6 +205,7 @@ mod tests {
         unsafe { nf_v1_free_command_result(good) };
     }
 
+    #[cfg(feature = "tally")]
     #[test]
     fn structured_payload_keeps_json_scope_and_owned_event_memory() {
         unsafe {
@@ -245,6 +249,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "tally")]
     #[test]
     fn rejects_payload_injection_and_invalid_op_without_corrupting_session() {
         unsafe {

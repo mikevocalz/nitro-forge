@@ -83,10 +83,14 @@ pub(crate) fn run_command(
 
 #[cfg(test)]
 mod tests {
+    // Helpers and imports go unused in builds that leave out the engines
+    // these tests drive (see feature_matrix_tests.rs).
+    #![allow(unused_imports, dead_code)]
     use super::*;
     use crate::factory;
     use ignition_core::{EngineKind, ErrorCode};
 
+    #[cfg(feature = "tally")]
     #[test]
     fn input_bytes_are_rejected_for_ops_that_do_not_read_them() {
         let mut tally = factory(EngineKind::Tally).unwrap();
@@ -96,6 +100,7 @@ mod tests {
         assert!(err.message.contains("does not accept binary input"));
     }
 
+    #[cfg(feature = "folio")]
     #[test]
     fn folio_add_file_attachment_accepts_binary_sidecar() {
         // `binary_input_ops` is the host-side gate: without
@@ -123,6 +128,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "tally")]
     #[test]
     fn binary_snapshot_returns_raw_envelope_bytes() {
         let mut tally = factory(EngineKind::Tally).unwrap();
@@ -136,6 +142,7 @@ mod tests {
         assert_eq!(json.data["bytes"], base64_encode(&bytes));
     }
 
+    #[cfg(feature = "tally")]
     #[test]
     fn cancelled_task_never_runs_reserved_ops() {
         let mut tally = factory(EngineKind::Tally).unwrap();

@@ -4,11 +4,14 @@
 
 use ignition_core::{Engine, EngineError};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 struct Session {
     closing: AtomicBool,
+    /// Size of the last NFD1 envelope this session produced or restored.
+    /// The memory-size fallback for engines without `resident_bytes`.
+    envelope_bytes: AtomicUsize,
     engine: Mutex<Option<Box<dyn Engine>>>,
 }
 
@@ -56,6 +59,7 @@ impl ConcurrentSessions {
 
         let session = Arc::new(Session {
             closing: AtomicBool::new(false),
+            envelope_bytes: AtomicUsize::new(0),
             engine: Mutex::new(Some(engine)),
         });
         lock_unpoison(&self.sessions).insert(id, session);
@@ -127,6 +131,34 @@ impl ConcurrentSessions {
         };
         lock_unpoison(&session.engine).take();
         true
+    }
+
+    /// Remember the size of an envelope this session just wrote or restored.
+    /// Unknown or closed handles are ignored.
+    pub fn note_envelope_bytes(&self, handle: i64, bytes: usize) {
+        if let Ok(session) = self.lookup(handle) {
+            session.envelope_bytes.store(bytes, Ordering::Relaxed);
+        }
+    }
+
+    /// Resident bytes of one document: the engine's own accounting when it
+    /// has one, otherwise the last envelope size this session saw (0 before
+    /// any snapshot or restore). Waits for an in-flight command, like
+    /// `with_engine`, so call it from the document's worker, not the JS thread.
+    pub fn resident_bytes(&self, handle: i64) -> Result<usize, EngineError> {
+        let session = self.lookup(handle)?;
+        let guard = lock_unpoison(&session.engine);
+        if session.closing.load(Ordering::Acquire) {
+            return Err(EngineError::not_found(format!(
+                "closed native session {handle}"
+            )));
+        }
+        let engine = guard
+            .as_deref()
+            .ok_or_else(|| EngineError::not_found(format!("closed native session {handle}")))?;
+        let own = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| engine.resident_bytes()))
+            .map_err(|_| EngineError::internal("engine panicked reporting its size"))?;
+        Ok(own.unwrap_or_else(|| session.envelope_bytes.load(Ordering::Relaxed)))
     }
 
     fn lookup(&self, handle: i64) -> Result<Arc<Session>, EngineError> {
