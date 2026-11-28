@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { presentPreview } from "@nyc-tron/ui/components/forge/audio/preview-model";
+import { presentPreview } from "@nitro-forge/editor-controls/audio/preview-model";
 import { toPreviewViewState } from "../src/previewView";
 import type { PlaybackSnapshot } from "../src/audioPlayback";
 

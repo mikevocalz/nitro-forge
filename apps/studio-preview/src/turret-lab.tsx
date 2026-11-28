@@ -4,7 +4,7 @@ import { useStore } from 'zustand';
 import { Button, NightScope, Pressable, SegmentedControl, Text, TokenScope, View, type StudioViewProps } from '@nitro-forge/studio-workspace/ui';
 
 import { BUILT_IN_PERSONAS, PersonaTurret, useForgeRenderPrefs, type PersonaSurface } from '@nitro-forge/studio-workspace/turret';
-import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
+import { PrecisionScrubber } from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import { workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
 import {
   FORGE_DIRECTION_IDS, directionPalette, forgeDirections, glassAllowed, isForgeDirection, labCanvas, nycTronTokensFor, prismFillSwatches,

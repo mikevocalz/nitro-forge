@@ -1,0 +1,32 @@
+ProCraft
+Copyright (c) 2026 ArtCraft Team and the ProCraft contributors.
+Licensed under the MIT License or the Apache License, Version 2.0, at your option
+(LICENSE-MIT, LICENSE-APACHE).
+
+Third-party material
+
+This product bundles third-party material under its own licenses, listed below.
+
+- Inter typeface (android/app/src/main/assets/fonts/Inter-*.ttf), by The Inter
+  Project Authors — SIL Open Font License 1.1. See Inter-OFL.txt and SOURCE.md beside the fonts.
+- Lucide icons (lucide.dev, lucide-static 1.63.0), by Lucide Icons and Contributors: ISC License; the
+  icons derived from Feather also MIT (Cole Bemis). The interface icons as Lucide draws them, kept
+  in android/app/src/main/java/io/github/artcraftandroid/procraft/ui/LucideIcons.kt.
+  See android/app/src/main/assets/icons/LICENSE-lucide.txt.
+- Light panoramas for the 3D view (android/app/src/main/assets/environments/*.hdr),
+  from Poly Haven (https://polyhaven.com) — CC0 1.0. Authors per file in the folder's README.md.
+- The Okhsl colour model's code in desktop/src/colour_models.rs, after Björn Ottosson's reference
+  implementation (https://bottosson.github.io/posts/colorpicker/) — MIT License, Copyright (c) 2021
+  Björn Ottosson; the notice is in the file.
+
+Libraries
+
+The Rust crates the app is built with, and their licenses, are listed in
+android/app/src/main/assets/licenses.txt (made by tools/licenses.py), which the
+app shows. Among them, the Android app (android, with crates/core) uses:
+
+- UniFFI (https://github.com/mozilla/uniffi-rs) — MPL-2.0: the uniffi crate in the library, and the
+  generator of the Kotlin bindings (generated at build time, not committed).
+- JNA (https://github.com/java-native-access/jna) — Apache-2.0 (dual-licensed with LGPL-2.1; used
+  under Apache-2.0).
+- AndroidX, Jetpack Compose, Material 3, input motion prediction and kotlinx.coroutines — Apache-2.0.

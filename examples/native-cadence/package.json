@@ -12,6 +12,7 @@
   "dependencies": {
     "@expo/ui": "58.0.28",
     "@nitro-forge/cadence": "workspace:*",
+    "@nitro-forge/editor-controls": "workspace:*",
     "@nitro-forge/ignition": "workspace:*",
     "@nitro-forge/telemetry": "workspace:*",
     "@nyc-tron/core": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-core-1.0.0-rc.2.tgz",

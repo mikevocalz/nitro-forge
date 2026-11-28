@@ -7,12 +7,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type {
   SpreadsheetGridProps, SpreadsheetWindowRequest,
-} from "@nyc-tron/ui/components/forge/SpreadsheetGrid";
-import type { SheetTabsProps } from "@nyc-tron/ui/components/forge/spreadsheet/SheetTabs";
-import type { ChartBuilderProps } from "@nyc-tron/ui/components/forge/spreadsheet/ChartBuilder";
-import type { SparklineEditorProps } from "@nyc-tron/ui/components/forge/spreadsheet/SparklineEditor";
-import type { SpreadsheetCardsViewProps } from "@nyc-tron/ui/components/forge/spreadsheet/SpreadsheetCardsView";
-import type { FillPlan } from "@nyc-tron/ui/components/forge/spreadsheet/fill-handle";
+} from "@nitro-forge/editor-controls/SpreadsheetGrid";
+import type { SheetTabsProps } from "@nitro-forge/editor-controls/spreadsheet/SheetTabs";
+import type { ChartBuilderProps } from "@nitro-forge/editor-controls/spreadsheet/ChartBuilder";
+import type { SparklineEditorProps } from "@nitro-forge/editor-controls/spreadsheet/SparklineEditor";
+import type { SpreadsheetCardsViewProps } from "@nitro-forge/editor-controls/spreadsheet/SpreadsheetCardsView";
+import type { FillPlan } from "@nitro-forge/editor-controls/spreadsheet/fill-handle";
 import type { TallyGridData, TallyGridDocument } from "../src/grid-adapter";
 import { commitTallyGridCell, readTallyWindow } from "../src/grid-adapter";
 import type { TallyFillPlan, TallySheetTabsBinding } from "../src/grid-cluster";

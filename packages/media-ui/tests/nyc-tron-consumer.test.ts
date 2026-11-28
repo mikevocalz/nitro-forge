@@ -2,8 +2,8 @@
 // and that implementation still produces the transport labels Forge's seek
 // bar and timeline depend on. NYC-Tron's own unit tests live in its repo.
 import { describe, expect, it } from "vitest";
-import * as tron from "@nyc-tron/ui/components/forge/timebase";
-import * as tronWaveform from "@nyc-tron/ui/components/forge/waveform";
+import * as tron from "@nitro-forge/editor-controls/timebase";
+import * as tronWaveform from "@nitro-forge/editor-controls/waveform";
 import * as local from "../src/timebase";
 
 describe("media-ui consumes NYC-Tron timebase", () => {

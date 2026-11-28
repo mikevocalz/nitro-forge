@@ -1,0 +1,9 @@
+import {PropertyInspector,type PropertyInspectorProps} from '../inputs/PropertyInspector.tsx';
+export interface HeaderFooterSettings {header:string;footer:string;differentFirst:boolean;firstHeader:string;firstFooter:string;differentOddEven:boolean;evenHeader:string;evenFooter:string;pageNumbers:boolean;numberStart:number;numberFormat:'decimal'|'roman'|'letters';linkPrevious:boolean}
+export interface HeadersFootersEditorProps extends Omit<PropertyInspectorProps,'label'|'fields'|'onCommit'> {value:HeaderFooterSettings;onCommit:(value:HeaderFooterSettings,signal?:AbortSignal)=>unknown}
+export function HeadersFootersEditor({value,onCommit,...props}:HeadersFootersEditorProps){return <PropertyInspector {...props} label="Headers and footers" fields={[
+ ...(['header','footer',...(value.differentFirst?['firstHeader','firstFooter'] as const:[]),...(value.differentOddEven?['evenHeader','evenFooter'] as const:[])] as const).map(id=>({kind:'text' as const,id,label:{header:'Running header',footer:'Running footer',firstHeader:'First-page header',firstFooter:'First-page footer',evenHeader:'Even-page header',evenFooter:'Even-page footer'}[id],value:value[id],maxLength:8192,multiline:true})),
+ ...(['differentFirst','differentOddEven','pageNumbers','linkPrevious'] as const).map(id=>({kind:'boolean' as const,id,label:{differentFirst:'Different first page',differentOddEven:'Different odd and even pages',pageNumbers:'Show page numbers',linkPrevious:'Link previous section'}[id],value:value[id]})),
+ {kind:'number',id:'numberStart',integer:true,label:'Starting page number',value:value.numberStart,min:1,max:1000000,step:1},
+ {kind:'choice',id:'numberFormat',label:'Page number format',value:value.numberFormat,choices:['decimal','roman','letters'].map(id=>({id,label:id}))}
+ ]} onCommit={(id,v,s)=>onCommit({...value,[id]:v},s)}/>;}

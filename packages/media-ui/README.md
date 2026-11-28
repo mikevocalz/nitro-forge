@@ -9,18 +9,19 @@ dense timelines belong to the existing **Skia v3** / Board GPU track.
 ## Where the components live
 
 `NativeSeekBar`, `WaveformLane`, `LevelFader`, the timebase math and the waveform math are
-owned by [NYC-Tron UI](https://github.com/mikevocalz/NYC-Tron-UI). Forge
-depends on the release tarball pinned in `tooling/nyc-tron.json`
-(v0.1.0-alpha.2); `node tooling/verify-nyc-tron-pin.mjs --download` checks the
-specifiers, the lockfile and the SHA256SUMS digest. NYC-Tron never imports
-Forge.
+in `@nitro-forge/editor-controls` (`packages/editor-controls`). They were built
+in [NYC-Tron UI](https://github.com/mikevocalz/NYC-Tron-UI) and moved to Forge
+on 2026-11-28. The controls build on NYC-Tron UI's general primitives from the
+release pinned in `tooling/nyc-tron.json`; `node tooling/verify-nyc-tron-pin.mjs
+--download` checks the specifiers, the lockfile and the SHA256SUMS digest.
+NYC-Tron never imports Forge.
 
-New code imports the NYC-Tron subpaths directly:
+New code imports the editor-control subpaths directly:
 
 ```tsx
-import { NativeSeekBar } from '@nyc-tron/ui/components/forge/NativeSeekBar';
-import { WaveformLane } from '@nyc-tron/ui/components/forge/WaveformLane';
-import { FRAME_RATES } from '@nyc-tron/ui/components/forge/timebase';
+import { NativeSeekBar } from '@nitro-forge/editor-controls/NativeSeekBar';
+import { WaveformLane } from '@nitro-forge/editor-controls/WaveformLane';
+import { FRAME_RATES } from '@nitro-forge/editor-controls/timebase';
 
 <NativeSeekBar
   frame={currentFrame}
@@ -39,19 +40,19 @@ import { FRAME_RATES } from '@nyc-tron/ui/components/forge/timebase';
 ```
 
 `@nitro-forge/media-ui` re-exports those names so existing call sites keep
-working. NYC-Tron styles them with Tailwind v4 classes (`bg-accent`,
+working. The controls are styled with Tailwind v4 classes (`bg-accent`,
 `bg-surface-sunken`, `bg-surface-raised`, `rounded-control`), so the host app
-needs Uniwind and the tokens from NYC-Tron's `docs/THEME_TOKENS.md`;
+needs Uniwind, the tokens from NYC-Tron's `docs/THEME_TOKENS.md` and an
+`@source` entry for `packages/editor-controls/src`;
 `apps/forge-media-lab` (`metro.config.js`, `global.css`) shows the setup. The
 old `foregroundColor`/`backgroundColor` props are gone; set `--color-accent`
 and `--color-surface-sunken`, or pass `barClassName`/`className`.
 
-Since v0.1.0-alpha.2 the gain control and seconds helpers come from NYC-Tron
-too. `NativeLevelSlider` is gone; use `LevelFader`
-(`@nyc-tron/ui/components/forge/audio/LevelFader`). It takes a `label`, previews
+The gain control and seconds helpers are editor controls too. `NativeLevelSlider` is gone; use `LevelFader`
+(`@nitro-forge/editor-controls/audio/LevelFader`). It takes a `label`, previews
 through `onChange` and calls `onCommit` once per drag or step, so commit the
 engine change in `onCommit`. `framesToSeconds` and `secondsToFrame` are
-re-exported from `@nyc-tron/ui/components/forge/timebase`.
+re-exported from `@nitro-forge/editor-controls/timebase`.
 
 The host owns the actual decoded media, player state and Rust document
 session. For actual recorded WAV peak data, consume

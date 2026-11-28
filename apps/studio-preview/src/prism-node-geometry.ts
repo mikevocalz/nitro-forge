@@ -1,4 +1,4 @@
-import type {ViewTransform} from '@nyc-tron/ui/components/forge/vector/vector-types';
+import type {ViewTransform} from '@nitro-forge/editor-controls/vector/vector-types';
 import type {PrismCanvasState} from '../../../packages/prism/src/canvas-cluster';
 
 type Layer=PrismCanvasState['layers'][number];

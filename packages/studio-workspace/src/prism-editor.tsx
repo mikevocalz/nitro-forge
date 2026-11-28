@@ -11,8 +11,8 @@ import { prismThemes, resolveWorkspaceScale, type WorkspaceDensity } from './the
 import { prismViewportLayout, PRISM_DOCKED_LAYERS_MIN_WIDTH, PRISM_TOOLBAR_TOP } from './prism-layout';
 import { prismLayerLabel } from './prism-layer-label';
 import { PrismCanvas } from './prism-canvas';
-import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
-import { LayerStack } from '@nyc-tron/ui/components/forge/layers/LayerStack';
+import { PrecisionScrubber } from '@nyc-tron/ui/components/shell/PrecisionScrubber';
+import { LayerStack } from '@nitro-forge/editor-controls/layers/LayerStack';
 import { prismLayerRows, prismMoveCommand, prismOpacityCommand, prismRenameCommand, prismRemoveCommand, prismSelectedRowId, prismVisibilityCommand, type PrismLayer, type PrismLayerCommand } from './prism-layers';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
 import { Platform } from 'react-native';

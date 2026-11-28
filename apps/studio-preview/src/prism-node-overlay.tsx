@@ -1,10 +1,10 @@
 import {useLayoutEffect,useMemo,useRef,type ComponentType} from 'react';
 import {createStore} from 'zustand/vanilla';
 import {useStore} from 'zustand';
-import * as PenNodeModule from '@nyc-tron/ui/components/forge/vector/PenNodeEditor';
-import type {PenNodeEditorProps} from '@nyc-tron/ui/components/forge/vector/PenNodeEditor';
+import * as PenNodeModule from '@nitro-forge/editor-controls/vector/PenNodeEditor';
+import type {PenNodeEditorProps} from '@nitro-forge/editor-controls/vector/PenNodeEditor';
 import {supportsPrismNodeEditing} from './prism-node-capability';
-import type {NodeRef} from '@nyc-tron/ui/components/forge/vector/vector-types';
+import type {NodeRef} from '@nitro-forge/editor-controls/vector/vector-types';
 import type {PrismDocument} from '../../../packages/prism/src/index';
 import {PrismCanvasAdapter,canvasPathNodes,type PrismCanvasState} from '../../../packages/prism/src/canvas-cluster';
 

@@ -5,9 +5,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { RichTextRibbonProps } from "@nyc-tron/ui/components/forge/document/RichTextRibbon";
-import type { BulletsNumberingEditorProps } from "@nyc-tron/ui/components/forge/document/BulletsNumberingEditor";
-import type { NavigationOutlineProps } from "@nyc-tron/ui/components/forge/document/NavigationOutline";
+import type { RichTextRibbonProps } from "@nitro-forge/editor-controls/document/RichTextRibbon";
+import type { BulletsNumberingEditorProps } from "@nitro-forge/editor-controls/document/BulletsNumberingEditor";
+import type { NavigationOutlineProps } from "@nitro-forge/editor-controls/document/NavigationOutline";
 import type {
   QuillBookmarkBinding, QuillListBinding, QuillOutlineHeading, QuillRibbonBinding,
 } from "../src/office-cluster";

@@ -1,0 +1,50 @@
+# Typecheck and node unit/render tests for @nitro-forge/editor-controls: the
+# editor controls moved from NYC-Tron UI, checked against the installed NYC-Tron
+# release (tooling/nyc-tron.json plus patches/@nyc-tron__ui@1.0.0-rc.2.patch).
+# The render tests drive the real components on mocked React Native hosts; they
+# do not prove native rendering, gesture arbitration or screen-reader output.
+# Rendered web acceptance runs in editor-controls-browser.yml.
+name: Editor controls
+
+on:
+  pull_request:
+    paths:
+      - 'packages/editor-controls/**'
+      - '.github/workflows/editor-controls.yml'
+      - 'patches/**'
+      - 'tooling/nyc-tron.json'
+      - 'tsconfig.base.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+  push:
+    branches: [master]
+    paths:
+      - 'packages/editor-controls/**'
+      - '.github/workflows/editor-controls.yml'
+      - 'patches/**'
+      - 'tooling/nyc-tron.json'
+      - 'tsconfig.base.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  editor-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
+      - name: Install the Forge workspace
+        run: corepack enable && corepack pnpm install --frozen-lockfile --ignore-scripts
+      - name: Typecheck the editor controls
+        run: corepack pnpm --filter @nitro-forge/editor-controls typecheck
+      - name: Unit and render tests
+        run: corepack pnpm --filter @nitro-forge/editor-controls test

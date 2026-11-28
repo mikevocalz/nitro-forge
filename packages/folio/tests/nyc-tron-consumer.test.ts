@@ -5,8 +5,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { AnnotationToolbarProps } from "@nyc-tron/ui/components/forge/pdf/AnnotationToolbar";
-import type { CommentsThreadPanelProps } from "@nyc-tron/ui/components/forge/pdf/CommentsThreadPanel";
+import type { AnnotationToolbarProps } from "@nitro-forge/editor-controls/pdf/AnnotationToolbar";
+import type { CommentsThreadPanelProps } from "@nitro-forge/editor-controls/pdf/CommentsThreadPanel";
 import type { FolioCommentsBinding } from "../src/office-cluster";
 import { bindFolioHistory, FOLIO_ANNOTATION_TOOLS } from "../src/office-cluster";
 

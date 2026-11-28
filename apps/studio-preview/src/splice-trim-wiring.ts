@@ -1,5 +1,5 @@
-import type { TimelineEdit } from '@nyc-tron/ui/components/forge/timeline/edits';
-import type { TrackFlag } from '@nyc-tron/ui/components/forge/timeline/TrackHeaders';
+import type { TimelineEdit } from '@nitro-forge/editor-controls/timeline/edits';
+import type { TrackFlag } from '@nitro-forge/editor-controls/timeline/TrackHeaders';
 
 type Commit = (write: () => Promise<unknown>) => Promise<void>;
 /** The slice of `timelineClusterCallbacks(adapter)` the trim and header controls call. */

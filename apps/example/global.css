@@ -7,6 +7,7 @@
 @source './src';
 @source '../../packages/studio-workspace/src';
 @source '../../packages/icons/src';
+@source '../../packages/editor-controls/src';
 /* NYC-Tron releases publish only dist/; their recipes' classes live there. */
 @source './node_modules/@nyc-tron/ui/dist/components';
 @source './node_modules/@nyc-tron/expo-controls/dist/components';

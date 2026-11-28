@@ -1,0 +1,714 @@
+{
+ "straight": {
+  "type": "View",
+  "props": {
+   "style": [
+    {
+     "gap": 8
+    },
+    null
+   ],
+   "children": [
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text",
+      "children": "Layer blend mode"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer blend mode",
+      "editScope": "[\"doc\",0,\"layer-1\",\"mode\"]",
+      "accessibilityValue": {
+       "text": "Normal"
+      },
+      "items": [
+       {
+        "id": "normal",
+        "label": "Normal",
+        "disabled": false
+       },
+       {
+        "id": "multiply",
+        "label": "Multiply",
+        "disabled": false
+       },
+       {
+        "id": "legacy",
+        "label": "Legacy",
+        "description": "Unsupported by compositor",
+        "disabled": true
+       }
+      ],
+      "disabled": false,
+      "unstyled": false,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "className": "text-text",
+        "children": "Normal"
+       }
+      }
+     }
+    },
+    {
+     "type": "<PrecisionScrubber>",
+     "props": {
+      "scope": "layer-1",
+      "revision": 0,
+      "label": "Layer opacity",
+      "value": 50,
+      "min": 0,
+      "max": 100,
+      "step": 0.0001,
+      "detents": [
+       0,
+       25,
+       50,
+       75,
+       100
+      ],
+      "unit": "%",
+      "disabled": false,
+      "unstyled": false,
+      "onPreview": "[Function]",
+      "onCommit": "[Function]"
+     },
+     "key": "[\"normal\",\"linear\",\"straight\"]"
+    },
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text",
+      "children": "Layer compositing space"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer compositing space",
+      "editScope": "[\"doc\",0,\"layer-1\",\"space\"]",
+      "accessibilityValue": {
+       "text": "Linear sRGB (linear)"
+      },
+      "items": [
+       {
+        "id": "linear",
+        "label": "Linear sRGB (linear)",
+        "disabled": false
+       },
+       {
+        "id": "encoded",
+        "label": "Encoded sRGB (encoded)",
+        "disabled": false
+       }
+      ],
+      "disabled": false,
+      "unstyled": false,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "className": "text-text",
+        "children": "Linear sRGB (linear)"
+       }
+      }
+     }
+    },
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text",
+      "children": "Layer alpha representation"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer alpha representation",
+      "editScope": "[\"doc\",0,\"layer-1\",\"alpha\"]",
+      "accessibilityValue": {
+       "text": "Straight alpha"
+      },
+      "items": [
+       {
+        "id": "straight",
+        "label": "Straight alpha"
+       },
+       {
+        "id": "premultiplied",
+        "label": "Premultiplied alpha"
+       }
+      ],
+      "disabled": false,
+      "unstyled": false,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "className": "text-text",
+        "children": "Straight alpha"
+       }
+      }
+     }
+    },
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text-muted",
+      "children": [
+       "Blend calculations use the host’s named linear space.",
+       " Changing this policy requests a compositor update; the document color profile stays host-owned."
+      ]
+     }
+    },
+    null,
+    null,
+    {
+     "type": "<ErrorMessage>",
+     "props": {
+      "unstyled": false
+     }
+    }
+   ]
+  },
+  "key": "[\"doc\",0,\"layer-1\",false,[{\"id\":\"normal\",\"label\":\"Normal\"},{\"id\":\"multiply\",\"label\":\"Multiply\"},{\"id\":\"legacy\",\"label\":\"Legacy\",\"unavailableReason\":\"Unsupported by compositor\"}],[{\"id\":\"linear\",\"label\":\"Linear sRGB\",\"transfer\":\"linear\",\"modeIds\":[\"normal\",\"multiply\",\"legacy\"]},{\"id\":\"encoded\",\"label\":\"Encoded sRGB\",\"transfer\":\"encoded\",\"modeIds\":[\"normal\"]}]]"
+ },
+ "premultiplied": {
+  "type": "View",
+  "props": {
+   "style": [
+    {
+     "gap": 8
+    },
+    null
+   ],
+   "children": [
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text",
+      "children": "Layer blend mode"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer blend mode",
+      "editScope": "[\"doc\",0,\"layer-1\",\"mode\"]",
+      "accessibilityValue": {
+       "text": "Normal"
+      },
+      "items": [
+       {
+        "id": "normal",
+        "label": "Normal",
+        "disabled": false
+       },
+       {
+        "id": "multiply",
+        "label": "Multiply",
+        "disabled": false
+       },
+       {
+        "id": "legacy",
+        "label": "Legacy",
+        "description": "Unsupported by compositor",
+        "disabled": true
+       }
+      ],
+      "disabled": false,
+      "unstyled": false,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "className": "text-text",
+        "children": "Normal"
+       }
+      }
+     }
+    },
+    {
+     "type": "<PrecisionScrubber>",
+     "props": {
+      "scope": "layer-1",
+      "revision": 0,
+      "label": "Layer opacity",
+      "value": 50,
+      "min": 0,
+      "max": 100,
+      "step": 0.0001,
+      "detents": [
+       0,
+       25,
+       50,
+       75,
+       100
+      ],
+      "unit": "%",
+      "disabled": false,
+      "unstyled": false,
+      "onPreview": "[Function]",
+      "onCommit": "[Function]"
+     },
+     "key": "[\"normal\",\"linear\",\"premultiplied\"]"
+    },
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text",
+      "children": "Layer compositing space"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer compositing space",
+      "editScope": "[\"doc\",0,\"layer-1\",\"space\"]",
+      "accessibilityValue": {
+       "text": "Linear sRGB (linear)"
+      },
+      "items": [
+       {
+        "id": "linear",
+        "label": "Linear sRGB (linear)",
+        "disabled": false
+       },
+       {
+        "id": "encoded",
+        "label": "Encoded sRGB (encoded)",
+        "disabled": false
+       }
+      ],
+      "disabled": false,
+      "unstyled": false,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "className": "text-text",
+        "children": "Linear sRGB (linear)"
+       }
+      }
+     }
+    },
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text",
+      "children": "Layer alpha representation"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer alpha representation",
+      "editScope": "[\"doc\",0,\"layer-1\",\"alpha\"]",
+      "accessibilityValue": {
+       "text": "Premultiplied alpha"
+      },
+      "items": [
+       {
+        "id": "straight",
+        "label": "Straight alpha"
+       },
+       {
+        "id": "premultiplied",
+        "label": "Premultiplied alpha"
+       }
+      ],
+      "disabled": false,
+      "unstyled": false,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "className": "text-text",
+        "children": "Premultiplied alpha"
+       }
+      }
+     }
+    },
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text-muted",
+      "children": [
+       "Blend calculations use the host’s named linear space.",
+       " Changing this policy requests a compositor update; the document color profile stays host-owned."
+      ]
+     }
+    },
+    null,
+    null,
+    {
+     "type": "<ErrorMessage>",
+     "props": {
+      "unstyled": false
+     }
+    }
+   ]
+  },
+  "key": "[\"doc\",0,\"layer-1\",false,[{\"id\":\"normal\",\"label\":\"Normal\"},{\"id\":\"multiply\",\"label\":\"Multiply\"},{\"id\":\"legacy\",\"label\":\"Legacy\",\"unavailableReason\":\"Unsupported by compositor\"}],[{\"id\":\"linear\",\"label\":\"Linear sRGB\",\"transfer\":\"linear\",\"modeIds\":[\"normal\",\"multiply\",\"legacy\"]},{\"id\":\"encoded\",\"label\":\"Encoded sRGB\",\"transfer\":\"encoded\",\"modeIds\":[\"normal\"]}]]"
+ },
+ "retainedUnavailableMode": {
+  "type": "View",
+  "props": {
+   "style": [
+    {
+     "gap": 8
+    },
+    null
+   ],
+   "children": [
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text",
+      "children": "Layer blend mode"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer blend mode",
+      "editScope": "[\"doc\",0,\"layer-1\",\"mode\"]",
+      "accessibilityValue": {
+       "text": "Legacy"
+      },
+      "items": [
+       {
+        "id": "normal",
+        "label": "Normal",
+        "disabled": false
+       },
+       {
+        "id": "multiply",
+        "label": "Multiply",
+        "disabled": false
+       },
+       {
+        "id": "legacy",
+        "label": "Legacy",
+        "description": "Unsupported by compositor",
+        "disabled": true
+       }
+      ],
+      "disabled": false,
+      "unstyled": false,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "className": "text-text",
+        "children": "Legacy"
+       }
+      }
+     }
+    },
+    {
+     "type": "<PrecisionScrubber>",
+     "props": {
+      "scope": "layer-1",
+      "revision": 0,
+      "label": "Layer opacity",
+      "value": 50,
+      "min": 0,
+      "max": 100,
+      "step": 0.0001,
+      "detents": [
+       0,
+       25,
+       50,
+       75,
+       100
+      ],
+      "unit": "%",
+      "disabled": true,
+      "unstyled": false,
+      "onPreview": "[Function]",
+      "onCommit": "[Function]"
+     },
+     "key": "[\"legacy\",\"linear\",\"straight\"]"
+    },
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text",
+      "children": "Layer compositing space"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer compositing space",
+      "editScope": "[\"doc\",0,\"layer-1\",\"space\"]",
+      "accessibilityValue": {
+       "text": "Linear sRGB (linear)"
+      },
+      "items": [
+       {
+        "id": "linear",
+        "label": "Linear sRGB (linear)",
+        "disabled": false
+       },
+       {
+        "id": "encoded",
+        "label": "Encoded sRGB (encoded)",
+        "disabled": true
+       }
+      ],
+      "disabled": false,
+      "unstyled": false,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "className": "text-text",
+        "children": "Linear sRGB (linear)"
+       }
+      }
+     }
+    },
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text",
+      "children": "Layer alpha representation"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer alpha representation",
+      "editScope": "[\"doc\",0,\"layer-1\",\"alpha\"]",
+      "accessibilityValue": {
+       "text": "Straight alpha"
+      },
+      "items": [
+       {
+        "id": "straight",
+        "label": "Straight alpha"
+       },
+       {
+        "id": "premultiplied",
+        "label": "Premultiplied alpha"
+       }
+      ],
+      "disabled": true,
+      "unstyled": false,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "className": "text-text",
+        "children": "Straight alpha"
+       }
+      }
+     }
+    },
+    {
+     "type": "Text",
+     "props": {
+      "className": "text-text-muted",
+      "children": [
+       "Blend calculations use the host’s named linear space.",
+       " Changing this policy requests a compositor update; the document color profile stays host-owned."
+      ]
+     }
+    },
+    {
+     "type": "Text",
+     "props": {
+      "accessibilityRole": "alert",
+      "className": "text-text",
+      "children": "Unsupported by compositor"
+     }
+    },
+    null,
+    {
+     "type": "<ErrorMessage>",
+     "props": {
+      "unstyled": false
+     }
+    }
+   ]
+  },
+  "key": "[\"doc\",0,\"layer-1\",false,[{\"id\":\"normal\",\"label\":\"Normal\"},{\"id\":\"multiply\",\"label\":\"Multiply\"},{\"id\":\"legacy\",\"label\":\"Legacy\",\"unavailableReason\":\"Unsupported by compositor\"}],[{\"id\":\"linear\",\"label\":\"Linear sRGB\",\"transfer\":\"linear\",\"modeIds\":[\"normal\",\"multiply\",\"legacy\"]},{\"id\":\"encoded\",\"label\":\"Encoded sRGB\",\"transfer\":\"encoded\",\"modeIds\":[\"normal\"]}]]"
+ },
+ "disabledUnstyledEncoded": {
+  "type": "View",
+  "props": {
+   "style": [
+    {
+     "gap": 8
+    },
+    null
+   ],
+   "children": [
+    {
+     "type": "Text",
+     "props": {
+      "children": "Layer blend mode"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer blend mode",
+      "editScope": "[\"doc\",3,\"layer-1\",\"mode\"]",
+      "accessibilityValue": {
+       "text": "Normal"
+      },
+      "items": [
+       {
+        "id": "normal",
+        "label": "Normal",
+        "disabled": false
+       },
+       {
+        "id": "multiply",
+        "label": "Multiply",
+        "disabled": true
+       },
+       {
+        "id": "legacy",
+        "label": "Legacy",
+        "description": "Unsupported by compositor",
+        "disabled": true
+       }
+      ],
+      "disabled": true,
+      "unstyled": true,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "children": "Normal"
+       }
+      }
+     }
+    },
+    {
+     "type": "<PrecisionScrubber>",
+     "props": {
+      "scope": "layer-1",
+      "revision": 3,
+      "label": "Layer opacity",
+      "value": 50,
+      "min": 0,
+      "max": 100,
+      "step": 0.0001,
+      "detents": [
+       0,
+       25,
+       50,
+       75,
+       100
+      ],
+      "unit": "%",
+      "disabled": true,
+      "unstyled": true,
+      "onPreview": "[Function]",
+      "onCommit": "[Function]"
+     },
+     "key": "[\"normal\",\"encoded\",\"straight\"]"
+    },
+    {
+     "type": "Text",
+     "props": {
+      "children": "Layer compositing space"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer compositing space",
+      "editScope": "[\"doc\",3,\"layer-1\",\"space\"]",
+      "accessibilityValue": {
+       "text": "Encoded sRGB (encoded)"
+      },
+      "items": [
+       {
+        "id": "linear",
+        "label": "Linear sRGB (linear)",
+        "disabled": false
+       },
+       {
+        "id": "encoded",
+        "label": "Encoded sRGB (encoded)",
+        "disabled": false
+       }
+      ],
+      "disabled": true,
+      "unstyled": true,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "children": "Encoded sRGB (encoded)"
+       }
+      }
+     }
+    },
+    {
+     "type": "Text",
+     "props": {
+      "children": "Layer alpha representation"
+     }
+    },
+    {
+     "type": "<MenuButton>",
+     "props": {
+      "label": "Layer alpha representation",
+      "editScope": "[\"doc\",3,\"layer-1\",\"alpha\"]",
+      "accessibilityValue": {
+       "text": "Straight alpha"
+      },
+      "items": [
+       {
+        "id": "straight",
+        "label": "Straight alpha"
+       },
+       {
+        "id": "premultiplied",
+        "label": "Premultiplied alpha"
+       }
+      ],
+      "disabled": true,
+      "unstyled": true,
+      "onSelect": "[Function]",
+      "children": {
+       "type": "Text",
+       "props": {
+        "children": "Straight alpha"
+       }
+      }
+     }
+    },
+    {
+     "type": "Text",
+     "props": {
+      "children": [
+       "Blend calculations use the host’s named encoded space.",
+       " Changing this policy requests a compositor update; the document color profile stays host-owned."
+      ]
+     }
+    },
+    null,
+    null,
+    {
+     "type": "<ErrorMessage>",
+     "props": {
+      "unstyled": true
+     }
+    }
+   ]
+  },
+  "key": "[\"doc\",3,\"layer-1\",true,[{\"id\":\"normal\",\"label\":\"Normal\"},{\"id\":\"multiply\",\"label\":\"Multiply\"},{\"id\":\"legacy\",\"label\":\"Legacy\",\"unavailableReason\":\"Unsupported by compositor\"}],[{\"id\":\"linear\",\"label\":\"Linear sRGB\",\"transfer\":\"linear\",\"modeIds\":[\"normal\",\"multiply\",\"legacy\"]},{\"id\":\"encoded\",\"label\":\"Encoded sRGB\",\"transfer\":\"encoded\",\"modeIds\":[\"normal\"]}]]"
+ }
+}

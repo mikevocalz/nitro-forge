@@ -3,8 +3,8 @@ import {useStore} from 'zustand';
 import {createStore} from 'zustand/vanilla';
 import {Banner,Button,Text,View} from '@nitro-forge/studio-workspace/ui';
 import {resolveWorkspaceScale,workspaceThemes,type WorkspaceDensity} from '@nitro-forge/studio-workspace/theme';
-import {PivotFieldList} from '@nyc-tron/ui/components/forge/spreadsheet/PivotFieldList';
-import {rangeAddress,rangeCellCount,type SheetRange} from '@nyc-tron/ui/components/forge/sheet-window';
+import {PivotFieldList} from '@nitro-forge/editor-controls/spreadsheet/PivotFieldList';
+import {rangeAddress,rangeCellCount,type SheetRange} from '@nitro-forge/editor-controls/sheet-window';
 import type {TallyDocument} from '../../../packages/tally/src/index';
 import {
  aggregateTallyPivotValue,assignTallyPivotField,commitTallyPivot,EMPTY_TALLY_PIVOT_SPEC,orderTallyPivotZone,readTallyPivot,readTallyPivotSource,removeTallyPivotAssignment,
