@@ -76,3 +76,32 @@ export async function loadTokenModules() {
 }
 
 export const canonNumber = text => String(Number(text));
+
+/** Style properties whose numeric values check-no-hardcoded.mjs reports (and tokenize-editor-controls.mjs rewrites). */
+export const STYLE_PROPS = new Set([
+  'left', 'right', 'top', 'bottom', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight',
+  'margin', 'marginTop', 'marginBottom', 'marginLeft', 'marginRight', 'marginHorizontal', 'marginVertical',
+  'padding', 'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'paddingHorizontal', 'paddingVertical',
+  'gap', 'rowGap', 'columnGap', 'borderWidth', 'borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth',
+  'borderRadius', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius',
+  'fontSize', 'lineHeight', 'letterSpacing', 'zIndex', 'opacity', 'hitSlop', 'outlineWidth', 'outlineOffset',
+  'shadowRadius', 'shadowOpacity', 'elevation', 'flexBasis', 'fontWeight',
+]);
+export const JSX_NUMERIC_PROPS = new Set(['size', 'width', 'height', 'strokeWidth', 'fontSize', 'r', 'rx', 'ry']);
+
+/** Numeric literals that are the value, or a ternary or arithmetic branch of the value. Pass ts-morph's `Node` and `SyntaxKind`. */
+export function numericPartsOf({ Node, SyntaxKind }) {
+  return function* numericParts(node) {
+    if (Node.isNumericLiteral(node)) yield node;
+    else if (Node.isPrefixUnaryExpression(node) && Node.isNumericLiteral(node.getOperand())) yield node.getOperand();
+    else if (Node.isParenthesizedExpression(node)) yield* numericParts(node.getExpression());
+    else if (Node.isAsExpression(node)) yield* numericParts(node.getExpression());
+    else if (Node.isConditionalExpression(node)) { yield* numericParts(node.getWhenTrue()); yield* numericParts(node.getWhenFalse()); }
+    else if (Node.isBinaryExpression(node)) {
+      // `x / 2` and `x % 3` are ratios, not lengths: only the left side can carry a literal length.
+      const operator = node.getOperatorToken().getKind();
+      yield* numericParts(node.getLeft());
+      if (operator !== SyntaxKind.SlashToken && operator !== SyntaxKind.PercentToken) yield* numericParts(node.getRight());
+    }
+  };
+}
