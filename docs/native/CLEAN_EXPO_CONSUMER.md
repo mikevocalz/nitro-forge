@@ -213,7 +213,9 @@ For each studio the visible controls cover:
 Each action reports its own result and stable test ID. Until actual
 simulator/emulator install/launch and visible actions have been captured and
 independently reviewed, runtime results remain NOT RUN. A green compile job
-is not an F6 pass. The gate acceptance, statuses and validator are unchanged.
+is not an F6 pass. The gate acceptance and validator are unchanged; on
+2026-11-28 the F6 status moved from `not-started` to `in-progress` because the
+packer, smoke job and native flows now exist. It is not `passed`.
 
 ## Validation scope
 
@@ -274,3 +276,7 @@ At 2016526, all 13 workflows passed, including source 58/58 and both actual inst
 
 
 At 3e7758d, source 63/63, producers, archives, bundle/prebuild and both Release builds passed. Android completed both full passes with 84 verified capture bounds and the previously clipped rejected-restore text visibly readable. iOS completed one full pass with 42 valid capture bounds, then the unchanged host semantic audit failed because its heading was above the final viewport. OS file receipt collection and pass 2 did not run; no success is inferred for them. The next QA source restores the actual heading/closed final studio through normal scrolling before the same audits; all 64-test source/native checks are pending. A separate ArtCraft pinned-download HTTP 403 prevented Kotlin compilation in its original run. See [exact outcomes and limits](../release/evidence/2026-11-14-3e7758d-native-final-viewport/README.md). No guard or deadline is waived; F6 remains incomplete.
+
+At 722a2fe, iOS failed at the unchanged 20-minute Maestro deadline during Quill's redo capture in pass 1. Thirteen picker centerings each made Maestro's maximum six attempts at the top scroll boundary and cost 210,572ms in total. At f1b5b48 the picker is reached through a bounded scroll to the app heading and an exact heading assertion instead; every assertion, capture guard, action, second pass and the deadline stay as they were. In [run 43603701341](https://github.com/mikevocalz/nitro-forge/actions/runs/43603701341) the iOS and Android native steps and all 13 workflows succeeded. See [the 722a2fe timeout packet](../release/evidence/2026-11-14-722a2fe-ios-picker-cost-timeout/README.md).
+
+2026-11-28: the branch merged master (#95 editor controls, #96 strict TypeScript) at cafeefc. The clean consumer does not depend on `@nitro-forge/editor-controls`, which is private and is not imported by any packed `src/` file. Local Linux checks passed; native CI on the merged source has not run yet. See [the merge refresh note](../release/evidence/2026-11-28-f6-master-merge/README.md). Independent review and final graph reconciliation remain; F6 is in progress, not passed.
