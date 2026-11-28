@@ -1,21 +1,21 @@
 // Explicit contract against the built, unpublished canvas checkout. No runtime UI dependency.
-import type {AlignDistributePanelProps} from '@nyc-tron/ui/components/forge/canvas/AlignDistributePanel';
-import type {TransformOriginHandleProps} from '@nyc-tron/ui/components/forge/canvas/TransformOriginHandle';
-import type {SelectionMarqueeProps} from '@nyc-tron/ui/components/forge/selection/SelectionMarquee';
-import type {MagicSelectionControlsProps,MagicWandCanvasProps} from '@nyc-tron/ui/components/forge/selection/MagicSelectionControls';
-import type {MaskThumbnailAndEditorProps} from '@nyc-tron/ui/components/forge/layers/MaskThumbnailAndEditor';
-import type {ArtboardNavigatorProps} from '@nyc-tron/ui/components/forge/layers/ArtboardNavigator';
-import type {ClipToggleProps} from '@nyc-tron/ui/components/forge/layers/ClippingMaskControls';
-import type {CanvasCompareViewProps} from '@nyc-tron/ui/components/forge/layers/CanvasCompareView';
-import type {PenNodeEditorProps} from '@nyc-tron/ui/components/forge/vector/PenNodeEditor';
-import type {FillStrokeInspectorProps} from '@nyc-tron/ui/components/forge/vector/FillStrokeInspector';
-import type {GradientOnCanvasHandlesProps} from '@nyc-tron/ui/components/forge/vector/GradientOnCanvasHandles';
-import type {ShapeBuilderProps} from '@nyc-tron/ui/components/forge/vector/ShapeBuilder';
-import type {ColorDropCanvasTargetProps} from '@nyc-tron/ui/components/forge/canvas-tools/ColorDropCanvasTarget';
-import type {CanvasRulerProps} from '@nyc-tron/ui/components/forge/canvas/CanvasRuler';
-import type {SnapGridSettingsProps} from '@nyc-tron/ui/components/forge/canvas/SnapGridSettings';
-import type {ReferenceImageBoardProps} from '@nyc-tron/ui/components/forge/canvas-tools/ReferenceImageBoard';
-import type {GestureCustomizationPanelProps} from '@nyc-tron/ui/components/forge/canvas-tools/GestureCustomizationPanel';
+import type {AlignDistributePanelProps} from '@nitro-forge/editor-controls/canvas/AlignDistributePanel';
+import type {TransformOriginHandleProps} from '@nitro-forge/editor-controls/canvas/TransformOriginHandle';
+import type {SelectionMarqueeProps} from '@nitro-forge/editor-controls/selection/SelectionMarquee';
+import type {MagicSelectionControlsProps,MagicWandCanvasProps} from '@nitro-forge/editor-controls/selection/MagicSelectionControls';
+import type {MaskThumbnailAndEditorProps} from '@nitro-forge/editor-controls/layers/MaskThumbnailAndEditor';
+import type {ArtboardNavigatorProps} from '@nitro-forge/editor-controls/layers/ArtboardNavigator';
+import type {ClipToggleProps} from '@nitro-forge/editor-controls/layers/ClippingMaskControls';
+import type {CanvasCompareViewProps} from '@nitro-forge/editor-controls/layers/CanvasCompareView';
+import type {PenNodeEditorProps} from '@nitro-forge/editor-controls/vector/PenNodeEditor';
+import type {FillStrokeInspectorProps} from '@nitro-forge/editor-controls/vector/FillStrokeInspector';
+import type {GradientOnCanvasHandlesProps} from '@nitro-forge/editor-controls/vector/GradientOnCanvasHandles';
+import type {ShapeBuilderProps} from '@nitro-forge/editor-controls/vector/ShapeBuilder';
+import type {ColorDropCanvasTargetProps} from '@nitro-forge/editor-controls/canvas-tools/ColorDropCanvasTarget';
+import type {CanvasRulerProps} from '@nitro-forge/editor-controls/canvas/CanvasRuler';
+import type {SnapGridSettingsProps} from '@nitro-forge/editor-controls/canvas/SnapGridSettings';
+import type {ReferenceImageBoardProps} from '@nitro-forge/editor-controls/canvas-tools/ReferenceImageBoard';
+import type {GestureCustomizationPanelProps} from '@nitro-forge/editor-controls/canvas-tools/GestureCustomizationPanel';
 import {PrismCanvasAdapter,canvasClippingRows,canvasPathNodes,type PrismCanvasState} from '../src/canvas-cluster';
 
 // These controls intentionally write host preferences, not imaginary Prism ops.

@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateMaskInfo} from '../src/layers/mask-model.ts';
+import {clipReason,resolveClipping,validateClippingLayers} from '../src/layers/clipping-model.ts';
+test('mask revisions obey the thumbnail cache version contract',()=>{validateMaskInfo(null);validateMaskInfo({enabled:true,inverted:false,revision:0});for(const revision of [-1,.5,NaN,Infinity,Number.MAX_SAFE_INTEGER+1])assert.throws(()=>validateMaskInfo({enabled:true,inverted:false,revision}));assert.throws(()=>validateMaskInfo({enabled:'true',inverted:false,revision:1}));});
+test('clipping accepts the shared layer parentId contract and respects inherited locks',()=>{const layers=[{id:'g',name:'Group',clipped:false,locked:true},{id:'top',name:'Top',clipped:true,parentId:'g'},{id:'base',name:'Base',clipped:false,parentId:'g'}];assert.equal(resolveClipping(layers).get('top').baseId,'base');assert.match(clipReason(layers,'top'),/Unlock/);assert.equal(clipReason(layers.map(layer=>({...layer,locked:false})),'top'),undefined);});
+test('ambiguous parents, cycles, duplicate IDs and invalid clipping metadata are rejected',()=>{for(const layers of [[{id:'a',name:'A',clipped:false,parent:'g',parentId:'h'}],[{id:'a',name:'A',clipped:false,parentId:'b'},{id:'b',name:'B',clipped:false,parentId:'a'}],[{id:'a',name:'A',clipped:false},{id:'a',name:'A',clipped:false}],[{id:'a',name:'A',clipped:'false'}]])assert.throws(()=>validateClippingLayers(layers));});

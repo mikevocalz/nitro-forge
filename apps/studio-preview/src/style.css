@@ -1,6 +1,7 @@
 @import "tailwindcss" important;
-/* The studio packages pass utility classes too. */
+/* The studio packages and the editor controls pass utility classes too. */
 @source "../../../packages/studio-workspace/src";
+@source "../../../packages/editor-controls/src";
 /* NYC-Tron releases publish only dist/; their recipes' classes live there. */
 @source "../node_modules/@nyc-tron/ui/dist/components";
 @source "../node_modules/@nyc-tron/expo-controls/dist/components";

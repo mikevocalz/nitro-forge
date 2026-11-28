@@ -1,4 +1,4 @@
-import { layerOpacityFromPercent, validateLayerBlend, type LayerAlphaOption, type LayerBlendMode, type LayerBlendSpace, type LayerBlendValue } from '@nyc-tron/ui/components/forge/layers/layer-blend-model';
+import { layerOpacityFromPercent, validateLayerBlend, type LayerAlphaOption, type LayerBlendMode, type LayerBlendSpace, type LayerBlendValue } from '@nitro-forge/editor-controls/layers/layer-blend-model';
 import type { CommandMenuItem } from '@nyc-tron/ui/components/shell/MenuButton';
 import type { PrismLayer, PrismLayerCommand } from './prism-layers.ts';
 

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MenuButton } from '@nyc-tron/ui/components/shell/MenuButton';
-import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
+import { PrecisionScrubber } from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import { CliHost } from '@nitro-forge/ignition/cli';
 import { PRISM_BLEND_MODE_IDS, PRISM_OPACITY_SCRUBBER, prismBlendCommand, prismBlendMenuItems, prismLayerBlendValue, type PrismBlendChange, type PrismLayer } from '@nitro-forge/studio-workspace/prism-blend';
 import { PrismDocument } from '../../../packages/prism/src/index';

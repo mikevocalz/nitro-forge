@@ -8,6 +8,8 @@ on:
       - "tooling/nyc-tron.json"
       - "tooling/verify-nyc-tron-pin.mjs"
       - "pnpm-lock.yaml"
+      - "packages/editor-controls/**"
+      - "patches/**"
       - ".github/workflows/cadence-advanced-controls.yml"
   push:
     branches: [master]
@@ -18,6 +20,8 @@ on:
       - "tooling/nyc-tron.json"
       - "tooling/verify-nyc-tron-pin.mjs"
       - "pnpm-lock.yaml"
+      - "packages/editor-controls/**"
+      - "patches/**"
       - ".github/workflows/cadence-advanced-controls.yml"
 permissions:
   contents: read
@@ -36,6 +40,8 @@ jobs:
         run: node tooling/verify-nyc-tron-pin.mjs
       - name: Install workspace (frozen; @nyc-tron/ui from the release tarball)
         run: corepack pnpm install --frozen-lockfile
+      - name: Build editor-controls declarations (consumers typecheck against its dist)
+        run: corepack pnpm --filter @nitro-forge/editor-controls build
       - name: Build real Rust host
         run: cargo build -p nf-cli
       - name: Check adapter TypeScript

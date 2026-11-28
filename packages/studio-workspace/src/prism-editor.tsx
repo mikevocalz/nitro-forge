@@ -11,9 +11,9 @@ import { forgeHairlineRadius, forgeRadius, prismThemes, resolveWorkspaceScale, t
 import { prismViewportLayout, PRISM_DOCKED_LAYERS_MIN_WIDTH, PRISM_TOOLBAR_TOP } from './prism-layout';
 import { prismLayerLabel } from './prism-layer-label';
 import { PrismCanvas } from './prism-canvas';
-import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
+import { PrecisionScrubber } from '@nyc-tron/ui/components/shell/PrecisionScrubber';
 import { MenuButton } from '@nyc-tron/ui/components/shell/MenuButton';
-import { LayerStack } from '@nyc-tron/ui/components/forge/layers/LayerStack';
+import { LayerStack } from '@nitro-forge/editor-controls/layers/LayerStack';
 import { prismLayerRows, prismMoveCommand, prismOpacityCommand, prismRenameCommand, prismRemoveCommand, prismSelectedRowId, prismVisibilityCommand, type PrismLayer, type PrismLayerCommand } from './prism-layers';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
 import { PRISM_ALPHA_MODES, PRISM_BLEND_MODES, PRISM_OPACITY_SCRUBBER, prismBlendCommand, prismBlendMenuItems, prismLayerBlendValue } from './prism-blend';

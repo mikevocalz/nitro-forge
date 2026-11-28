@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layerBlendProblem, validateLayerBlend } from '@nyc-tron/ui/components/forge/layers/layer-blend-model';
+import { layerBlendProblem, validateLayerBlend } from '@nitro-forge/editor-controls/layers/layer-blend-model';
 import { PRISM_ALPHA_MODES, PRISM_BLEND_MODE_IDS, PRISM_BLEND_MODES, PRISM_BLEND_SPACES, PRISM_OPACITY_SCRUBBER, prismBlendCommand, prismBlendMenuItems, prismLayerBlendValue } from './prism-blend.ts';
 import type { PrismLayer } from './prism-layers.ts';
 

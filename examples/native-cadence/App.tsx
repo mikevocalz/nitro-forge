@@ -3,10 +3,10 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from "
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { useStore } from "zustand";
 import { ArcKnob } from "@nyc-tron/native-controls/ArcKnob";
-import { InstrumentKnob } from "@nyc-tron/ui/components/forge/inputs/InstrumentKnob";
+import { InstrumentKnob } from "@nitro-forge/editor-controls/inputs/InstrumentKnob";
 import { focusForScreenReader } from "@nyc-tron/ui/components/shell/screen-reader-focus";
-import { PrecisionScrubber } from "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber";
-import { InstrumentXYPad } from "@nyc-tron/ui/components/forge/inputs/InstrumentXYPad";
+import { PrecisionScrubber } from "@nyc-tron/ui/components/shell/PrecisionScrubber";
+import { InstrumentXYPad } from "@nitro-forge/editor-controls/inputs/InstrumentXYPad";
 import { CadenceInstrumentSession, type CadenceInstrumentState } from "@nitro-forge/cadence/instrument-session";
 import { createNitroHost, type EngineHost } from "@nitro-forge/ignition";
 import { createTelemetry, instrumentHost, type Telemetry } from "@nitro-forge/telemetry";

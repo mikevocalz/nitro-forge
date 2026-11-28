@@ -1,6 +1,6 @@
 import { useStore } from "zustand";
 import type { StoreApi } from "zustand/vanilla";
-import { RecordingTrack } from "@nyc-tron/ui/components/forge/audio/RecordingTrack";
+import { RecordingTrack } from "@nitro-forge/editor-controls/audio/RecordingTrack";
 import { useForgeAudioRecorder } from "./useForgeAudioRecorder";
 import type { RecordingSnapshot } from "./recording";
 import { inputLevel, toRecordingViewState } from "./recordingView";

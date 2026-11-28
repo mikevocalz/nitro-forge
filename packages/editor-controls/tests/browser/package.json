@@ -1,0 +1,19 @@
+{
+  "name": "nitro-forge-editor-controls-browser-acceptance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "@expo/ui": "58.0.28",
+    "@tailwindcss/cli": "4.3.4",
+    "esbuild": "0.28.2",
+    "playwright": "1.62.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native-web": "0.21.4",
+    "tailwindcss": "4.3.4",
+    "zustand": "5.0.16"
+  }
+}

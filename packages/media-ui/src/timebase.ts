@@ -1,8 +1,8 @@
 /**
  * Frame/timebase math, including the seconds conversions, is owned by NYC-Tron
- * UI (@nyc-tron/ui/components/forge/timebase). These are re-exports only.
+ * UI (@nitro-forge/editor-controls/timebase). These are re-exports only.
  */
-import type { formatTimecode } from "@nyc-tron/ui/components/forge/timebase";
+import type { formatTimecode } from "@nitro-forge/editor-controls/timebase";
 
 export {
   FRAME_RATES,
@@ -13,8 +13,8 @@ export {
   frameToPosition,
   positionToFrame,
   secondsToFrame,
-} from "@nyc-tron/ui/components/forge/timebase";
-export type { FrameRate } from "@nyc-tron/ui/components/forge/timebase";
+} from "@nitro-forge/editor-controls/timebase";
+export type { FrameRate } from "@nitro-forge/editor-controls/timebase";
 
 /** Options accepted by NYC-Tron's formatTimecode. */
 export type TimecodeOptions = NonNullable<Parameters<typeof formatTimecode>[2]>;

@@ -1,0 +1,46 @@
+import {createMeasuredDropOwner,type DropToken} from '@nyc-tron/ui/components/gestures/measured-drop-owner';
+import {useLayoutEffect,useRef} from 'react';
+import type {ReactNode} from 'react';
+import {FlatList,Text,View,useWindowDimensions,type ViewProps} from 'react-native';
+import {GestureDetector,usePanGesture} from 'react-native-gesture-handler';
+import {createStore} from 'zustand/vanilla';
+import {useStore} from 'zustand';
+import {Button} from '@nyc-tron/ui/components/Button';
+import {MenuButton} from '@nyc-tron/ui/components/shell/MenuButton';
+import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
+import {controlIdentity,useScopedControl,type ScopedControlProps} from '../inputs/useScopedControl.ts';
+import {useEditorBoundary} from '@nyc-tron/ui/components/gestures/editor-interaction-scope';
+import {validatePDFPages,type PDFPageDescriptor} from './pdf-page-model.ts';
+import {exact} from '../exact-optional.ts';
+export interface PDFThumbnailSidebarProps extends Omit<ViewProps,'children'>,ScopedControlProps {
+ pages:readonly PDFPageDescriptor[];selectedIds:readonly string[];groups?:readonly {id:string;label:string}[];viewportHeight?:number;
+ renderThumbnail:(page:PDFPageDescriptor,size:{width:number;height:number})=>ReactNode;
+ onSelectionChange:(ids:readonly string[])=>void;onMove?:((id:string,toIndex:number,signal?:AbortSignal)=>unknown)|undefined;
+ onGroupCommit?:((id:string,groupId:string|null,signal?:AbortSignal)=>unknown)|undefined;onInsert?:((signal?:AbortSignal)=>unknown)|undefined;unstyled?:boolean;
+}
+/** Virtual native page list with stable thumbnail bounds, grouping and one scoped reorder per release. */
+export function PDFThumbnailSidebar({scope='pdf-thumbnails',revision=0,...props}:PDFThumbnailSidebarProps){
+ const {pages,selectedIds,groups=[],viewportHeight=480,renderThumbnail,onSelectionChange:_select,onMove:_move,onGroupCommit,onInsert,unstyled=false,disabledReason,style,...rest}=props;validatePDFPages(pages);
+ const {fontScale}=useWindowDimensions(),rowHeight=Math.max(176,Math.ceil(fontScale*44)*3+44);
+ if(new Set(selectedIds).size!==selectedIds.length||groups.length>256||new Set(groups.map(g=>g.id)).size!==groups.length||groups.some(g=>!g.id.trim()||g.id.length>256||!g.label.trim()||g.label.length>1024)||!Number.isFinite(viewportHeight)||viewportHeight<88||viewportHeight>8192||selectedIds.some(id=>!pages.some(p=>p.id===id)))throw new RangeError('Invalid PDF thumbnail selection');
+ const local=useRef<ReturnType<typeof makeStore>|null>(null);local.current??=makeStore();const store=local.current,s=useStore(store,v=>v),owner=useEditorBoundary([JSON.stringify([...controlIdentity(scope,revision),disabledReason,pages.map(p=>p.id),s.width,s.height,rowHeight])]),guard=useScopedControl(owner,props,disabledReason!==undefined),off=guard.pending||disabledReason!==undefined;
+ const drops=useRef<ReturnType<typeof createMeasuredDropOwner<never>>|null>(null);drops.current??=createMeasuredDropOwner();
+ const committed=useRef(owner),geometry=useRef(0);
+ useLayoutEffect(()=>{committed.current=owner;drops.current!.cancel();store.setState({dragging:null});return()=>{drops.current!.cancel();};},[owner,off]);
+ const boundary=()=>owner+':'+geometry.current;
+ const current=()=>committed.current===owner&&!!guard.current();
+ const start=(id:string)=>{if(!current())return null;const token=drops.current!.begin(boundary());store.setState({dragging:id});return current()&&drops.current!.current(token,boundary())?token:null;};
+ const cancel=(token:DropToken)=>{if(!current()||!drops.current!.current(token,boundary()))return;drops.current!.cancel(token);store.setState({dragging:null});};
+ const move=(token:DropToken,id:string,to:number)=>{if(!current()||!drops.current!.finish(token,boundary()))return;store.setState({dragging:null});if(!current())return;return guard.run('move',(h,signal)=>h.pages.some(p=>p.id===id&&p.canModify)&&to>=0&&to<h.pages.length?h.onMove?.(id,to,signal):undefined);};
+ return <View {...rest} onLayout={e=>{const size=e.nativeEvent.layout;if(size.width!==store.getState().width||size.height!==store.getState().height){geometry.current++;drops.current!.cancel();store.setState({width:size.width,height:size.height,dragging:null});}rest.onLayout?.(e);}} style={[{gap:8,minWidth:0},style]} accessibilityLabel="PDF page thumbnails"><FlatList data={pages} keyExtractor={p=>p.id} initialNumToRender={4} windowSize={5} removeClippedSubviews={false} scrollEnabled={s.dragging===null} style={{height:viewportHeight}} getItemLayout={(_d,index)=>({index,length:rowHeight,offset:index*rowHeight})} extraData={[selectedIds,off,groups,s.dragging]} renderItem={({item,index})=><ThumbnailRow rowHeight={rowHeight} key={item.id} boundary={owner} page={item} index={index} count={pages.length} selected={selectedIds.includes(item.id)} disabled={off} moveAllowed={!!props.onMove&&item.canModify} group={groups.find(g=>g.id===item.groupId)?.label} renderThumbnail={renderThumbnail} unstyled={unstyled} onDrag={()=>start(item.id)} onCancel={cancel} onMove={(token,to)=>move(token,item.id,to)} onSelect={toggle=>{const h=guard.current();if(!h)return;h.onSelectionChange(toggle?h.selectedIds.includes(item.id)?h.selectedIds.filter(id=>id!==item.id):[...h.selectedIds,item.id]:[item.id]);}} groupControl={onGroupCommit?<MenuButton label={'Group for '+item.label} editScope={owner+item.id} disabled={off||!item.canModify} unstyled={unstyled} items={[{id:'none',label:'No page group'},...groups.map(g=>({id:'group:'+g.id,label:g.label}))]} onSelect={id=>guard.run('group',(h,signal)=>h.pages.some(p=>p.id===item.id&&p.canModify)&&(id==='none'||h.groups?.some(g=>g.id===id.slice(6)))?h.onGroupCommit?.(item.id,id==='none'?null:id.slice(6),signal):undefined)}><Text {...{className:unstyled?undefined:'text-text'}}>Group</Text></MenuButton>:null}/>}/>
+ {onInsert?<Button title="Insert PDF pages" disabled={off} unstyled={unstyled} onPress={()=>guard.run('insert',(h,s)=>h.onInsert?.(s))}/>:null}<ErrorMessage {...exact({message:guard.error??disabledReason,unstyled:unstyled})}/></View>;
+}
+function ThumbnailRow({boundary,rowHeight,page,index,count,selected,disabled,moveAllowed,group,renderThumbnail,unstyled,onDrag,onCancel,onMove,onSelect,groupControl}:{boundary:string;rowHeight:number;page:PDFPageDescriptor;index:number;count:number;selected:boolean;disabled:boolean;moveAllowed:boolean;group?:string|undefined;renderThumbnail:PDFThumbnailSidebarProps['renderThumbnail'];unstyled:boolean;onDrag:()=>DropToken|null;onCancel:(token:DropToken)=>void;onMove:(token:DropToken,to:number)=>unknown;onSelect:(toggle:boolean)=>void;groupControl:ReactNode}){
+ const active=useRef<{boundary:string;token:DropToken}|null>(null),committed=useRef('');
+ const identity=JSON.stringify([boundary,page.id,index,count,rowHeight,disabled,moveAllowed]);
+ useLayoutEffect(()=>{committed.current=identity;active.current=null;},[identity]);
+ const admitted=()=>committed.current===identity&&!disabled&&moveAllowed;
+ const gesture=usePanGesture({enabled:moveAllowed&&!disabled,runOnJS:true,maxPointers:1,activeOffsetY:[-4,4],failOffsetX:[-8,8],onActivate:()=>{if(!admitted())return;const token=onDrag();if(admitted()&&token)active.current={boundary:identity,token};},onDeactivate:e=>{if(!admitted())return;const session=active.current;if(session?.boundary!==identity)return;active.current=null;if(e.canceled){onCancel(session.token);return;}const to=Math.max(0,Math.min(count-1,index+Math.round(e.translationY/rowHeight)));if(to!==index)void onMove(session.token,to);else onCancel(session.token);},onFinalize:e=>{if(!admitted()||!e.canceled)return;const session=active.current;if(session?.boundary!==identity)return;active.current=null;onCancel(session.token);}});
+ return <View style={{height:rowHeight,paddingVertical:6,gap:4}}>{group?<Text accessibilityRole="header" numberOfLines={1} {...{className:unstyled?undefined:'text-text'}}>{group}</Text>:null}<View style={{flexDirection:'row',gap:6,alignItems:'center',flex:1}}><GestureDetector gesture={gesture} touchAction="pan-x"><View collapsable={false} accessible accessibilityRole="adjustable" accessibilityLabel={'Move '+page.label} accessibilityState={{disabled:disabled||!moveAllowed}} accessibilityActions={[{name:'increment',label:'Move page later'},{name:'decrement',label:'Move page earlier'}]} onAccessibilityAction={e=>{if(!admitted())return;const d=e.nativeEvent.actionName==='increment'?1:e.nativeEvent.actionName==='decrement'?-1:0;if(d&&index+d>=0&&index+d<count){const token=onDrag();if(admitted()&&token)void onMove(token,index+d);}}} style={{width:44,height:88,alignItems:'center',justifyContent:'center'}}><Text {...{className:unstyled?undefined:'text-text-muted'}}>⋮⋮</Text></View></GestureDetector><View style={{width:72,height:96,overflow:'hidden'}}>{renderThumbnail(page,{width:72,height:96})}</View><View style={{flex:1,minWidth:0,gap:4}}><Button numberOfLines={1} title={page.label} variant="secondary" accessibilityState={{selected}} disabled={disabled} unstyled={unstyled} onPress={()=>onSelect(false)}/><Button title={selected?'Deselect page':'Add page selection'} variant="ghost" disabled={disabled} unstyled={unstyled} onPress={()=>onSelect(true)}/>{groupControl}</View></View></View>;
+}
+function makeStore(){return createStore(()=>({dragging:null as string|null,width:0,height:0}));}

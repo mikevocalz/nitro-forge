@@ -1,0 +1,19 @@
+import {useLayoutEffect,useRef} from 'react';
+import {Text,View} from 'react-native';
+import {createStore} from 'zustand/vanilla';
+import {useStore} from 'zustand';
+import {PDFThumbnailSidebar,type PDFThumbnailSidebarProps} from './PDFThumbnailSidebar.tsx';
+import {Button} from '@nyc-tron/ui/components/Button';
+import {ErrorMessage} from '@nyc-tron/ui/components/feedback/ErrorMessage';
+import {controlIdentity,useScopedControl} from '../inputs/useScopedControl.ts';
+import {exact} from '../exact-optional.ts';
+export interface PageReorderOrganizerProps extends PDFThumbnailSidebarProps {
+ onDuplicate:(ids:readonly string[],signal?:AbortSignal)=>unknown;onDelete:(ids:readonly string[],signal?:AbortSignal)=>unknown;onRotate:(ids:readonly string[],degrees:90|-90,signal?:AbortSignal)=>unknown;
+}
+export function PageReorderOrganizer({scope='pdf-organizer',revision=0,onDuplicate:_duplicate,onDelete:_delete,onRotate:_rotate,...props}:PageReorderOrganizerProps){
+ const owner=JSON.stringify([...controlIdentity(scope,revision),props.disabledReason]),guard=useScopedControl(owner,{...props,onDuplicate:_duplicate,onDelete:_delete,onRotate:_rotate},props.disabledReason!==undefined),off=guard.pending||props.disabledReason!==undefined,selected=props.pages.filter(p=>props.selectedIds.includes(p.id)),editable=selected.length>0&&selected.every(p=>p.canModify);
+ const local=useRef<ReturnType<typeof makeStore>|null>(null);local.current??=makeStore();const store=local.current,confirm=useStore(store,s=>s.ids);useLayoutEffect(()=>{store.setState({ids:null});},[owner]);
+ const run=(action:'duplicate'|'rotate-left'|'rotate-right'|'delete',ids=props.selectedIds)=>guard.run(action,(h,s)=>{if(!ids.length||ids.some(id=>!h.pages.some(p=>p.id===id&&p.canModify)))throw new Error('Selected PDF pages cannot be modified');if(action==='delete'){if(ids.length>=h.pages.length)throw new Error('Keep at least one page in the PDF');return h.onDelete(ids,s);}if(action==='duplicate')return h.onDuplicate(ids,s);return h.onRotate(ids,action==='rotate-left'?-90:90,s);});
+ return <View style={{gap:8}}><PDFThumbnailSidebar {...props} scope={scope} revision={revision} onMove={props.onMove?(id,to)=>guard.run('move',(h,s)=>h.onMove?.(id,to,s)):undefined} onGroupCommit={props.onGroupCommit?(id,group)=>guard.run('group',(h,s)=>h.onGroupCommit?.(id,group,s)):undefined} onInsert={props.onInsert?()=>guard.run('insert',(h,s)=>h.onInsert?.(s)):undefined} disabledReason={off?'Page organization in progress':props.disabledReason}/><View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}><Button title="Duplicate selected PDF pages" disabled={off||!editable} {...exact({unstyled:props.unstyled})} onPress={()=>run('duplicate')}/><Button title="Rotate selected pages left" disabled={off||!editable} {...exact({unstyled:props.unstyled})} onPress={()=>run('rotate-left')}/><Button title="Rotate selected pages right" disabled={off||!editable} {...exact({unstyled:props.unstyled})} onPress={()=>run('rotate-right')}/><Button title="Delete selected PDF pages" variant="danger" disabled={off||!editable||selected.length>=props.pages.length} {...exact({unstyled:props.unstyled})} onPress={()=>store.setState({ids:[...props.selectedIds]})}/></View>{confirm?<View style={{gap:6}}><Text {...{className:props.unstyled?undefined:'text-text'}}>Delete {confirm.length} selected pages from this PDF?</Text><Button title="Confirm delete PDF pages" variant="danger" disabled={off} {...exact({unstyled:props.unstyled})} onPress={async()=>{if(await run('delete',confirm))store.setState({ids:null});}}/><Button title="Keep PDF pages" variant="secondary" {...exact({unstyled:props.unstyled})} onPress={()=>store.setState({ids:null})}/></View>:null}<ErrorMessage {...exact({message:guard.error??props.disabledReason,unstyled:props.unstyled})}/></View>;
+}
+function makeStore(){return createStore(()=>({ids:null as readonly string[]|null}));}

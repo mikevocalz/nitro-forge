@@ -1,0 +1,2 @@
+import {test,expect} from 'playwright/test';
+for(const kind of ['layers','mask','artboards'])test(kind+' preserves the app-authored flex panel geometry',async({page})=>{await page.goto('/panel-layout?kind='+kind);await expect(page.getByTestId('bounded-panel')).toBeVisible();const panel=await page.getByTestId('bounded-panel').boundingBox(),host=await page.getByTestId('bounded-host').boundingBox();expect(panel.height).toBeCloseTo(host.height-44);expect(panel.y).toBeCloseTo(host.y+44);expect(panel.width).toBeCloseTo(host.width);});

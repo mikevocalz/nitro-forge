@@ -40,6 +40,40 @@ acceptance, complete F2's later stable `1.0.0` repin or authorize Forge v1.
 The implementation and exact validation limits belong in the F2 evidence
 [receipt](release/evidence/2026-11-13-6dd7e71/f2-rc2-repin.md). The older checkpoints below retain their original versions and scope.
 
+## Editor controls moved to Forge, 2026-11-28
+
+The owner decided that NYC-Tron UI ships only general app UI and never
+depends on Forge, and that Forge owns its editor controls. The controls that
+NYC-Tron UI shipped under `packages/ui/src/components/forge/` moved unchanged
+(NYC-Tron commit `5a1ea4db`) to `packages/editor-controls` in this repository,
+package `@nitro-forge/editor-controls`. Forge still consumes NYC-Tron's
+general UI (buttons, tabs, menus, gestures, stores, styles, shell inputs) from
+the pinned release.
+
+| Old import | New import |
+| --- | --- |
+| `@nyc-tron/ui/components/forge/inputs/precision` | `@nyc-tron/ui/components/shell/precision` |
+| `@nyc-tron/ui/components/forge/inputs/precision-scrubber-model` | `@nyc-tron/ui/components/shell/precision-scrubber-model` |
+| `@nyc-tron/ui/components/forge/inputs/PrecisionScrubber` | `@nyc-tron/ui/components/shell/PrecisionScrubber` |
+| `@nyc-tron/ui/components/forge/<path>` (everything else) | `@nitro-forge/editor-controls/<path>` |
+
+A package that imports the controls lists
+`"@nitro-forge/editor-controls": "workspace:*"`. Nothing in Forge may import
+`@nyc-tron/ui/components/forge/*`; `node tooling/verify-nyc-tron-pin.mjs`
+reports any such import by file and line.
+
+The rc.2 release still contains the old `forge/` files but does not export
+the 20 subpaths the moved controls import (the seven helpers NYC-Tron
+relocated, such as `components/shell/PrecisionScrubber`, and 13 general
+primitives such as `components/gestures/value-gesture`).
+`patches/@nyc-tron__ui@1.0.0-rc.2.patch` adds those export-map entries and
+points them at rc.2's existing `dist/` files. It changes nothing else, and the
+pin check enforces that. Delete the patch and its `patchedDependencies`
+entries when the pin moves to the next NYC-Tron release.
+
+The sections below are records of earlier releases and keep the
+`components/forge/` paths that were current then.
+
 ## One component source
 
 Historical alpha.2 checkpoint:
@@ -57,7 +91,8 @@ SwiftPM build of a pure-Swift module cannot resolve (fixed in `d4f350a`). Every 
 `"private": true` and none is on npm, so Forge installs them by release URL.
 No NYC-Tron package has a validated native production build yet.
 
-Some subpaths in the released `@nyc-tron/ui` exports map:
+Some subpaths in the alpha.2 `@nyc-tron/ui` exports map (the `components/forge/*`
+entries are now `@nitro-forge/editor-controls/*`, see the next section up):
 
 ```text
 Consumer (Moyo, NYC-MON, Forge, other)

@@ -19,6 +19,7 @@
     "@nitro-forge/ignition": "workspace:*"
   },
   "devDependencies": {
+    "@nitro-forge/editor-controls": "workspace:*",
     "typescript": "7.0.2",
     "vitest": "5.1.0"
   },

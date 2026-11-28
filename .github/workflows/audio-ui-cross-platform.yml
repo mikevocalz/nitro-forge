@@ -5,6 +5,8 @@ on:
     paths:
       - 'packages/audio-ui/**'
       - 'apps/forge-audio-lab/**'
+      - 'packages/editor-controls/**'
+      - 'patches/**'
       - '.github/workflows/audio-ui-cross-platform.yml'
       - 'tooling/nyc-tron.json'
       - 'tooling/verify-nyc-tron-pin.mjs'
@@ -32,6 +34,8 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
+      - name: Build editor-controls declarations (consumers typecheck against its dist)
+        run: pnpm --filter @nitro-forge/editor-controls build
       - name: NYC-Tron release pin (URL, lockfile, SHA256SUMS)
         run: node tooling/verify-nyc-tron-pin.mjs --download
       - name: Audio UI TypeScript

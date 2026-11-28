@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { moveLayer, validateLayers } from '@nyc-tron/ui/components/forge/layers/layer-model';
+import { moveLayer, validateLayers } from '@nitro-forge/editor-controls/layers/layer-model';
 import {
   prismLayerRows, prismMoveCommand, prismOpacityCommand, prismRenameCommand, prismSelectedRowId,
   prismVisibilityCommand, prismRemoveCommand, prismFillColour, type PrismLayer,

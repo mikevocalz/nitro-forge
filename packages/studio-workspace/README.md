@@ -52,13 +52,13 @@ raw-native visual fallback. The browser host takes its file picker from
 generated with Forge's own in `src/theme.css` and `src/theme.native.css`
 (`pnpm build:theme`). See `docs/ux/studio-refresh/OWN_UI_INTEGRATION.md`.
 
-The Prism layer panel is NYC-Tron UI's `LayerStack`
-(`@nyc-tron/ui/components/forge/layers/LayerStack`, release pinned in
-`tooling/nyc-tron.json`). `src/prism-layers.ts` maps Prism's bottom-to-top
+The Prism layer panel is the editor control `LayerStack`
+(`@nitro-forge/editor-controls/layers/LayerStack`, in `packages/editor-controls`). `src/prism-layers.ts` maps Prism's bottom-to-top
 layers to its top-first rows and turns each move, visibility toggle, rename
 released opacity drag and row removal into one engine operation, so one
 undo step. Rows carry Prism's kind ("Rectangle", "Ellipse", "Raster") and a
 shape's fill as the thumbnail.
 Selection stays in the editor store. Dock and Composer handles use NYC-Tron's
-`DragGrabHandle`, and layer opacity uses its `PrecisionScrubber`; NYC-Tron's
+`DragGrabHandle`, and layer opacity uses its `PrecisionScrubber`
+(`@nyc-tron/ui/components/shell/PrecisionScrubber`); NYC-Tron's
 colour variables come from `nycTronTokens` through the host's `TokenScope`.

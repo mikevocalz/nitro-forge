@@ -14,6 +14,8 @@ on:
       - "tooling/nyc-tron.json"
       - "tooling/verify-nyc-tron-pin.mjs"
       - "pnpm-lock.yaml"
+      - "packages/editor-controls/**"
+      - "patches/**"
       - ".github/workflows/office-bridge.yml"
   push:
     branches: [master]
@@ -29,6 +31,8 @@ on:
       - "tooling/nyc-tron.json"
       - "tooling/verify-nyc-tron-pin.mjs"
       - "pnpm-lock.yaml"
+      - "packages/editor-controls/**"
+      - "patches/**"
       - ".github/workflows/office-bridge.yml"
 
 permissions:
@@ -46,6 +50,8 @@ jobs:
       - run: corepack enable
       - name: Install Forge workspace
         run: corepack pnpm install --frozen-lockfile
+      - name: Build editor-controls declarations (consumers typecheck against its dist)
+        run: corepack pnpm --filter @nitro-forge/editor-controls build
       - name: Verify the NYC-Tron release pin (URL, lockfile, tarball sha256)
         run: node tooling/verify-nyc-tron-pin.mjs --download
       - name: Typecheck Pitch, Quill and Folio adapters and the NYC-Tron consumer contract

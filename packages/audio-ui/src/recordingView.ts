@@ -1,4 +1,4 @@
-import type { RecordingViewState } from "@nyc-tron/ui/components/forge/audio/recording-model";
+import type { RecordingViewState } from "@nitro-forge/editor-controls/audio/recording-model";
 import type { WaveformPeak } from "@nitro-forge/media-ui";
 import type { RecordingPhase } from "./recording";
 

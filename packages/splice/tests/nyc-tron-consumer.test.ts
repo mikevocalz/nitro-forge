@@ -8,9 +8,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { TimelineEdit } from "@nyc-tron/ui/components/forge/timeline/edits";
-import type { FrameRate as TronFrameRate } from "@nyc-tron/ui/components/forge/timebase";
-import type { TimelineClipLaneProps } from "@nyc-tron/ui/components/forge/timeline/TimelineClipLane";
+import type { TimelineEdit } from "@nitro-forge/editor-controls/timeline/edits";
+import type { FrameRate as TronFrameRate } from "@nitro-forge/editor-controls/timebase";
+import type { TimelineClipLaneProps } from "@nitro-forge/editor-controls/timeline/TimelineClipLane";
 import { SpliceTimelineAdapter, type FrameRate, type TimelineClipView, type TimelineEditInput } from "../src/timeline-cluster";
 
 // Every edit TimelineClipLane, ClipTrimHandles and RazorSplitTool emit is one the adapter applies.

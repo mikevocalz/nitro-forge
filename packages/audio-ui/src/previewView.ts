@@ -1,4 +1,4 @@
-import type { PreviewViewState } from "@nyc-tron/ui/components/forge/audio/preview-model";
+import type { PreviewViewState } from "@nitro-forge/editor-controls/audio/preview-model";
 import type { PlaybackSnapshot } from "./audioPlayback";
 
 /**
