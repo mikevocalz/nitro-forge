@@ -1,6 +1,6 @@
 import { ScrollView, Text, View } from './ui';
-import type { Studio } from '@nitro-forge/studio-layout';
 import { workspaceScale } from './theme';
+import type { Studio } from '@nitro-forge/studio-layout';
 import { tokens } from './tokens';
 
 type Data = Record<string, any>;

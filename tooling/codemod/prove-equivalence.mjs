@@ -57,6 +57,19 @@ const ROOTS = {
 const MODULE_SPECIFIER = { 'packages/studio-workspace/src': './tokens', 'packages/icons/src': './tokens.js' };
 
 const f = ts.factory;
+const FOLD = new Map([
+  [ts.SyntaxKind.PlusToken, (a, b) => a + b],
+  [ts.SyntaxKind.MinusToken, (a, b) => a - b],
+  [ts.SyntaxKind.AsteriskToken, (a, b) => a * b],
+  [ts.SyntaxKind.SlashToken, (a, b) => a / b],
+]);
+/** The number a literal (or a negated literal) holds, or null. */
+const numberOf = node => {
+  if (ts.isParenthesizedExpression(node)) return numberOf(node.expression);
+  if (ts.isNumericLiteral(node)) return Number(node.text);
+  if (ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.MinusToken && ts.isNumericLiteral(node.operand)) return -Number(node.operand.text);
+  return null;
+};
 const literalFor = value => {
   if (typeof value === 'string') return f.createStringLiteral(value, true);
   if (typeof value === 'number') {
@@ -127,6 +140,19 @@ function render(text, file, { modules }) {
             return node;
           }
         }
+      }
+      // Arithmetic on two numbers folds to its result on both sides, so `tokens.spacing.off16 / 2`
+      // and a base `8` compare equal. Only + - * / with numeric operands fold; anything else stays.
+      if (ts.isBinaryExpression(node) && FOLD.has(node.operatorToken.kind)) {
+        const left = visit(node.left);
+        const right = visit(node.right);
+        const a = numberOf(left);
+        const b = numberOf(right);
+        if (a !== null && b !== null) {
+          const value = FOLD.get(node.operatorToken.kind)(a, b);
+          if (Number.isFinite(value)) return literalFor(value);
+        }
+        return f.updateBinaryExpression(node, left, node.operatorToken, right);
       }
       if (ts.isNumericLiteral(node)) return f.createNumericLiteral(String(Number(node.text)));
       if (ts.isStringLiteral(node)) return f.createStringLiteral(node.text, true);
