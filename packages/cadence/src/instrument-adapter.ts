@@ -1,4 +1,4 @@
-import type { CadenceDocument } from "./index";
+import type { CadenceDocument } from "./index.ts";
 
 /**
  * Bind NYC-Tron rotary controls to existing Cadence Rust document ops.

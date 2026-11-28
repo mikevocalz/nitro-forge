@@ -11,7 +11,7 @@ import {
   type ImportFormat,
 } from "@nitro-forge/ignition/transfer";
 import { base64ToBytes, type DocumentHandle } from "@nitro-forge/ignition";
-import { OPS } from "./index";
+import { OPS } from "./index.ts";
 
 /** Output rate of the WAV export. */
 export const WAV_SAMPLE_RATE = 48_000;

@@ -5,7 +5,7 @@
  * an encoder backend (`TRANSFER_DEFERRED["splice:video"]`).
  */
 import { NFD_EXPORT, NFD_IMPORT, type ExportFormat, type ImportFormat } from "@nitro-forge/ignition/transfer";
-import { OPS } from "./index";
+import { OPS } from "./index.ts";
 
 export const SPLICE_PLAN_EXPORT: ExportFormat = {
   id: "render-plan",

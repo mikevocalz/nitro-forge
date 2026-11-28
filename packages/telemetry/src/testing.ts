@@ -1,5 +1,5 @@
-import { createTelemetry, type Telemetry } from "./telemetry";
-import type { TelemetryEvent } from "./types";
+import { createTelemetry, type Telemetry } from "./telemetry.ts";
+import type { TelemetryEvent } from "./types.ts";
 
 /**
  * The test half of N-18: a `diagnostics` telemetry with a manual clock and

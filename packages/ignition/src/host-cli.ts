@@ -7,10 +7,10 @@ import type {
   EngineErrorShape,
   EngineKind,
   ForgeEvent,
-} from "./types";
-import { EngineError } from "./types";
-import { base64ToBytes, bytesToBase64 } from "./base64";
-import type { EngineHost } from "./host";
+} from "./types.ts";
+import { EngineError } from "./types.ts";
+import { base64ToBytes, bytesToBase64 } from "./base64.ts";
+import type { EngineHost } from "./host.ts";
 
 interface Pending {
   resolve: (v: FrameResponse) => void;

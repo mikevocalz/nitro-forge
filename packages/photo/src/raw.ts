@@ -3,7 +3,7 @@ import { StringDecoder } from "node:string_decoder";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { base64ToBytes, bytesToBase64 } from "@nitro-forge/ignition";
-import type { PhotoDocument, PhotoPreviewRequest, PhotoPreviewResult } from "./index";
+import type { PhotoDocument, PhotoPreviewRequest, PhotoPreviewResult } from "./index.ts";
 
 /**
  * TS adapter for the `raw-decode` host service (`rust/raw-decode`),

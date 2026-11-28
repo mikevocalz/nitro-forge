@@ -1,4 +1,4 @@
-import type { TelemetryAttributes, TelemetryValue } from "./types";
+import type { TelemetryAttributes, TelemetryValue } from "./types.ts";
 
 const IDENTIFIER = /^[\w.:-]{1,64}$/;
 

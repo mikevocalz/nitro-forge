@@ -14,9 +14,9 @@
  * synchronous `getString`/`set`/`remove` so an app passes its MMKV instance
  * directly. Nothing here imports MMKV.
  */
-import { DocumentHandle } from "./document";
-import type { EngineHost } from "./host";
-import type { EngineKind } from "./types";
+import { DocumentHandle } from "./document.ts";
+import type { EngineHost } from "./host.ts";
+import type { EngineKind } from "./types.ts";
 
 /** Synchronous string store. An `MMKV` instance satisfies it. */
 export interface WorkspaceStore {

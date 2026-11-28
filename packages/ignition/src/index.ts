@@ -8,8 +8,8 @@ export {
   type EngineKind,
   type ErrorCode,
   type ForgeEvent,
-} from "./types";
-export { base64ToBytes, bytesToBase64 } from "./base64";
+} from "./types.ts";
+export { base64ToBytes, bytesToBase64 } from "./base64.ts";
 export {
   NitroHost,
   createNitroHost,
@@ -18,10 +18,10 @@ export {
   type EngineHost,
   type ForgeFactoryNative,
   type ForgeDocumentNative,
-} from "./host";
-export { DocumentHandle, type ForgeListener } from "./document";
-export type { ForgeFactory } from "./specs/ForgeFactory.nitro";
-export type { ForgeDocument } from "./specs/ForgeDocument.nitro";
-export type { ForgeTask } from "./specs/ForgeTask.nitro";
-export type { ForgeMediaCache } from "./specs/ForgeMediaCache.nitro";
-export type { ForgeBinaryCommandResult } from "./contracts";
+} from "./host.ts";
+export { DocumentHandle, type ForgeListener } from "./document.ts";
+export type { ForgeFactory } from "./specs/ForgeFactory.nitro.ts";
+export type { ForgeDocument } from "./specs/ForgeDocument.nitro.ts";
+export type { ForgeTask } from "./specs/ForgeTask.nitro.ts";
+export type { ForgeMediaCache } from "./specs/ForgeMediaCache.nitro.ts";
+export type { ForgeBinaryCommandResult } from "./contracts.ts";

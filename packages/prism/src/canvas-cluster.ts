@@ -1,7 +1,7 @@
 import {base64ToBytes} from '@nitro-forge/ignition';
-import type {PrismDocument,Shape} from './index';
-import type {Rgba} from './rgba';
-import type {AlignEdge,AlignTarget,Artboard,BlendMode,BooleanOp,FillRule,LayerTransform,NodeKind,Paint,PaintOrder,PathNode,PixelPreview,SelectionMode,SelectionShape,Stroke,Subpath} from './canvas-types';
+import type {PrismDocument,Shape} from './index.ts';
+import type {Rgba} from './rgba.ts';
+import type {AlignEdge,AlignTarget,Artboard,BlendMode,BooleanOp,FillRule,LayerTransform,NodeKind,Paint,PaintOrder,PathNode,PixelPreview,SelectionMode,SelectionShape,Stroke,Subpath} from './canvas-types.ts';
 
 type Immutable<T> = T extends object ? {readonly [K in keyof T]:Immutable<T[K]>} : T;
 export type CanvasPaint = Immutable<Paint>;

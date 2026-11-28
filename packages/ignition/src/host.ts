@@ -3,9 +3,9 @@ import type {
   CommandResult,
   EngineErrorShape,
   EngineKind,
-} from "./types";
-import { EngineError } from "./types";
-import type { ForgeFactory } from "./specs/ForgeFactory.nitro";
+} from "./types.ts";
+import { EngineError } from "./types.ts";
+import type { ForgeFactory } from "./specs/ForgeFactory.nitro.ts";
 
 /**
  * EngineHost — the transport contract between TypeScript and Rust engines.

@@ -1,7 +1,7 @@
-import type {ForgeMediaCache} from "./ForgeMediaCache.nitro";
+import type {ForgeMediaCache} from "./ForgeMediaCache.nitro.ts";
 import { Apple, Android, type HybridObject } from "nitro-core";
-import type { ForgeEngineKind } from "../contracts";
-import type { ForgeDocument } from "./ForgeDocument.nitro";
+import type { ForgeEngineKind } from "../contracts.ts";
+import type { ForgeDocument } from "./ForgeDocument.nitro.ts";
 
 export * from "#nitro/ForgeFactory";
 

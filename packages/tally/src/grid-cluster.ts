@@ -1,4 +1,4 @@
-import type { CellInfo, SheetTabTone, TallyDocument } from "./index";
+import type { CellInfo, SheetTabTone, TallyDocument } from "./index.ts";
 import {
   TALLY_GRID_MAX_COLUMNS,
   TALLY_GRID_MAX_ROWS,
@@ -8,7 +8,7 @@ import {
   readTallyWindow,
   tallyCellAddress,
   type TallyGridData,
-} from "./grid-adapter";
+} from "./grid-adapter.ts";
 
 /**
  * Engine side of NYC-Tron's spreadsheet cluster (Forge roster I-01, I-02,

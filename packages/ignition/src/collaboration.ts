@@ -1,9 +1,9 @@
-import { ownedJson } from "./owned-json";
-import { ownCollaborationCheckpoint, type CollaborationCheckpoint } from "./collaboration-checkpoint";
-import { DocumentHandle } from "./document";
-import { validateCheckpoint } from "./autosave";
-import type { EngineHost } from "./host";
-import type { Command, EngineKind } from "./types";
+import { ownedJson } from "./owned-json.ts";
+import { ownCollaborationCheckpoint, type CollaborationCheckpoint } from "./collaboration-checkpoint.ts";
+import { DocumentHandle } from "./document.ts";
+import { validateCheckpoint } from "./autosave.ts";
+import type { EngineHost } from "./host.ts";
+import type { Command, EngineKind } from "./types.ts";
 
 /** The provider must authorize the document and retain immutable revisions.
  * Revision zero denotes absence. compareAndSwap is atomic and durable: it must

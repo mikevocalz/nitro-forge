@@ -1,8 +1,8 @@
-import type {ForgeTask} from "./ForgeTask.nitro";
+import type {ForgeTask} from "./ForgeTask.nitro.ts";
 import { Apple, Android, type HybridObject } from "nitro-core";
 import type {
   ForgeEngineKind, ForgeCommand, ForgeCommandResult, ForgeBinaryCommandResult,
-} from "../contracts";
+} from "../contracts.ts";
 
 export * from "#nitro/ForgeDocument";
 

@@ -1,4 +1,4 @@
-import type { TallyDocument, CellInfo } from "./index";
+import type { TallyDocument, CellInfo } from "./index.ts";
 
 /**
  * Nonvisual adapter for NYC-Tron's SpreadsheetGrid component.

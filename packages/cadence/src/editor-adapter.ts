@@ -1,4 +1,4 @@
-import type { CadenceDocument } from "./index";
+import type { CadenceDocument } from "./index.ts";
 
 /**
  * Maps NYC-Tron's mixer and MIDI editor callbacks onto Cadence engine ops.

@@ -1,4 +1,4 @@
-import type {DraftDocument,DraftState,DraftSnapQuery} from './index';
+import type {DraftDocument,DraftState,DraftSnapQuery} from './index.ts';
 /** Matches the current canonical command-line control. Input/history remain host-owned. */
 export interface DraftCommandBinding{
  prompt:string;history:readonly {id:string;command:string;output:string;kind:'result'|'error'|'info'}[];

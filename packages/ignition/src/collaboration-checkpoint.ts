@@ -1,5 +1,5 @@
-import { validateCheckpoint, type BinaryCheckpointStorage } from "./autosave";
-import type { EngineKind } from "./types";
+import { validateCheckpoint, type BinaryCheckpointStorage } from "./autosave.ts";
+import type { EngineKind } from "./types.ts";
 
 /** Private application recovery state produced by DocumentCollaboration.checkpoint.
  * Scope its storage key to the service, account and document. Never treat an

@@ -1,6 +1,6 @@
-import { DocumentHandle } from "./document";
-import type { EngineHost } from "./host";
-import type { EngineKind } from "./types";
+import { DocumentHandle } from "./document.ts";
+import type { EngineHost } from "./host.ts";
+import type { EngineKind } from "./types.ts";
 
 // Persisted NFC1 tags are fixed independently of the runtime engine list's
 // order. Adding an engine requires an explicit new tag, never renumbering.

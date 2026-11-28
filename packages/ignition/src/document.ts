@@ -1,5 +1,5 @@
-import type { Command, CommandResult, EngineKind, ForgeEvent } from "./types";
-import type { EngineHost } from "./host";
+import type { Command, CommandResult, EngineKind, ForgeEvent } from "./types.ts";
+import type { EngineHost } from "./host.ts";
 
 export type ForgeListener = (e: ForgeEvent) => void;
 

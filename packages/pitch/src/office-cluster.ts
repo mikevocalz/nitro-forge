@@ -1,4 +1,4 @@
-import type { AnimKind, PitchDocument, PitchAnimationTrigger } from "./index";
+import type { AnimKind, PitchDocument, PitchAnimationTrigger } from "./index.ts";
 
 /**
  * Engine side of NYC-Tron's slide controls (Forge roster J-01 SlideFilmstrip,

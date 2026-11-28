@@ -1,6 +1,6 @@
-import type { BlockKind, Bookmark, Pos, QuillDocument, Style, ListItem, ListFormat, ListKind, TextCase } from "./index";
-import {deriveQuillListMarkers} from './list-markers';
-export {deriveQuillListMarkers} from './list-markers';
+import type { BlockKind, Bookmark, Pos, QuillDocument, Style, ListItem, ListFormat, ListKind, TextCase } from "./index.ts";
+import {deriveQuillListMarkers} from './list-markers.ts';
+export {deriveQuillListMarkers} from './list-markers.ts';
 
 /**
  * Engine side of NYC-Tron's document controls (Forge roster H-03

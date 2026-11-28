@@ -1,4 +1,4 @@
-import type { AnnotSubtype, FolioDocument, FolioCommentMetadata, FolioCommentEntry, InkPaths, Rect } from "./index";
+import type { AnnotSubtype, FolioDocument, FolioCommentMetadata, FolioCommentEntry, InkPaths, Rect } from "./index.ts";
 
 /**
  * Engine side of NYC-Tron's PDF controls (Forge roster K-04

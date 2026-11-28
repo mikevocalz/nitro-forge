@@ -1,5 +1,5 @@
 import {Apple,Android,type HybridObject} from 'nitro-core';
-import type {ForgeBinaryCommandResult} from '../contracts';
+import type {ForgeBinaryCommandResult} from '../contracts.ts';
 export * from '#nitro/ForgeTask';
 
 /** Native-owned running command. Cancel is cooperative; result settles once. */

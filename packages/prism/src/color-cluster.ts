@@ -9,7 +9,7 @@
  * engine sees one `setColors` per Apply, so one dialog session is one undo
  * step.
  */
-import { OPS, type PrismColors, type PrismDocument, type Rgba } from "./index";
+import { OPS, type PrismColors, type PrismDocument, type Rgba } from "./index.ts";
 
 /** NYC-Tron `RgbaColor`: integer channels 0..255, alpha 0..1. */
 export interface ColorValue {
