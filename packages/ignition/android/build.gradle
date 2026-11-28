@@ -1,6 +1,9 @@
 apply plugin: 'com.android.library'
 // Pure C++ specs use the Java loader below; generated Kotlin loader is not needed.
 def forgeArchitectures = (rootProject.findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a,x86,x86_64').split(',')
+// Studio engines the app ships: written by the Expo config plugin's engines
+// option, else NF_ENGINES, else all. CMake checks it against the archive.
+def forgeEngines = (rootProject.findProperty('nitroForge.engines') ?: System.getenv('NF_ENGINES') ?: 'all').toString().trim()
 
 android {
   namespace 'com.nitroforge.ignitionv1'
@@ -12,7 +15,7 @@ android {
     ndk { abiFilters(*forgeArchitectures) }
     externalNativeBuild {
       cmake {
-        arguments '-DANDROID_STL=c++_shared', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+        arguments '-DANDROID_STL=c++_shared', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON', "-DNITRO_FORGE_ENGINES=${forgeEngines}"
         cppFlags '-fexceptions -frtti'
       }
     }

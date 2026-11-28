@@ -61,6 +61,13 @@ class ForgeRustSession final {
 
   [[nodiscard]] bool isOpen() const noexcept;
 
+  /**
+   * Approximate heap bytes the Rust document holds (nf_v1_resident_bytes);
+   * 0 once closed. Waits for in-flight work on this document, so call it
+   * from the document's queue, never the JS thread.
+   */
+  [[nodiscard]] size_t residentBytes() const noexcept;
+
  private:
   explicit ForgeRustSession(int64_t handle) noexcept;
 

@@ -15,6 +15,16 @@ const ARCHITECTURES = {
   ios: ['arm64-device', 'arm64-simulator', 'x86_64-simulator'],
   android: ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'],
 };
+// Studio engines nf-sys can link, in rust/nf-sys/Cargo.toml feature order.
+// Must match the Cargo features, the C++ kindName table and ForgeEngineKind;
+// withForge.node.cjs checks all three.
+const ENGINES = Object.freeze([
+  'prism', 'cadence', 'splice', 'folio', 'pitch', 'tally',
+  'quill', 'photo', 'motion', 'design', 'draft', 'scene',
+]);
+// gradle.properties / Podfile.properties.json key read by android/build.gradle
+// and scripts/resolve-engines.cjs.
+const ENGINES_PROPERTY = 'nitroForge.engines';
 const APPLE_ROOT = 'native/ForgeRust.xcframework';
 const REQUIRED_ASSETS = [
   `${APPLE_ROOT}/Info.plist`,
@@ -27,6 +37,83 @@ const REQUIRED_ASSETS = [
 
 function fail(message) {
   throw new Error(`[Nitro Forge] ${message}`);
+}
+
+/**
+ * Canonical engine list from an array or a comma-separated string ("all"
+ * allowed). Rejects empty, unknown and duplicate names. Returns names in
+ * ENGINES order so the same selection always writes the same property.
+ */
+function parseEngineList(value, source) {
+  let names;
+  if (typeof value === 'string') {
+    names = value.trim() === 'all' ? [...ENGINES] : value.split(',').map(name => name.trim());
+  } else if (Array.isArray(value)) {
+    names = value;
+  } else {
+    fail(`${source} must be an array of engine names: ${ENGINES.join(', ')}.`);
+  }
+  if (names.length === 0 || (names.length === 1 && names[0] === '')) {
+    fail(`${source} must name at least one engine: ${ENGINES.join(', ')}.`);
+  }
+  const seen = new Set();
+  for (const name of names) {
+    if (typeof name !== 'string' || !ENGINES.includes(name)) {
+      fail(`${source} has unknown engine ${JSON.stringify(name)}. Known engines: ${ENGINES.join(', ')}.`);
+    }
+    if (seen.has(name)) fail(`${source} lists ${name} twice.`);
+    seen.add(name);
+  }
+  return ENGINES.filter(name => seen.has(name));
+}
+
+function parseOptions(options) {
+  if (options === undefined) return { engines: undefined };
+  if (!options || typeof options !== 'object' || Array.isArray(options)) {
+    fail('Plugin options must be an object, e.g. ["@nitro-forge/ignition", { engines: ["prism"] }].');
+  }
+  const unknown = Object.keys(options).filter(key => key !== 'engines');
+  if (unknown.length) fail(`Unknown plugin option ${unknown.join(', ')}. The only option is engines.`);
+  if (options.engines === undefined) return { engines: undefined };
+  if (!Array.isArray(options.engines)) {
+    fail(`The engines option must be an array of engine names: ${ENGINES.join(', ')}.`);
+  }
+  return { engines: parseEngineList(options.engines, 'The engines option') };
+}
+
+// Expo's withMod contract, written structurally so the plugin keeps loading
+// nothing from Expo or React Native: the newest mod runs first, then hands its
+// results to the mod registered before it.
+function withMod(config, platform, mod, action) {
+  config.mods ??= {};
+  config.mods[platform] ??= {};
+  const previous = config.mods[platform][mod];
+  if (previous?.isProvider) fail(`Cannot add the ${platform}.${mod} mod after its provider.`);
+  config.mods[platform][mod] = async function withForgeEngines({ modRequest, ...rest }) {
+    const results = await action({ ...rest, modRequest });
+    return previous ? previous(results) : results;
+  };
+  return config;
+}
+
+function withEngineProperties(config, engines, platforms) {
+  const value = engines.join(',');
+  if (platforms.includes('android')) {
+    withMod(config, 'android', 'gradleProperties', async modConfig => {
+      const properties = modConfig.modResults;
+      const existing = properties.find(item => item.type === 'property' && item.key === ENGINES_PROPERTY);
+      if (existing) existing.value = value;
+      else properties.push({ type: 'property', key: ENGINES_PROPERTY, value });
+      return modConfig;
+    });
+  }
+  if (platforms.includes('ios')) {
+    withMod(config, 'ios', 'podfileProperties', async modConfig => {
+      modConfig.modResults[ENGINES_PROPERTY] = value;
+      return modConfig;
+    });
+  }
+  return config;
 }
 
 function readJson(file, description) {
@@ -82,7 +169,7 @@ function validateArchitectures(manifest) {
   }
 }
 
-function validateAssets(packageRoot) {
+function validateAssets(packageRoot, engines) {
   const root = fs.realpathSync(packageRoot);
   const manifestPath = path.join(root, 'native/assets.json');
   let realManifest;
@@ -125,17 +212,32 @@ function validateAssets(packageRoot) {
   for (const required of REQUIRED_ASSETS) {
     if (!listed.has(required)) fail(`Native asset manifest is missing ${required}. Install the universal Apple/Android Ignition archive.`);
   }
+  // An archive without an engines field was built with every engine (the
+  // nf-sys default). One with it must link every engine the app asked for.
+  if (manifest.engines !== undefined) {
+    const archived = parseEngineList(manifest.engines, 'Native asset manifest engines');
+    const missing = (engines ?? ENGINES).filter(name => !archived.includes(name));
+    if (missing.length) {
+      fail(`This Ignition archive links ${archived.join(', ')} but the app needs ${missing.join(', ')}. Rebuild nf-sys with NF_ENGINES=${(engines ?? ENGINES).join(',')} or set the engines plugin option.`);
+    }
+  }
   // Producer and clean-consumer checks verify hashes and actual architecture
   // metadata. Presence validation here is not an ABI or native build verdict.
 }
 
 /**
- * Optionless Expo config plugin. The caller opts into SwiftPM in initial app
- * config: Expo chooses that route before running config plugins. No resources
- * are acquired and no native projects/configuration are mutated here.
+ * Expo config plugin. The caller opts into SwiftPM in initial app config: Expo
+ * chooses that route before running config plugins. No resources are acquired.
+ *
+ * Without options nothing native is touched. With { engines: [...] } the
+ * plugin records the studio engines the app ships as nitroForge.engines in
+ * android/gradle.properties (read by android/build.gradle, which checks the
+ * Rust archive at CMake configure) and ios/Podfile.properties.json (read by
+ * scripts/build-apple.sh through NF_APP_ROOT). Build nf-sys with the same set
+ * (NF_ENGINES, or NF_APP_ROOT after prebuild) to drop the other engines.
  */
-module.exports = function withForge(config, options) {
-  if (options !== undefined) fail('This config plugin is optionless. Use plugins: ["@nitro-forge/ignition"].');
+function withForge(config, options) {
+  const { engines } = parseOptions(options);
   if (!config || typeof config !== 'object') fail('Expected the Expo app configuration.');
   const projectRoot = config._internal?.projectRoot;
   if (typeof projectRoot !== 'string' || !path.isAbsolute(projectRoot)) {
@@ -156,6 +258,12 @@ module.exports = function withForge(config, options) {
       fail(`Unsupported ${name} version ${String(actual)}; this candidate requires exactly ${expected}.`);
     }
   }
-  validateAssets(path.resolve(__dirname, '..'));
+  validateAssets(path.resolve(__dirname, '..'), engines);
+  if (engines) withEngineProperties(config, engines, platforms);
   return config;
-};
+}
+
+module.exports = withForge;
+module.exports.ENGINES = ENGINES;
+module.exports.ENGINES_PROPERTY = ENGINES_PROPERTY;
+module.exports.parseEngineList = parseEngineList;

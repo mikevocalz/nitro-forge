@@ -65,6 +65,7 @@ pub unsafe extern "C" fn nf_v1_apply_binary(
             return Err(EngineError::invalid("invalid binary input buffer"));
         }
         command.binary_output = true;
+        let is_snapshot = command.op == ignition_core::OP_SNAPSHOT;
         if has_input == 1 {
             command.input = Some(if input_len == 0 {
                 Vec::new()
@@ -76,6 +77,9 @@ pub unsafe extern "C" fn nf_v1_apply_binary(
             crate::dispatch::run_command(engine, command, task.as_ref())
         })?;
         let output = result.output.take();
+        if let (true, Some(bytes)) = (is_snapshot, output.as_ref()) {
+            crate::ffi_v1::note_envelope_bytes(handle, bytes.len());
+        }
         let command = ok(result)?;
         let output = output.map_or(NULL_BYTES, |bytes| {
             let mut bytes = bytes.into_boxed_slice();
@@ -110,6 +114,9 @@ pub unsafe extern "C" fn nf_v1_free_binary_result(result: NfBinaryResult) {
 
 #[cfg(test)]
 mod tests {
+    // Helpers and imports go unused in builds that leave out the engines
+    // these tests drive (see feature_matrix_tests.rs).
+    #![allow(unused_imports, dead_code)]
     use super::*;
     use std::ffi::CStr;
     unsafe fn run(
@@ -132,6 +139,7 @@ mod tests {
             task,
         )
     }
+    #[cfg(feature = "draft")]
     #[test]
     fn draft_registered_factory_returns_real_binary_path_rgba() {
         unsafe {
@@ -147,6 +155,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "design")]
     #[test]
     fn design_registered_factory_returns_real_binary_rgba() {
         unsafe {
@@ -164,6 +173,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "motion")]
     #[test]
     fn motion_binary_raster_ingest_owns_bytes_and_returns_real_frames() {
         unsafe {
@@ -179,6 +189,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "motion")]
     #[test]
     fn motion_registered_factory_returns_real_binary_rgba() {
         unsafe {
@@ -196,6 +207,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "photo")]
     #[test]
     fn photo_develop_binary_preview_returns_real_pixels_without_mutation() {
         unsafe {
@@ -235,6 +247,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "photo")]
     #[test]
     fn photo_registered_factory_rejects_unsupported_binary_without_mutation() {
         unsafe {
@@ -257,6 +270,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "tally")]
     #[test]
     fn binary_ffi_uses_raw_output_and_cancelled_mutations_stay_atomic() {
         unsafe {
@@ -290,6 +304,7 @@ mod tests {
             assert_eq!(crate::ffi_v1::nf_v1_close(h), 1);
         }
     }
+    #[cfg(feature = "prism")]
     #[test]
     fn raw_prism_pixels_round_trip_without_base64() {
         unsafe {

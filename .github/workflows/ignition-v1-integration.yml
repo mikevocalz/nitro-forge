@@ -41,6 +41,12 @@ jobs:
           /tmp/serial-queue-test
       - run: cmp packages/ignition/cpp/nf_v1.h rust/nf-sys/include/nf_v1.h
       - run: cargo test --locked -p nf-sys && cargo build --locked -p nf-sys
+      - name: Engine feature matrix (Prism only, Tally only, none, all)
+        run: |
+          cargo test --locked -p nf-sys --no-default-features --features prism
+          cargo test --locked -p nf-sys --no-default-features --features tally
+          cargo test --locked -p nf-sys --no-default-features
+          cargo test --locked -p nf-sys --no-default-features --features all
       - name: Verify shared document lifecycle, autosave, transactions and collaboration
         run: |
           cargo build --locked -p nf-cli
@@ -57,6 +63,13 @@ jobs:
             tooling/native/nf_v1_cpp_smoke.cpp packages/ignition/cpp/ForgeRustSession.cpp \
             target/debug/libnf_sys.a -ldl -lpthread -lm -o target/nf-v1-smoke
           target/nf-v1-smoke
+      - name: Link the C++ session to a Prism-only nf-sys
+        run: |
+          CARGO_TARGET_DIR=target/prism-only cargo build --locked -p nf-sys --no-default-features --features prism
+          g++ -std=c++20 -Wall -Wextra -Werror -I packages/ignition/cpp \
+            tooling/native/nf_v1_engine_subset_smoke.cpp packages/ignition/cpp/ForgeRustSession.cpp \
+            target/prism-only/debug/libnf_sys.a -ldl -lpthread -lm -o target/nf-v1-subset-smoke
+          target/nf-v1-subset-smoke
       - name: Compile v1 implementations against generated specs
         run: |
           NITRO_ROOT=$(pnpm --filter @nitro-forge/ignition exec node -p "require('node:path').dirname(require.resolve('nitro-core/package.json'))")

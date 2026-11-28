@@ -11,6 +11,10 @@ set(FORGE_RUST_ARCHIVE "${CMAKE_CURRENT_SOURCE_DIR}/../native/android/${ANDROID_
 if(NOT EXISTS "${FORGE_RUST_ARCHIVE}")
   message(FATAL_ERROR "Missing ${FORGE_RUST_ARCHIVE}. Run packages/ignition/scripts/build-android.sh with the app NDK first.")
 endif()
+# Engines the app ships (nitroForge.engines, passed by build.gradle) must all
+# be linked in the archive; see forge-engines.cmake.
+set(FORGE_RUST_ENGINES_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../native/android/${ANDROID_ABI}/engines.txt")
+include(${CMAKE_CURRENT_SOURCE_DIR}/forge-engines.cmake)
 add_library(ForgeRust STATIC IMPORTED)
 set_target_properties(ForgeRust PROPERTIES IMPORTED_LOCATION "${FORGE_RUST_ARCHIVE}")
 target_link_libraries(NitroForgeV1 ForgeRust android log)

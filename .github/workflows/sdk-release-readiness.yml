@@ -9,6 +9,11 @@ on:
       - 'tooling/release/**'
       - 'packages/ignition/plugin/**'
       - 'packages/ignition/app.plugin.*'
+      - 'packages/ignition/scripts/resolve-engines.cjs'
+      - 'packages/ignition/android/forge-engines.cmake'
+      - 'rust/nf-sys/Cargo.toml'
+      - 'packages/ignition/cpp/HybridForgeFactory.cpp'
+      - 'packages/ignition/src/contracts.ts'
       - '.github/workflows/sdk-release-readiness.yml'
   workflow_dispatch:
   schedule:

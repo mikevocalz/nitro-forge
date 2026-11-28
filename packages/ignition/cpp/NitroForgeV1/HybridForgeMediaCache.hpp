@@ -7,7 +7,9 @@
 #include <type_traits>
 namespace margelo::nitro::nitroforge::ignitionv1 {
 class HybridForgeMediaCache final:public HybridForgeMediaCacheSpec {
- struct State{explicit State(size_t capacity):cache(capacity){}::nitroforge::native::ByteCache cache;std::atomic<size_t> bytes{0};bool closed=false;};
+ struct State{explicit State(size_t capacity):cache(capacity){}::nitroforge::native::ByteCache cache;std::atomic<size_t> bytes{0};std::atomic<size_t> footprint{0};bool closed=false;
+  // Owner queue only: publish both counters after every mutation.
+  void publish(){bytes.store(cache.size());footprint.store(cache.footprint());}};
  public:
  explicit HybridForgeMediaCache(size_t capacity):_state(std::make_shared<State>(capacity)),_capacity(capacity){}
  double getByteSize()override{return static_cast<double>(_state->bytes.load());}
@@ -20,13 +22,18 @@ class HybridForgeMediaCache final:public HybridForgeMediaCacheSpec {
  Promise<bool> remove(const std::string& key)override{return enqueue<bool>([key](State& s){return s.cache.remove(key);});}
  Promise<void> clear()override{return enqueue<void>([](State& s){s.cache.clear();});}
  Promise<void> close()override{return enqueue<void>([](State& s){s.cache.clear();s.closed=true;},true);}
+ protected:
+ // Cached bytes plus key and node overhead (0 after close), read from the JS
+ // thread without touching the owner queue. Nitro samples this when the
+ // object is handed to JS and on NitroModules.updateMemorySize(cache).
+ size_t getExternalMemorySize()noexcept override{return _state->footprint.load(std::memory_order_relaxed);}
  private:
  template<typename T,typename Work>Promise<T> enqueue(Work work,bool closing=false){
   auto promise=Promise<T>::pending();const auto state=_state;
   try{_queue.enqueue([promise,state,work=std::move(work),closing](){try{
     if(state->closed&&!closing)throw std::runtime_error("Media cache is closed");
-    if constexpr(std::is_void_v<T>){work(*state);state->bytes.store(state->cache.size());promise.resolve();}
-    else{auto value=work(*state);state->bytes.store(state->cache.size());promise.resolve(std::move(value));}
+    if constexpr(std::is_void_v<T>){work(*state);state->publish();promise.resolve();}
+    else{auto value=work(*state);state->publish();promise.resolve(std::move(value));}
    }catch(...){promise.reject(std::current_exception());}});}catch(...){promise.reject(std::current_exception());}return promise;
  }
  std::shared_ptr<State> _state;size_t _capacity;

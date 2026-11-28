@@ -56,6 +56,12 @@ impl<T> Journal<T> {
     pub fn redo_len(&self) -> usize {
         self.redo.len()
     }
+
+    /// Every retained entry, undo stack first, then redo. For memory
+    /// accounting (`Engine::resident_bytes`); order carries no meaning.
+    pub fn entries(&self) -> impl Iterator<Item = &T> {
+        self.undo.iter().chain(self.redo.iter())
+    }
 }
 
 #[cfg(test)]
@@ -81,5 +87,15 @@ mod tests {
         assert_eq!(j.pop_undo(), Some(3));
         assert_eq!(j.pop_undo(), Some(2));
         assert_eq!(j.pop_undo(), None);
+    }
+
+    #[test]
+    fn entries_walk_undo_then_redo() {
+        let mut j: Journal<u32> = Journal::new(4);
+        j.record(1);
+        j.record(2);
+        let undone = j.pop_undo().unwrap();
+        j.push_redo(undone);
+        assert_eq!(j.entries().copied().collect::<Vec<_>>(), vec![1, 2]);
     }
 }

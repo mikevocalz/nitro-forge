@@ -1,4 +1,5 @@
-use crate::{factory, Command, Engine, EngineKind};
+use crate::{factory, Command, EngineKind};
+use ignition_core::Engine;
 use ignition_core::{ErrorCode, TaskContext};
 use serde_json::{json, Value};
 

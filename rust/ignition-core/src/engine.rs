@@ -23,6 +23,22 @@ pub enum EngineKind {
 }
 
 impl EngineKind {
+    /// Every engine kind, in the order the FFI and the Nitro spec list them.
+    pub const ALL: [EngineKind; 12] = [
+        EngineKind::Prism,
+        EngineKind::Cadence,
+        EngineKind::Splice,
+        EngineKind::Folio,
+        EngineKind::Pitch,
+        EngineKind::Tally,
+        EngineKind::Quill,
+        EngineKind::Photo,
+        EngineKind::Motion,
+        EngineKind::Design,
+        EngineKind::Draft,
+        EngineKind::Scene,
+    ];
+
     pub fn as_str(&self) -> &'static str {
         match self {
             EngineKind::Prism => "prism",
@@ -87,6 +103,16 @@ pub trait Engine: Send + 'static {
     /// silently dropped. Default: none.
     fn binary_input_ops(&self) -> &'static [&'static str] {
         &[]
+    }
+
+    /// Heap bytes this document holds, undo history included, for host
+    /// memory-pressure reporting (Nitro's `getExternalMemorySize`).
+    ///
+    /// Must be cheap: walk top-level buffers, never serialize. Count shared
+    /// (`Arc`) buffers once. `None` means the engine does not account for
+    /// itself; hosts then fall back to the last envelope size they saw.
+    fn resident_bytes(&self) -> Option<usize> {
+        None
     }
 
     /// Apply a `__batch` command atomically on this engine.

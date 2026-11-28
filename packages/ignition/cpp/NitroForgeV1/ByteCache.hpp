@@ -13,21 +13,28 @@ class ByteCache final {
  public:
  explicit ByteCache(size_t capacity):_capacity(capacity){if(capacity==0||capacity>256u*1024u*1024u)throw std::invalid_argument("Cache capacity must be 1..256 MiB");}
  size_t size()const{return _bytes;}
+ // Heap bytes held, for getExternalMemorySize: payload, each key twice (the
+ // LRU list and the map both own a copy) and a fixed per-entry node cost.
+ // An estimate of allocator overhead, never smaller than size().
+ size_t footprint()const{return _bytes+2*_keyBytes+_entries.size()*kEntryOverhead;}
  void put(const std::string& key,std::span<const uint8_t> bytes){
   if(key.empty()||key.size()>1024||bytes.size()>_capacity)throw std::invalid_argument("Cache key or value exceeds bounds");
   std::vector<uint8_t> copy(bytes.begin(),bytes.end());
   remove(key);
   while(!_order.empty()&&(_bytes+copy.size()>_capacity||_entries.size()>=4096))remove(_order.back());
-  _order.push_front(key);_bytes+=copy.size();_entries.emplace(key,Entry{std::move(copy),_order.begin()});
+  _order.push_front(key);_bytes+=copy.size();_keyBytes+=key.size();_entries.emplace(key,Entry{std::move(copy),_order.begin()});
  }
  std::optional<std::vector<uint8_t>> get(const std::string& key){
   auto found=_entries.find(key);if(found==_entries.end())return std::nullopt;
   _order.splice(_order.begin(),_order,found->second.order);return found->second.bytes;
  }
- bool remove(const std::string& key){auto it=_entries.find(key);if(it==_entries.end())return false;_bytes-=it->second.bytes.size();_order.erase(it->second.order);_entries.erase(it);return true;}
- void clear(){_entries.clear();_order.clear();_bytes=0;}
+ bool remove(const std::string& key){auto it=_entries.find(key);if(it==_entries.end())return false;_bytes-=it->second.bytes.size();_keyBytes-=key.size();_order.erase(it->second.order);_entries.erase(it);return true;}
+ void clear(){_entries.clear();_order.clear();_bytes=0;_keyBytes=0;}
  private:
  struct Entry{std::vector<uint8_t> bytes;std::list<std::string>::iterator order;};
- size_t _capacity,_bytes=0;std::list<std::string> _order;std::unordered_map<std::string,Entry> _entries;
+ // Map node (key string, Entry, next pointer, cached hash) plus list node
+ // (string, prev/next pointers).
+ static constexpr size_t kEntryOverhead=2*sizeof(std::string)+sizeof(Entry)+4*sizeof(void*);
+ size_t _capacity,_bytes=0,_keyBytes=0;std::list<std::string> _order;std::unordered_map<std::string,Entry> _entries;
 };
 }

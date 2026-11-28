@@ -20,6 +20,8 @@ HybridForgeDocument::HybridForgeDocument(
   if (!_session || !_session->isOpen()) {
     throw std::invalid_argument("ForgeDocument requires an open Rust document");
   }
+  // Construction runs on the open() worker, before JS sees the object.
+  _residentBytes->store(_session->residentBytes(), std::memory_order_relaxed);
 }
 
 ForgeEngineKind HybridForgeDocument::getKind() {

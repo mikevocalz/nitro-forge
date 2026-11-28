@@ -11,17 +11,48 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [dependencies]
 ignition-core = { workspace = true }
 serde_json = { workspace = true }
-prism-engine = { path = "../../packages/prism/rust" }
-cadence-engine = { path = "../../packages/cadence/rust" }
-splice-engine = { path = "../../packages/splice/rust" }
-folio-engine = { path = "../../packages/folio/rust" }
-pitch-engine = { path = "../../packages/pitch/rust" }
-tally-engine = { path = "../../packages/tally/rust" }
-quill-engine = { path = "../../packages/quill/rust" }
-photo-engine = { path = "../../packages/photo/rust" }
+prism-engine = { path = "../../packages/prism/rust", optional = true }
+cadence-engine = { path = "../../packages/cadence/rust", optional = true }
+splice-engine = { path = "../../packages/splice/rust", optional = true }
+folio-engine = { path = "../../packages/folio/rust", optional = true }
+pitch-engine = { path = "../../packages/pitch/rust", optional = true }
+tally-engine = { path = "../../packages/tally/rust", optional = true }
+quill-engine = { path = "../../packages/quill/rust", optional = true }
+photo-engine = { path = "../../packages/photo/rust", optional = true }
+motion-engine = { path = "../../packages/motion/rust", optional = true }
+design-engine = { path = "../../packages/design/rust", optional = true }
+draft-engine = { path = "../../packages/draft/rust", optional = true }
+scene-engine = { path = "../../packages/scene/rust", optional = true }
 
-motion-engine = { path = "../../packages/motion/rust" }
-design-engine = { path = "../../packages/design/rust" }
-
-draft-engine = { path = "../../packages/draft/rust" }
-scene-engine = { path = "../../packages/scene/rust" }
+# One feature per studio engine, so an app links only the studios it ships.
+# `default` keeps the full set, so plain `cargo build -p nf-sys` is unchanged.
+# Build a subset with `--no-default-features --features prism,tally`.
+# packages/ignition/scripts/build-{apple,android}.sh read NF_ENGINES for this.
+[features]
+default = ["all"]
+all = [
+    "prism",
+    "cadence",
+    "splice",
+    "folio",
+    "pitch",
+    "tally",
+    "quill",
+    "photo",
+    "motion",
+    "design",
+    "draft",
+    "scene",
+]
+prism = ["dep:prism-engine"]
+cadence = ["dep:cadence-engine"]
+splice = ["dep:splice-engine"]
+folio = ["dep:folio-engine"]
+pitch = ["dep:pitch-engine"]
+tally = ["dep:tally-engine"]
+quill = ["dep:quill-engine"]
+photo = ["dep:photo-engine"]
+motion = ["dep:motion-engine"]
+design = ["dep:design-engine"]
+draft = ["dep:draft-engine"]
+scene = ["dep:scene-engine"]

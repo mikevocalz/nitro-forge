@@ -2,6 +2,7 @@
 
 #include <NitroForgeV1/ForgeRustSession.hpp>
 #include <NitroForgeV1/HybridForgeDocumentSpec.hpp>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <NitroForgeV1/SerialQueue.hpp>
@@ -27,16 +28,30 @@ class HybridForgeDocument final : public HybridForgeDocumentSpec {
   Promise<bool> redo() override;
   Promise<void> close() override;
 
+ protected:
+  /**
+   * The Rust document's resident bytes, undo history included, as of the
+   * last queued operation (0 after close). Read from the JS thread without
+   * touching the Rust session. Nitro samples it when the document is handed
+   * to JS and on NitroModules.updateMemorySize(document).
+   */
+  size_t getExternalMemorySize() noexcept override {
+    return _residentBytes->load(std::memory_order_relaxed);
+  }
+
  private:
   template <typename T, typename Work>
   Promise<T> enqueue(Work work) {
     const auto promise = Promise<T>::pending();
     try {
-      _queue.enqueue([promise, work = std::move(work)]() {
+      // The size is refreshed on the queue after the work, whether it
+      // succeeded or failed: a failed command can still close the session.
+      _queue.enqueue([promise, work = std::move(work), session = _session, resident = _residentBytes]() {
+        const auto refresh = [&]() noexcept { resident->store(session->residentBytes(), std::memory_order_relaxed); };
         try {
-          if constexpr (std::is_void_v<T>) { work(); promise.resolve(); }
-          else { promise.resolve(work()); }
-        } catch (...) { promise.reject(std::current_exception()); }
+          if constexpr (std::is_void_v<T>) { work(); refresh(); promise.resolve(); }
+          else { auto value = work(); refresh(); promise.resolve(std::move(value)); }
+        } catch (...) { refresh(); promise.reject(std::current_exception()); }
       });
     } catch (...) { promise.reject(std::current_exception()); }
     return promise;
@@ -46,6 +61,8 @@ class HybridForgeDocument final : public HybridForgeDocumentSpec {
   } };
   const ForgeEngineKind _kind;
   std::shared_ptr<::nitroforge::native::ForgeRustSession> _session;
+  // Shared with queued work, which may outlive a call but not the session.
+  std::shared_ptr<std::atomic<size_t>> _residentBytes = std::make_shared<std::atomic<size_t>>(0);
 };
 
 } // namespace margelo::nitro::nitroforge::ignitionv1

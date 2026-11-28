@@ -167,3 +167,20 @@ The registered Design engine appends native and NFC1/NCC1 tag 9 after Motion 8. 
 The registered Draft engine appends native/checkpoint identity 10 after Design9. It owns bounded 2D points, segments, snap settings and linear coordinate constraints, with real rank/DOF/residual results and atomic solved geometry. Exact locked coordinates remain fixed. World viewport and selection are host-owned; projected finite paths use actual Prism RGBA. Schema1 NFD1 snapshots have an 8 MiB cap and sixteen Arc/COW history entries. This source registration does not supply general nonlinear CAD, 3D processing, native target acceptance or default product activation.
 
 The registered Scene engine appends native and NFC1/NCC1 tag 11 after Draft 10; tags 0–10 stay fixed. Its `kind:"scene",schema:1` JSON payload uses the unchanged NFD1 envelope header. Per the P17 Track-B B0 decision the engine owns document state only — group/layer/mesh/camera/light nodes with TRS transforms and acyclic parent graphs, PBR-state materials matching the scene-render model, custom base64 mesh attributes and deterministic primitives — and never rasterizes: `renderFrame` emits the canonical scene description the host submits unchanged to the `rust/scene-render` service, keeping the "engines own state, hosts own pixels" split. Bounded Journal undo (32 entries) and an 8 MiB encoded-state cap apply as elsewhere; node-material DAG, UV packing, glTF/OBJ import, GPU tier and native target acceptance remain separate work.
+
+## Per-studio engine linking
+
+Each engine in `rust/nf-sys` sits behind a Cargo feature of the same name (`prism`, `cadence`, `splice`, `folio`, `pitch`, `tally`, `quill`, `photo`, `motion`, `design`, `draft`, `scene`). `default = ["all"]` keeps the full set, so `cargo build -p nf-sys` builds what it built before. `--no-default-features --features prism,tally` links only those two. The table lives in `rust/nf-sys/src/engines.rs`.
+
+Opening an engine this build left out fails with code `unsupported`, recoverable, and the message `engine '<kind>' not linked in this build (linked: ...)`. An unknown name is still `invalid_command`. `nf_v1_engine_linked(kind, len)` answers 1 (linked), 0 (left out) or -1 (unknown) without opening anything.
+
+The selection reaches the native builds in one direction: the Expo config plugin option `engines` writes `nitroForge.engines` to `android/gradle.properties` and `ios/Podfile.properties.json` at prebuild. `scripts/build-android.sh` and `scripts/build-apple.sh` read `NF_ENGINES`, else that property under `NF_APP_ROOT`, else build all engines (`scripts/resolve-engines.cjs`). They record the list in `native/android/<abi>/engines.txt` and `native/ForgeRust.engines.txt`. On Android, `android/forge-engines.cmake` fails configure when the app needs an engine the archive does not link. iOS links a prebuilt XCFramework through SwiftPM, so there is no build-time check there; the plugin checks `engines` in the packaged `native/assets.json` when the archive records one. The podspec is discovery only and reads nothing.
+
+## Native memory reporting
+
+`ForgeMediaCache` and `ForgeDocument` override Nitro's `HybridObject::getExternalMemorySize()` (a protected `noexcept` virtual in the pinned nightly) so Hermes sees their native bytes as GC pressure. Both read an atomic that the object's own queue refreshes after each operation, so the JS thread never waits on the cache or the Rust document.
+
+- Media cache: payload bytes plus each key twice and a fixed per-entry node cost (`ByteCache::footprint()`); 0 after close.
+- Document: `nf_v1_resident_bytes(handle)`. Engines that implement `Engine::resident_bytes` report their own count (Prism: live layers, masks, selection and undo history, each shared pixel buffer once). The others report the size of the last NFD1 envelope that session wrote or restored, and 0 before either. 0 after close.
+
+Nitro samples the value when it hands the object to JS and when JS calls `NitroModules.updateMemorySize(object)`. A cache or document that grows after creation reports the new size only on the next such call.

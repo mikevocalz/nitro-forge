@@ -1,7 +1,8 @@
 //! Nitro v1-specific C ABI. Commands and snapshots are length-bounded.
 //! Each document is synchronized independently via ConcurrentSessions.
 
-use super::{error_json, factory, ok_json, set_err, NfBytes, NULL_BYTES};
+use super::{error_json, ok_json, set_err, NfBytes, NULL_BYTES};
+use crate::engines;
 use crate::session_registry::ConcurrentSessions;
 use ignition_core::{Command, Engine, EngineError, EngineKind, OP_REDO, OP_SNAPSHOT, OP_UNDO};
 use std::ffi::{c_char, CString};
@@ -28,6 +29,11 @@ pub(super) fn with_v1_engine<T>(
     registry().with_engine(handle, operation)
 }
 
+/// Record the size of an envelope produced through another entry point.
+pub(super) fn note_envelope_bytes(handle: i64, bytes: usize) {
+    registry().note_envelope_bytes(handle, bytes);
+}
+
 fn error_frame(error: EngineError) -> CString {
     ok_json(serde_json::json!({"ok":false,"error":error}))
 }
@@ -52,9 +58,7 @@ pub unsafe extern "C" fn nf_v1_open(
             .map_err(|_| EngineError::invalid("engine kind is not UTF-8"))?;
         let parsed = EngineKind::parse(text)
             .ok_or_else(|| EngineError::invalid(format!("unknown engine '{text}'")))?;
-        let engine = factory(parsed)
-            .ok_or_else(|| EngineError::unsupported(format!("engine '{text}' not linked")))?;
-        registry().open(engine)
+        registry().open(engines::open_kind(parsed)?)
     }));
     match result {
         Ok(Ok(handle)) => handle,
@@ -112,6 +116,7 @@ pub unsafe extern "C" fn nf_v1_snapshot(handle: i64, out_err: *mut *mut c_char) 
     }));
     match result {
         Ok(Ok(bytes)) => {
+            registry().note_envelope_bytes(handle, bytes.len());
             if bytes.len() > MAX_SNAPSHOT_BYTES {
                 set_err(
                     out_err,
@@ -150,13 +155,48 @@ pub unsafe extern "C" fn nf_v1_restore(handle: i64, bytes: *const u8, len: usize
             return Err(EngineError::invalid("snapshot missing or exceeds 256 MiB"));
         }
         let input = std::slice::from_raw_parts(bytes, len);
-        registry().with_engine(handle, |engine| engine.restore(input))
+        registry().with_engine(handle, |engine| engine.restore(input))?;
+        registry().note_envelope_bytes(handle, len);
+        Ok(())
     }));
     match result {
         Ok(Ok(())) => std::ptr::null_mut(),
         Ok(Err(error)) => error_json(error).into_raw(),
         Err(_) => error_json(EngineError::internal("panic restoring native engine")).into_raw(),
     }
+}
+
+/// Whether this build links an engine: 1 linked, 0 a known engine left out
+/// of this build (its Cargo feature was off), -1 an unknown or invalid name.
+/// Constructs nothing and takes no lock.
+///
+/// # Safety
+/// kind must point to exactly kind_len readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn nf_v1_engine_linked(kind: *const u8, kind_len: usize) -> i32 {
+    if kind.is_null() || kind_len == 0 || kind_len > 32 {
+        return -1;
+    }
+    let Ok(text) = std::str::from_utf8(std::slice::from_raw_parts(kind, kind_len)) else {
+        return -1;
+    };
+    match EngineKind::parse(text) {
+        Some(parsed) => i32::from(engines::is_linked(parsed)),
+        None => -1,
+    }
+}
+
+/// Approximate heap bytes one open document holds, undo history included,
+/// for host memory-pressure reporting. Engines that account for themselves
+/// report that; others report the last envelope size the session wrote or
+/// restored. 0 for an invalid or closed handle. Waits for in-flight work on
+/// the same document, so call it from that document's worker.
+#[no_mangle]
+pub extern "C" fn nf_v1_resident_bytes(handle: i64) -> u64 {
+    catch_unwind(AssertUnwindSafe(|| registry().resident_bytes(handle)))
+        .ok()
+        .and_then(Result::ok)
+        .map_or(0, |bytes| bytes as u64)
 }
 
 /// Close waits for in-flight document work and returns true exactly once.
@@ -167,6 +207,9 @@ pub extern "C" fn nf_v1_close(handle: i64) -> i32 {
 
 #[cfg(test)]
 mod tests {
+    // Helpers and imports go unused in builds that leave out the engines
+    // these tests drive (see feature_matrix_tests.rs).
+    #![allow(unused_imports, dead_code)]
     use super::super::{nf_free_bytes, nf_free_string};
     use super::*;
     use std::ffi::CStr;
@@ -179,6 +222,7 @@ mod tests {
         result
     }
 
+    #[cfg(feature = "tally")]
     #[test]
     fn v1_ffi_open_edit_binary_snapshot_restore_close() {
         unsafe {
@@ -215,6 +259,7 @@ mod tests {
     /// with no new symbols: Cadence markers (batch undo as one step,
     /// snapshot round-trip), `detectBeats` sensitivity validation, and a
     /// Tally pivot filter with no values.
+    #[cfg(all(feature = "cadence", feature = "tally"))]
     #[test]
     fn v1_ffi_carries_cadence_markers_and_tally_all_filter() {
         unsafe {
@@ -264,6 +309,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "prism")]
     #[test]
     fn v1_ffi_rejects_corrupt_inputs_and_closed_handles() {
         unsafe {
