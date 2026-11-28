@@ -9,8 +9,10 @@
 
 use crate::{normalize_inlines, Block, BlockKind, Inline, Style};
 use ignition_core::EngineError;
-use quick_xml::events::{BytesStart, Event};
+use quick_xml::escape::{resolve_predefined_entity, unescape};
+use quick_xml::events::{BytesRef, BytesStart, Event};
 use quick_xml::Reader;
+use std::borrow::Cow;
 use std::io::{Cursor, Read, Write};
 
 const CONTENT_TYPES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -180,20 +182,47 @@ pub fn export_docx(blocks: &[Block]) -> Result<Vec<u8>, EngineError> {
     Ok(cursor.into_inner())
 }
 
-fn local_name(qname: &[u8]) -> &[u8] {
+/// Local part of a qualified name, as bytes so callers match byte literals.
+fn local_name(qname: &str) -> &[u8] {
+    let qname = qname.as_bytes();
     match qname.iter().rposition(|b| *b == b':') {
         Some(i) => &qname[i + 1..],
         None => qname,
     }
 }
 
+/// Raw (not unescaped) value of the first attribute whose local name is `key`.
 fn attr_val(e: &BytesStart<'_>, key: &[u8]) -> Option<String> {
     for a in e.attributes().flatten() {
         if local_name(a.key.as_ref()) == key {
-            return Some(String::from_utf8_lossy(&a.value).into_owned());
+            return Some(a.value.into_owned());
         }
     }
     None
+}
+
+/// Attribute value with entity and character references resolved, and no
+/// attribute-value whitespace normalization: what quick-xml 0.37's
+/// `unescape_value` returned.
+pub(crate) fn unescaped_value<'a>(
+    a: &'a quick_xml::events::attributes::Attribute<'_>,
+) -> Result<Cow<'a, str>, quick_xml::escape::EscapeError> {
+    unescape(&a.value)
+}
+
+/// Text that a general reference (`&name;` or `&#N;`) stands for. Since
+/// quick-xml 0.38 the reader reports each reference as its own
+/// `Event::GeneralRef` between `Event::Text` pieces. Only character
+/// references and the five predefined XML entities resolve; anything else
+/// is an error, as it was for 0.37's `unescape`.
+pub(crate) fn general_ref_text(r: &BytesRef<'_>) -> Result<Cow<'static, str>, String> {
+    match r.resolve_char_ref() {
+        Ok(Some(c)) => Ok(Cow::Owned(c.to_string())),
+        Ok(None) => resolve_predefined_entity(r)
+            .map(Cow::Borrowed)
+            .ok_or_else(|| format!("unrecognized entity '&{};'", &**r)),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 fn run_shading(e: &BytesStart<'_>) -> Result<Option<String>, EngineError> {
@@ -201,8 +230,7 @@ fn run_shading(e: &BytesStart<'_>) -> Result<Option<String>, EngineError> {
     for attribute in e.attributes() {
         let attribute =
             attribute.map_err(|_| EngineError::validation("invalid run shading attribute"))?;
-        let value = attribute
-            .unescape_value()
+        let value = unescaped_value(&attribute)
             .map_err(|_| EngineError::validation("invalid run shading value"))?;
         match local_name(attribute.key.as_ref()) {
             b"fill" => fill = Some(format!("#{value}")),
@@ -239,8 +267,7 @@ fn run_font_size(e: &BytesStart<'_>) -> Result<f64, EngineError> {
         let attribute =
             attribute.map_err(|_| EngineError::validation("invalid run size attribute"))?;
         if local_name(attribute.key.as_ref()) == b"val" {
-            let value = attribute
-                .unescape_value()
+            let value = unescaped_value(&attribute)
                 .map_err(|_| EngineError::validation("invalid run size value"))?;
             let half_points: u32 = value.parse().map_err(|_| {
                 EngineError::validation("run font size must be integer half-points")
@@ -260,8 +287,7 @@ fn run_font(e: &BytesStart<'_>) -> Result<Option<String>, EngineError> {
             let attribute =
                 attribute.map_err(|_| EngineError::validation("invalid run font attribute"))?;
             if local_name(attribute.key.as_ref()) == key {
-                let value = attribute
-                    .unescape_value()
+                let value = unescaped_value(&attribute)
                     .map_err(|_| EngineError::validation("invalid run font value"))?
                     .into_owned();
                 crate::validate_font_family(&value)?;
@@ -307,9 +333,38 @@ fn parse_document_with_numbering(
     let mut level_seen = false;
     let mut paragraph_indent = false;
     let mut text = String::new();
+    // One run of `<w:t>` character data (text pieces and the references
+    // between them). 0.37 delivered it as one `Text` event and dropped the
+    // whole run when it failed to unescape; `run_ok` keeps that rule.
+    let mut run = String::new();
+    let mut run_ok = true;
 
     loop {
         let event = r.read_event();
+        match &event {
+            Ok(Event::Text(t)) => {
+                if in_t {
+                    run.push_str(t);
+                }
+                continue;
+            }
+            Ok(Event::GeneralRef(g)) => {
+                if in_t {
+                    match general_ref_text(g) {
+                        Ok(s) => run.push_str(&s),
+                        Err(_) => run_ok = false,
+                    }
+                }
+                continue;
+            }
+            _ => {
+                if run_ok {
+                    text.push_str(&run);
+                }
+                run.clear();
+                run_ok = true;
+            }
+        }
         if let Ok(Event::Start(e) | Event::Empty(e)) = &event {
             if in_num_pr
                 && ![b"numPr".as_slice(), b"numId", b"ilvl"]
@@ -322,7 +377,7 @@ fn parse_document_with_numbering(
             let q = e.name();
             let local = local_name(q.as_ref());
             if [b"numPr".as_slice(), b"numId", b"ilvl"].contains(&local) {
-                if !q.as_ref().starts_with(b"w:") {
+                if !q.as_ref().starts_with("w:") {
                     return Err(EngineError::unsupported(
                         "paragraph numbering needs admitted w prefix",
                     ));
@@ -331,7 +386,7 @@ fn parse_document_with_numbering(
                     let a = a.map_err(|_| {
                         EngineError::validation("invalid numbering property attribute")
                     })?;
-                    if a.key.as_ref() != b"w:val" {
+                    if a.key.as_ref() != "w:val" {
                         return Err(EngineError::unsupported(
                             "unsupported paragraph numbering attribute",
                         ));
@@ -341,9 +396,8 @@ fn parse_document_with_numbering(
             if !numbering.is_empty() {
                 for a in e.attributes() {
                     let a = a.map_err(|_| EngineError::validation("invalid XML attribute"))?;
-                    if a.key.as_ref() == b"xmlns:w"
-                        && a.value.as_ref()
-                            != b"http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                    if a.key.as_ref() == "xmlns:w"
+                        && a.value != "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
                     {
                         return Err(EngineError::unsupported(
                             "unsupported document numbering namespace",
@@ -514,11 +568,6 @@ fn parse_document_with_numbering(
                 }
                 _ => {}
             },
-            Ok(Event::Text(e)) if in_t => {
-                if let Ok(cow) = e.unescape() {
-                    text.push_str(&cow);
-                }
-            }
             Ok(Event::End(e)) => {
                 match local_name(e.name().as_ref()) {
                     b"numPr" => in_num_pr = false,
@@ -778,6 +827,29 @@ mod highlight_tests {
 }
 
 #[cfg(test)]
+mod reference_tests {
+    use super::*;
+
+    #[test]
+    fn run_text_split_at_references_is_rejoined() {
+        let xml = "<w:document xmlns:w=\"urn:test\"><w:body><w:p><w:r><w:rPr><w:rFonts w:ascii=\"A&amp;B\"/></w:rPr><w:t>R&amp;D &lt;3&gt; &#x263A;&#65;</w:t></w:r></w:p></w:body></w:document>";
+        let blocks = parse_document(xml).unwrap();
+        assert_eq!(blocks[0].inlines[0].text, "R&D <3> \u{263A}A");
+        assert_eq!(blocks[0].inlines[0].style.font_family.as_deref(), Some("A&B"));
+    }
+
+    #[test]
+    fn unresolvable_reference_drops_only_its_own_run() {
+        // 0.37 dropped a `<w:t>` text run that failed to unescape; the
+        // other runs of the paragraph survive.
+        let xml = "<w:document xmlns:w=\"urn:test\"><w:body><w:p><w:r><w:t>keep</w:t></w:r><w:r><w:t>lost &bogus; run</w:t></w:r></w:p></w:body></w:document>";
+        let blocks = parse_document(xml).unwrap();
+        let text: String = blocks[0].inlines.iter().map(|i| i.text.as_str()).collect();
+        assert_eq!(text, "keep");
+    }
+}
+
+#[cfg(test)]
 mod numbering_package_tests {
     use super::*;
     use ignition_core::Engine;
@@ -803,7 +875,7 @@ mod numbering_package_tests {
         let mut found = false;
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
-            let path = file.name().to_string();
+            let path = file.name().unwrap().into_owned();
             let mut data = vec![];
             file.read_to_end(&mut data).unwrap();
             if path == name {

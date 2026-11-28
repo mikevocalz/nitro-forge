@@ -52,7 +52,8 @@
 //!   computed value keeps its error type). `<f>` elements become `=…`
 //!   raws; `t="shared"|"array"|"dataTable"` formulas, ISO-8601 `t="d"`
 //!   cells and unknown `t` values reject the whole import. Character data
-//!   is read from both `Text` and `CDATA` events; `_xHHHH_` escapes are
+//!   is read from `Text`, `GeneralRef` (rejoined into one run) and `CDATA`
+//!   events; `_xHHHH_` escapes are
 //!   decoded and malformed entities/encodings reject the import rather
 //!   than silently dropping text. Cells without an `r` attribute take
 //!   positional interpretation (row/column cursors).
@@ -77,7 +78,8 @@
 use super::*;
 use format_ops::{BorderSide, BorderStyle, CellFormat};
 use formula::{fmt_addr, fmt_num, on_sheet, parse_addr, Evaluator, SHEET_MAX_COLUMNS, SHEET_MAX_ROWS};
-use quick_xml::events::{BytesStart, Event};
+use quick_xml::escape::{resolve_predefined_entity, unescape};
+use quick_xml::events::{BytesRef, BytesStart, Event};
 use quick_xml::Reader;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
@@ -129,7 +131,9 @@ const ERR_LITERALS: [&str; 6] = [
     formula::ERR_CYCLE,
 ];
 
-fn local_name(qname: &[u8]) -> &[u8] {
+/// Local part of a qualified name, as bytes so callers match byte literals.
+fn local_name(qname: &str) -> &[u8] {
+    let qname = qname.as_bytes();
     match qname.iter().rposition(|b| *b == b':') {
         Some(i) => &qname[i + 1..],
         None => qname,
@@ -137,16 +141,33 @@ fn local_name(qname: &[u8]) -> &[u8] {
 }
 
 /// First attribute whose local name matches `key`, XML-unescaped.
+/// The raw value goes through `escape::unescape` (entity and character
+/// references only, no attribute-value whitespace normalization), which
+/// is what quick-xml 0.37's `unescape_value` did.
 fn attr_val(e: &BytesStart<'_>, key: &[u8]) -> Option<String> {
     for a in e.attributes().flatten() {
         if local_name(a.key.as_ref()) == key {
-            return a
-                .unescape_value()
+            return unescape(&a.value)
                 .ok()
                 .map(|v| xlsx_unescape(&v).into_owned());
         }
     }
     None
+}
+
+/// Text that a general reference (`&name;` or `&#N;`) stands for. Since
+/// quick-xml 0.38 the reader reports each reference as its own
+/// `Event::GeneralRef` between `Event::Text` pieces. Only character
+/// references and the five predefined XML entities are valid in OOXML
+/// parts; anything else is malformed, as it was for 0.37's `unescape`.
+fn general_ref_text(r: &BytesRef<'_>) -> Result<Cow<'static, str>, String> {
+    match r.resolve_char_ref() {
+        Ok(Some(c)) => Ok(Cow::Owned(c.to_string())),
+        Ok(None) => resolve_predefined_entity(r)
+            .map(Cow::Borrowed)
+            .ok_or_else(|| format!("unrecognized entity '&{};'", &**r)),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 /// True when `b[i..]` begins a literal `_xHHHH_`-shaped sequence — the
@@ -990,11 +1011,42 @@ fn parse_shared_strings(xml: &str) -> Result<Vec<String>, EngineError> {
     let mut in_t = false;
     let mut in_rph = false;
     let mut cur = String::new();
+    // One run of character data (text pieces and the references between
+    // them), `_xHHHH_`-decoded as a whole when the next markup arrives.
+    let mut run = String::new();
     loop {
-        match r
+        let event = r
             .read_event()
-            .map_err(|e| EngineError::serialization(format!("malformed sharedStrings.xml: {e}")))?
-        {
+            .map_err(|e| EngineError::serialization(format!("malformed sharedStrings.xml: {e}")))?;
+        let taking = in_si && in_t && !in_rph;
+        match &event {
+            Event::Text(t) => {
+                if taking {
+                    run.push_str(t);
+                }
+                continue;
+            }
+            Event::GeneralRef(g) => {
+                if taking {
+                    // Unresolvable references reject the import — silently
+                    // dropping text would corrupt the string without a trace.
+                    let t = general_ref_text(g).map_err(|err| {
+                        EngineError::serialization(format!(
+                            "malformed sharedStrings.xml text: {err}"
+                        ))
+                    })?;
+                    run.push_str(&t);
+                }
+                continue;
+            }
+            _ => {
+                if !run.is_empty() {
+                    cur.push_str(&xlsx_unescape(&run));
+                    run.clear();
+                }
+            }
+        }
+        match event {
             Event::Eof => break,
             Event::Start(e) => match local_name(e.name().as_ref()) {
                 b"si" if !in_si => in_si = true,
@@ -1017,20 +1069,7 @@ fn parse_shared_strings(xml: &str) -> Result<Vec<String>, EngineError> {
                 b"rPh" => in_rph = false,
                 _ => {}
             },
-            Event::Text(e) if in_si && in_t && !in_rph => {
-                // Unescape failures reject the import — silently dropping
-                // text would corrupt the string without a trace.
-                let t = e.unescape().map_err(|err| {
-                    EngineError::serialization(format!("malformed sharedStrings.xml text: {err}"))
-                })?;
-                cur.push_str(&xlsx_unescape(&t));
-            }
-            Event::CData(e) if in_si && in_t && !in_rph => {
-                let t = e.decode().map_err(|err| {
-                    EngineError::serialization(format!("malformed sharedStrings.xml CDATA: {err}"))
-                })?;
-                cur.push_str(&xlsx_unescape(&t));
-            }
+            Event::CData(e) if taking => cur.push_str(&xlsx_unescape(&e)),
             _ => {}
         }
     }
@@ -1108,10 +1147,40 @@ fn parse_sheet(
         }};
     }
 
+    // One run of cell character data (text pieces and the references
+    // between them), handed to `push_cell_text` when the next markup arrives
+    // so `_xHHHH_` decoding sees the whole run.
+    let mut run = String::new();
+
     loop {
         let event = r
             .read_event()
             .map_err(|e| EngineError::serialization(format!("malformed worksheet XML: {e}")))?;
+        match &event {
+            Event::Text(t) => {
+                if in_c {
+                    run.push_str(t);
+                }
+                continue;
+            }
+            Event::GeneralRef(g) => {
+                if in_c {
+                    // Unresolvable references reject the import — silently
+                    // dropping text would corrupt the cell without a trace.
+                    let t = general_ref_text(g).map_err(|err| {
+                        EngineError::serialization(format!("malformed worksheet XML text: {err}"))
+                    })?;
+                    run.push_str(&t);
+                }
+                continue;
+            }
+            _ => {
+                if !run.is_empty() {
+                    push_cell_text(&mut acc, in_f, in_v, &run);
+                    run.clear();
+                }
+            }
+        }
         match event {
             Event::Eof => break,
             Event::Start(e) => {
@@ -1268,26 +1337,9 @@ fn parse_sheet(
                     }
                 }
             }
-            Event::Text(e) => {
-                if in_c {
-                    // Unescape failures reject the import — silently
-                    // dropping text would corrupt the cell without a trace.
-                    let t = e.unescape().map_err(|err| {
-                        EngineError::serialization(format!(
-                            "malformed worksheet XML text: {err}"
-                        ))
-                    })?;
-                    push_cell_text(&mut acc, in_f, in_v, &t);
-                }
-            }
             Event::CData(e) => {
                 if in_c {
-                    let t = e.decode().map_err(|err| {
-                        EngineError::serialization(format!(
-                            "malformed worksheet XML CDATA: {err}"
-                        ))
-                    })?;
-                    push_cell_text(&mut acc, in_f, in_v, &t);
+                    push_cell_text(&mut acc, in_f, in_v, &e);
                 }
             }
             Event::End(e) => {
@@ -1740,10 +1792,10 @@ mod tests {
     }
 
     /// Build an xlsx with `sheets` worksheet parts that each decompress to
-    /// `pad` bytes of 'a' text, then forge the central-directory
-    /// uncompressed-size fields to 64 bytes — claimed sizes must never
-    /// drive the import's byte budget.
-    fn forged_size_xlsx(pad: usize, sheets: usize) -> Vec<u8> {
+    /// `pad` bytes of 'a' text. With `forge`, the central-directory
+    /// uncompressed-size fields of the worksheet entries are then shrunk to
+    /// 64 bytes — claimed sizes must never drive the import's byte budget.
+    fn padded_xlsx(pad: usize, sheets: usize, forge: bool) -> Vec<u8> {
         let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
         let opts = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated);
@@ -1771,6 +1823,9 @@ mod tests {
             put(&format!("xl/worksheets/sheet{i}.xml"), &pad_body);
         }
         let mut bytes = zip.finish().unwrap().into_inner();
+        if !forge {
+            return bytes;
+        }
         // Walk the central directory from the EOCD and shrink the
         // uncompressed-size field (offset 24) of every worksheet entry.
         let eocd = bytes
@@ -1794,12 +1849,29 @@ mod tests {
     }
 
     #[test]
-    fn import_xlsx_total_cap_counts_actual_bytes_not_forged_sizes() {
+    fn import_xlsx_total_cap_counts_actual_bytes() {
         // Test-build caps: MAX_PART_BYTES = 4 MiB, MAX_TOTAL_BYTES = 8 MiB.
         // Three ~3 MiB worksheet parts stay under the per-part cap but
-        // exceed the total; their forged central-directory sizes claim
-        // ~64 bytes each, which the old accounting would have trusted.
-        let bytes = forged_size_xlsx(3 * 1024 * 1024, 3);
+        // exceed the total.
+        let bytes = padded_xlsx(3 * 1024 * 1024, 3, false);
+        let mut e = TallyEngine::new();
+        apply(&mut e, "setCell", json!({"addr":"A1","value":"keep"}));
+        let before = e.snapshot().unwrap();
+        let err =
+            apply_err(&mut e, "importXlsx", json!({"bytes_b64": crate::base64_encode(&bytes)}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds, "{}", err.message);
+        assert_eq!(e.snapshot().unwrap(), before);
+        assert_eq!(raw(&mut e, "A1"), "keep");
+    }
+
+    #[test]
+    fn import_xlsx_rejects_forged_uncompressed_sizes() {
+        // The same three ~3 MiB parts, but the central directory claims
+        // 64 bytes for each, which the old accounting would have trusted.
+        // zip 9 refuses to inflate an entry past its declared size, so the
+        // import fails on the first forged part before any budget is spent
+        // and the live sheet is untouched.
+        let bytes = padded_xlsx(3 * 1024 * 1024, 3, true);
         // Sanity: the forgery actually landed — the central directory now
         // claims 64 bytes while the parts decompress to ~3 MiB each.
         let mut z = zip::ZipArchive::new(Cursor::new(&bytes[..])).unwrap();
@@ -1810,7 +1882,8 @@ mod tests {
         let before = e.snapshot().unwrap();
         let err =
             apply_err(&mut e, "importXlsx", json!({"bytes_b64": crate::base64_encode(&bytes)}));
-        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(err.code, ignition_core::ErrorCode::Serialization, "{}", err.message);
+        assert!(err.message.contains("xl/worksheets/sheet1.xml"), "{}", err.message);
         assert_eq!(e.snapshot().unwrap(), before);
         assert_eq!(raw(&mut e, "A1"), "keep");
     }
@@ -1948,5 +2021,30 @@ mod tests {
             .apply(Command::new("importXlsx", json!({})).with_binary(Some(big)))
             .unwrap_err();
         assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+    }
+
+    #[test]
+    fn import_xlsx_joins_text_split_at_references() {
+        // quick-xml reports every `&...;` as its own event; the importer
+        // must rejoin them into one run, including an `_xHHHH_` escape
+        // whose digits arrive through a character reference.
+        let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let opts = zip::write::SimpleFileOptions::default();
+        zip.start_file("xl/workbook.xml", opts).unwrap();
+        zip.write_all("<workbook><sheets><sheet name=\"R&amp;D &#x263A;\" r:id=\"rId1\"/></sheets></workbook>".as_bytes()).unwrap();
+        zip.start_file("xl/_rels/workbook.xml.rels", opts).unwrap();
+        zip.write_all(b"<Relationships><Relationship Id=\"rId1\" Type=\"http://x/worksheet\" Target=\"worksheets/s1.xml\"/></Relationships>").unwrap();
+        zip.start_file("xl/sharedStrings.xml", opts).unwrap();
+        zip.write_all(b"<sst><si><t>apples &amp; pears &lt;3&gt; &quot;q&apos;</t></si></sst>").unwrap();
+        zip.start_file("xl/worksheets/s1.xml", opts).unwrap();
+        zip.write_all(b"<worksheet><sheetData><row><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"inlineStr\"><is><t>a_x&#48;00D_b &#65;&#x42;</t></is></c><c r=\"C1\"><f>A1&amp;\"!\"</f><v>0</v></c></row></sheetData></worksheet>").unwrap();
+        let bytes = zip.finish().unwrap().into_inner();
+        let mut e = TallyEngine::new();
+        apply(&mut e, "importXlsx", json!({"bytes_b64": crate::base64_encode(&bytes)}));
+        assert_eq!(raw(&mut e, "A1"), "apples & pears <3> \"q'");
+        assert_eq!(raw(&mut e, "B1"), "a\rb AB");
+        assert_eq!(raw(&mut e, "C1"), "=A1&\"!\"");
+        let wb = apply(&mut e, "workbook", json!({})).data;
+        assert!(wb.to_string().contains("R&D \u{263A}"), "{wb}");
     }
 }

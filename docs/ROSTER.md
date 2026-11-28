@@ -2804,3 +2804,23 @@ branch's working tree:
 
 Not run locally: native iOS or Android compilation, devices, simulators. The
 native compiles come from the PR's CI jobs only.
+
+## Cargo audit fix: zip 9 and quick-xml 0.42 (2026-11-28, `fix/cargo-audit-zip9`)
+
+Holds and the remaining ignores: `docs/release/RELEASE_TRAIN.md`, "Held" and
+"Released from Held, 2026-11-28". Local runs on Linux x86_64, cargo 1.97.0:
+
+- `cargo test --locked -p tally-engine -p quill-engine`: tally-engine 233
+  passed, quill-engine 273 passed, 0 failed.
+- `cargo test --locked --workspace --exclude nf-raw --exclude raw-decode`:
+  44 suites, 1438 passed, 0 failed, 0 ignored. `nf-raw` and `raw-decode` did
+  not build here: the LibRaw 0.22.3 download from libraw.org returned 403
+  through this machine's proxy. Neither crate depends on zip or quick-xml.
+- `cargo audit --deny warnings` with cargo-audit 0.23.0 and the advisory
+  database fetched on 2026-11-28: exit 0, with RUSTSEC-2026-0187 (lopdf) and
+  RUSTSEC-2026-0543 (chrono) ignored.
+- `cargo build --locked --target wasm32-wasip1 -p tally-engine -p quill-engine`
+  passed after the zip move only; not rerun after the quick-xml move.
+
+Not run: `pnpm -r test` (the Tally and Quill vitest suites through nf-cli),
+`pnpm -r typecheck`, the `nf-wasm-probe` round trip, native builds.

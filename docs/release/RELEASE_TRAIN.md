@@ -98,10 +98,18 @@ Checked against npm and crates.io on 2026-11-11. Every row is either bumped in t
 | react-native-skia + react-native-webgpu | 3.9.1 + 0.21.0 | 3.10.0 + 0.21.3 | Both move Dawn 157.1.0 to 158.0.0 together; the Graphite/Dawn family needs an iOS and Android build of `apps/example` and NYC-Tron's T1 result on 3.10.0 before it moves. |
 | react-native-svg | 15.16.0 | 15.16.1 | 15.16.1 ships its own `Package.swift`, which collides with the local SwiftPM patch; adopting it needs an iOS SwiftPM build. |
 | react-native-video (vendored `experimental-build-v1.tgz`) | generated with nightly.120 | n/a | Third-party artifact with recorded provenance. A workspace override keeps it on the nightly.136 runtime; regenerating it needs the upstream checkout in `tooling/react-native-video-v1/README.md`. |
-| quick-xml | 0.37.5 | 0.42.0 | RUSTSEC-2026-0194 and -0195 (denial of service). 0.42 changes `name()`, `unescape()` and `decode()`; Tally fails with 12 compile errors and Quill with 29. Needs an engine PR for the XLSX and DOCX readers. |
 | lopdf | 0.36.0 | 0.47.0 | RUSTSEC-2026-0187 (stack overflow on deeply nested objects). 0.47 compiles after 3 call-site fixes but fails 8 of 149 folio-engine tests, including all three encrypted round-trip tests. Needs an engine PR. |
-| zip | 2.6.1 | 9.5.1 | RUSTSEC-2026-0367, -0368, -0369, -0429. All four are in `ZipArchive::extract` / `ZipStreamReader::extract`, which no Forge crate calls (Tally and Quill read entries by name). The 2-to-9 migration goes with the quick-xml engine PR. |
+| chrono (transitive) | 0.4.45 | 0.4.45 | Added 2026-11-28. RUSTSEC-2026-0543 (unmaintained, warning; no fixed version). `pdfium-render` (`folio-render`) depends on chrono with no feature to turn it off, in 0.9.5 and in the latest 0.9.6; `lopdf` 0.36 (`folio-engine`) pulls it through its default `chrono` feature. Ignored in `.cargo/audit.toml` until neither pulls chrono or a maintained release clears the advisory. |
 | harfrust, moxcms, skrifa, rand, sha2, md-5 | current majors | newer majors | Semver-major crate releases; outside `cargo update` and not flagged by `cargo audit`. |
+
+### Released from Held, 2026-11-28
+
+The weekly `Cargo audit` run 45235149877 failed on two new zip 2.6.1 advisories, RUSTSEC-2026-0545 (AES entries read without the authentication check; fixed in 9.0.0) and RUSTSEC-2026-0548 (`ZipStreamReader` trusts local-header names; fixed in 9.0.5), and on the chrono warning above. The zip and quick-xml migrations that were held for an engine PR landed together on `fix/cargo-audit-zip9`. `cargo update -p zip -p quick-xml` was the only lockfile change.
+
+| Dependency | From | To | Notes |
+| --- | --- | --- | --- |
+| zip (`tally-engine`, `quill-engine`) | 2.6.1 | 9.9.0 | Clears RUSTSEC-2026-0367, -0368, -0369, -0429, -0545 and -0548. Default features stay off; only `deflate-flate2-zlib-rs` is enabled, so zopfli leaves the tree. `ZipFile::name()` now returns a `Result`. zip 9 refuses to inflate an entry past its declared size, so a forged central directory now fails the Tally import with `Serialization` instead of reaching the byte cap. |
+| quick-xml (`tally-engine`, `quill-engine`) | 0.37.5 | 0.42.0 | Clears RUSTSEC-2026-0194 and -0195. Names, attribute values and text are `str`; references arrive as `Event::GeneralRef`. The readers rejoin each text run, unescape attribute values with `escape::unescape` (no attribute whitespace normalization, as before), and keep their 0.37 rejection rules. |
 
 ## Skills and standards
 - [No AI Slop](https://github.com/petergyang/no-ai-slop/blob/000650b156983f5159695b441477f4e63b25dc85/skills/no-ai-slop/SKILL.md) + [Everything Claude Code verification loop](https://github.com/WorldFlowAI/everything-claude-code/blob/432485ba6b92c14fb357276a98957f348bcff9ee/skills/verification-loop/SKILL.md).
