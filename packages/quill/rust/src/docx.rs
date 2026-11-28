@@ -803,7 +803,7 @@ mod numbering_package_tests {
         let mut found = false;
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
-            let path = file.name().to_string();
+            let path = file.name().unwrap().into_owned();
             let mut data = vec![];
             file.read_to_end(&mut data).unwrap();
             if path == name {

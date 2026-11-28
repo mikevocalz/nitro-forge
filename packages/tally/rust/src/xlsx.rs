@@ -1740,10 +1740,10 @@ mod tests {
     }
 
     /// Build an xlsx with `sheets` worksheet parts that each decompress to
-    /// `pad` bytes of 'a' text, then forge the central-directory
-    /// uncompressed-size fields to 64 bytes — claimed sizes must never
-    /// drive the import's byte budget.
-    fn forged_size_xlsx(pad: usize, sheets: usize) -> Vec<u8> {
+    /// `pad` bytes of 'a' text. With `forge`, the central-directory
+    /// uncompressed-size fields of the worksheet entries are then shrunk to
+    /// 64 bytes — claimed sizes must never drive the import's byte budget.
+    fn padded_xlsx(pad: usize, sheets: usize, forge: bool) -> Vec<u8> {
         let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
         let opts = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated);
@@ -1771,6 +1771,9 @@ mod tests {
             put(&format!("xl/worksheets/sheet{i}.xml"), &pad_body);
         }
         let mut bytes = zip.finish().unwrap().into_inner();
+        if !forge {
+            return bytes;
+        }
         // Walk the central directory from the EOCD and shrink the
         // uncompressed-size field (offset 24) of every worksheet entry.
         let eocd = bytes
@@ -1794,12 +1797,29 @@ mod tests {
     }
 
     #[test]
-    fn import_xlsx_total_cap_counts_actual_bytes_not_forged_sizes() {
+    fn import_xlsx_total_cap_counts_actual_bytes() {
         // Test-build caps: MAX_PART_BYTES = 4 MiB, MAX_TOTAL_BYTES = 8 MiB.
         // Three ~3 MiB worksheet parts stay under the per-part cap but
-        // exceed the total; their forged central-directory sizes claim
-        // ~64 bytes each, which the old accounting would have trusted.
-        let bytes = forged_size_xlsx(3 * 1024 * 1024, 3);
+        // exceed the total.
+        let bytes = padded_xlsx(3 * 1024 * 1024, 3, false);
+        let mut e = TallyEngine::new();
+        apply(&mut e, "setCell", json!({"addr":"A1","value":"keep"}));
+        let before = e.snapshot().unwrap();
+        let err =
+            apply_err(&mut e, "importXlsx", json!({"bytes_b64": crate::base64_encode(&bytes)}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds, "{}", err.message);
+        assert_eq!(e.snapshot().unwrap(), before);
+        assert_eq!(raw(&mut e, "A1"), "keep");
+    }
+
+    #[test]
+    fn import_xlsx_rejects_forged_uncompressed_sizes() {
+        // The same three ~3 MiB parts, but the central directory claims
+        // 64 bytes for each, which the old accounting would have trusted.
+        // zip 9 refuses to inflate an entry past its declared size, so the
+        // import fails on the first forged part before any budget is spent
+        // and the live sheet is untouched.
+        let bytes = padded_xlsx(3 * 1024 * 1024, 3, true);
         // Sanity: the forgery actually landed — the central directory now
         // claims 64 bytes while the parts decompress to ~3 MiB each.
         let mut z = zip::ZipArchive::new(Cursor::new(&bytes[..])).unwrap();
@@ -1810,7 +1830,8 @@ mod tests {
         let before = e.snapshot().unwrap();
         let err =
             apply_err(&mut e, "importXlsx", json!({"bytes_b64": crate::base64_encode(&bytes)}));
-        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(err.code, ignition_core::ErrorCode::Serialization, "{}", err.message);
+        assert!(err.message.contains("xl/worksheets/sheet1.xml"), "{}", err.message);
         assert_eq!(e.snapshot().unwrap(), before);
         assert_eq!(raw(&mut e, "A1"), "keep");
     }

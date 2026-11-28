@@ -9,7 +9,7 @@ license.workspace = true
 ignition-core = { workspace = true }
 serde = { workspace = true, features = ["rc"] }
 serde_json = { workspace = true }
-zip = { version = "2", default-features = false, features = ["deflate"] }
+zip = { version = "9.9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 quick-xml = "0.37"
 unicode-normalization = "=0.1.25"
 # Font metrics backend (P-font-glyph-backend-decision, option c/a):
