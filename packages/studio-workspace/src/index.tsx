@@ -1,13 +1,14 @@
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 import type { StudioViewRef } from './ui';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { AccessibilityInfo, useColorScheme, type LayoutChangeEvent, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, Platform, useColorScheme, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import { ScrollView, Text, View, Menu, SegmentedControl, TabBar, Button, IconButton, KeyValueList, FieldGroup, ErrorMessage, Toolbar, List, ListItem, EmptyState } from './ui';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { DOCKS, type Dock, type DockAction, type Rect, type Studio } from '@nitro-forge/studio-layout';
 import { createStudioWorkspaceStore, MIN_STAGE_HEIGHT, MIN_STAGE_WIDTH, PANEL_IDS, PANEL_NAMES, actOnPanel, layoutErrorMessage } from './model';
 import { APP_MANIFESTS } from './app-manifest';
+import { STUDIO_SHORTCUTS, dispatchStudioShortcut, isApplePlatform, shortcutLabel, withShortcut, type ShortcutKeyEvent } from './keyboard-shortcuts';
 import { ForgeDocumentStage } from './stage';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { DragGrabHandle } from '@nyc-tron/ui/components/DragGrabHandle';
@@ -25,6 +26,8 @@ export type ForgeWorkspaceProps = {
   rows: WorkspaceRow[]; actions: WorkspaceAction[];
   onUndo: () => Promise<unknown> | unknown; onRedo: () => Promise<unknown> | unknown;
   onSave: () => Promise<unknown> | unknown; onRefresh: () => Promise<unknown> | unknown;
+  /** Shows the host's file chooser; ⌘O / Ctrl+O calls it on a hardware keyboard. Without it the shortcut is left to the platform. */
+  onOpen?: () => Promise<unknown> | unknown;
   headerLeading?: ReactNode; headerTrailing?: ReactNode; leadingActions?: ReactNode;
   themeOverrides?: Partial<WorkspaceColors>;
   /** User-selected chrome spacing; independent of window width and document layout. */
@@ -41,6 +44,11 @@ const panelIcons: Record<string, string> = { outline: 'file', properties: 'layer
 const progressLabels: Record<string, string> = { Undo: 'Undoing…', Redo: 'Redoing…', Save: 'Saving…', Open: 'Opening…', Refresh: 'Refreshing…', 'Save layout': 'Saving layout…' };
 const doneLabels: Record<string, string> = { Undo: 'Undone', Redo: 'Redone', Save: 'Saved', Open: 'Opened', Refresh: 'Refreshed', 'Save layout': 'Layout saved' };
 const titleCase = (text: string) => text ? text[0]!.toUpperCase() + text.slice(1) : text;
+/** The DOM surface the web keyboard layer needs, typed by shape so native builds need no DOM types. */
+type ShortcutDocument = { body?: unknown; documentElement?: unknown; addEventListener(type: 'keydown', listener: (event: ShortcutKeyEvent) => void): void; removeEventListener(type: 'keydown', listener: (event: ShortcutKeyEvent) => void): void };
+type ShortcutRoot = { contains?(node: unknown): boolean; getClientRects?(): { length: number } };
+const host = globalThis as { document?: ShortcutDocument; navigator?: { platform?: string; userAgent?: string } };
+const applePlatform = isApplePlatform(Platform.OS, host.navigator?.platform || host.navigator?.userAgent || '');
 const appIcons: Record<Studio, string> = { quill: 'text', prism: 'brush', tally: 'table', pitch: 'slide', folio: 'pdf', splice: 'video', cadence: 'music', photo: 'image', motion: 'play', design: 'color-wheel', draft: 'pencil' };
 
 /** Shared inner editor chrome. The host owns and supplies one stable engine document. */
@@ -51,9 +59,11 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   const canvasStudio = props.studioId === 'prism';
   const colors: WorkspaceColors = { ...(canvasStudio ? prismThemes : workspaceThemes)[appearance], ...props.themeOverrides };
   const store = useMemo(() => createStudioWorkspaceStore(props.studioId), [props.studioId]);
-  const ui = useMemo(() => createStore(() => ({ arranging: false, reducedMotion: true, width: 1200, height: 800, operationStatus: null as string | null })), [props.studioId]);
+  const ui = useMemo(() => createStore(() => ({ arranging: false, reducedMotion: true, width: 1200, height: 800, operationStatus: null as string | null, shortcutsOpen: false })), [props.studioId]);
   const arranging = useStore(ui, s => s.arranging);
   const operationStatus = useStore(ui, s => s.operationStatus);
+  const shortcutsOpen = useStore(ui, s => s.shortcutsOpen);
+  const root = useRef<StudioViewRef>(null);
   const reducedMotion = useStore(ui, s => s.reducedMotion);
   useEffect(() => {
     let active = true;
@@ -117,7 +127,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     catch (error) { store.setState({ error: error instanceof Error ? error.message : String(error) }); }
     finally { operation.current = false; }
   };
-  const button = (label: string, onPress: () => void, selected = false, disabled = false, small = false, iconOnly = false, glyph?: string, primary = false, testID?: string) => {
+  const button = (label: string, onPress: () => void, selected = false, disabled = false, small = false, iconOnly = false, glyph?: string, primary = false, testID?: string, ariaLabel?: string) => {
     const toggled = Object.values(panelNames).includes(label) ? selected : undefined;
     const icon = glyph ? <ForgeIcon name={glyph} size={18} selected={selected} disabled={disabled}
       appearance={appearance} color={primary ? colors.ink : selected ? colors.accent : colors.muted}
@@ -126,8 +136,8 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
       variant: primary ? 'primary' as const : 'ghost' as const, tone: 'carolina' as const,
       // A transparent edge keeps each button's shape under Windows High Contrast.
       className: (selected && !primary ? 'rounded-sm border border-transparent bg-ink-800' : 'rounded-sm border border-transparent') + (props.density === 'comfortable' ? ' min-h-12 min-w-12' : '') };
-    return iconOnly ? <IconButton key={label} {...shared} size={primary ? 'md' : 'sm'} aria-label={label} icon={icon} />
-      : <Button key={label} {...shared} size={small ? 'sm' : 'md'} title={label} icon={icon} />;
+    return iconOnly ? <IconButton key={label} {...shared} size={primary ? 'md' : 'sm'} aria-label={ariaLabel ?? label} icon={icon} />
+      : <Button key={label} {...shared} size={small ? 'sm' : 'md'} title={label} icon={icon} {...(ariaLabel ? { 'aria-label': ariaLabel } : {})} />;
   };
   const action = (id: string, kind: DockAction) => actOnPanel(store, id, kind, compact);
   const fraction = (dock: Dock) => layout.sizes[dock === 'left' ? 'leftFraction' : dock === 'right' ? 'rightFraction' : 'bottomFraction'];
@@ -163,7 +173,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         {id === 'history' && <View style={{ gap: 10 }}>
           <Text accessibilityRole="header" style={{ color: colors.text, fontSize: scale.type.body - 1 }}>{panelNames.history}</Text>
           <Text style={{ color: colors.muted, fontSize: scale.type.label, lineHeight: 19 }}>Step back through your edits, or forward again.</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>{button('Undo', () => { void perform('Undo', props.onUndo); }, false, props.busy)}{button('Redo', () => { void perform('Redo', props.onRedo); }, false, props.busy)}</View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>{button('Undo', () => { void perform('Undo', props.onUndo); }, false, props.busy, false, false, undefined, false, 'history-undo', withShortcut('Undo', 'undo', applePlatform))}{button('Redo', () => { void perform('Redo', props.onRedo); }, false, props.busy, false, false, undefined, false, 'history-redo', withShortcut('Redo', 'redo', applePlatform))}</View>
         </View>}
         {arranging && <View style={{ borderTopWidth: 1, borderTopColor: colors.line, paddingTop: scale.space.inset, gap: scale.space.stack }}>
           <Text style={{ color: colors.muted, fontSize: scale.type.caption, fontWeight: '600' }}>Panel position</Text>
@@ -202,7 +212,39 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     </View>;
   };
 
-  const keyboardProps = { onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') { store.getState().cancelDrag(); } } };
+  // Pro keyboard layer: ⌘Z, ⇧⌘Z, ⌘S and ⌘O (Ctrl off Apple platforms), and ⌘/ for the list.
+  const shortcutHandlers = {
+    undo: () => { void perform('Undo', props.onUndo); },
+    redo: () => { void perform('Redo', props.onRedo); },
+    save: () => { void perform('Save', props.onSave); },
+    // Open only asks the host to show its file chooser; the host reports the
+    // result, so a chooser left open never holds the workspace busy.
+    open: props.onOpen ? () => { if (!props.busy && !operation.current) void Promise.resolve().then(props.onOpen).catch(error => store.setState({ error: error instanceof Error ? error.message : String(error) })); } : undefined,
+    help: () => ui.setState({ shortcutsOpen: !ui.getState().shortcutsOpen }),
+  };
+  const shortcuts = useRef(shortcutHandlers);
+  shortcuts.current = shortcutHandlers;
+  useEffect(() => {
+    // On the web the keys go to whatever has focus, often the page itself, so
+    // the document listens. A studio kept mounted but hidden ignores them, and
+    // so does one whose keys come from inside another studio.
+    const document = host.document;
+    if (Platform.OS !== 'web' || !document) return;
+    const onKeyDown = (event: ShortcutKeyEvent) => {
+      const node = root.current as unknown as ShortcutRoot | null;
+      if (!node?.getClientRects || node.getClientRects().length === 0) return;
+      const target = event.target;
+      if (target && target !== document.body && target !== document.documentElement && node.contains && !node.contains(target)) return;
+      dispatchStudioShortcut(event, applePlatform, shortcuts.current);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+  const keyboardProps = { onKeyDown: (event: StudioKeyboardEvent) => {
+    if (keyboardKey(event) === 'Escape') { store.getState().cancelDrag(); if (ui.getState().shortcutsOpen) ui.setState({ shortcutsOpen: false }); return; }
+    // Native hardware keyboards (iPad, Android, desktop) deliver keys to the focused view.
+    if (Platform.OS !== 'web') dispatchStudioShortcut(event as unknown as ShortcutKeyEvent, applePlatform, shortcuts.current);
+  } };
   const rail = <View style={{ width: scale.size.rail, backgroundColor: colors.base, borderRightWidth: 1, borderRightColor: colors.line, alignItems: 'center', paddingVertical: scale.space.inset + 2 }}>
     <View style={{ alignItems: 'center', gap: scale.space.inset, paddingBottom: scale.space.group }}>
       {PANEL_IDS.filter(id => id !== 'history').map(id => <View key={id} style={{ alignItems: 'center', gap: 4 }}>
@@ -216,7 +258,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
       <Text aria-hidden style={{ color: layout.collapsed.includes('history') ? colors.muted : colors.accent, fontSize: scale.type.caption }}>{panelNames.history}</Text>
     </View>
   </View>;
-  return <View {...keyboardProps} onLayout={event => {
+  return <View ref={root} {...keyboardProps} onLayout={event => {
     const { width, height } = event.nativeEvent.layout;
     if (width > 0 && height > 0 && (width !== ui.getState().width || height !== ui.getState().height)) ui.setState({ width, height });
   }} testID="forge-workspace" style={{ flex: 1, minHeight: 0, backgroundColor: canvasStudio ? colors.deep : colors.base }}>
@@ -230,7 +272,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         <Text numberOfLines={1} style={{ color: colors.text, fontWeight: '600', fontSize: compact ? 13 : 15 }}>{props.documentTitle}</Text>
       </View>
       {!separateHostControls && props.headerTrailing}
-      {button('Save', () => { void perform('Save', props.onSave); }, true, props.busy, false, compact, 'save', true, 'workspace-save')}
+      {button('Save', () => { void perform('Save', props.onSave); }, true, props.busy, false, compact, 'save', true, 'workspace-save', withShortcut('Save', 'save', applePlatform))}
     </View>
     {separateHostControls && !packHostControls && <View testID="workspace-host-controls" style={{ minHeight: scale.size.target, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: scale.space.inset }}>
       {props.headerTrailing}
@@ -239,8 +281,8 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
       <ScrollView horizontal style={{ flex: 1 }} contentContainerStyle={{ alignItems: 'center', gap: scale.space.stack }}>
         {props.leadingActions}
         <View style={{ width: 1, height: 22, backgroundColor: colors.line, marginHorizontal: 8 }} />
-        {button('Undo', () => { void perform('Undo', props.onUndo); }, false, props.busy, true, true, 'undo', false, 'workspace-undo')}
-        {button('Redo', () => { void perform('Redo', props.onRedo); }, false, props.busy, true, true, 'redo', false, 'workspace-redo')}
+        {button('Undo', () => { void perform('Undo', props.onUndo); }, false, props.busy, true, true, 'undo', false, 'workspace-undo', withShortcut('Undo', 'undo', applePlatform))}
+        {button('Redo', () => { void perform('Redo', props.onRedo); }, false, props.busy, true, true, 'redo', false, 'workspace-redo', withShortcut('Redo', 'redo', applePlatform))}
       </ScrollView>
       {packHostControls && <View testID="workspace-host-controls" style={{ flexDirection: 'row', alignItems: 'center' }}>{props.headerTrailing}</View>}
       <Menu title="Workspace" triggerLabel="Workspace" actions={[
@@ -249,6 +291,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         { id: 'arrange', title: arranging ? 'Done arranging' : 'Arrange panels' },
         { id: 'save', title: 'Save layout' }, { id: 'restore', title: 'Restore layout' },
         { id: 'reset', title: 'Reset layout' }, { id: 'refresh', title: 'Refresh', disabled: !!props.busy },
+        { id: 'shortcuts', title: `Keyboard shortcuts (${shortcutLabel('help', applePlatform)})` },
       ]} onAction={id => {
         if (id.startsWith('density:')) { const density=id.slice(8); if(isWorkspaceDensity(density)) props.onDensityChange?.(density); }
         if (id.startsWith('panel:')) { const panel = id.slice(6); if (PANEL_IDS.includes(panel as typeof PANEL_IDS[number])) action(panel, layout.collapsed.includes(panel) ? 'activate' : 'collapse'); }
@@ -257,9 +300,23 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         if (id === 'restore') { if (savedPreset.current) store.getState().restorePreset(savedPreset.current); else store.setState({ error: 'Save a layout first' }); }
         if (id === 'reset') store.getState().reset();
         if (id === 'refresh') void perform('Refresh', props.onRefresh);
+        if (id === 'shortcuts') ui.setState({ shortcutsOpen: true });
       }}><View style={{ minHeight: scale.size.target, minWidth: scale.size.target, paddingHorizontal: scale.space.element + 2, justifyContent: 'center' }}><Text style={{ color: colors.text, fontSize: 12 }}>Workspace</Text></View></Menu>
     </View>
     {arranging && <View style={{ flexDirection: 'row', backgroundColor: colors.soft, paddingHorizontal: scale.space.group, alignItems: 'center', justifyContent: 'space-between' }}><Text style={{ color: colors.accent, fontSize: 11 }}>Drag a panel to an edge, or use its move controls.</Text>{button('Done arranging', () => { ui.setState({ arranging: false }); store.getState().cancelDrag(); })}</View>}
+    {shortcutsOpen && <View testID="workspace-shortcuts" accessibilityLabel="Keyboard shortcuts" style={{ position: 'absolute', zIndex: 30, top: (canvasStudio ? scale.size.canvasHeader + scale.size.canvasToolbar : scale.size.header + scale.size.toolbar) + scale.space.element, right: scale.space.group, width: 300, maxWidth: '90%', padding: scale.space.group, gap: scale.space.element, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.controlBorder, borderRadius: scale.radius.panel, boxShadow: '0 6px 20px #00000030' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text accessibilityRole="header" style={{ color: colors.text, fontSize: scale.type.body, fontWeight: '600' }}>Keyboard shortcuts</Text>
+        {button('Close shortcuts', () => ui.setState({ shortcutsOpen: false }), false, false, true, true, 'close', false, 'workspace-shortcuts-close')}
+      </View>
+      {STUDIO_SHORTCUTS.filter(item => item.shortcut !== 'open' || props.onOpen).map(item => <View key={item.shortcut} accessible accessibilityLabel={withShortcut(item.label, item.shortcut, applePlatform)} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: scale.space.inset, minHeight: 28, alignItems: 'center' }}>
+        <Text style={{ color: colors.text, fontSize: scale.type.label }}>{item.label}</Text>
+        <View style={{ paddingHorizontal: scale.space.element, paddingVertical: 2, borderWidth: 1, borderColor: colors.controlBorder, borderRadius: scale.radius.control, backgroundColor: colors.base }}>
+          <Text style={{ color: colors.text, fontSize: scale.type.label, fontFamily: scale.font.mono }}>{shortcutLabel(item.shortcut, applePlatform)}</Text>
+        </View>
+      </View>)}
+      <Text style={{ color: colors.muted, fontSize: scale.type.caption, lineHeight: 16 }}>Shortcuts work with a hardware keyboard. While you type in a text field, ⌘Z undoes your typing.</Text>
+    </View>}
     <View style={{ flex: 1, minHeight: 0, flexDirection: 'row' }}>
       {!compact && !canvasStudio && rail}
     <View ref={shell} onLayout={onLayout} testID="workspace-host" style={{ flex: 1, minHeight: 0, position: 'relative' }}>

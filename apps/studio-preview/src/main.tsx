@@ -8,6 +8,7 @@ import { STUDIOS, type Studio } from '@nitro-forge/studio-layout';
 import { getEditorConfig } from '../../example/src/editors';
 import { useEditorDoc } from './useDocument';
 import { WORKSPACE_DENSITIES, forgeRadius, isWorkspaceDensity, workspaceThemes, type WorkspaceDensity } from '@nitro-forge/studio-workspace/theme';
+import { isApplePlatform, shortcutLabel } from '@nitro-forge/studio-workspace/keyboard';
 import { FORGE_DIRECTION_IDS, isForgeDirection, nycTronTokens, type ForgeDirectionId } from '@nitro-forge/studio-workspace/directions';
 import { EngineStudioSurface } from './engine-studio-surfaces';
 import { exportPrismPng } from './prism-png-export';
@@ -74,13 +75,22 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
       store.setState({ notice: `Opened ${file.name}`, documentTitle: file.name });
     });
   };
+  const applePlatform = isApplePlatform('web', navigator.platform || navigator.userAgent);
+  const accept = studio === 'quill' ? '.docx,.nfd' : '.nfd';
+  // ⌘O / Ctrl+O: the same chooser the Open button shows.
+  const chooseFile = () => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = accept;
+    input.onchange = () => { const file = input.files?.[0]; if (file) void openFile(file).catch(() => {}); };
+    input.click();
+  };
   const leadingActions = <Page className="document-actions">
     <DropZone disableObjectUrl includeBase64={false} accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
       // Open sits in the editor's own toolbar, so the drop target draws no
       // well of its own and the label takes the theme's ink.
       unstyled
       onDrop={({ assets }) => { const file = assets.find(asset => asset.file)?.file; if (file) void openFile(file).catch(() => {}); }}>
-    <FilePicker unstyled className="document-action min-h-11 px-3 flex-row items-center justify-center rounded-control hover:bg-surface-sunken" labelClassName="text-text text-sm font-semibold" label="Open" disabled={busy || !editor.doc}
+    <FilePicker unstyled className="document-action min-h-11 px-3 flex-row items-center justify-center rounded-control hover:bg-surface-sunken" labelClassName="text-text text-sm font-semibold" label="Open" accessibilityHint={`Keyboard shortcut ${shortcutLabel('open', applePlatform)}`} disabled={busy || !editor.doc}
       accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
       onFiles={files => { const file = files[0]; if (file) void openFile(file).catch(() => {}); }} /></DropZone>
       {studio === 'cadence' && <Button aria-label="Export WAV, up to 60 seconds" title="Export WAV (≤60 s)" variant="ghost" tone="carolina" size="sm" cornerRadius={forgeRadius.sm} className="rounded-sm" disabled={busy || !editor.doc} onPress={() => {
@@ -133,7 +143,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
       state={editor.state} rows={config.rows(editor.state)}
       actions={config.actions.map(action => ({ id: action.id, title: action.title, run: () => run(() => action.run(editor)) }))}
       onUndo={() => run(editor.undo)} onRedo={() => run(editor.redo)}
-      onSave={() => run(save)} onRefresh={() => run(editor.reload)}
+      onSave={() => run(save)} onRefresh={() => run(editor.reload)} onOpen={chooseFile}
       busy={busy || !editor.doc} error={error ?? editor.error}>
       {studio === 'quill' ? <QuillTextEditor density={density} ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' || studio === 'tally' || studio === 'cadence' || studio === 'splice' ? <EngineStudioSurface disabled={busy || !editor.doc} perform={run} studio={studio} document={editor.doc} state={editor.state} reload={editor.reload} theme={theme} density={density} direction={direction} personas={studio === 'prism' ? prismPersonaStore() : undefined} onComposePersona={() => { window.location.hash = COMPOSER_LAB_HASH; }} /> : undefined}
     </ForgeWorkspace>
