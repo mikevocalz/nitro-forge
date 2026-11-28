@@ -114,7 +114,7 @@ export function LayerStack({scope='layers',revision=0,disabled=false,expandedIds
   onSelect={id=>{const p=current();if(p)p.props.onSelect(id);}} onToggleVisible={id=>{const p=current();if(p&&!p.busy)void mutate(id,()=>p.props.onToggleVisible(id));}}
   onOpacityPreview={(id,value)=>{const p=allowed(id);if(p)p.props.onOpacityPreview?.(id,value);}} onOpacityCommit={(id,value)=>{const p=allowed(id);if(p)return mutate(id,()=>p.props.onOpacityCommit(id,value));}}
   onMove={move} onRename={(id,name)=>{const p=allowed(id);if(p)return mutate(id,()=>p.props.onRename(id,name));}} {...(props.onRemove?{onRemove:(id:string)=>{const p=allowed(id);if(p)return mutate(id,()=>p.props.onRemove!(id));}}:{})}
-  {...(controls?{renderControls:(layer:LayerRow)=>{const row=rows.find(value=>value.layer.id===layer.id)!,original=row.layer;const groups=props.layers.filter(item=>item.kind==='group');return <View style={{height:tokens.spacing.fixedTarget,flexDirection:'row',alignItems:'center',gap:tokens.spacing.fixedStack,paddingStart:Math.min(row.depth,6)*8}}>
+  {...(controls?{renderControls:(layer:LayerRow)=>{const row=rows.find(value=>value.layer.id===layer.id)!,original=row.layer;const groups=props.layers.filter(item=>item.kind==='group');return <View style={{height:tokens.spacing.fixedTarget,flexDirection:'row',alignItems:'center',gap:tokens.spacing.fixedStack,paddingStart:Math.min(row.depth,6)*tokens.spacing.fixedElement}}>
    {original.kind==='group'?<Button title={expandedIds.includes(layer.id)?'−':'+'} accessibilityLabel={(expandedIds.includes(layer.id)?'Collapse ':'Expand ')+layer.name} disabled={disabled||busy||!row.hasChildren||!onExpandedChange} {...exact({unstyled:props.unstyled})} style={{minWidth:tokens.spacing.fixedTarget,minHeight:tokens.spacing.fixedTarget}} onPress={()=>{const p=current();if(p&&!p.busy)p.onExpandedChange?.(expandedIds.includes(layer.id)?expandedIds.filter(id=>id!==layer.id):[...expandedIds,layer.id]);}}/>:<View style={{width:tokens.spacing.fixedTarget}}/>}
    <Button title={original.locked?'Unlock':'Lock'} accessibilityLabel={(original.locked?'Unlock ':'Lock ')+layer.name} disabled={disabled||busy||row.inheritedLock||!onToggleLocked} {...exact({unstyled:props.unstyled})} style={{minWidth:tokens.spacing.fixedTarget,minHeight:tokens.spacing.fixedTarget}} onPress={()=>{const p=current();if(p&&!p.busy&&!row.inheritedLock)void mutate(layer.id,()=>p.onToggleLocked?.(layer.id));}}/>
    {nested||onReparent?<View style={{flex:1,minWidth:tokens.spacing.off76}}><MenuButton label={'Group for '+layer.name} editScope={JSON.stringify([scope,revision,layer.id,original.parentId,original.locked,row.inheritedLock,disabled])} disabled={disabled||busy||!!original.locked||row.inheritedLock||!onReparent} {...exact({unstyled:props.unstyled})} items={[{id:'root',label:'Document root'},...groups.map(group=>{let unavailable=false;try{validateLayerTreeMove(props.layers,layer.id,group.id,0);}catch{unavailable=true;}return {id:'group:'+group.id,label:group.name,disabled:unavailable};})]} onSelect={value=>{const p=allowed(layer.id);if(!p?.onReparent)return;const parent=value==='root'?null:value.slice(6);if(parent===(original.parentId??null))return;const toIndex=p.props.layers.filter(item=>item.id!==layer.id&&(item.parentId??null)===parent).length;validateLayerTreeMove(p.props.layers,layer.id,parent,toIndex);void mutate(layer.id,()=>p.onReparent!(layer.id,parent,toIndex));}}><Text numberOfLines={1} {...{className:joinClasses(!props.unstyled&&'text-text')}}>{original.parentId?props.layers.find(item=>item.id===original.parentId)?.name:'Document root'}</Text></MenuButton></View>:null}
@@ -311,7 +311,7 @@ function LayerStackRow(props:RowProps){
   </Pressable>
   {layer.clippedTo?<ClipIndicator unstyled={!styled}/>:null}
   {layer.thumbnail?<Thumbnail thumbnail={layer.thumbnail} styled={styled} dimmed={!layer.visible}/>
-   :props.thumbnailSlot?<View pointerEvents="none" style={{width:LAYER_THUMBNAIL_SIZE,marginEnd:4}}/>:null}
+   :props.thumbnailSlot?<View pointerEvents="none" style={{width:LAYER_THUMBNAIL_SIZE,marginEnd:tokens.spacing.fixedStack}}/>:null}
   {/* The name keeps 96pt beside the slider. With the readout it may shrink as a last resort, so remove never clips. */}
   <View style={{flex:1,minWidth:props.mode==="slider"?LAYER_NAME_MIN_WIDTH:0,height:LAYER_TOUCH_TARGET,justifyContent:"center"}}>
    {rename
@@ -355,7 +355,7 @@ function LayerStackRow(props:RowProps){
     if(e.nativeEvent.actionName==="decrement")stepActions(-1);
    }}
    style={{width:LAYER_OPACITY_SLIDER_WIDTH,minWidth:controlTokens.extent.field,flexShrink:1,height:LAYER_TOUCH_TARGET,flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedElement,
-    paddingEnd:props.onRemove?4:12,...dimmed}}>
+    paddingEnd:props.onRemove?tokens.spacing.fixedStack:tokens.spacing.fixedInset,...dimmed}}>
    <View onLayout={e=>{trackWidth.current=e.nativeEvent.layout.width;}}
     {...{className:joinClasses(styled&&"bg-surface-raised")}}
     style={{flex:1,height:tokens.spacing.fixedStack,borderRadius:forgeHairlineRadius.tick,overflow:"hidden"}}>
@@ -428,7 +428,7 @@ function Thumbnail({thumbnail,styled,dimmed}:{thumbnail:LayerThumbnail;styled:bo
  const fill="fill" in thumbnail?{backgroundColor:thumbnail.fill}:null;
  return <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
   {...{"aria-hidden":true,className:joinClasses(styled&&"rounded-control border border-border",styled&&!fill&&"bg-surface-sunken")}}
-  style={{width:LAYER_THUMBNAIL_SIZE,height:LAYER_THUMBNAIL_SIZE,marginEnd:4,overflow:"hidden",
+  style={{width:LAYER_THUMBNAIL_SIZE,height:LAYER_THUMBNAIL_SIZE,marginEnd:tokens.spacing.fixedStack,overflow:"hidden",
    alignItems:"center",justifyContent:"center",opacity:dimmed?tokens.opacity.disabled:1,...fill}}>
   {"node" in thumbnail?thumbnail.node:null}
  </View>;

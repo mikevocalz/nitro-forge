@@ -3,6 +3,7 @@
  * draft media-ui WaveformLane/PR #25. Source PCM remains in the audio engine;
  * never average transients away or fake signal data.
  */
+import { tokens } from "./tokens.ts";
 export interface WaveformPeak { readonly min:number; readonly max:number }
 export interface WaveformBar { readonly top:number; readonly height:number }
 export function normalizePeak(p:WaveformPeak):WaveformPeak{
@@ -43,7 +44,7 @@ export function peaksToBars(peaks:readonly WaveformPeak[],height:number):Wavefor
 export interface WaveformRange { readonly start:number; readonly end:number }
 
 /** The whole clip. */
-export const FULL_RANGE:WaveformRange={start:0,end:1};
+export const FULL_RANGE:WaveformRange={start:0,end:tokens.borderWidth.hairline};
 
 /** @throws {RangeError} Unless `0 <= start < end <= 1`. */
 export function assertWaveformRange(r:WaveformRange):void{

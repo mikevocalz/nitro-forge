@@ -240,7 +240,7 @@ function FloatingWindow({reference:ref,frame,selected,styled,picture,onSelect,on
   style={{position:"absolute",left:frame.x,top:frame.y,width:frame.width,height:frame.height}}>
   <View {...bar.current.panHandlers} testID={"reference-bar-"+ref.id}
    {...{className:joinClasses(styled&&"bg-surface-sunken border-b border-border")}}
-   style={{height:REFERENCE_BAR_HEIGHT,flexDirection:"row",alignItems:"center",paddingStart:12,gap:tokens.spacing.off6,
+   style={{height:REFERENCE_BAR_HEIGHT,flexDirection:"row",alignItems:"center",paddingStart:tokens.spacing.fixedInset,gap:tokens.spacing.off6,
     ...(web?{cursor:stuck?"default":"move",userSelect:"none",touchAction:"none"} as object:null)}}>
    <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}} style={{flex:1,minWidth:0}}>
     {ref.label}</Text>

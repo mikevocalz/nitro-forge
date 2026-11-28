@@ -179,9 +179,9 @@ function GridRow({ last, ...p }: RowProps & { last: boolean }) {
     style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: tokens.spacing.fixedInset, paddingVertical: tokens.spacing.off10 }}
     {...{ className: joinClasses(styled && !last && "border-b border-border") }}>
     <Text numberOfLines={2} {...{ className: joinClasses(styled && "text-text font-semibold") }}
-      style={{ width: ROUTING_COLUMNS.name, paddingEnd: 8 }}>{source.name}</Text>
-    <View style={{ width: ROUTING_COLUMNS.output, paddingEnd: 12 }}><OutputGroup {...p} /></View>
-    {buses.map(bus => <View key={bus.id} style={{ flex: 1, minWidth: ROUTING_COLUMNS.send, paddingEnd: 8 }}>
+      style={{ width: ROUTING_COLUMNS.name, paddingEnd: tokens.spacing.fixedElement }}>{source.name}</Text>
+    <View style={{ width: ROUTING_COLUMNS.output, paddingEnd: tokens.spacing.fixedInset }}><OutputGroup {...p} /></View>
+    {buses.map(bus => <View key={bus.id} style={{ flex: 1, minWidth: ROUTING_COLUMNS.send, paddingEnd: tokens.spacing.fixedElement }}>
       <SendControl {...p} bus={bus} />
     </View>)}
   </View>;

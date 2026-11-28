@@ -226,7 +226,7 @@ function LevelFaderBody({
   const unity = range.maxDb > 0 ? gainToPosition(1, range) * travel + THUMB / 2 : undefined;
   const unityStyle = unity === undefined ? undefined : vertical
     ? { position: "absolute" as const, bottom: unity - tokens.borderWidth.hairline, height: tokens.spacing.off2, left: (HIT - tokens.spacing.off18) / 2, width: tokens.spacing.off18 }
-    : { position: "absolute" as const, start: unity - 1, width: tokens.spacing.off2, top: (HIT - tokens.spacing.off18) / 2, height: tokens.spacing.off18 };
+    : { position: "absolute" as const, start: unity - tokens.borderWidth.hairline, width: tokens.spacing.off2, top: (HIT - tokens.spacing.off18) / 2, height: tokens.spacing.off18 };
   // Web only: the browser keeps the cross axis for page or mixer scrolling.
   // `touchAction` is a react-native-web style key, absent from RN's ViewStyle.
   const webTrack = Platform.OS === "web"

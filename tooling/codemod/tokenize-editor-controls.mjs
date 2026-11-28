@@ -77,8 +77,6 @@ export const DECORATIVE_OPACITY = {
 export const SKIP_SITES = {
   'photo/photo-export.ts:8': 'default export settings (watermark opacity and size are document data, not a style)',
   'slides/slide-model.ts:41': 'default slide size of the document model (960 x 540), not a style',
-  'color/SVColorField.tsx:36': 'centre of gradient step i of 48 (i + 0.5), arithmetic, not an opacity value',
-  'color/SVColorField.tsx:37': 'centre of gradient step i of 48 (i + 0.5), arithmetic, not an opacity value',
 };
 /** Sites whose role is not what the property says. */
 export const OVERRIDES = {
@@ -189,7 +187,7 @@ for (const file of files) {
       // A border wider than the border scale draws a shape (a CSS triangle, a knob ring): it is sized like spacing.
       const scale = role === 'border' && Math.abs(value) > tokens.borderWidth.off3 ? 'spacing' : role;
       const best = nearest(scale, Math.abs(value));
-      const half = scale === 'spacing' && /^(left|right|top|bottom|margin\w*)$/.test(property) && best.distance > 1e-9 ? VOCAB.spacing.find(entry => entry.tier <= 2 && Math.abs(entry.value - Math.abs(value) * 2) < 1e-9) : null;
+      const half = scale === 'spacing' && /^(left|right|top|bottom|start|end|margin\w*)$/.test(property) && best.distance > 1e-9 ? VOCAB.spacing.find(entry => entry.tier <= 2 && Math.abs(entry.value - Math.abs(value) * 2) < 1e-9) : null;
       if (half) replacement = `${half.text} / 2`;
       else {
         replacement = best.entry.text;

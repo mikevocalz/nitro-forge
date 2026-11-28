@@ -218,7 +218,7 @@ function CanvasCompareViewBody({
         style={{position:"absolute",top:tokens.spacing.fixedInset,end:tokens.spacing.fixedInset,width:ref.width+tokens.spacing.fixedElement,height:ref.height+tokens.spacing.fixedElement,padding:tokens.spacing.fixedStack,overflow:"hidden"}}>
         <Image source={{uri:beforeImage.uri}} accessibilityIgnoresInvertColors resizeMode="stretch"
           style={{width:ref.width,height:ref.height}}/>
-        {chip(beforeLabel,{start:8,bottom:tokens.spacing.fixedElement})}
+        {chip(beforeLabel,{start:tokens.spacing.fixedElement,bottom:tokens.spacing.fixedElement})}
       </View>:null}
     </>;
   };

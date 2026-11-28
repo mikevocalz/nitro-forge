@@ -148,7 +148,7 @@ function FilmstripRow(props:RowProps){
   const shift=drag?(horizontal?[{translateX:I18nManager.isRTL?-drag.dy:drag.dy}]:[{translateY:drag.dy}]):undefined;
   return <View style={{...(horizontal?{width:rowHeight,flexDirection:"column-reverse",paddingVertical:tokens.spacing.fixedStack}:{height:rowHeight,flexDirection:"row",paddingHorizontal:tokens.spacing.fixedStack}),
     alignItems:"center",zIndex:drag?controlTokens.layer.resting:0,transform:shift,...(reserveSection?{paddingTop:tokens.spacing.fixedCanvas}:{})}}>
-    {sectionLabel?<Text accessibilityRole="header" {...{className:joinClasses(styled&&"text-text font-semibold")}} style={{position:"absolute",top:0,start:8,end:8,height:tokens.spacing.fixedStatus}}>{sectionLabel}</Text>:null}
+    {sectionLabel?<Text accessibilityRole="header" {...{className:joinClasses(styled&&"text-text font-semibold")}} style={{position:"absolute",top:0,start:tokens.spacing.fixedElement,end:tokens.spacing.fixedElement,height:tokens.spacing.fixedStatus}}>{sectionLabel}</Text>:null}
     <View style={{...(horizontal?{flexDirection:"row",height:OFFICE_TOUCH_TARGET}:{width:tokens.spacing.fixedTarget}),alignItems:"center",gap:tokens.spacing.off6}}>
       <Text {...{className:joinClasses(styled&&(selected?"text-text":"text-text-muted"))}}
         style={{fontVariant:["tabular-nums"],fontSize:tokens.text.label,fontWeight:selected?"700":"400"}}>{index+1}</Text>

@@ -79,9 +79,10 @@ export const canonNumber = text => String(Number(text));
 
 /** Style properties whose numeric values check-no-hardcoded.mjs reports (and tokenize-editor-controls.mjs rewrites). */
 export const STYLE_PROPS = new Set([
-  'left', 'right', 'top', 'bottom', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight',
+  'left', 'right', 'top', 'bottom', 'start', 'end', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight',
   'margin', 'marginTop', 'marginBottom', 'marginLeft', 'marginRight', 'marginHorizontal', 'marginVertical',
   'padding', 'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'paddingHorizontal', 'paddingVertical',
+  'marginStart', 'marginEnd', 'paddingStart', 'paddingEnd', 'borderStartWidth', 'borderEndWidth',
   'gap', 'rowGap', 'columnGap', 'borderWidth', 'borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth',
   'borderRadius', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius',
   'fontSize', 'lineHeight', 'letterSpacing', 'zIndex', 'opacity', 'hitSlop', 'outlineWidth', 'outlineOffset',

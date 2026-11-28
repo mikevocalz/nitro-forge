@@ -90,7 +90,7 @@ function SlideAnimationPaneBody({boundary,actionError,disabledReason,disabled=fa
         const name=objectLabel(a.objectId);
         const on=a.objectId===selectedObjectId;
         return <View key={a.index} {...{className:joinClasses(styled&&"rounded-control",styled&&on&&"bg-accent/10")}}
-          style={{flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedElement,minHeight:OFFICE_TOUCH_TARGET,paddingStart:8}}>
+          style={{flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedElement,minHeight:OFFICE_TOUCH_TARGET,paddingStart:tokens.spacing.fixedElement}}>
           <Text {...{className:muted}} style={{width:tokens.spacing.off22,fontVariant:["tabular-nums"]}}>{i+1}</Text>
           <Pressable disabled={disabled} onPress={()=>store.set(s=>({...s,activeIndex:a.index}))} accessible accessibilityRole="button" accessibilityLabel={(i+1)+". "+name+", "+effectLabel(a.kind,effects)+", starts at "+formatSeconds(a.startS)+", lasts "+formatSeconds(a.durationS)}
             style={{flex:1,minWidth:0}}>

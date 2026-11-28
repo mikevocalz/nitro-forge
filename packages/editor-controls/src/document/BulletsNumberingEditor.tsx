@@ -109,7 +109,7 @@ function BulletsNumberingEditorBody({actionError,disabledReason,disabled=false,
       style={{padding:tokens.spacing.off10,gap:tokens.spacing.fixedStack}}>
       {items.length===0?<Text {...{className:muted}}>Select paragraphs to make a list.</Text>:items.map((it,i)=>{
         const selected=i>=selectionStart&&i<=selectionEnd;
-        return <View key={it.id} {...{role:"listitem"}} style={{flexDirection:"row",gap:tokens.spacing.fixedElement,paddingStart:it.level*20}}>
+        return <View key={it.id} {...{role:"listitem"}} style={{flexDirection:"row",gap:tokens.spacing.fixedElement,paddingStart:it.level*tokens.spacing.off20}}>
           <Text {...{className:joinClasses(styled&&"text-text-muted")}} style={{minWidth:tokens.spacing.fixedStatus,textAlign:"right",fontVariant:["tabular-nums"]}}>{markers[i]}</Text>
           <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text")}} style={{flex:1,fontWeight:selected?"600":"400"}}>{it.text||" "}</Text>
         </View>;

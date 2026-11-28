@@ -105,7 +105,7 @@ function NavigationOutlineBody({actionError,disabledReason,disabled=false,
             else return;
             (e as unknown as {preventDefault?:()=>void}).preventDefault?.();
           };
-          return <View key={h.id} style={{flexDirection:"row",alignItems:"center",paddingStart:row.depth*16}}>
+          return <View key={h.id} style={{flexDirection:"row",alignItems:"center",paddingStart:row.depth*tokens.spacing.fixedGroup}}>
             {row.hasChildren?<Pressable accessibilityRole="button" accessibilityLabel={(row.collapsed?"Expand ":"Collapse ")+h.text}
               accessibilityState={{expanded:!row.collapsed}} onPress={()=>toggle(h.id)}
               {...{className:joinClasses(styled&&"rounded-control focus-visible:ring-2 focus-visible:ring-focus")}}

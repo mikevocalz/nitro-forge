@@ -110,7 +110,7 @@ function CommentsThreadPanelBody({actionError,disabledReason,disabled=false,ment
               style={{minHeight:OFFICE_TOUCH_TARGET,gap:tokens.spacing.off2,justifyContent:"center"}}>
               {describeLocation?<Text {...{className:muted}}>{describeLocation(t)}</Text>:null}<Entry entry={t} styled={styled}/>
             </Pressable>
-            {t.replies.length?<View {...{className:joinClasses(styled&&"border-border")}} style={{gap:tokens.spacing.fixedElement,borderStartWidth:1,paddingStart:10}}>
+            {t.replies.length?<View {...{className:joinClasses(styled&&"border-border")}} style={{gap:tokens.spacing.fixedElement,borderStartWidth:tokens.borderWidth.hairline,paddingStart:tokens.spacing.off10}}>
               {t.replies.map(r=><Entry key={r.id} entry={r} styled={styled}/>)}
             </View>:null}
             {onReply&&!t.resolved?<View style={{gap:tokens.spacing.off6}}>{mentions.length?<Select label="Mention collaborator" value="none" options={[{value:'none',label:'Mention someone',disabled:true},...mentions.map(m=>({value:m.id,label:m.label}))]} disabled={busy} unstyled={unstyled} onValueChange={id=>{const person=mentions.find(m=>m.id===id);if(!person)return;store.set(s=>({...s,drafts:{...s.drafts,[t.id]:(s.drafts[t.id]??'')+' @'+person.label+' '},mentions:{...s.mentions,[t.id]:[...new Set([...(s.mentions[t.id]??[]),id])]}}));}}/>:null}

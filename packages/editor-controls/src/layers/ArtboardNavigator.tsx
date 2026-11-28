@@ -247,7 +247,7 @@ function ArtboardNavigatorBody({
       {grid&&editing?<View style={{paddingHorizontal:tokens.spacing.fixedStack,paddingBottom:tokens.spacing.fixedStack}}>{name}</View>:null}
       {!grid&&editing?<View style={{flex:1,minWidth:0}}>{name}</View>:null}
       {grid?null:removeButton}
-      {grid?<View pointerEvents="box-none" style={{position:"absolute",top:tokens.spacing.fixedElement,start:8,end:8,flexDirection:"row",justifyContent:"space-between"}}>
+      {grid?<View pointerEvents="box-none" style={{position:"absolute",top:tokens.spacing.fixedElement,start:tokens.spacing.fixedElement,end:tokens.spacing.fixedElement,flexDirection:"row",justifyContent:"space-between"}}>
         {grip}{removeButton}
       </View>:null}
     </View>;
@@ -259,7 +259,7 @@ function ArtboardNavigatorBody({
     onPress={()=>onAddArtboard(newArtboardOp(latest.current.artboards,selectedId))}/>;
   return <View {...rest} ref={host} accessibilityLabel={label}
     {...{className:joinClasses("min-w-0 gap-2",styled&&"rounded-control bg-surface-sunken p-2",className)}}>
-    <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:tokens.spacing.fixedElement,paddingStart:4}}>
+    <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:tokens.spacing.fixedElement,paddingStart:tokens.spacing.fixedStack}}>
       <Text accessibilityRole="header" {...{className:joinClasses(styled&&"text-text text-sm font-semibold")}}>
         {label+(artboards.length?" ("+artboards.length+")":"")}
       </Text>

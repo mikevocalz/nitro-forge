@@ -192,7 +192,7 @@ function SlotRow({ slot, index, count, selected, disabled, styled, onSelect, onR
   const last = index === count - 1;
   return <View {...{ role: "listitem" }}
     {...{ className: joinClasses(styled && "rounded-control border", styled && (selected ? "border-primary bg-surface-sunken" : "border-border bg-surface-raised")) }}
-    style={{ flexDirection: "row", alignItems: "center", paddingStart: 4, paddingEnd: 2, gap: tokens.spacing.off2, minHeight: HIT + tokens.spacing.fixedInset }}>
+    style={{ flexDirection: "row", alignItems: "center", paddingStart: tokens.spacing.fixedStack, paddingEnd: tokens.spacing.off2, gap: tokens.spacing.off2, minHeight: HIT + tokens.spacing.fixedInset }}>
     <Pressable role="button" accessibilityLabel={description} accessibilityState={{ selected, disabled }}
       {...{ "aria-current": selected ? "true" : undefined }}
       accessibilityActions={[

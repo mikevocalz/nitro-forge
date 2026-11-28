@@ -159,5 +159,5 @@ function Failure({width,height,styled,onRetry}:{width:number;height:number;style
 /** Corner dot on a stale preview whose newer revision failed, so the old picture is not mistaken for current. */
 function StaleMark({styled}:{styled:boolean}){
   return <View pointerEvents="none" {...{className:joinClasses(styled&&"bg-danger")}}
-    style={{position:"absolute",top:tokens.spacing.off2,end:2,width:tokens.spacing.off7,height:tokens.spacing.off7,borderRadius:forgeHairlineRadius.tick}}/>;
+    style={{position:"absolute",top:tokens.spacing.off2,end:tokens.spacing.off2,width:tokens.spacing.off7,height:tokens.spacing.off7,borderRadius:forgeHairlineRadius.tick}}/>;
 }

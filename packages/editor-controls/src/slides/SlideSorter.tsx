@@ -137,9 +137,9 @@ function SlideSorterBody({boundary,actionError,disabledReason,disabled=false,
             style={{padding:tokens.spacing.off2,overflow:"hidden"}}>
             <SlideThumbnail slide={slide} width={cell-tokens.spacing.fixedElement} size={size} renderImage={renderImage} styled={styled}/>
             {on?<View {...{className:joinClasses(styled&&"bg-accent")}}
-              style={{position:"absolute",top:tokens.spacing.off6,end:6,width:tokens.spacing.off20,height:tokens.spacing.off20,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center"}}>
+              style={{position:"absolute",top:tokens.spacing.off6,end:tokens.spacing.off6,width:tokens.spacing.off20,height:tokens.spacing.off20,borderRadius:forgeRadius.sm,alignItems:"center",justifyContent:"center"}}>
               <View {...{className:joinClasses(styled&&"border-surface-raised")}}
-                style={{width:tokens.spacing.fixedElement,height:tokens.spacing.off5,borderStartWidth:2,borderBottomWidth:tokens.borderWidth.strong,transform:[{rotate:"-45deg"}],marginTop:-tokens.spacing.off2}}/>
+                style={{width:tokens.spacing.fixedElement,height:tokens.spacing.off5,borderStartWidth:tokens.borderWidth.strong,borderBottomWidth:tokens.borderWidth.strong,transform:[{rotate:"-45deg"}],marginTop:-tokens.spacing.off2}}/>
             </View>:null}
           </Pressable>
           <Text {...{className:muted}} style={{fontVariant:["tabular-nums"],textAlign:"center"}}>{index+1}</Text>

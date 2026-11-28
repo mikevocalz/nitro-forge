@@ -97,7 +97,7 @@ export function MixGroupBar({
       const count = copy.memberCount(group.memberIds.length);
       return <View key={group.name} {...{ role: "group", "aria-label": copy.groupName(group.name,count) }}
         {...{ className: joinClasses("flex-row items-center gap-2", styled && "rounded-control border border-border bg-surface-sunken") }}
-        style={{ flexWrap:"wrap", maxWidth:"100%", paddingVertical: tokens.spacing.fixedStack, paddingStart: 10, paddingEnd: 4 }}>
+        style={{ flexWrap:"wrap", maxWidth:"100%", paddingVertical: tokens.spacing.fixedStack, paddingStart: tokens.spacing.off10, paddingEnd: tokens.spacing.fixedStack }}>
         <View style={{ minWidth: tokens.spacing.fixedToolbar, maxWidth: controlTokens.extent.fieldWide }}>
           <Text numberOfLines={1} {...{ className: joinClasses(styled && "font-semibold text-text") }}>{group.name}</Text>
           <Text numberOfLines={1} {...{ className: joinClasses(styled && "text-xs text-text-muted") }}>{count}</Text>

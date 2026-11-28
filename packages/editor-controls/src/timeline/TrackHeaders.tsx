@@ -170,7 +170,7 @@ function TrackHeadersBody({
       const up=target(track.id,-1),down=target(track.id,1);
       return <View key={track.id} accessibilityLabel={`${track.label}, ${status}`}
         {...{className:joinClasses(styled&&"bg-surface-raised border-b border-border")}}
-        style={{height:laneHeight,flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedStack,paddingStart:8,paddingEnd:2}}>
+        style={{height:laneHeight,flexDirection:"row",alignItems:"center",gap:tokens.spacing.fixedStack,paddingStart:tokens.spacing.fixedElement,paddingEnd:tokens.spacing.off2}}>
         <View style={{flex:1,minWidth:0,gap:tokens.borderWidth.hairline}}>
           <NameField track={track} onRename={onRename} disabled={disabled} styled={styled}/>
           <Text numberOfLines={1} {...{className:joinClasses(styled&&"text-text-muted text-xs px-1")}}>{status}</Text>

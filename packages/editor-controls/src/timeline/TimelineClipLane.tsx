@@ -362,7 +362,7 @@ function TimelineClipLaneBody({
     {...{className:joinClasses(className)}} style={[{width:viewport.widthPx,direction:"ltr"},style]}>
     <ErrorMessage {...exact({message:actionError??undefined,unstyled:unstyled})}/>
     {tracks.map(track=>{
-      const clips=visibleClips(track,{start:range.start-1,end:range.end+1});
+      const clips=visibleClips(track,{start:range.start-tokens.borderWidth.hairline,end:range.end+tokens.borderWidth.hairline});
       const sel=track.clips.find(c=>c.id===selectedClipId);
       if(sel&&!clips.includes(sel))clips.push(sel);
       const ghost=dragged&&draggedClip&&dragged.trackId===track.id?{target:dragged,clip:draggedClip}:undefined;

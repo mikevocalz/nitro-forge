@@ -387,7 +387,7 @@ function SpreadsheetGridBody({interactionBoundary,actionError,readOnly,disabledR
       {/* 12pt mark, 44pt grab area through hitSlop. */}
       <View aria-hidden hitSlop={16}
         {...{className:joinClasses(!unstyled&&"bg-primary border-2 border-surface-raised")}}
-        style={{position:"absolute",bottom:-tokens.borderWidth.hairline,end:-1,width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset}}/>
+        style={{position:"absolute",bottom:-tokens.borderWidth.hairline,end:-tokens.borderWidth.hairline,width:tokens.spacing.fixedInset,height:tokens.spacing.fixedInset}}/>
     </FillTransport>:null;
   const cell=(row:number,col:number)=>{
     const addr=cellAddress(row,col);
