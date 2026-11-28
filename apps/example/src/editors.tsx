@@ -11,12 +11,12 @@ import { MotionDocument } from "@nitro-forge/motion";
 import { DesignDocument } from "@nitro-forge/design";
 import { DraftDocument } from "@nitro-forge/draft";
 import type { EditorDoc } from "./useDocument";
+import { actionTitles, studioRows, type Row } from "./editor-copy";
 
-export interface Row {
-  label: string;
-  value: string;
-}
+export type { Row } from "./editor-copy";
 export interface Action {
+  /** Stable id for tests (`workspace-action-<id>`); the title is the user's label. */
+  id: string;
   title: string;
   run: (doc: EditorDoc) => Promise<unknown> | unknown;
 }
@@ -28,8 +28,6 @@ export interface EditorConfig {
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const g = (o: any, k: string, d: any = undefined) =>
-  o && typeof o === "object" ? o[k] ?? d : d;
 
 const configs: Record<string, EditorConfig> = {
   prism: {
@@ -40,20 +38,14 @@ const configs: Record<string, EditorConfig> = {
       void l;
       return d;
     },
-    rows: (s: any) => [
-      { label: "Canvas", value: `${s?.width ?? 0} × ${s?.height ?? 0}` },
-      ...(s?.layers ?? []).map((l: any, i: number) => ({
-        label: `Layer ${i}: ${l.name}`,
-        value: `opacity ${l.opacity}${l.visible ? "" : " (hidden)"}`,
-      })),
-    ],
+    rows: studioRows.prism,
     actions: [
       {
-        title: "Add raster layer",
-        run: (d) => d.apply("addRasterLayer", { name: `Layer ${Date.now() % 1000}` }),
+        id: "add-layer", title: actionTitles.prism["add-layer"],
+        run: (d) => d.apply("addRasterLayer", { name: `Layer ${((d.state as any)?.layers?.length ?? 0) + 1}` }),
       },
       {
-        title: "Fill top layer blue",
+        id: "fill-blue", title: actionTitles.prism["fill-blue"],
         run: async (d) => {
           const s: any = d.state;
           const top = s?.layers?.[s.layers.length - 1];
@@ -61,7 +53,7 @@ const configs: Record<string, EditorConfig> = {
         },
       },
       {
-        title: "Invert top layer",
+        id: "invert", title: actionTitles.prism["invert"],
         run: async (d) => {
           const s: any = d.state;
           const top = s?.layers?.[s.layers.length - 1];
@@ -73,18 +65,11 @@ const configs: Record<string, EditorConfig> = {
   cadence: {
     title: "Cadence",
     open: async (h) => CadenceDocument.open(h),
-    rows: (s: any) => [
-      { label: "Tempo", value: `${s?.tempo_bpm ?? "?"} BPM` },
-      { label: "Signature", value: (s?.time_sig ?? []).join("/") },
-      ...(s?.tracks ?? []).map((t: any, i: number) => ({
-        label: `Track ${i}: ${t.name}`,
-        value: `${t.clips?.length ?? 0} clips${t.muted ? " · muted" : ""}`,
-      })),
-    ],
+    rows: studioRows.cadence,
     actions: [
-      { title: "Add MIDI track", run: (d) => d.apply("addTrack", { kind: "midi" }) },
+      { id: "add-midi-track", title: actionTitles.cadence["add-midi-track"], run: (d) => d.apply("addTrack", { kind: "midi" }) },
       {
-        title: "Add C-major clip to first track",
+        id: "add-chord", title: actionTitles.cadence["add-chord"],
         run: async (d) => {
           const s: any = d.state;
           const t = s?.tracks?.[0];
@@ -99,22 +84,16 @@ const configs: Record<string, EditorConfig> = {
             });
         },
       },
-      { title: "Tempo → 140", run: (d) => d.apply("setTempo", { bpm: 140 }) },
+      { id: "tempo-140", title: actionTitles.cadence["tempo-140"], run: (d) => d.apply("setTempo", { bpm: 140 }) },
     ],
   },
   splice: {
     title: "Splice",
     open: async (h) => SpliceDocument.open(h),
-    rows: (s: any) => [
-      { label: "FPS", value: String(s?.fps ?? 30) },
-      ...(s?.tracks ?? []).map((t: any, i: number) => ({
-        label: `${t.kind} track ${i}`,
-        value: `${t.clips?.length ?? 0} clips`,
-      })),
-    ],
+    rows: studioRows.splice,
     actions: [
       {
-        title: "Add source + video track + 8s clip",
+        id: "add-clip", title: actionTitles.splice["add-clip"],
         run: async (d) => {
           const src = (await d.apply("addSource", { duration_s: 30, name: "clip.mp4" }))
             .data as any;
@@ -125,7 +104,7 @@ const configs: Record<string, EditorConfig> = {
         },
       },
       {
-        title: "Split first clip at midpoint",
+        id: "split-clip", title: actionTitles.splice["split-clip"],
         run: async (d) => {
           const s: any = d.state;
           const c = s?.tracks?.[0]?.clips?.[0];
@@ -139,29 +118,26 @@ const configs: Record<string, EditorConfig> = {
   folio: {
     title: "Folio",
     open: async (h) => FolioDocument.create(h, 2),
-    rows: (s: any) => [{ label: "Pages", value: String(s?.pages ?? "?") }],
+    rows: studioRows.folio,
     actions: [
       {
-        title: "Annotate page 1",
+        id: "add-note", title: actionTitles.folio["add-note"],
         run: (d) =>
           d.apply("addAnnotation", {
-            page: 0, rect: [72, 700, 220, 18], contents: "Added from app",
+            page: 0, rect: [72, 700, 220, 18], contents: "Note",
           }),
       },
-      { title: "Rotate page 1 → 90°", run: (d) => d.apply("rotatePage", { page: 0, degrees: 90 }) },
+      { id: "rotate-page", title: actionTitles.folio["rotate-page"], run: (d) => d.apply("rotatePage", { page: 0, degrees: 90 }) },
     ],
   },
   pitch: {
     title: "Pitch",
     open: async (h) => PitchDocument.open(h, "Demo Deck"),
-    rows: (s: any) => [
-      { label: "Title", value: g(s?.meta, "title", "—") },
-      { label: "Slides", value: String(s?.slides?.length ?? 0) },
-    ],
+    rows: studioRows.pitch,
     actions: [
-      { title: "Add slide", run: (d) => d.apply("addSlide", { layout: "titleBody" }) },
+      { id: "add-slide", title: actionTitles.pitch["add-slide"], run: (d) => d.apply("addSlide", { layout: "titleBody" }) },
       {
-        title: "Add animated title text",
+        id: "add-title", title: actionTitles.pitch["add-title"],
         run: async (d) => {
           const s: any = d.state;
           const slide = s?.slides?.[s.slides.length - 1];
@@ -181,34 +157,26 @@ const configs: Record<string, EditorConfig> = {
   tally: {
     title: "Tally",
     open: async (h) => TallyDocument.open(h),
-    rows: (s: any) =>
-      (s?.sheets ?? []).map((sh: any, i: number) => ({
-        label: `Sheet ${i}: ${sh.name}`,
-        value: `${Object.keys(sh.cells ?? {}).length} cells`,
-      })),
+    rows: studioRows.tally,
     actions: [
       {
-        title: "Write A1=5, A2=7, A3=SUM",
+        id: "sample-sum", title: actionTitles.tally["sample-sum"],
         run: async (d) => {
           await d.apply("setCell", { addr: "A1", value: "5" });
           await d.apply("setCell", { addr: "A2", value: "7" });
           await d.apply("setCell", { addr: "A3", value: "=SUM(A1:A2)" });
         },
       },
-      { title: "Add sheet", run: (d) => d.apply("addSheet", {}) },
+      { id: "add-sheet", title: actionTitles.tally["add-sheet"], run: (d) => d.apply("addSheet", {}) },
     ],
   },
   quill: {
     title: "Quill",
     open: async (h) => QuillDocument.open(h),
-    rows: (s: any) =>
-      (s?.blocks ?? []).map((b: any, i: number) => ({
-        label: `${b.kind === "h1" || b.kind === "h2" ? "Heading" : b.kind === "quote" ? "Quote" : "Paragraph"} ${i + 1}`,
-        value: (b.inlines ?? []).map((x: any) => x.text).join(""),
-      })),
+    rows: studioRows.quill,
     actions: [
       {
-        title: "Append paragraph",
+        id: "add-paragraph", title: actionTitles.quill["add-paragraph"],
         run: async (d) => {
           const s: any = d.state;
           const idx = s?.blocks?.length ?? 0;
@@ -219,7 +187,7 @@ const configs: Record<string, EditorConfig> = {
         },
       },
       {
-        title: "Bold first block",
+        id: "bold-first", title: actionTitles.quill["bold-first"],
         run: async (d) => {
           const s: any = d.state;
           const len = (s?.blocks?.[0]?.inlines ?? []).reduce(
@@ -238,17 +206,10 @@ const configs: Record<string, EditorConfig> = {
   photo: {
     title: "Photo",
     open: async (h) => PhotoDocument.open(h),
-    rows: (s: any) => [
-      { label: "Originals", value: String(Object.keys(s?.originals ?? {}).length) },
-      { label: "Versions", value: String(Object.keys(s?.versions ?? {}).length) },
-      ...(Object.values(s?.originals ?? {}) as any[]).map((o: any) => ({
-        label: `${o.camera_make ?? "Camera"} ${o.camera_model ?? ""}`.trim(),
-        value: `rating ${o.rating ?? 0} · ${(o.labels ?? []).length} labels`,
-      })),
-    ],
+    rows: studioRows.photo,
     actions: [
       {
-        title: "Add original",
+        id: "add-photo", title: actionTitles.photo["add-photo"],
         run: (d) =>
           d.apply("addOriginal", {
             sha256: "e".repeat(64),
@@ -259,14 +220,14 @@ const configs: Record<string, EditorConfig> = {
           }),
       },
       {
-        title: "Rate first original ★4",
+        id: "rate-first", title: actionTitles.photo["rate-first"],
         run: async (d) => {
           const id = Object.keys((d.state as any)?.originals ?? {})[0];
           if (id) await d.apply("setRating", { id, rating: 4 });
         },
       },
       {
-        title: "New develop version on first original",
+        id: "new-edit", title: actionTitles.photo["new-edit"],
         run: async (d) => {
           const s = d.state as any;
           const id = Object.keys(s?.originals ?? {})[0];
@@ -279,17 +240,10 @@ const configs: Record<string, EditorConfig> = {
     title: "Motion",
     open: async (h) =>
       MotionDocument.open(h, { width: 320, height: 180, duration_s: 4 }),
-    rows: (s: any) => [
-      { label: "Canvas", value: `${s?.width ?? 0} × ${s?.height ?? 0}` },
-      { label: "Duration", value: `${s?.duration_s ?? "?"}s @ ${s?.frame_rate?.num ?? "?"}/${s?.frame_rate?.den ?? "?"}` },
-      ...(s?.layers ?? []).map((l: any) => ({
-        label: l.name ?? `Layer ${l.id}`,
-        value: `${l.kind} · opacity ${l.opacity ?? 1}${l.visible === false ? " · hidden" : ""}`,
-      })),
-    ],
+    rows: studioRows.motion,
     actions: [
       {
-        title: "Add animated rect layer",
+        id: "add-square", title: actionTitles.motion["add-square"],
         run: async (d) => {
           const layer = (
             await d.apply("addShapeLayer", {
@@ -308,7 +262,7 @@ const configs: Record<string, EditorConfig> = {
         },
       },
       {
-        title: "Render frame at t=1",
+        id: "preview-frame", title: actionTitles.motion["preview-frame"],
         run: async (d) => {
           const frame = await d.apply("renderFrame", { time_s: 1 });
           void frame;
@@ -320,13 +274,10 @@ const configs: Record<string, EditorConfig> = {
     title: "Design",
     open: async (h) =>
       DesignDocument.open(h, { title: "Untitled screen", width: 960, height: 540 }),
-    rows: (s: any) => [
-      { label: "Title", value: g(s, "title", "—") },
-      { label: "Nodes", value: String(Object.keys(s?.nodes ?? {}).length) },
-    ],
+    rows: studioRows.design,
     actions: [
       {
-        title: "Add card frame + rect + label",
+        id: "add-card", title: actionTitles.design["add-card"],
         run: async (d) => {
           const frame = (
             await d.apply("addFrame", { parent: 1, name: "Card", x: 40, y: 40, width: 240, height: 160, fill: [255, 255, 255, 255] })
@@ -338,20 +289,16 @@ const configs: Record<string, EditorConfig> = {
           await d.apply("addText", { parent: frame.node_id, content: "Hello", x: 12, y: 64, width: 120, height: 24 });
         },
       },
-      { title: "Evaluate layout", run: (d) => d.apply("evaluateLayout", {}) },
+      { id: "update-layout", title: actionTitles.design["update-layout"], run: (d) => d.apply("evaluateLayout", {}) },
     ],
   },
   draft: {
     title: "Draft",
     open: async (h) => DraftDocument.open(h, "mm"),
-    rows: (s: any) => [
-      { label: "Units", value: String(s?.units ?? "mm") },
-      { label: "Entities", value: `${Object.keys(s?.points ?? {}).length} pts · ${Object.keys(s?.segments ?? {}).length} segs · ${Object.keys(s?.circles ?? {}).length} circles` },
-      { label: "Constraints", value: String(Object.keys(s?.constraints ?? {}).length) },
-    ],
+    rows: studioRows.draft,
     actions: [
       {
-        title: "Draw 100×100 square",
+        id: "draw-square", title: actionTitles.draft["draw-square"],
         run: async (d) => {
           const ids: number[] = [];
           for (const [x, y] of [[0, 0], [100, 0], [100, 100], [0, 100]] as const)
@@ -361,7 +308,7 @@ const configs: Record<string, EditorConfig> = {
         },
       },
       {
-        title: "Find closed profiles",
+        id: "find-shapes", title: actionTitles.draft["find-shapes"],
         run: (d) => d.apply("findProfiles", {}),
       },
     ],

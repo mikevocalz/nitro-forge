@@ -139,7 +139,7 @@ export function CadenceAnalysisControls(props:CadenceAnalysisControlsProps){
        params={{thresholdDb:slot.params.threshold_db,ratio:slot.params.ratio,kneeDb:slot.params.knee_db,makeupDb:slot.params.makeup_db}}
        onThresholdCommit={value=>write(()=>adapter.dynamics(slot.id).onThresholdCommit(value))} onRatioCommit={value=>write(()=>adapter.dynamics(slot.id).onRatioCommit(value))}/>}
      </>}
-     <Text style={textStyle}>These curves come from the document engine. They are not live audio measurements.</Text>
+     <Text style={textStyle}>These curves are calculated from the document, not measured from live audio.</Text>
     </>}
    </>}
   </>}

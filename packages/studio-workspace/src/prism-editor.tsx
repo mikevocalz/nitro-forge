@@ -149,7 +149,7 @@ export function PrismEditor(props: PrismEditorProps) {
   const { narrow, short, dockedLayers, panelWidth, panelTop, panelMaxHeight, layerListMaxHeight, railTop,
     canvasLeft, canvasRight, canvasTop, canvasBottom, canvasWidth, canvasHeight, fillWidth, fillLeft
   } = prismViewportLayout(width, height, ratio, layersOpen, !!selected, { toolbarBottom: PRISM_TOOLBAR_TOP + measuredToolbar, railRight: 12 + railWidth });
-  const feedback = error ?? previewError ?? (rendering ? 'Updating engine composite…' : notice);
+  const feedback = error ?? previewError ?? (rendering ? 'Updating the canvas…' : notice);
 
   useEffect(() => {
     const next = readState(props.state);

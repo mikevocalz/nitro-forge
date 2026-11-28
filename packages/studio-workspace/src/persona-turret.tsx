@@ -62,7 +62,7 @@ export const turretCopy = {
   actionEscape: 'Cancel preview',
   allReady: (label: string) => `Everything in ${label} works here.`,
   noStops: 'No persona runs on this device',
-  disabled: 'Persona switching waits for the engine to finish',
+  disabled: 'Persona switching waits for the current edit to finish',
 } as const;
 
 export type PersonaTurretProps = {

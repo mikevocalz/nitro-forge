@@ -55,9 +55,10 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
     const bytes = await editor.save();
     const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' }));
     const link = document.createElement('a');
-    link.href = url; link.download = `${studio}-untitled.nfd`; link.click();
+    const fileName = `${studio}-untitled.nfd`;
+    link.href = url; link.download = fileName; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    store.setState({ notice: `Saved ${bytes.length.toLocaleString()} bytes from the Rust engine` });
+    store.setState({ notice: `Saved ${fileName} to your downloads` });
   };
   const openFile = async (file: File) => {
     await run(async () => {
@@ -94,7 +95,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
             const link = document.createElement('a');
             link.href = url; link.download = 'cadence-master.wav'; link.click();
           } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
-          store.setState({ notice: 'WAV download requested from the rendered master' });
+          store.setState({ notice: 'Exported cadence-master.wav to your downloads' });
         }).catch(() => {});
       }} />}
       {studio === 'prism' && <Button aria-label="Export PNG, up to one megapixel" title="Export PNG" variant="ghost" tone="carolina" size="sm" cornerRadius={forgeRadius.sm} className="rounded-sm" disabled={busy || !editor.doc} onPress={() => {
@@ -110,7 +111,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
             const link = document.createElement('a');
             link.href = url; link.download = 'prism-canvas.png'; link.click();
           } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
-          store.setState({ notice: 'PNG download requested from the engine canvas' });
+          store.setState({ notice: 'Exported prism-canvas.png to your downloads' });
         }).catch(() => {});
       }} />}
       {studio === 'quill' && <Button aria-label="Export Word document" title="Export Word" variant="ghost" tone="carolina" size="sm" cornerRadius={forgeRadius.sm} className="rounded-sm" disabled={busy || !editor.doc} onPress={() => {
@@ -121,7 +122,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
           const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
           const link = document.createElement('a'); link.href = url; link.download = 'essay.docx'; link.click();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
-          store.setState({ notice: 'Word document exported' });
+          store.setState({ notice: 'Exported essay.docx to your downloads' });
         }).catch(() => {});
       }} />}
 
@@ -130,7 +131,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
     <ForgeWorkspace headerLeading={<Link className="back-link" href="#/"><SemanticText className="back-chevron" aria-hidden><ComposerGlyph name="chevron-left" size={14} color="currentColor" /></SemanticText>All apps</Link>} headerTrailing={headerTrailing} leadingActions={leadingActions} studioId={studio} title={config.title} documentTitle={documentTitle}
       theme={theme} density={density} {...(onDensityChange?{onDensityChange}:{})} loadPreset={loadPreset} persistPreset={persistPreset}
       state={editor.state} rows={config.rows(editor.state)}
-      actions={config.actions.map(action => ({ title: action.title, run: () => run(() => action.run(editor)) }))}
+      actions={config.actions.map(action => ({ id: action.id, title: action.title, run: () => run(() => action.run(editor)) }))}
       onUndo={() => run(editor.undo)} onRedo={() => run(editor.redo)}
       onSave={() => run(save)} onRefresh={() => run(editor.reload)}
       busy={busy || !editor.doc} error={error ?? editor.error}>

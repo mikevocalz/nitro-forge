@@ -113,7 +113,7 @@
     {
       "kind": "click",
       "role": "menuitem",
-      "name": "Show Properties",
+      "name": "Show Inspector",
       "step_id": "show-properties"
     },
     {
@@ -124,7 +124,7 @@
     {
       "kind": "click",
       "role": "button",
-      "name": "Hide Properties",
+      "name": "Hide Inspector",
       "step_id": "hide-properties"
     },
     {

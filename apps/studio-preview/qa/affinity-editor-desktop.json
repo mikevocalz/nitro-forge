@@ -91,7 +91,7 @@
     {
       "kind": "click",
       "role": "button",
-      "name": "Properties",
+      "name": "Inspector",
       "step_id": "show-properties-rail"
     },
     {
@@ -102,7 +102,7 @@
     {
       "kind": "click",
       "role": "button",
-      "name": "Properties",
+      "name": "Inspector",
       "step_id": "hide-properties-rail"
     },
     {

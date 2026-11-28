@@ -261,7 +261,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
   const capabilityBody = <>
     {foldTitle('capabilities', 'Capabilities', disclosureCount('capabilities', draft.capabilities.length, composerCapabilities.length))}
     {unfolded('capabilities') && <>
-      {label('Unbuilt items can still be picked. The preview marks them missing until the engine supports them.')}
+      {label('Unbuilt items can still be picked. The preview marks them missing until this build supports them.')}
       {tileGrid('composer-capabilities', composerCapabilities.map(cap => {
         const on = draft.capabilities.includes(cap.id);
         const tag = capabilityTag(cap);

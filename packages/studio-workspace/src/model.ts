@@ -10,6 +10,20 @@ import {
 export const PANEL_IDS = ['outline', 'properties', 'actions', 'history'] as const;
 /** A panel managed by {@linkcode createStudioWorkspaceStore}. */
 export type PanelId = typeof PANEL_IDS[number];
+/** The one name each panel goes by: tab, rail, bottom bar, menu, heading and status. */
+export const PANEL_NAMES: Readonly<Record<PanelId, string>> = { outline: 'Outline', properties: 'Inspector', actions: 'Actions', history: 'History' };
+/** What a person reads for a layout error code the store keeps. Unknown text passes through. */
+export function layoutErrorMessage(error: string): string {
+  switch (error) {
+    case 'no-stage-space': return 'There is not enough room for that panel. Hide another panel or widen the window.';
+    case 'invalid-geometry': return 'The workspace is still measuring its size. Try again in a moment.';
+    case 'unknown-panel': case 'missing-panel': return 'That panel is not available in this studio.';
+    case 'invalid-position': return 'A panel cannot go there. Drag it to the left, right or bottom edge.';
+    case 'Invalid workspace preset': return 'Your saved layout could not be read. Save the layout again.';
+    case 'Measure the workspace before resizing': return 'The workspace is still measuring its size. Try again in a moment.';
+    default: return error;
+  }
+}
 /** Panel registry used to validate workspace presets and transitions. */
 export const KNOWN_PANELS: ReadonlySet<string> = new Set(PANEL_IDS);
 /** Default minimum drawing-stage width, in logical pixels. */
@@ -87,7 +101,7 @@ export function createStudioWorkspaceStore(studioId: Studio = 'prism') {
         set({ error: result.ok ? 'no-stage-space' : result.reason, drag: null });
         return false;
       }
-      set({ layout: result.layout, drag: null, error: null, status: `${({ outline: "Document", properties: "Inspector", actions: "Commands", history: "History" } as Record<string, string>)[panelId] ?? "Panel"} ${action === "collapse" ? "hidden" : "opened"}` });
+      set({ layout: result.layout, drag: null, error: null, status: `${PANEL_NAMES[panelId as PanelId] ?? 'Panel'} ${action === 'collapse' ? 'hidden' : 'shown'}` });
       return true;
     },
     resize(dock, fraction) {

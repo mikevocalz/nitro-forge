@@ -42,7 +42,7 @@
     {
       "kind": "click",
       "role": "menuitem",
-      "name": "Show Properties",
+      "name": "Show Inspector",
       "step_id": "show-properties"
     },
     {
@@ -58,7 +58,7 @@
     {
       "kind": "click",
       "role": "menuitem",
-      "name": "Show Commands",
+      "name": "Show Actions",
       "step_id": "show-commands"
     },
     {
@@ -69,7 +69,7 @@
     {
       "kind": "click",
       "role": "tab",
-      "name": "Properties",
+      "name": "Inspector",
       "step_id": "activate-properties-tab"
     },
     {
@@ -80,7 +80,7 @@
     {
       "kind": "click",
       "role": "tab",
-      "name": "Commands",
+      "name": "Actions",
       "step_id": "activate-commands-tab"
     },
     {
@@ -91,7 +91,7 @@
     {
       "kind": "click",
       "role": "tab",
-      "name": "Properties",
+      "name": "Inspector",
       "step_id": "properties-second-tab"
     },
     {
@@ -102,7 +102,7 @@
     {
       "kind": "click",
       "role": "tab",
-      "name": "Commands",
+      "name": "Actions",
       "step_id": "commands-second-tab"
     },
     {
@@ -128,7 +128,7 @@
     },
     {
       "kind": "press",
-      "selector": "[role=\"radiogroup\"][aria-label=\"Dock position for Commands\"] [role=\"radio\"]:last-child",
+      "selector": "[role=\"radiogroup\"][aria-label=\"Dock position for Actions\"] [role=\"radio\"]:last-child",
       "key": "Tab",
       "step_id": "focus-scroll-bottom-radio"
     },
@@ -139,7 +139,7 @@
     },
     {
       "kind": "click",
-      "selector": "[role=\"radiogroup\"][aria-label=\"Dock position for Commands\"] [role=\"radio\"]:last-child",
+      "selector": "[role=\"radiogroup\"][aria-label=\"Dock position for Actions\"] [role=\"radio\"]:last-child",
       "step_id": "choose-bottom-position"
     },
     {
@@ -149,7 +149,7 @@
     },
     {
       "kind": "press",
-      "selector": "[role=\"radiogroup\"][aria-label=\"Dock position for Commands\"] [role=\"radio\"]:last-child",
+      "selector": "[role=\"radiogroup\"][aria-label=\"Dock position for Actions\"] [role=\"radio\"]:last-child",
       "key": "Tab",
       "step_id": "focus-bottom-after-move"
     },
